@@ -3,6 +3,7 @@
 \usepackage[top=2.0cm,left=1.5cm,right=1.0cm,bottom=2.25cm]{geometry}
 \linespread{1.25}
 
+\input{general_preambl}
 
 \begin{document}
 
@@ -19,12 +20,161 @@
 }\vspace{3cm}
 
 
+\section{Notation}
+
+
+\begin{center}
+\begin{tabular}{ll}
+  \hline
+  \Hamilt & The electronic Hamiltonian\\
+  $n_\alpha$ & The number of alpha electrons\\
+  $n_\beta$ & The number of beta electrons\\
+  $n$ & The total number of electrons\\
+          & $n = n_\alpha + n_\beta$\\
+  $\mathcal{V}$ & The space of spatial one-electron wave functions\\
+          &(The full space of one-electron wave functions is\\
+          &assumed to be a direct sum of two such spaces,\\
+          &the first associated to $\alpha$-spin and the second\\
+          &to $\beta$-spin electrons. A subscript might be used,\\
+          &but the space is the same: $\mathcal{V_\alpha} = \mathcal{V_\beta} = \mathcal{V}$)\\
+  $N$ & The dimension of $\mathcal{V}$: $N = \text{dim }\mathcal{V}$\\
+  $i$,$j$,$k$,$l$&orbital indices for occupied orbitals\\
+          & (the context should make clear the reference determinant)\\
+  $a$,$b$,$c$,$d$&orbital indices for virtual orbitals\\
+          & (the context should make clear the reference determinant)\\
+  $\sigma(p)$ &spin ($\alpha$ or $\beta$) of orbital with index $p$\\
+  \HilbSp & The complete Hilbert space of quantum states\\
+          &(within finite basis set approximation)\\
+          & $\HilbSp = \Lambda^n (\mathcal{V}_\alpha \oplus \mathcal{V}_\beta)$\\
+  $\Psi$ & Elements of $\HilbSp$\\
+  $\Phi$ & Determinantal elements of $\HilbSp$\\
+  $\psi$ & Elements of $\mathcal{V}$\\
+  \hline
+\end{tabular}
+\end{center}
+
+\newpage
 \section{Introduction}
 
+Let
+\begin{equation}
+  \ket{\Psi_\text{FCI}} = \sum_I c_I \ket{\Phi_I}
+\end{equation}
+be a $n$-electron normalised Full-CI like wave function represented in the orbital basis
+\begin{equation}
+  \ket{\phi_I} = \phi_{I_1} \wedge \phi_{I_2} \wedge \dots \wedge \phi_{I_n}\,,
+\end{equation}
+where $\{\phi_p\}$ is an orthonormal basis for the space of one-electron wave functions and $I$ is an ordered multi-index.
+We want to find $\ket{\Phi} \in Gr$ such that $|\bracket{\Psi_\text{FCI}}{\Phi}|$ is maximum, where $Gr$ is the image of the Grassmannian in the space of the $n$-electron wave functions.
+Recall that
+\begin{equation}
+  D(\psi_1, \psi_2) = \sqrt{2}\sqrt{1 - |\bracket{\psi_1}{\psi_2}|}
+\end{equation}
+is a metric in $\projective \HilbSp$.\cite{}
+Also, $Gr$ is the set of all elements of $\HilbSp$ that can be written as a single Slater determinant (a decomposable element) for some orthonormal basis of $\mathcal{V}$.
 
+\newpage
 \section{Minimisation with respect to FCI}
 
-% \subsection{}
+To find $\ket{\Phi}$, it is equivalent to find the orbitals (namely, a basis of $\mathcal{V}$) such that 
+\begin{equation}
+  \ket{\Psi_\text{FCI}} = C_0 \ket{\Phi} +
+  \sum_{
+    \mathclap{\substack{I\\
+        I \ne \{1,2,\dots,n\}}}
+      }
+    c_I \ket{\Phi_I}\,,
+\end{equation}
+and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\bracket{\Psi_\text{FCI}}{\Phi}|$.
+
+\subsection{Parametrisation by orbital rotations}
+We parametrise $Gr$ by the orbital rotations as\cite{}
+\begin{equation}
+  \ket{\Phi} = e^{-\hat{K}} \ket{\Phi_0}\,,
+\end{equation}
+where
+\begin{eqnarray}
+  \hat{K} &=& \sum_{i,a} K_i^a(a_a^\dagger a_i - a_i^\dagger a_a)\\
+          &=& \sum_{i,a} K_i^a(a_i^a - a_a^i)\,
+\end{eqnarray}
+This parametrisation comes from the most general 
+\begin{equation}
+  \hat{K} = \sum_{p,q} K_q^pa_p^\dagger a_q\,,
+\end{equation}
+but using that $K_q^p$ is anti-symmetric (so that $e^{-\hat{K}}$ is orthogonal), and excluding rotations within the occupied or virtual spaces of $\ket{\Phi_0}$, that are redundant (do not alter the Slater determinant with $\ket{\Phi_0}$).
+For $\hat{K} = 0$ it is clear that $\ket{\Phi} = \ket{\Phi_0}$.
+
+Let
+\begin{equation}
+  f(K_i^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
+\end{equation}
+where the argument $K_i^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
+Note that rotations that mix $\alpha$ and $\beta$ orbitals.
+We will also assume that $\bracket{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remains true for all steps
+of our optimisation.
+If $\bracket{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function and
+if $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
+
+\subsection{Jacobian and Hessian}
+
+We want to maximise $f$ and we need its Jacobian and Hessian.
+The expressions at $\hat{K} = 0$ are given below.
+For the derivation of the expressions, see that hand notes.
+
+\begin{equation}
+  \frac{\partial f(\hat{K} = 0)}{\partial K_i^a} = (-1)^{n_{\sigma(i)} - i + 1} C_i^a
+\end{equation}
+
+\begin{equation}
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_i^a \partial K_j^b} =
+  \left\{
+    \begin{array}{lcr}
+      -C_0 & \quad\quad & (i = j, a = b)\\
+      0 & \quad\quad & (i \ne j, a = b)\\
+      0 & \quad\quad & (i = j, a \ne b)\\
+      (-1)^{n_{\sigma(i)}+n_{\sigma(j)}-i-j}C_{ij}^{ab} & \quad\quad & (\sigma(i) \ne \sigma(j))\\
+      (-1)^{i+j+1}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a<b)\\
+      (-1)^{i+j}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a>b)\\
+    \end{array}
+  \right.
+\end{equation}
+In these equations, $C_i^a$ and $C_{ij}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
+The canonical order of the orbitals is assumed to be ``first all $\alpha$, then all $\beta$''.
+
+\subsection{Transformation of the wave function}
+In the optimisation process, $\ket{\Phi}$ varies and we would need the Jacobian and the Hessian at $\hat{K} \ne 0$.
+The expressions are much more complicated and we avoid this by making a full transformation of $\ket{\Psi_\text{FCI}}$ to the new orbital basis.
+Let $U = e^{-\hat{K}}$ be the matrix that transform the orbital basis:
+\begin{equation}
+  \phi_p = \sum_q \phi'_q U_{qp}\,.
+\end{equation}
+Given the coefficients $C_I$ of the expansion in the first basis, we want to know the coefficients $C'_I$ such that
+\begin{equation}
+  \ket{\Psi_\text{FCI}} = \sum_I c_I \ket{\Phi_I} = \sum_I c'_I \ket{\Phi'_I}\,.
+\end{equation}
+These are given by:
+\begin{equation}\label{eq:trans_fci_orbital_basis}
+  C'_I = \sum_J C_J\, \text{det}(U_{IJ})\,,
+\end{equation}
+where $U_{IJ}$ is the minor of the matrix $U$ with the entries in the rows and columns given by the multi-indices $I$ and $J$.
+
+Such transformation is the most time consuming step.
+
+
+\subsection{Newton-Raphson step}
+Starting from a orbital basis $\{\phi_p\}$ such that the first determinant (that is, with the first $n_\alpha$ $\alpha$ orbitals and first $n_\beta$ $\beta$ occupied) is $\ket{\Phi_0}$, we calculate the Jacobian $\mathbf{J}$ and the Hessian $\mathbf{H}$ as shown above.
+The Newton step (in the space of the $K_i^a$ parameters) is
+\begin{equation}
+  \mathbf{z} = -\mathbf{H}^{-1} \mathbf{J}\,.
+\end{equation}
+From this vector, the operator $\hat{K}$ is constructed and the orbital transformation matrix is given by
+\begin{equation}
+  U = e^{-\hat{K}}\,.
+\end{equation}
+This is done for the $\alpha$ and the $\beta$ orbitals and the wave function $\ket{\Psi_\text{FCI}}$ is transformed to the new orbital basis, by equation \ref{eq:trans_fci_orbital_basis}.
+This proceeds until convergence.
+
+\end{document}
 
 % \begin{center}
 %   \includegraphics[width= \textwidth]{}
@@ -32,12 +182,10 @@
 %   \label{fig:}
 % \end{center}
 
-
-\end{document}
-
   
 %%% Local Variables:
 %%% ispell-local-dictionary: "british"
 %%% mode: latex
 %%% TeX-master: t
 %%% End:
+
