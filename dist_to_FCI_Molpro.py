@@ -1,3 +1,55 @@
+"""f(x) = <0|FCI>, for |0> Slater determinant and |FCI> from Molpro
+
+# Parametrisation of |0>:
+
+The slater determinants are parametrised by the orbital rotations:
+
+|0'> = exp(-K) |0>
+
+where K = K(alpha) + K(beta)
+ K(sigma) = sum_{i,a} K_i^a (a_i^a - a_a^i)
+
+ K_1^{n+1}    K_1^{n+2}   ...  K_1^orb_dim
+ K_2^{n+1}    K_2^{n+2}   ...  K_2^orb_dim
+          ...
+              K_i^a
+          ...
+ K_n^{n+1}    K_n^{n+2}   ...  K_n^orb_dim
+
+  --> packed as:
+
+   Jac[0]   = K_1^{n+1}
+   Jac[1]   = K_2^{n+1}
+      ...
+   Jac[n-1] = K_n^{n+1}
+   Jac[0   + n] = K_1^{n+2}
+   Jac[1   + n] = K_2^{n+2}
+      ...
+   Jac[n-1 + n] = K_n^{n+2}
+   Jac[0   + 2n] = K_1^{n+3}
+      ...
+   Jac[i-1 + (a - n - 1)*n] = K_i^a
+     ...
+   Jac[n-1 + (orb_dim - n - 1)*n = n*(orb_dim - n) - 1] = K_n^orb_dim    <<< last alpha
+   Jac[n*(orb_dim - n) + 0] = K_1^2     <<< first beta = Molpro_FCI_Wave_Function.beta_shift
+     ...
+
+   -> beta are shifted by  b_shift = n*(orb_dim - n)
+
+# |FCI>
+
+The wave function |FCI> is written as a FCI wave function (that is, with
+all possible Slater determinants), but it can be the true FCI wave function
+or a CID, or CISD wave function (with explicit zeros for other determinants)
+
+TODO: CCD, CCSD, MP2.
+
+History:
+    Aug 2018 - Start
+    Mar 2019 - Add CISD wave function
+               Add to git
+Yuri
+"""
 import numpy as np
 from numpy import linalg
 from scipy.linalg import expm, lu
@@ -13,9 +65,39 @@ molpro_CISD_header = ' PROGRAM * CISD (Closed-shell CI(SD))     '\
 molpro_CCSD_header = ' PROGRAM * CCSD (Closed-shell coupled cluster)'\
                      + '     Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n'
 
-class Molpro_FCI_Wave_Function():
-    """A wave function with the structure of the FCI from Molpro
+MRCI_ref_str = ' Reference coefficients greater than 0.0000000\n'
+MRCI_sgl_str = ' Coefficients of singly external configurations greater than 0.0000000\n'
+MRCI_dbl_str = ' Coefficients of doubly external configurations greater than 0.0000000\n'
 
+CC_sgl_str = ' Singles amplitudes (print threshold =  0.000E+00):\n'
+CC_dbl_str = ' Doubles amplitudes (print threshold =  0.000E+00):\n'
+
+
+class Molpro_FCI_Wave_Function():
+    """A wave function with the structure of Molpro's FCI wave function
+
+    Currently, only for Ms=0, that is, equal number of alpha and beta orbitals.
+
+    Atributes:
+    determinants (list) : a list of determinants, each determinant being a list
+                          similar to Molpro's FCI output:
+                          [Ci, a1, a2, ..., an_a, b1, b2, ..., bn_a]
+                          where Ci is the (float) coefficient of the determinant 
+                          in the normalised wave function, a_i are the occupied
+                          alpha orbitals and b_i the occupied beta orbitals.
+                          Ex: [0.9, 1, 2, 1, 2] is the determinant with the first
+                          two alpha and beta orbitals occupied, with a coefficient
+                          or 0.9.
+    orb_dim (int) : dimension of the (spatial) orbital space
+    n_frozen (int) : number of frozen orbitals (assumed to be equal for alpha and beta)
+    n_elec (int) : number of electrons
+    n_alpha (int) : number of alpha electrons
+    n_beta (int) : number of beta electrons (always equals n_alpha in the current
+                   implementation)
+    beta_shift (int) : it is equal to n_alpha*(orb_dim - n_alpha) and is the
+                       first position of the parameters in beta space (see the
+                       documentation of the module)
+    WF_type (str) : type of wave function. Currently it can be FCI, CID and CISD.
     """
 
     def __init__(self,
@@ -24,7 +106,7 @@ class Molpro_FCI_Wave_Function():
                  FCI_file_name = None):
         """Initialize a FCI wave function
 
-        Args:
+        Parameters:
         file_name - the molpro output with the FCI wave function
         state - state of interest
         FCI_file_name - if not None, file_name is assumed to be of a non-FCI
@@ -94,7 +176,6 @@ class Molpro_FCI_Wave_Function():
                             pos_b_ini = 1 + 2*self.n_frozen + self.n_alpha
                             pos_b_fin = pos_b_ini + self.n_beta
 
-
 #            print('norm of FCI: ', math.sqrt(S))
             if not FCI_prog_found or not FCI_found:
                 raise Exception('FCI wave function not found!')
@@ -112,20 +193,15 @@ class Molpro_FCI_Wave_Function():
                         if self.WF_type is None:
                             if molpro_MRCI_header == l:
                                 self.WF_type = 'MRCI'
-                                ref_str = ' Reference coefficients greater than 0.0000000\n'
-                                sgl_str = ' Coefficients of singly external configurations greater than 0.0000000\n'
-                                dbl_str = ' Coefficients of doubly external configurations greater than 0.0000000\n'
                             if molpro_CISD_header == l or molpro_CCSD_header == l:
                                 self.WF_type = 'CISD' if molpro_CISD_header == l else 'CCSD'
-                                sgl_str = ' Singles amplitudes (print threshold =  0.000E+00):\n'
-                                dbl_str = ' Doubles amplitudes (print threshold =  0.000E+00):\n'
 
                         elif self.WF_type == 'MRCI':
-                            if ref_str == l:
+                            if MRCI_ref_str == l:
                                 ref_found = True
-                            elif sgl_str == l:
+                            elif MRCI_sgl_str == l:
                                 sgl_found = True
-                            elif dbl_str == l:
+                            elif MRCI_dbl_str == l:
                                 dbl_found = True
                             elif dbl_found:
                                 lspl = l.split()
@@ -155,9 +231,9 @@ class Molpro_FCI_Wave_Function():
 
                         elif self.WF_type == 'CCSD' or self.WF_type == 'CISD':
 
-                            if sgl_str == l:
+                            if CC_sgl_str == l:
                                 sgl_found = True
-                            elif dbl_str == l:
+                            elif CC_dbl_str == l:
                                 dbl_found = True
                             elif dbl_found:
                                 lspl = l.split()
@@ -179,7 +255,7 @@ class Molpro_FCI_Wave_Function():
                                 break
 
             if self.WF_type is None:
-                raise Exception('Known type of wave function not found in ' + file_name)
+                raise Exception('We found no wave function in ' + file_name)
 
             elif self.WF_type == 'MRCI':
                 self.load_MRCI_WF(ref, singles, doubles)
@@ -203,7 +279,6 @@ class Molpro_FCI_Wave_Function():
         #     print(i)
         # print('-------------------')
         # print()
-
         for det in self.determinants:
             rk = rank_of_exc(det)
             if rk == 0:
@@ -223,7 +298,6 @@ class Molpro_FCI_Wave_Function():
                     if i > self.n_alpha:
                         exc_descr.append(i)
 #               print('This det: ', det, ' exc_descr = ', exc_descr, 'exc_type = ', exc_type)
-
                 if rk == 1:
                     if len(exc_descr) != 2:
                         raise Exception('Length of exc_descr is not 2 for single excitation.')
@@ -231,7 +305,6 @@ class Molpro_FCI_Wave_Function():
                         if s[1:] == exc_descr:
                             det[0] = float(s[0]) if (self.n_alpha+s[1])%2 == 0 else -float(s[0])
                             break
-
                 if rk == 2:
                     if len(exc_descr) != 4:
                         raise Exception('Length of exc_descr is not 4 for double excitation.')
@@ -252,10 +325,7 @@ class Molpro_FCI_Wave_Function():
                                         det[0] += float(d[0]) if (d[1] + d[2])%2 == 1 else -float(d[0])
                                 elif exc_type == 'ab' and d[3] == exc_descr[2]:
                                     det[0] += float(d[0]) if (d[1] + d[2])%2 == 0 else -float(d[0])
-
-        self.normalize()
-
-
+        self.normalise()
 
     def load_CCSD_WF(self, Tsgl, Tdbl):
         """Load the CCSD wave function."""
@@ -316,7 +386,6 @@ class Molpro_FCI_Wave_Function():
                                   -float(s[0])/sqrt_2)
                         print('Replacing coef of singles: ', det, s)
                         break
-                
 
             if rank_of_exc(det) == 2:
                 exc_descr = [] # occ1, occ2, virt1, virt2, NP (-1 => excitation from same spin)
@@ -346,17 +415,20 @@ class Molpro_FCI_Wave_Function():
                         elif d[1] == d[2]:
                             det[0] += float(d[0])
                         elif d[3] == d[4]:
-                            det[0] += float(d[0])/sqrt_2 if (d[1] + d[2])%2 == 0 else -float(d[0])/sqrt_2
+                            det[0] += (float(d[0])/sqrt_2 if (d[1] + d[2])%2 == 0
+                                       else -float(d[0])/sqrt_2)
                         else:
                             if exc_descr[4] in ['aa', 'bb']:
                                 if d[5] == -1:
-                                    det[0] += float(d[0])/2 if (d[1] + d[2])%2 == 1 else -float(d[0])/2
+                                    det[0] += (float(d[0])/2 if (d[1] + d[2])%2 == 1
+                                               else -float(d[0])/2)
                             elif exc_descr[4] == 'ab':
                                 if d[5] == 1:
-                                    det[0] += float(d[0])/2 if (d[1] + d[2])%2 == 0 else -float(d[0])/2
+                                    det[0] += (float(d[0])/2 if (d[1] + d[2])%2 == 0
+                                               else -float(d[0])/2)
                                 else:
-                                    det[0] += -float(d[0])/2 if (d[1] + d[2])%2 == 0 else float(d[0])/2
-
+                                    det[0] += (-float(d[0])/2 if (d[1] + d[2])%2 == 0
+                                               else float(d[0])/2)
 
     def __str__(self):
         """Return a string version of the wave function."""
@@ -375,8 +447,7 @@ class Molpro_FCI_Wave_Function():
         x += '='*50 + '\n'
         return x
 
-
-    def normalize(self):
+    def normalise(self):
         """Normalise the wave function to unity"""
         S = 0.0
         for det in self.determinants:
@@ -399,7 +470,7 @@ def rank_of_exc(determinant):
     return rank
 
 def print_matrix(X, f_str):
-    """Print a matrix to f_str."""
+    """Print the matrix X to f_str."""
     for i in X:
         for j in i:
             f_str.write(' {0:10.6f} '.format(j)\
@@ -569,49 +640,13 @@ def transform_wf_2(wf, Ua, Ub, just_C0 = False):
     return new_wf
 
 
-#
-# Parametrization of orb rotations:
-#
-# |0'> = exp(-K) |0>
-#
-# where K = K(alpha) + K(beta)
-#    K(sigma) = sum_{i,a} K_i^a (a_i^a - a_a^i)
-#
-#  K_1^{n+1}    K_1^{n+2}   ...  K_1^orb_dim
-#  K_2^{n+1}    K_2^{n+2}   ...  K_2^orb_dim
-#           ...
-#                      K_i^a
-#           ...
-#  K_n^{n+1}    K_n^{n+2}   ...  K_n^orb_dim
-#
-#   --> packed as:
-#
-#    Jac[0]   = K_1^{n+1}
-#    Jac[1]   = K_2^{n+1}
-#       ...
-#    Jac[n-1] = K_n^{n+1}
-#    Jac[0   + n] = K_1^{n+2}
-#    Jac[1   + n] = K_2^{n+2}
-#       ...
-#    Jac[n-1 + n] = K_n^{n+2}
-#    Jac[0   + 2n] = K_1^{n+3}
-#       ...
-#    Jac[i-1 + (a - n - 1)*n] = K_i^a
-#      ...
-#    Jac[n-1 + (orb_dim - n - 1)*n = n*(orb_dim - n) - 1] = K_n^orb_dim    <<< last alpha
-#    Jac[n*(orb_dim - n) + 0] = K_1^2     <<< first beta
-#      ...
-#
-#    -> beta are shifted by  b_shift = n*(orb_dim - n)
-#
-
 def get_position_in_jac(i, a, n, spin_shift):
     """Pack Jacobian: return the position.
     """
     return i-1 + (a - n-1)*n + spin_shift
 
 def get_i_a_from_pos_in_jac(pos, n, b_shift):
-    """ Unpack Jacobian: returns (i,a).
+    """Unpack Jacobian: returns (i,a).
     """
     s = 0 if pos < b_shift else b_shift
     return (1 + (pos - s)%n, # i
@@ -637,7 +672,6 @@ def construct_Jac_Hess(wf, f_str, analytic = True, verb = 0):
 
     Returns the tuple (Jac, Hess), with the Jacobian and the 
     Hessian
-
     """
     if verb > 50:
         f_str.write('='*50 + '\n')
@@ -805,8 +839,34 @@ def print_Jac_Hess(J, H, wf, f_str):
 
 
 def calc_wf_from_z(z, cur_wf, f_str, verb = 0, just_C0 = False):
+    """Calculate the wave function in a new orbital basis
 
-    if verb > 30:
+    Given the wave function in the current orbital basis, 
+    a new (representation of the) wave function is constructed
+    in a orbital basis that has been modified by a step z.
+
+    Paramters:
+    z        the update in the orbital basis (given in the space of the 
+             K_i^a parameters) from the position z=0 (that is, the orbital
+             basis used to construct the current representation of the
+             wave function
+    cur_wf   current representation of the wave function
+             (as Molpro_FCI_Wave_Function)
+    f_str    stream to output
+    verb     verbose level (default = 0)
+             Levels:
+          ==  0    nothing is printed
+          >=  5    info about steps
+             30    prints intermediate matrices
+    just_C0  Calculates only the first coefficient (see transform_wf)
+
+    Returns:
+    a tuple (new_wf, Ua, Ub) where new_wf is a Molpro_FCI_Wave_Function
+    with the wave function in the new representation, and Ua and Ub
+    are the transformations from the previous to the new orbital
+    basis (alpha and beta, respectively).
+    """
+    if verb >= 30:
         f_str.write('='*50 + '\n')
         f_str.write('Current z vector\n')
         f_str.write(str(z) + '\n')
@@ -819,7 +879,7 @@ def calc_wf_from_z(z, cur_wf, f_str, verb = 0, just_C0 = False):
             K[i][a] = -z[get_position_in_jac(i+1, a+1, cur_wf.n_alpha, 0)]
             K[a][i] = -K[i][a]
     Ua = expm(K)
-    if verb > 30:
+    if verb >= 30:
         f_str.write('='*30 + '\n')
         f_str.write('Current K matrices:\n')
         f_str.write('alpha:\n')
@@ -831,7 +891,7 @@ def calc_wf_from_z(z, cur_wf, f_str, verb = 0, just_C0 = False):
             K[i][a] = -z[get_position_in_jac(i+1, a+1, cur_wf.n_alpha, cur_wf.beta_shift)]
             K[a][i] = -K[i][a]
     Ub = expm(K)
-    if verb > 30:
+    if verb >= 30:
         f_str.write('beta:\n')
         print_matrix(K, f_str)
         f_str.write('-'*30 + '\n')
@@ -852,21 +912,22 @@ def calc_wf_from_z(z, cur_wf, f_str, verb = 0, just_C0 = False):
             print_matrix(Id, f_str)
             f_str.write('-'*30 + '\n')
         f_str.write('='*50 + '\n')
-    if verb > 5:
+    if verb >= 5:
         f_str.write('# Matrices Ua and Ub are done. Going to calculate transformed wf now...\n')
     return (transform_wf(cur_wf, Ua, Ub, just_C0 = just_C0), Ua, Ub)
 
 
-
 def get_transf_RHF_to_UHF(RHF_output, UHF_output):
-    """
-    returns Ua, Ub such that
+    """Return the matrices that transform RHF to UHF orbitals.
+
+    returns:
+    (Ua, Ub)
+
+    such that
     
     orb_UHFa = orb_RHF*Ua
     orb_UHFb = orb_RHF*Ub
-    
     """
-
     coeff_RHF = get_orbitals(RHF_output)
     print(coeff_RHF)
     coeff_RHF_inv = linalg.inv(coeff_RHF)
@@ -876,7 +937,15 @@ def get_transf_RHF_to_UHF(RHF_output, UHF_output):
 
 
 def get_orbitals(output_name):
+    """Load (last) orbitals from Molpro output.
 
+    Parameters:
+    output_name   Molpro output
+
+    Returns:
+    One (for restricted) or two (for unrestricted) numpy matrices with the
+    orbital coefficients 
+    """
     reading_orbitals = False
     is_RHF = None
     n_orb = None

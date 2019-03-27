@@ -1,9 +1,12 @@
-""" Optimizer of the distance to the FCI wave function
+"""Optimizer of the distance to the FCI wave function
 
-Yuri - Aug 2018
+History
+    Aug 2018 - Start
+    Mar 2019 - Organise and comment the code
+               Add to git
 
+Yuri
 """
-
 import copy
 import math
 import numpy as np
@@ -21,7 +24,7 @@ def optimize_distance_to_FCI(fci_wf,
                              ini_U = None):
     """Find a single Slater determinant that minimise the distance to fci_wf
 
-    It uses a Newton Raphson method for the optimisation.
+    It uses a Newton-Raphson method for the optimisation.
     See Molpro_FCI_Wave_Function for an example of the classes and
     functions used.
 
@@ -37,7 +40,6 @@ def optimize_distance_to_FCI(fci_wf,
     normZ and normJ are the norm of the vectors z and J,
     i_iteration is the number of iterations,
     converged is True or False, indicating if the procedure converged
-
 
 
     Parameters:
@@ -75,7 +77,6 @@ def optimize_distance_to_FCI(fci_wf,
             if None, Identity is used as initial transformation.
             (default = None)
     """
-
     converged = False
     try_uphill = False
     i_pos_eigVal = -1

@@ -1,4 +1,14 @@
 #!/usr/bin/python3
+"""Main program to optimise the Psi_minD
+
+Try `main_dist_to_Gr --help` for the usage.
+
+History
+    Aug 2018 - Start
+    Mar 2019 - Add to git
+
+Yuri
+"""
 import sys
 import re
 import os
