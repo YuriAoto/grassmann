@@ -9,17 +9,20 @@ Yuri
 """
 import copy
 import math
+import sys
+import logging
+
 import numpy as np
 from scipy import linalg
-import sys
+
+logger = logging.getLogger(__name__)
 
 def optimize_distance_to_FCI(fci_wf,
                              construct_Jac_Hess,
-                             print_Jac_Hess,
+                             str_Jac_Hess,
                              calc_wf_from_z,
                              transform_wf,
                              max_iter = 20,
-                             verbose = 1,
                              f_out = sys.stdout,
                              ini_U = None):
     """Find a single Slater determinant that minimise the distance to fci_wf
@@ -51,7 +54,7 @@ def optimize_distance_to_FCI(fci_wf,
                          Jacobian and the Hessian of the function
                          f(x) = <x,fci_wf>, where x is a Slater determinant
 
-    print_Jac_Hess      a method to print the Jacobian and the Hessian
+    str_Jac_Hess       a method that returns str of the Jacobian and the Hessian
 
     calc_wf_from_z     a method that calculates the wave function from 
                        a parametrization z
@@ -61,15 +64,6 @@ def optimize_distance_to_FCI(fci_wf,
     max_iter   the maximum number of iterations in the optimisation
                (default = 20)
 
-    verbose    the level of printing to the output (default = 1):
-            <    0   No output
-            ==   0   only warnings
-            >=   1   iterations
-            >=  10   info about steps inside the iterations
-                20   C0
-                50   the wave function in each iteration
-               100   the Jacobian and Hessian in each iteration
-               
     f_out   the output stream (default = sys.stdout)
 
     ini_U   if not None, it should be a two elements tuple with
@@ -90,43 +84,38 @@ def optimize_distance_to_FCI(fci_wf,
         Ub = ini_U[1]
         cur_wf = transform_wf(fci_wf, Ua, Ub)
 
-    if verbose == 1:
-        f_out.write('{0:<5s}  {1:<11s}  {2:<11s}'.\
-                    format('it.', '|z|', '|Jac|'))
+    f_out.write('{0:<5s}  {1:<11s}  {2:<11s}\n'.\
+                format('it.', '|z|', '|Jac|'))
 
     for i_iteration in range(max_iter):
-        if verbose >= 10:
-            f_out.write('='*50 + '\n')
-            f_out.write('Starting iteration {0:4d}\n'.\
-                        format(i_iteration))
-            if verbose >= 50:
-                f_out.write('Wave function:\n' + str(cur_wf))
-            f_out.write('='*25 + '\n')
+        logger.info('Starting iteration %d',
+                    i_iteration)
+        if  logger.level <= logging.DEBUG:
+            logger.debug('Wave function:\n' + str(cur_wf))
 
-        Jac, Hess = construct_Jac_Hess(cur_wf, f_out, verb = 0)
-        if verbose >= 10:
-            f_out.write('## Hessian and Jacobian are built\n')
-        if verbose >= 100:
-            print_Jac_Hess(Jac, Hess, f_out)
+        Jac, Hess = construct_Jac_Hess(cur_wf)
+        logger.info('Hessian and Jacobian are built\n')
+        if logger.level <= 1:
+            logger.log(1, str_Jac_Hess(Jac, Hess, cur_wf))
 
         if False: # Check Jac and Hessian
-            num_Jac, num_Hess = construct_Jac_Hess(cur_wf, f_out,
-                                                   verb = 0, analytic=False)
+            num_Jac, num_Hess = construct_Jac_Hess(cur_wf,
+                                                   analytic=False)
             diff = 0.0
             for i,x in enumerate(num_Jac):
                 diff += abs(x-Jac[i])
-            f_out.write('Sum abs(diff(Jac, numJac)) = {0:10.6e}\n'.\
-                        format(diff))
+            logger.debug('Sum abs(diff(Jac, numJac)) = {0:10.6e}'.\
+                         format(diff))
             diff = 0.0
             for i1, x1 in enumerate(num_Hess):
                 for i2, x2 in enumerate(x1):
                     diff += abs(x2-Hess[i1][i2])
-            f_out.write('Sum abs(diff(Hess, numHess)) = {0:10.6e}\n'.\
-                        format(diff))
-            f_out.write('=-'*30 + '\n#Analytic\n')
-            print_Jac_Hess(Jac, Hess, f_out)
-            f_out.write('=-'*30 + '\n#Numeric\n')
-            print_Jac_Hess(num_Jac, num_Hess, f_out)
+            logger.debug('Sum abs(diff(Hess, numHess)) = {0:10.6e}'.\
+                         format(diff))
+            logger.debug('Analytic:\n%s',
+                         str_Jac_Hess(Jac, Hess, cur_wf))
+            logger.debug('Numeric:\n%s',
+                         str_Jac_Hess(num_Jac, num_Hess, cur_wf))
 
         eig_val, eig_vec = linalg.eigh(Hess)
         Hess_has_pos_eig = False
@@ -135,8 +124,7 @@ def optimize_distance_to_FCI(fci_wf,
             if eigVal > 0.0:
                 Hess_has_pos_eig = True
                 Hess_dir_with_posEvec = np.array(eig_vec[:,i])
-                if verbose >= 0:
-                    f_out.write('WARNING: Hessian has positive eigenvalue.\n')
+                logger.warning('Hessian has positive eigenvalue.')
                 break
 
         normJ = 0.0
@@ -146,14 +134,10 @@ def optimize_distance_to_FCI(fci_wf,
 
         if not try_uphill:
             # Newton step
-            
             Hess_inv = linalg.inv(Hess)
-            if verbose >= 10:
-                f_out.write('## Hessian is inverted\n')
-
+            logger.info('Hessian is inverted.')
             z = -np.matmul(Hess_inv, Jac)
-            if verbose >= 10:
-                f_out.write('## z vector have been calculated by Newton step\n')
+            logger.info('z vector has been calculated by Newton step.')
 
         else:
             #den = np.matmul(np.matmul(Jac.transpose(), Hess), Jac)
@@ -164,45 +148,38 @@ def optimize_distance_to_FCI(fci_wf,
 
             # Look maximum in the direction of eigenvector of Hess with pos 
             gamma = 0.5
-            if verbose >= 10:
-                f_out.write('## Calculating z vector by Gradient descent;\n' +\
-                            'gamma = {0:.5f}\n'.format(gamma))
+            logger.info('Calculating z vector by Gradient descent;\n'
+                        + 'gamma = {0:.5f}\n'.format(gamma))
             max_c0 = cur_wf.determinants[0][0]
             max_i0 = 0
-            if verbose >= 20:
-                f_out.write(' Current C0: {0:.4f}\n'.format(max_c0))
-                f_out.flush()
+            if logger.level <= 15:
+                logger.log(15, 'Current C0: {0:.4f}'.format(max_c0))
             for i in range(6):
-                tmp_wf, tmp_Ua, tmp_Ub = calc_wf_from_z(i*gamma*Hess_dir_with_posEvec, cur_wf, f_out,
-                                                        verb = 0, just_C0 = True)
+                tmp_wf, tmp_Ua, tmp_Ub = calc_wf_from_z(i*gamma*Hess_dir_with_posEvec, cur_wf,
+                                                        just_C0=True)
                 this_c0 = tmp_wf.determinants[0][0]
-                if verbose >= 20:
-                    f_out.write(' Attempting for i={0:d}: C0={1:.4f}\n'.format(i, this_c0))
+                logger.debug('Attempting for i=%d: C0 = %f', i, this_c0)
                 if abs(max_c0) < abs(this_c0):
                     max_c0 = this_c0
                     max_i0 = i
             z = max_i0*gamma*Hess_dir_with_posEvec
-            if verbose >= 10:
-                f_out.write('## z vector obtained: {0:d}*gamma*Hess_dir_with_posEvec\n'.\
-                            format(max_i0))
+            logger.info('z vector obtained: %d*gamma*Hess_dir_with_posEvec',
+                        max_i0)
             try_uphill = False
-
 
         normZ = 0.0
         for i in z:
             normZ += i**2
         normZ = math.sqrt(normZ)
 
-        if verbose == 1:
-            f_out.write('{0:<5d}  {1:<11.8f}  {2:<11.8f}\n'.\
-                        format(i_iteration,
-                               math.sqrt(normZ),
-                               math.sqrt(normJ)))
-        elif verbose >= 1:
-            f_out.write('Norm of z vector: {0:8.5e}\n'.\
-                        format(normZ))
-            f_out.write('Norm of J vector: {0:8.5e}\n'.\
-                        format(normJ))
+        f_out.write('{0:<5d}  {1:<11.8f}  {2:<11.8f}\n'.\
+                    format(i_iteration,
+                           math.sqrt(normZ),
+                           math.sqrt(normJ)))
+        logger.info('Norm of z vector: {0:8.5e}'.\
+                    format(normZ))
+        logger.info('Norm of J vector: {0:8.5e}'.\
+                    format(normJ))
     
         if normJ < 1.0E-8 and normZ < 1.0E-8 and not try_uphill:
             if not Hess_has_pos_eig:
@@ -210,14 +187,12 @@ def optimize_distance_to_FCI(fci_wf,
                 break
             else:
                 try_uphill = True
-#        elif try_uphill:
-#            try_uphill = False
+            # elif try_uphill:
+            #     try_uphill = False
 
-        if verbose >= 10:
-            f_out.write('## Calculating new basis and transforming wave function...\n')
-        cur_wf, cur_Ua, cur_Ub = calc_wf_from_z(z, cur_wf, f_out, verb = verbose)
-        if verbose >= 10:
-            f_out.write('## New basis and wave function have been calculated!\n')
+        logger.info('Calculating new basis and transforming wave function.')
+        cur_wf, cur_Ua, cur_Ub = calc_wf_from_z(z, cur_wf)
+        logger.info('New basis and wave function have been calculated!')
 
         Ua = np.matmul(Ua, cur_Ua)
         Ub = np.matmul(Ub, cur_Ub)
