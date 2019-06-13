@@ -27,22 +27,20 @@ def dGr_main(args):
     toout('Command:\n' + args.command)
     toout('')
     toout('From command line and environment:')
-    toout('Molpro output: ' + args.file_name)
-    if args.file_name_FCI is not None:
-        toout('Molpro FCI output: ' + args.file_name_FCI)
+    toout('External wave function, |extWF>: ' + args.molpro_output)
+    if args.WF_templ is not None:
+        toout('Template for |extWF>: ' + args.WF_templ)
+    toout('Orbital basis of |extWF>: ' + args.WF_orb)
+    toout('Hartree-Fock orbitals, |minE>: ' + args.HF_orb)
+    if args.ini_orb is not None:
+        f_out.write('Initial orbitals: ')
+        if isinstance(args.ini_orb, tuple):
+            toout('Numpy files ' + str(args.ini_orb[0]) +
+                        ' and ' + str(args.ini_orb[1]))
+        else:
+            toout('Molpro output ' + args.ini_orb)
     toout('State: ' + args.state)
     toout('Log level: ' + logging.getLevelName(args.loglevel))
-    if args.file_name_iniU is not None:
-        f_out.write('Using initial orbitals from ')
-        if isinstance(args.file_name_iniU, tuple):
-            toout('Numpy files ' + str(args.file_name_iniU[0]) +
-                        ' and ' + str(args.file_name_iniU[1]))
-        else:
-            toout('Molpro output ' + args.file_name_iniU)
-    if args.WF_orb is not None:
-        toout('Orbital basis of wave function is from ' + args.WF_orb)
-    toout('Molpro output: {0:s}'.\
-                format(args.file_name))
     toout('qpy job ID: {:s}'.\
                 format(os.environ['QPY_JOB_ID']
                        if 'QPY_JOB_ID' in os.environ
@@ -53,9 +51,9 @@ def dGr_main(args):
         time.strftime("%d %b %Y - %H:%M",time.gmtime(start_time))))
     toout('')
     # ----- loading wave function
-    ext_wf = dFCI.Molpro_FCI_Wave_Function(args.file_name,
+    ext_wf = dFCI.Molpro_FCI_Wave_Function(args.molpro_output,
                                            args.state if args.state else '1.1',
-                                           FCI_file_name = args.file_name_FCI)
+                                           FCI_file_name = args.WF_templ)
 
     logger.info('External wave function, initial coefficients:\n' + str(ext_wf))
     if logger.level <= logging.INFO:
@@ -65,26 +63,24 @@ def dGr_main(args):
         logger.info('Norm of external WF: %f',
                     math.sqrt(S))
 
-    if args.file_name_HF is not None:
-        Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb, args.file_name_HF)
-        toout('Using external wave function in the basis of orbitals of '
-                    + args.file_name_HF)
+    if args.HF_orb is not None:
+        Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb, args.HF_orb)
         if logger.level <= logging.DEBUG:
             logger.debug('Wave function, before changing to new basis:\n%s',
                          str(ext_wf))
         ext_wf = dFCI.transform_wf(ext_wf, Ua, Ub)
 
-    if args.file_name_iniU is not None:
-        if isinstance(args.file_name_iniU, tuple):
-            Ua = np.load(args.file_name_iniU[0])
-            Ub = np.load(args.file_name_iniU[1])
+    if args.ini_orb is not None:
+        if isinstance(args.ini_orb, tuple):
+            Ua = np.load(args.ini_orb[0])
+            Ub = np.load(args.ini_orb[1])
         else:
-            if args.file_name_HF is not None:
-                Ua, Ub = dFCI.transf_orb_from_to(args.file_name_HF,
-                                                 args.file_name_iniU)
+            if args.HF_orb is not None:
+                Ua, Ub = dFCI.transf_orb_from_to(args.HF_orb,
+                                                 args.ini_orb)
             else:
                 Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb,
-                                                 args.file_name_iniU)
+                                                 args.ini_orb)
     else:
         Ua, Ub = dFCI.get_trans_max_coef(ext_wf)
         toout('Using initial guess for U from det with largest coefficient.')
