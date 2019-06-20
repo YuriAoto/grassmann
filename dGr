@@ -25,6 +25,7 @@ log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
               + '\n%(message)s\n')
 logging.basicConfig(filename=logfile,
                     format=log_format,
+                    filemode='w',
                     level=cmd_line_args.loglevel)
 logger = logging.getLogger(__name__)
 

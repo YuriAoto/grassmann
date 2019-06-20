@@ -587,14 +587,33 @@ def get_trans_max_coef(wf):
 
 def transform_wf(wf, Ua, Ub, just_C0 = False):
     """Transform the wave function as induced by a transformation in the orbital basis
-
-    Parameters
-
+    
+    Arguments:
+    
     wf   the initial wave function as Molpro_FCI_Wave_Function
     Ua   the orbital transformation for alpha orbitals
     Ub   the orbital transformation for beta orbitals
     just_C0   If True, calculates the coefficients of the initial determinant only 
               (default False)
+    
+    Behaviour:
+    
+    If the coefficients of wf are given in the basis |u_I>:
+    
+    |wf> = \sum_I c_I |u_I>
+    
+    it calculates the wave function in the basis |v_I>:
+    
+    |wf> = \sum_I d_I |v_I>
+    
+    and Ua and Ub are the matrix transformations of the MO from the basis |v_I>
+    to the basis |u_I>:
+    
+    |MO of (u)> = |MO of (v)> U
+    
+    Return:
+    new_wf   the transformed wave function
+    
     """
     new_wf = Molpro_FCI_Wave_Function()
     new_wf.n_frozen = wf.n_frozen
@@ -607,6 +626,8 @@ def transform_wf(wf, Ua, Ub, just_C0 = False):
     for det_J in wf.determinants:
         new_det = copy.copy(det_J)
         new_det[0] = 0.0
+        logger.debug('====== Starting det %s',
+                     str(new_det))
         for det_I in wf.determinants:
             if abs(det_I[0])>1.0E-11:
                 n_calcs += 1
@@ -623,6 +644,10 @@ def transform_wf(wf, Ua, Ub, just_C0 = False):
                     logger.debug('det_J = %s', str(det_J))
                     logger.debug('det_I = %s', str(det_I))
                     logger.debug('U_minor:\n%s', str(U_minor))
+                    logger.debug('I = %s; c_I = %f; det_minor = %f; c_I*det_minor = %f',
+                                 str(det_I[1:]), det_I[0], U_det_minor_IJ, det_I[0]*U_det_minor_IJ)
+                    logger.debug('current C_J (%s) = %f',
+                                 str(new_det[1:]), new_det[0])
         new_wf.determinants.append(new_det)
         if just_C0:
             break
@@ -996,6 +1021,7 @@ def get_orbitals(output_name):
     n_orb = None
     coef_a = None
     coef_b = None
+    logger.info('File: %s', output_name)
     with open(output_name, 'r') as f: 
         for l in f:
             if 'NUMBER OF CONTRACTIONS' in l:

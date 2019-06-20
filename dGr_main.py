@@ -10,6 +10,7 @@ import logging
 import numpy as np
 from scipy import linalg
 
+from dGr_util import dist_from_ovlp
 import dGr_FCI_Molpro as dFCI
 from dGr_opt_FCI import optimize_distance_to_FCI
 
@@ -31,9 +32,9 @@ def dGr_main(args):
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
-    toout('Hartree-Fock orbitals, |minE>: ' + args.HF_orb)
+    toout('Hartree-Fock orbitals, |min E>: ' + args.HF_orb)
     if args.ini_orb is not None:
-        f_out.write('Initial orbitals: ')
+        f_out.write('Initial guess: ')
         if isinstance(args.ini_orb, tuple):
             toout('Numpy files ' + str(args.ini_orb[0]) +
                         ' and ' + str(args.ini_orb[1]))
@@ -54,8 +55,7 @@ def dGr_main(args):
     ext_wf = dFCI.Molpro_FCI_Wave_Function(args.molpro_output,
                                            args.state if args.state else '1.1',
                                            FCI_file_name = args.WF_templ)
-
-    logger.info('External wave function, initial coefficients:\n' + str(ext_wf))
+    logger.debug('|extWF>, loaded coefficients:\n' + str(ext_wf))
     if logger.level <= logging.INFO:
         S = 0.0
         for det in ext_wf.determinants:
@@ -63,29 +63,27 @@ def dGr_main(args):
         logger.info('Norm of external WF: %f',
                     math.sqrt(S))
 
-    if args.HF_orb is not None:
-        Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb, args.HF_orb)
-        if logger.level <= logging.DEBUG:
-            logger.debug('Wave function, before changing to new basis:\n%s',
-                         str(ext_wf))
-        ext_wf = dFCI.transform_wf(ext_wf, Ua, Ub)
+    if args.HF_orb != args.WF_orb:
+        logger.debug('Getting WF_orb to HF_orb transformation')
+        Ua_HF_to_WF, Ub_HF_to_WF = dFCI.transf_orb_from_to(args.WF_orb, args.HF_orb)
+        ext_wf_HForb_C0 = dFCI.transform_wf(ext_wf,
+                                            Ua_HF_to_WF, Ub_HF_to_WF,
+                                            just_C0=True).determinants[0][0]
+    else:
+        ext_wf_HForb_C0 = ext_wf.determinants[0][0]
 
     if args.ini_orb is not None:
         if isinstance(args.ini_orb, tuple):
             Ua = np.load(args.ini_orb[0])
             Ub = np.load(args.ini_orb[1])
         else:
-            if args.HF_orb is not None:
-                Ua, Ub = dFCI.transf_orb_from_to(args.HF_orb,
-                                                 args.ini_orb)
-            else:
-                Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb,
-                                                 args.ini_orb)
+            Ua, Ub = dFCI.transf_orb_from_to(args.WF_orb,
+                                             args.ini_orb)
     else:
         Ua, Ub = dFCI.get_trans_max_coef(ext_wf)
         toout('Using initial guess for U from det with largest coefficient.')
-        logger.debug('Ua for alpha orbitals:\n' + str(Ua))
-        logger.debug('Ub for beta orbitals:\n' + str(Ub))
+    logger.debug('Initial U for alpha orbitals:\n' + str(Ua))
+    logger.debug('Initial U for beta orbitals:\n' + str(Ub))
 
     toout('Lenght of FCI vector: {0:d}'.\
                 format(len(ext_wf.determinants)))
@@ -95,10 +93,6 @@ def dGr_main(args):
                 format(ext_wf.n_alpha, ext_wf.n_beta))
     toout('First determinant: {0}'.\
                 format(ext_wf.determinants[0]))
-
-    if logger.level <= logging.DEBUG:
-        logger.debug('Wave function, initial coefficients:\n%s',
-                     str(ext_wf))
 
     toout('')
     toout('Starting optimisation')
@@ -130,12 +124,14 @@ def dGr_main(args):
     np.save(args.basename + '-min_dist_Ua', Ua)
     np.save(args.basename + '-min_dist_Ub', Ub)
 
-    toout('First determinant in initial basis:\n|min_E> = {0:s}'.\
-                format(str(ext_wf.determinants[0])))
+    ovlp_D_fmt = '|<{0:s}|{1:s}>| = {2:12.8f} ; D({0:2}, {1:s}) = {3:12.8f}'
+    toout(ovlp_D_fmt.format(
+        'min E', 'extWF',
+        abs(ext_wf_HForb_C0),
+        dist_from_ovlp(ext_wf_HForb_C0)))
 
     logger.info('Transforming FCI initial wave function to the new basis.')
     new_WF = dFCI.transform_wf(ext_wf, Ua, Ub)
-
     logger.info('Checking Hessian engenvalues')
     Jac, Hess = dFCI.construct_Jac_Hess(new_WF, f_out)
     eig_val, eig_vec = linalg.eigh(Hess)
@@ -157,8 +153,12 @@ def dGr_main(args):
         if abs(c[0]) > max_coef:
             max_coef = abs(c[0])
             i_max_coef = i
-    toout('Determinant with largest coefficient: {0:d}\n|min_dist> = {1:s}'.\
+    logger.info('Determinant with largest coefficient: {0:d}, {1:s}'.\
                 format(i_max_coef, str(new_WF.determinants[i_max_coef])))
+    toout(ovlp_D_fmt.format(
+        'min D', 'extWF',
+        abs(new_WF.determinants[i_max_coef][0]),
+        dist_from_ovlp(new_WF.determinants[i_max_coef][0])))
 
     logger.info('Transforming determinant of FCI in initial basis to the new basis.')
     # Note: This is destroing original FCI!
@@ -170,12 +170,16 @@ def dGr_main(args):
         else:
             det[0] = 0.0
 
+    if args.HF_orb != args.WF_orb:
+        Ua = np.matmul(linalg.inv(Ua_HF_to_WF), Ua)
+        Ub = np.matmul(linalg.inv(Ub_HF_to_WF), Ub)
     det_in_new_basis = dFCI.transform_wf(ext_wf, Ua, Ub)
     logger.debug('Determinant in new basis:\n%s',
-                 str(det_in_new_basis))
-
-    toout('|<min_dist|min_E>| = {0:15.12f}'.\
-                format(abs(det_in_new_basis.determinants[i_max_coef][0])))
+                str(det_in_new_basis))
+    toout(ovlp_D_fmt.format(
+        'min E', 'min D',
+        abs(det_in_new_basis.determinants[i_max_coef][0]),
+        dist_from_ovlp(det_in_new_basis.determinants[i_max_coef][0])))
 
     toout('')
     end_time = time.time()
