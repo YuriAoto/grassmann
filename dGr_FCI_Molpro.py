@@ -219,6 +219,7 @@ class Molpro_FCI_Wave_Function():
                                 lspl = l.split()
                                 coef = float(lspl[0])
                                 if is_first_det:
+                                    is_first_det = False
                                     sgn_invert = coef < 0.0
                                 if sgn_invert:
                                     coef = -coef
