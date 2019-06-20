@@ -7,6 +7,7 @@ import time
 import math
 import logging
 
+import git
 import numpy as np
 from scipy import linalg
 
@@ -17,11 +18,15 @@ from dGr_opt_FCI import optimize_distance_to_FCI
 logger = logging.getLogger(__name__)
 
 def dGr_main(args):
+    git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)))
+    git_sha = git_repo.head.object.hexsha
     f_out = open(args.basename + '.min_dist' + args.state, 'w')
     def toout(x):
         f_out.write(x + '\n')
     toout('dGr - optimize the distance in the Grassmannian')
     toout('Yuri Aoto - 2018, 2019')
+    toout('')
+    toout('Current git commit: ' + git_sha)
     toout('')
     toout('Directory:\n' + args.wdir)
     toout('')
