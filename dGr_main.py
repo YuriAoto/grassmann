@@ -102,6 +102,7 @@ def dGr_main(args):
     toout('')
     toout('Starting optimisation')
     toout('-'*30)
+    f_out.flush()
     logger.info('Starting optimisation')
     res = optimize_distance_to_FCI(ext_wf,
                                    dFCI.construct_Jac_Hess,
