@@ -936,6 +936,15 @@ def get_orbitals(output_name):
     
     Behaviour:
     This function loads always the last RHF or UHF orbitals.
+    The returnece matrix (matrices) have the coefficients of
+    the i-th orbital in the ith column:
+    
+    1st MO      2nd MO    ...    nth MO
+    
+    C[0][0]    C[1][1]    ...    C[1][n-1]   -> coef of 1st basis function
+    C[1][0]    C[2][1]    ...    C[2][n-1]   -> coef of 2nd basis function
+    ...        ...        ...    ...
+    C[n-1][0]  C[n-1][1]  ...    C[n][n-1]   -> coef of nth basis function
     
     Returns:
     One (for restricted) or two (for unrestricted) numpy matrices with the
