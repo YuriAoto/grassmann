@@ -176,6 +176,7 @@ def optimize_distance_to_FCI(fci_wf,
                     format(i_iteration,
                            math.sqrt(normZ),
                            math.sqrt(normJ)))
+        f_out.flush()
         logger.info('Norm of z vector: {0:8.5e}'.\
                     format(normZ))
         logger.info('Norm of J vector: {0:8.5e}'.\

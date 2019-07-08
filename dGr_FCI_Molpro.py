@@ -112,12 +112,12 @@ class Molpro_FCI_Wave_Function():
         Parameters:
         file_name - the molpro output with the FCI wave function
         state - state of interest
-        FCI_file_name - if not None, file_name is assumed to be of a non-FCI
-                        wave function, and FCI_file_name has a FCI wave function
+        FCI_file_name - if None, file_name is assumed to be of FCI
+                        wave function, that will be the external wave function.
+                        if not None, FCI_file_name has a FCI wave function
                         to be used as template. In the end, all
                         coefficients will be zero, except those from the
                         wave function of file_name.
-                        if None, file_name is assumed to be a FCI wave function
         """
         self.determinants = []
         self.orb_dim = None
@@ -136,6 +136,7 @@ class Molpro_FCI_Wave_Function():
             FCI_found = False
             FCI_prog_found = False
             # Load the structure of a FCI wave function
+            # and eventually the wave function itself
             with open (FCI_file_name, 'r') as f:
                 for l in f:
                     if 'FCI STATE  '+state+' Energy' in l and 'Energy' in l:
@@ -178,7 +179,7 @@ class Molpro_FCI_Wave_Function():
                             pos_a_fin = pos_a_ini + self.n_alpha
                             pos_b_ini = 1 + 2*self.n_frozen + self.n_alpha
                             pos_b_fin = pos_b_ini + self.n_beta
-            logger.info('norm of FCI: %f', math.sqrt(S))
+                logger.info('norm of FCI (template): %f', math.sqrt(S))
             if not FCI_prog_found or not FCI_found:
                 raise Exception('FCI wave function not found!')
             # Load the required external wave function
@@ -186,16 +187,66 @@ class Molpro_FCI_Wave_Function():
                 ref_found = False
                 sgl_found = False
                 dbl_found = False
+                FCI_found = False
+                FCI_prog_found = False
+                i_FCI_templ = 0
+                is_first_det = True
                 ref = 0.0
                 singles = []
                 doubles = []
                 with open (file_name, 'r') as f:
                     for l in f:
                         if self.WF_type is None:
-                            if molpro_MRCI_header == l:
+                            if l == molpro_FCI_header:
+                                self.WF_type = 'FCI'
+                            elif l == molpro_MRCI_header:
                                 self.WF_type = 'MRCI'
-                            if molpro_CISD_header == l or molpro_CCSD_header == l:
+                            elif l == molpro_CISD_header or l == molpro_CCSD_header:
                                 self.WF_type = 'CISD' if molpro_CISD_header == l else 'CCSD'
+
+                        elif self.WF_type == 'FCI':
+                            if 'FCI STATE  '+state+' Energy' in l and 'Energy' in l:
+                                FCI_found = True
+                                continue
+                            if molpro_FCI_header == l:
+                                FCI_prog_found = True
+                                continue
+                            if FCI_found:
+                                if 'CI Vector' in l:
+                                    continue
+                                if 'EOF' in l:
+                                    break
+                                lspl = l.split()
+                                coef = float(lspl[0])
+                                if is_first_det:
+                                    is_first_det = False
+                                    sgn_invert = coef < 0.0
+                                if sgn_invert:
+                                    coef = -coef
+                                det_descr = lspl[pos_a_ini:pos_a_fin] + lspl[pos_b_ini:pos_b_fin]
+                                det_descr = list(map(lambda x: int(x) - self.n_frozen, det_descr))
+                                while self.determinants[i_FCI_templ][1:] != det_descr:
+                                    i_FCI_templ = (i_FCI_templ + 1
+                                                   if i_FCI_templ < len(self.determinants) else
+                                                   0)
+                                self.determinants[i_FCI_templ][0] = coef
+                            elif FCI_prog_found:
+                                if 'Frozen orbitals:' in l:
+                                    self.n_frozen = int(l.split()[2])
+                                if 'Active orbitals:' in l:
+                                    self.orb_dim = int(l.split()[2])
+                                if 'Active electrons:' in l:
+                                    self.n_elec = int(l.split()[2])
+                                    if self.n_elec%2 != 0:
+                                        raise Exception('Only even number of electrons!')
+                                    self.n_alpha = self.n_elec//2
+                                    self.n_beta = self.n_alpha
+                                    self.beta_shift = self.n_alpha*(self.orb_dim - self.n_alpha)
+                                    pos_a_ini = 1 + self.n_frozen
+                                    pos_a_fin = pos_a_ini + self.n_alpha
+                                    pos_b_ini = 1 + 2*self.n_frozen + self.n_alpha
+                                    pos_b_fin = pos_b_ini + self.n_beta
+
                         elif self.WF_type == 'MRCI':
                             if MRCI_ref_str == l:
                                 ref_found = True
@@ -230,7 +281,6 @@ class Molpro_FCI_Wave_Function():
                                 break
 
                         elif self.WF_type == 'CCSD' or self.WF_type == 'CISD':
-
                             if CC_sgl_str == l:
                                 sgl_found = True
                             elif CC_dbl_str == l:
@@ -537,14 +587,33 @@ def get_trans_max_coef(wf):
 
 def transform_wf(wf, Ua, Ub, just_C0 = False):
     """Transform the wave function as induced by a transformation in the orbital basis
-
-    Parameters
-
+    
+    Arguments:
+    
     wf   the initial wave function as Molpro_FCI_Wave_Function
     Ua   the orbital transformation for alpha orbitals
     Ub   the orbital transformation for beta orbitals
     just_C0   If True, calculates the coefficients of the initial determinant only 
               (default False)
+    
+    Behaviour:
+    
+    If the coefficients of wf are given in the basis |u_I>:
+    
+    |wf> = \sum_I c_I |u_I>
+    
+    it calculates the wave function in the basis |v_I>:
+    
+    |wf> = \sum_I d_I |v_I>
+    
+    and Ua and Ub are the matrix transformations of the MO from the basis |v_I>
+    to the basis |u_I>:
+    
+    |MO of (u)> = |MO of (v)> U
+    
+    Return:
+    new_wf   the transformed wave function
+    
     """
     new_wf = Molpro_FCI_Wave_Function()
     new_wf.n_frozen = wf.n_frozen
@@ -557,6 +626,8 @@ def transform_wf(wf, Ua, Ub, just_C0 = False):
     for det_J in wf.determinants:
         new_det = copy.copy(det_J)
         new_det[0] = 0.0
+        logger.debug('====== Starting det %s',
+                     str(new_det))
         for det_I in wf.determinants:
             if abs(det_I[0])>1.0E-11:
                 n_calcs += 1
@@ -573,6 +644,10 @@ def transform_wf(wf, Ua, Ub, just_C0 = False):
                     logger.debug('det_J = %s', str(det_J))
                     logger.debug('det_I = %s', str(det_I))
                     logger.debug('U_minor:\n%s', str(U_minor))
+                    logger.debug('I = %s; c_I = %f; det_minor = %f; c_I*det_minor = %f',
+                                 str(det_I[1:]), det_I[0], U_det_minor_IJ, det_I[0]*U_det_minor_IJ)
+                    logger.debug('current C_J (%s) = %f',
+                                 str(new_det[1:]), new_det[0])
         new_wf.determinants.append(new_det)
         if just_C0:
             break
@@ -955,6 +1030,7 @@ def get_orbitals(output_name):
     n_orb = None
     coef_a = None
     coef_b = None
+    logger.info('File: %s', output_name)
     with open(output_name, 'r') as f: 
         for l in f:
             if 'NUMBER OF CONTRACTIONS' in l:

@@ -11,22 +11,23 @@ from collections import namedtuple
 class ParseError(Exception):
     pass
 
+def __is_molpro_output(file):
+    """Return True if file is a Molpro output."""
+    with open(file, 'r') as f:
+        for l in f:
+            if '***  PROGRAM SYSTEM MOLPRO  ***' in l:
+                return True
+    return False
 
-CmdArgs = namedtuple('CmdArgs',
-                     ['basename',
-                      'file_name',
-                      'file_name_iniU',
-                      'file_name_HF',
-                      'file_name_FCI',
-                      'WF_orb',
-                      'state',
-                      'loglevel',
-                      'wdir',
-                      'command'])
-
+def __assert_molpro_output(file):
+    """Raise ParseError if file does not exist or is not Molpro file."""
+    if not os.path.isfile(file):
+        raise ParseError('File ' + file + ' not found!')
+    if not __is_molpro_output(file):
+        raise ParseError('File ' + file + ' is not a Molpro output!')
 
 def parse_cmd_line():
-    """Parse the command line for dGr"""
+    """Parse the command line for dGr, checking if it is all OK."""
     parser = argparse.ArgumentParser(description='Optimize the Psi_minD.')
     parser.add_argument('molpro_output',
                         help='Molpro output with the wave function')
@@ -37,55 +38,47 @@ def parse_cmd_line():
     parser.add_argument('--HF_orb',
                         help='Hartree-Fock orbitals (as Molpro output file)')
     parser.add_argument('--WF_orb',
-                        help='Orbital basis of the wave function (as Molpro output file)')
+                        help='Orbital basis of the wave function (as Molpro output file)'
+                        + 'If not given, assume to be the same as molpro_output')
+    parser.add_argument('--WF_templ',
+                        help='A Molpro output with a Full CI wave function,'
+                        + ' to be used as template')
     parser.add_argument('--state',
                         help='Desired state, in Molpro notation')
-    parser.add_argument('--FCIwf',
-                        help='The Full CI wave function, to be used as template')
     parser.add_argument('-l', '--loglevel', type=int,
                         help='Set log level (integer)')
     cmd_args = parser.parse_args()
     file_name = cmd_args.molpro_output
-    basename = re.sub('\.out$', '', file_name)
-    if cmd_args.ini_orb is None:
-        file_name_iniU = None
-    else:
-        if os.path.isfile(cmd_args.ini_orb):
-            file_name_iniU = cmd_args.ini_orb
-        else:
-            if not os.path.isfile(cmd_args.ini_orb + '_Ua.npy'):
-                ParseError('Neither ' + cmd_args.ini_orb
-                           + ' nor ' + cmd_args.ini_orb + '_Ua.npy exist!')
-            if not os.path.isfile(cmd_args.ini_orb + '_Ub.npy'):
-                ParseError('Neither ' + cmd_args.ini_orb
-                           + ' nor ' + cmd_args.ini_orb + '_Ub.npy exist!')
-            file_name_iniU = (cmd_args.ini_orb + '_Ua.npy',
-                              cmd_args.ini_orb + '_Ub.npy')
-    if cmd_args.HF_orb is None:
-        file_name_HF = None
-    else:
-        if os.path.isfile(cmd_args.HF_orb):
-            file_name_HF = cmd_args.HF_orb
-        else:
-            ParseError('File ' + cmd_args.HF_orb + ' not found!')
+    cmd_args.basename = re.sub('\.out$', '', cmd_args.molpro_output)
+    cmd_args.wdir = os.getcwd()
+    cmd_args.command = ' '.join(sys.argv)
+    __assert_molpro_output(cmd_args.molpro_output)
+    if cmd_args.ini_orb is not None:
+        try:
+            __assert_molpro_output(cmd_args.ini_orb)
+        except ParseError as e:
+            if 'not a Molpro output' in str(e):
+                raise e
+            else:
+                if not os.path.isfile(cmd_args.ini_orb + '_Ua.npy'):
+                    raise ParseError('Neither ' + cmd_args.ini_orb
+                                     + ' nor ' + cmd_args.ini_orb
+                                     + '_Ua.npy exist!')
+                if not os.path.isfile(cmd_args.ini_orb + '_Ub.npy'):
+                    raise ParseError('Neither ' + cmd_args.ini_orb
+                                     + ' nor ' + cmd_args.ini_orb
+                                     + '_Ub.npy exist!')
+                cmd_args.ini_orb = (cmd_args.ini_orb + '_Ua.npy',
+                                    cmd_args.ini_orb + '_Ub.npy')
     if cmd_args.WF_orb is None:
-        WF_orb = file_name
+        cmd_args.WF_orb = cmd_args.molpro_output
     else:
-        if not os.path.isfile(cmd_args.WF_orb):
-            ParseError('File ' + cmd_args.WF_orb + ' not found!')
-        WF_orb = cmd_args.WF_orb
-    state = cmd_args.state if cmd_args.state is not None else ''
-    loglevel = cmd_args.loglevel
-    file_name_FCI = cmd_args.FCIwf
-    if file_name_FCI is not None and not os.path.isfile(file_name_FCI):
-        ParseError('File ' + file_name_FCI + ' not found!')
-    return CmdArgs(basename = basename,
-                   file_name = file_name,
-                   file_name_iniU = file_name_iniU,
-                   file_name_HF = file_name_HF,
-                   file_name_FCI = file_name_FCI,
-                   WF_orb = WF_orb,
-                   state = state,
-                   loglevel = loglevel,
-                   wdir = os.getcwd(),
-                   command = ' '.join(sys.argv))
+        __assert_molpro_output(cmd_args.WF_orb)
+    if cmd_args.HF_orb is None:
+        cmd_args.HF_orb = cmd_args.WF_orb
+    else:
+        __assert_molpro_output(cmd_args.HF_orb)
+    if cmd_args.WF_templ is not None:
+        __assert_molpro_output(cmd_args.WF_templ)
+    cmd_args.state = cmd_args.state if cmd_args.state is not None else ''
+    return cmd_args
