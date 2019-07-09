@@ -28,7 +28,7 @@ def __assert_molpro_output(file):
 
 def parse_cmd_line():
     """Parse the command line for dGr, checking if it is all OK."""
-    parser = argparse.ArgumentParser(description='Optimize the Psi_minD.')
+    parser = argparse.ArgumentParser(description='Optimise the distance to the Grassmannian, and obtain |min D>.')
     parser.add_argument('molpro_output',
                         help='Molpro output with the wave function')
     parser.add_argument('--ini_orb',
