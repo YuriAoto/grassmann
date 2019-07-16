@@ -93,6 +93,9 @@ def optimise_distance_to_FCI(fci_wf,
             if None, Identity is used as initial transformation.
             (default = None)
     
+    thrsh_Z    Convergence threshold for Z vector (defult = 1.0E-8)
+    thrsh_J    Convergence threshold for Jacobian (defult = 1.0E-8)
+    
     Returns:
     
     The namedtuple Results. Some particularities are:
@@ -258,8 +261,15 @@ def optimise_distance_to_FCI(fci_wf,
                    n_pos_H_eigVal = n_pos_eigV)
 
 
-def optimise_distance_to_CI(ci_wf):
-    """Find a single Slater determinant that minimise the distance to ci_wf
+def optimise_distance_to_CI(ci_wf
+                            max_iter = 20,
+                            f_out = sys.stdout,
+                            ini_U = None,
+                            thrsh_eta = 1.0E-8,
+                            thrsh_C = 1.0E-8,
+                            only_C = False,
+                            only_eta = False):
+    """Find a single Slater determinant that maximises the overlap to ci_wf
     
     Behaviour:
     
@@ -273,15 +283,155 @@ def optimise_distance_to_CI(ci_wf):
     function (ci_wf), given with a (eventually truncated) configurations
     interaction parametrisation.
     
+    One of the steps is to solve the linear system (A-B) @ eta = C.
+    The convergence is obtained checkin the norm of eta and C
+    
     Parameters:
     
-    ci_wf
+    ci_wf      an instance of a class that represents the external wave function.
+               Such class must have some attributes, that are properly explained below.
     
+    max_iter   the maximum number of iterations in the optimisation
+               (default = 20)
     
+    f_out   the output stream (default = sys.stdout)
     
+    ini_U   if not None, it should be a two elements tuple with
+            initial transformation for alpha and beta orbitals,
+            from the basis of the ci_wf to the basis of the slater
+            determinant
+            if None, Identity is used as initial transformation.
+            (default = None)
+    
+    thrsh_eta      Convergence threshold for eta vector (default = 1.0E-8)
+    thrsh_C        Convergence threshold for C vector (default = 1.0E-8)
+    only_C         If True, stops iterations if C vector passes in the convergence
+                   test, irrespective of the norm of eta (and does not go further
+                   in the iteration) (default = False)
+    only_eta       If True, stops iterations if eta vector passes in the convergence
+                   test, irrespective of the norm of C (default = False)
+    
+    Attributes that ci_wf must have:
+    n_alpha, n_beta (int)              the number of alha ana beta electrons
+    dim_orb_space (int)                dimension of the orbital space
+    get_ABC_matrices (method)          given a transformation U to another orbital basis,
+                                       return the matrices A, B and C, that contain
+                                       the elements to calculate the Newton step
+    distance_to_det (method)           given a transformation U to another orbital basis,
+                                       calculates the distance between the external
+                                       wave function to the slater determinant associated to
+                                       U
     
     Returns:
     
-    The namedtuple Results
+    The namedtuple Results. Some particularities are:
+    
+    norm is a 2-tuple with norm_eta and norm_C.
+    converged is also a 2-tuple, showing convergence for
+    C and eta.
+    n_pos_H_eigVal is not set yet!! We have to know how to calculate this...
+    
     """
-    pass
+    n_pos_eigV = None
+    converged_eta = False
+    converged_C = False
+    f = None
+    f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}\n'.\
+                format('it.', 'f', '|eta|', '|C|'))
+    if only_C and only_eta:
+        raise ValueError('Do not set both only_C and only_eta to True!')
+    if ini_U is not None:
+        U = ini_U
+        if ini_U[0].shape[0] != ci_wf.dim_orb_space:
+            raise ValueError ('ini_U alpha has shape {0:} but dim of orbital space of ci_wf is {1:}'.\
+                              format(ini_U[0].shape[0], ci_wf.dim_orb_space))
+        if ini_U[1].shape[0] != ci_wf.dim_orb_space:
+            raise ValueError ('ini_U beta has shape {0:} but dim of orbital space of ci_wf is {1:}'.\
+                              format(ini_U[1].shape[0], ci_wf.dim_orb_space))
+        if ini_U[0].shape[1] != ci_wf.n_alpha:
+            raise ValueError ('ini_U alpha has shape {0:} but n_alpha in ci_wf is {1:}'.\
+                              format(ini_U[0].shape[1], ci_wf.n_alpha))
+        if ini_U[1].shape[1] != ci_wf.n_beta:
+            raise ValueError ('ini_U beta has shape {0:} but n_beta in ci_wf is {1:}'.\
+                              format(ini_U[1].shape[1], ci_wf.n_beta))
+    else:
+        U = (identity(ci_wf.dim_orb_space)[:,:ci_wf.n_alpha],
+             identity(ci_wf.dim_orb_space)[:,:ci_wf.n_beta])
+    for i_iteration in range(max_iter):
+        A, B, C = ci_wf.get_ABC_matrices(U)
+        if logger.level <= logging.DEBUG:
+            logger.debug('matrix A(alpha, alpha):\n' + str_matrix(A[0][0]))
+            logger.debug('matrix A(alpha, beta):\n' + str_matrix(A[0][1]))
+            logger.debug('matrix A(beta , alpha):\n' + str_matrix(A[1][0]))
+            logger.debug('matrix A(beta , beta):\n' + str_matrix(A[1][1]))
+            logger.debug('matrix B(alpha):\n' + str_matrix(B[0]))
+            logger.debug('matrix B(beta):\n' + str_matrix(B[1]))
+            logger.debug('matrix C(alpha):\n' + str_matrix(C[0]))
+            logger.debug('matrix C(beta):\n' + str_matrix(C[1]))
+        norm_C = 0.0
+        for line in C[0]:
+            for C_ij in line:
+                norm_C += C_ij**2
+        for line in C[1]:
+            for C_ij in line:
+                norm_C += C_ij**2
+        norm_C = math.sqrt(norm_C)
+        logger.info('norm of C matrix: {.5e}'.format(norm_C))
+        if norm_C < thrsh_C:
+            converged_C = True
+            if only_C:
+                break
+        else:
+            converged_C = False
+        B_minus_A, C = _generates_Absil_lin_system(A, B, C)
+        if logger.level <= logging.DEBUG:
+            logger.debug('lin_system, B-A:\n' + str_matrix(B_minus_A))
+            logger.debug('lin_system, C:\n' + str_matrix(C))
+        eta = linalg.solve(B_minus_A, C)
+        if logger.level <= logging.DEBUG:
+            logger.debug('lin_system (solution), eta:\n' + str_matrix(eta))
+        Usvd_a, SGMsvd_a, VTsvd_a = linalg.svd(eta[:ci_wf.n_alpha])
+        Usvd_b, SGMsvd_b, VTsvd_b = linalg.svd(eta[ci_wf.n_alpha:])
+        if logger.level <= logging.DEBUG:
+            logger.debug('SVD results, Usvd_a:\n'   + str_matrix(Usvd_a))
+            logger.debug('SVD results, SGMsvd_a:\n' + str_matrix(SGMsvd_a))
+            logger.debug('SVD results, VTsvd_a:\n'  + str_matrix(VTsvd_a))
+            logger.debug('SVD results, Usvd_b:\n'   + str_matrix(Usvd_b))
+            logger.debug('SVD results, SGMsvd_b:\n' + str_matrix(SGMsvd_b))
+            logger.debug('SVD results, VTsvd_b:\n'  + str_matrix(VTsvd_b))
+        U = (U[0] @ VTsvd_a @ np.cos(SGMsvd_a) + Usvd_a @ np.sin(SGMsvd_a),
+             U[1] @ VTsvd_b @ np.cos(SGMsvd_b) + Usvd_b @ np.sin(SGMsvd_b))
+        if logger.level <= logging.DEBUG:
+            logger.debug('new U_a:\n' + str_matrix(U[0]))
+            logger.debug('new U_b:\n' + str_matrix(U[1]))
+        U = tuple(map(linalg.orth, U))
+        if logger.level <= logging.DEBUG:
+            logger.debug('new U_a, after orthogonalisation:\n' + str_matrix(U[0]))
+            logger.debug('new U_b, after orthogonalisation:\n' + str_matrix(U[1]))
+        f = ci_wf.distance_to_det(U)
+        norm_eta = 0.0
+        for icol in eta:
+            for eta_ij in icol:
+                norm_eta += eta_ij**2
+        norm_eta = math.sqrt(norm_eta)
+        logger.info('norm of eta matrix: {.5e}'.format(norm_eta))
+        f_out.write('{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}\n'.\
+                    format(i_iteration,
+                           f,
+                           norm_eta,
+                           norm_C))
+        if norm_eta < thrsh_eta:
+            converged_eta = True
+            if only_eta:
+                break
+        else:
+            converged_eta = False
+        if converged_C and converged_eta:
+            break
+    return Results(f = f,
+                   U = U,
+                   norm = (norm_eta, norm_C)
+                   last_iteration = i_iteration,
+                   converged = (converged_eta, converged_C),
+                   n_pos_H_eigVal = n_pos_eigV)
+
