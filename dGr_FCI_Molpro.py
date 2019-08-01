@@ -90,7 +90,7 @@ class Molpro_FCI_Wave_Function():
                           alpha orbitals and b_i the occupied beta orbitals.
                           Ex: [0.9, 1, 2, 1, 2] is the determinant with the first
                           two alpha and beta orbitals occupied, with a coefficient
-                          or 0.9.
+                          of 0.9.
     orb_dim (int) : dimension of the (spatial) orbital space
     n_frozen (int) : number of frozen orbitals (assumed to be equal for alpha and beta)
     n_elec (int) : number of electrons
@@ -128,16 +128,13 @@ class Molpro_FCI_Wave_Function():
         self.beta_shift = None
         self.WF_type = None
         sgn_invert = False
-        S = 0.0
-        if FCI_file_name is None:
-            self.WF_type = 'FCI'
-            FCI_file_name = file_name
-        if file_name is not None:
+        if FCI_file_name is not None:
             FCI_found = False
             FCI_prog_found = False
             # Load the structure of a FCI wave function
             # and eventually the wave function itself
             with open (FCI_file_name, 'r') as f:
+                S = 0.0
                 for l in f:
                     if 'FCI STATE  '+state+' Energy' in l and 'Energy' in l:
                         FCI_found = True
@@ -180,8 +177,7 @@ class Molpro_FCI_Wave_Function():
                             pos_b_ini = 1 + 2*self.n_frozen + self.n_alpha
                             pos_b_fin = pos_b_ini + self.n_beta
                 logger.info('norm of FCI (template): %f', math.sqrt(S))
-            if not FCI_prog_found or not FCI_found:
-                raise Exception('FCI wave function not found!')
+        if file_name is not None:
             # Load the required external wave function
             if self.WF_type is None:
                 ref_found = False
@@ -203,13 +199,9 @@ class Molpro_FCI_Wave_Function():
                                 self.WF_type = 'MRCI'
                             elif l == molpro_CISD_header or l == molpro_CCSD_header:
                                 self.WF_type = 'CISD' if molpro_CISD_header == l else 'CCSD'
-
                         elif self.WF_type == 'FCI':
                             if 'FCI STATE  '+state+' Energy' in l and 'Energy' in l:
                                 FCI_found = True
-                                continue
-                            if molpro_FCI_header == l:
-                                FCI_prog_found = True
                                 continue
                             if FCI_found:
                                 if 'CI Vector' in l:
@@ -225,12 +217,15 @@ class Molpro_FCI_Wave_Function():
                                     coef = -coef
                                 det_descr = lspl[pos_a_ini:pos_a_fin] + lspl[pos_b_ini:pos_b_fin]
                                 det_descr = list(map(lambda x: int(x) - self.n_frozen, det_descr))
-                                while self.determinants[i_FCI_templ][1:] != det_descr:
-                                    i_FCI_templ = (i_FCI_templ + 1
-                                                   if i_FCI_templ < len(self.determinants) else
-                                                   0)
-                                self.determinants[i_FCI_templ][0] = coef
-                            elif FCI_prog_found:
+                                if FCI_file_name is not None:
+                                    while self.determinants[i_FCI_templ][1:] != det_descr:
+                                        i_FCI_templ = (i_FCI_templ + 1
+                                                       if i_FCI_templ < len(self.determinants) else
+                                                       0)
+                                    self.determinants[i_FCI_templ][0] = coef
+                                else:
+                                    self.determinants.append([coef] + det_descr)
+                            else:
                                 if 'Frozen orbitals:' in l:
                                     self.n_frozen = int(l.split()[2])
                                 if 'Active orbitals:' in l:
