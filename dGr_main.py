@@ -100,13 +100,15 @@ def dGr_main(args):
     if args.ini_orb is not None:
         if isinstance(args.ini_orb, tuple):
             Ua = np.load(args.ini_orb[0])
-            Ub = np.load(args.ini_orb[1])
+            Ub = np.load(args.ini_orb[1])[:,:ext_wf.n_beta]
         else:
             Ua, Ub = FCI.transf_orb_from_to(args.WF_orb,
                                             args.ini_orb)
     else:
         Ua, Ub = FCI.get_trans_max_coef(ext_wf)
         toout('Using initial guess for U from determinant with largest coefficient.')
+    Ua = Ua[:,:ext_wf.n_alpha]
+    Ub = Ub[:,:ext_wf.n_beta]
     logger.debug('Initial U for alpha orbitals:\n' + str(Ua))
     logger.debug('Initial U for beta orbitals:\n' + str(Ub))
 
@@ -132,9 +134,12 @@ def dGr_main(args):
             f_out = f_out,
             ini_U = (Ua, Ub))
     else:
-        raise Exception('optimise_distance_to_CI is not implemented yet!')
         res = dGr_optimiser.optimise_distance_to_CI(
-            ext_wf)
+            ext_wf,
+            f_out = f_out,
+            ini_U = (Ua, Ub),
+            restricted = False
+        )
     toout('-'*30)
     logger.info('Optimisation completed')
 
@@ -148,13 +153,16 @@ def dGr_main(args):
         else:
             toout('Norm of "residual": {0:8.4e}'.format(res.norm))
         toout()
-    if res.n_pos_H_eigVal > 0:
-        toout('WARNING: Found {0:d} positive eigenvalue(s) for Hessian.'.\
-              format(res.n_pos_H_eigVal))
-        logger.warning('Found {0:d} positive eigenvalue(s) for Hessian.'.\
-                       format(res.n_pos_H_eigVal))
+    if res.n_pos_H_eigVal is None:
+        toout('WARNING: Unknown number of positive eigenvalue(s) of Hessian.')
     else:
-        logger.info('All eigenvalues of Hessian are negative: OK, we are at a maximum!')
+        if res.n_pos_H_eigVal > 0:
+            toout('WARNING: Found {0:d} positive eigenvalue(s) of Hessian.'.\
+                  format(res.n_pos_H_eigVal))
+            logger.warning('Found {0:d} positive eigenvalue(s) of Hessian.'.\
+                           format(res.n_pos_H_eigVal))
+        else:
+            logger.info('All eigenvalues of Hessian are negative: OK, we are at a maximum!')
 
     if isinstance(res.f, tuple):
         toout('WARNING: First determinant is not the one with largest coefficient!')

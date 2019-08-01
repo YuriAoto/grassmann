@@ -11,6 +11,8 @@ import copy
 import math
 import sys
 import logging
+import datetime
+import time
 
 from collections import namedtuple
 import numpy as np
@@ -262,13 +264,142 @@ def optimise_distance_to_FCI(fci_wf,
                    converged = converged,
                    n_pos_H_eigVal = n_pos_eigV)
 
+def _get_norm_of_matrix(M):
+    """Return norm of M
+    
+    If M = array,              returns sqrt(sum Mij)
+    If M = (array_a, array_b), returns sqrt((sum M[0]ij + M[1]ij)/2)
+    """
+    norm = 0.0
+    if isinstance(M, tuple):
+        norm += _get_norm_of_matrix(M[0])
+        norm += _get_norm_of_matrix(M[1])
+        norm = norm/2
+    else:
+        for line in M:
+            for M_ij in line:
+                norm += M_ij**2
+    return math.sqrt(norm)
 
-def optimise_distance_to_CI(ci_wf
+def _generate_Absil_lin_system(A, B, C, U):
+    """Given the matrices A, B, C, reshape to get the linear system
+    
+    Behaviour:
+    
+    From the matrices A, B, C, reshape them to get the
+    matrix (a 2d array) B_minus_A and the vector (a 1D array) C,
+    such that
+    
+    B_minus_A @ eta = C
+    
+    is the linear system to calculate eta, in the step of
+    Absil's Newton-Grassmann optimisation
+    
+    Limitations:
+    
+    It assumes that the number of alpha and beta electrons are the same
+    
+    Parameters:
+    
+    A   (2-tuple of 4D array, for rescricted)
+        (A^a_a, A^a_b) = (A_same, A_mix)
+        
+        (2-tuple of 2-tuples of 4D arrays, for unrestricted)
+        ((A^a_a, A^a_b),
+         (A^b_a, A^b_b))
+    
+    B   (4D array, for rescricted)
+        B^a
+        (2-tuple of 4D array, for unrescricted)
+        (B^a, B^b)
+    
+    C   (2D array, for rescricted)
+        C^a
+        (2-tuple of 2D array, for unrescricted)
+        (C^a, C^b)
+    
+    U   (2D array, for rescricted)
+        Ua
+        (2-tuple of 2D array, for unrescricted)
+        (Ua, Ub)
+        The transformation matrix in this iteration
+        
+    Return:
+    
+    The 2D array A_minus_B and the 1D array Cn
+    """
+    restricted = not isinstance(C, tuple)
+    # n = nubmer of electrons
+    # K = nubmer of orbitals
+    # nK = nubmer of electrons times the number of spatial orbitals
+    if restricted:
+        K = A[0].shape[0]
+        n = A[0].shape[1]
+    else:
+        K = A[0][0].shape[0]
+        n = A[0][0].shape[1]
+    nK = n*K
+    # test all entries and shapes?
+    if restricted:
+        Cn = np.zeros(nK + n)
+        Cn[:nK] = np.ravel(C,order='C')
+    else:
+        Cn = np.zeros(2*(nK + n))
+        Cn[:2*nK] = np.concatenate((np.ravel(C[0], order='C'),
+                                    np.ravel(C[1], order='C')))
+    if restricted:
+        B_minus_A = np.zeros((nK + n, nK))
+        B_minus_A[:nK,:] = np.reshape(B, (nK, nK), order='C')
+        B_minus_A[:nK,:] -= np.reshape(A[0], (nK, nK), order='C')
+        B_minus_A[:nK,:] -= np.reshape(A[1], (nK, nK), order='C')
+        # --> Extra term due to normalisation
+        B_minus_A[:nK,:] += 2*np.multiply.outer(Cn[:nK], np.ravel(U, order='C'))
+        # --> Terms to guarantee orthogonality to U
+        B_minus_A[nK:,:] += U.T
+    else:
+        B_minus_A = np.zeros((2*(nK + n), 2*nK))
+        B_minus_A[:nK, :nK] = np.reshape(B[0],
+                                         (nK, nK),
+                                         order='C')
+        B_minus_A[:nK, :nK] -= np.reshape(A[0][0],
+                                          (nK, nK),
+                                          order='C')
+        B_minus_A[nK:2*nK, nK:] = np.reshape(B[1],
+                                         (nK, nK),
+                                         order='C')
+        B_minus_A[nK:2*nK, nK:] -= np.reshape(A[1][1],
+                                          (nK, nK),
+                                          order='C')
+        B_minus_A[:nK, nK:] -= np.reshape(A[0][1],
+                                          (nK, nK),
+                                          order='C')
+        B_minus_A[nK:2*nK, :nK] -= np.reshape(A[1][0],
+                                          (nK, nK),
+                                          order='C')
+        # --> Extra term due to normalisation
+        B_minus_A[:nK, :nK] += np.multiply.outer(Cn[:nK],
+                                                 np.ravel(U[0], order='C'))
+        B_minus_A[:nK, nK:] += np.multiply.outer(Cn[:nK],
+                                                 np.ravel(U[1], order='C'))
+        B_minus_A[nK:2*nK, :nK] += np.multiply.outer(Cn[nK:2*nK],
+                                                 np.ravel(U[0], order='C'))
+        B_minus_A[nK:2*nK, nK:] += np.multiply.outer(Cn[nK:2*nK],
+                                                 np.ravel(U[1], order='C'))
+        # --> Terms to guarantee orthogonality to U
+        ## Can be made more efficiente if order = 'F' is used!!!
+        for iel in range(n):
+            for iorb in range(K):
+                B_minus_A[2*nK     + iel,      iel + n*iorb] = U[0][iorb,iel]
+                B_minus_A[2*nK + n + iel, nK + iel + n*iorb] = U[1][iorb,iel]
+    return B_minus_A, Cn
+
+def optimise_distance_to_CI(ci_wf,
                             max_iter = 20,
                             f_out = sys.stdout,
+                            restricted = True,
                             ini_U = None,
-                            thrsh_eta = 1.0E-8,
-                            thrsh_C = 1.0E-8,
+                            thrsh_eta = 1.0E-6,
+                            thrsh_C = 1.0E-6,
                             only_C = False,
                             only_eta = False):
     """Find a single Slater determinant that maximises the overlap to ci_wf
@@ -288,15 +419,25 @@ def optimise_distance_to_CI(ci_wf
     One of the steps is to solve the linear system (A-B) @ eta = C.
     The convergence is obtained checkin the norm of eta and C
     
+    Limitations:
+    
+    The system is assumed to have the same number of alpha and beta electrons.
+    
+    
     Parameters:
     
     ci_wf      an instance of a class that represents the external wave function.
-               Such class must have some attributes, that are properly explained below.
+               Such class must have some attributes, that are explained below.
     
     max_iter   the maximum number of iterations in the optimisation
                (default = 20)
     
-    f_out   the output stream (default = sys.stdout)
+    f_out      the output stream (default = sys.stdout)
+    
+    restricted  (bool, optional, default = True)
+                Optimise the spatial part of both alpha and beta equally.
+                Assume that the reference orbital is also restricted
+                and that the ci_wf is symmetric in alpha and beta.
     
     ini_U   if not None, it should be a two elements tuple with
             initial transformation for alpha and beta orbitals,
@@ -315,14 +456,16 @@ def optimise_distance_to_CI(ci_wf
     
     Attributes that ci_wf must have:
     n_alpha, n_beta (int)              the number of alha ana beta electrons
-    dim_orb_space (int)                dimension of the orbital space
+    orb_dim (int)                      dimension of the orbital space
     get_ABC_matrices (method)          given a transformation U to another orbital basis,
                                        return the matrices A, B and C, that contain
-                                       the elements to calculate the Newton step
+                                       the elements to calculate the Newton step.
+                                       See the documentation of _generate_Absil_lin_system
+                                       for a description of shapes of these matrices.
     distance_to_det (method)           given a transformation U to another orbital basis,
                                        calculates the distance between the external
                                        wave function to the slater determinant associated to
-                                       U
+                                       U.
     
     Returns:
     
@@ -334,6 +477,7 @@ def optimise_distance_to_CI(ci_wf
     n_pos_H_eigVal is not set yet!! We have to know how to calculate this...
     
     """
+    check_equations = True
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
@@ -342,81 +486,169 @@ def optimise_distance_to_CI(ci_wf
                 format('it.', 'f', '|eta|', '|C|'))
     if only_C and only_eta:
         raise ValueError('Do not set both only_C and only_eta to True!')
+    if restricted and ci_wf.n_alpha != ci_wf.n_beta:
+        raise ValueError('For restricted calculation, CI wf must have n_alpha = n_beta')
     if ini_U is not None:
+        if restricted:
+            if not isinstance(ini_U, np.array):
+                raise ValueError('For restricted calculations, ini_U must be a numpy.array')
+            if ini_U.shape[0] != ci_wf.orb_dim:
+                raise ValueError ('ini_U has shape[0] {0:} but dim of orbital space of ci_wf is {1:}'.\
+                                  format(ini_U.shape[0], ci_wf.orb_dim))
+            if ini_U.shape[1] != ci_wf.n_alpha:
+                raise ValueError ('ini_U alpha has shape[1] {0:} but n_alpha in ci_wf is {1:}'.\
+                                  format(ini_U.shape[1], ci_wf.n_alpha))
+        else:
+            if not isinstance(ini_U, tuple):
+                raise ValueError('For unrestricted calculations,'
+                                 + ' ini_U must be a 2-tuple of numpy.array')
+            if ini_U[0].shape[0] != ci_wf.orb_dim:
+                raise ValueError (('ini_U alpha has shape[0] {0:}'
+                                   + ' but dim of orbital space of ci_wf is {1:}').\
+                                  format(ini_U[0].shape[0], ci_wf.orb_dim))
+            if ini_U[1].shape[0] != ci_wf.orb_dim:
+                raise ValueError (('ini_U beta has shape[0] {0:}'
+                                   + ' but dim of orbital space of ci_wf is {1:}').\
+                                  format(ini_U[1].shape[0], ci_wf.orb_dim))
+            if ini_U[0].shape[1] != ci_wf.n_alpha:
+                raise ValueError (('ini_U alpha has shape[1] {0:}'
+                                   + ' but n_alpha in ci_wf is {1:}').\
+                                  format(ini_U[0].shape[1], ci_wf.n_alpha))
+            if ini_U[1].shape[1] != ci_wf.n_beta:
+                raise ValueError (('ini_U beta has shape[1] {0:}'
+                                   + ' but n_beta in ci_wf is {1:}').\
+                                  format(ini_U[1].shape[1], ci_wf.n_beta))
         U = ini_U
-        if ini_U[0].shape[0] != ci_wf.dim_orb_space:
-            raise ValueError ('ini_U alpha has shape {0:} but dim of orbital space of ci_wf is {1:}'.\
-                              format(ini_U[0].shape[0], ci_wf.dim_orb_space))
-        if ini_U[1].shape[0] != ci_wf.dim_orb_space:
-            raise ValueError ('ini_U beta has shape {0:} but dim of orbital space of ci_wf is {1:}'.\
-                              format(ini_U[1].shape[0], ci_wf.dim_orb_space))
-        if ini_U[0].shape[1] != ci_wf.n_alpha:
-            raise ValueError ('ini_U alpha has shape {0:} but n_alpha in ci_wf is {1:}'.\
-                              format(ini_U[0].shape[1], ci_wf.n_alpha))
-        if ini_U[1].shape[1] != ci_wf.n_beta:
-            raise ValueError ('ini_U beta has shape {0:} but n_beta in ci_wf is {1:}'.\
-                              format(ini_U[1].shape[1], ci_wf.n_beta))
     else:
-        U = (identity(ci_wf.dim_orb_space)[:,:ci_wf.n_alpha],
-             identity(ci_wf.dim_orb_space)[:,:ci_wf.n_beta])
+        if restricted:
+            U = np.identity(ci_wf.orb_dim)[:,:ci_wf.n_alpha]
+        else:
+            U = (np.identity(ci_wf.orb_dim)[:,:ci_wf.n_alpha],
+                 np.identity(ci_wf.orb_dim)[:,:ci_wf.n_beta])
     for i_iteration in range(max_iter):
+        logger.info('Calculating matrices A, B, C...')
+        ini_time = time.time()
+
+        ## testing f
+        # Ua, Ub = U
+        # Ua[2,2] += 0.1
+        # print(ci_wf.distance_to_det((Ua, Ub)))
+        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # Ua[4,1] -= 0.5
+        # print(ci_wf.distance_to_det((Ua, Ub)))
+        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # Ub[4,1] += 0.3
+        # print(ci_wf.distance_to_det((Ua, Ub)))
+        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # exit()
+
         A, B, C = ci_wf.get_ABC_matrices(U)
+        end_time = time.time()
+        elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
+        logger.info('Total time to calculate matrices A, B, C: {}'.\
+                    format(elapsed_time))
         if logger.level <= logging.DEBUG:
-            logger.debug('matrix A(alpha, alpha):\n' + str_matrix(A[0][0]))
-            logger.debug('matrix A(alpha, beta):\n' + str_matrix(A[0][1]))
-            logger.debug('matrix A(beta , alpha):\n' + str_matrix(A[1][0]))
-            logger.debug('matrix A(beta , beta):\n' + str_matrix(A[1][1]))
-            logger.debug('matrix B(alpha):\n' + str_matrix(B[0]))
-            logger.debug('matrix B(beta):\n' + str_matrix(B[1]))
-            logger.debug('matrix C(alpha):\n' + str_matrix(C[0]))
-            logger.debug('matrix C(beta):\n' + str_matrix(C[1]))
-        norm_C = 0.0
-        for line in C[0]:
-            for C_ij in line:
-                norm_C += C_ij**2
-        for line in C[1]:
-            for C_ij in line:
-                norm_C += C_ij**2
-        norm_C = math.sqrt(norm_C)
-        logger.info('norm of C matrix: {.5e}'.format(norm_C))
+            if restricted:
+                logger.debug('matrix A:\n' + str_matrix(A))
+                logger.debug('matrix B:\n' + str_matrix(B))
+                logger.debug('matrix C:\n' + str_matrix(C))
+            else:
+                logger.debug('matrix A(alpha, alpha):\n' + str(A[0][0]))
+                logger.debug('matrix A(alpha, beta):\n' + str(A[0][1]))
+                logger.debug('matrix A(beta , alpha):\n' + str(A[1][0]))
+                logger.debug('matrix A(beta , beta):\n' + str(A[1][1]))
+                logger.debug('matrix B(alpha):\n' + str(B[0]))
+                logger.debug('matrix B(beta):\n' + str(B[1]))
+                logger.debug('matrix C(alpha):\n' + str_matrix(C[0]))
+                logger.debug('matrix C(beta):\n' + str_matrix(C[1]))
+        norm_C = _get_norm_of_matrix(C)
+        logger.info('norm of matrix C: {:.5e}'.format(norm_C))
         if norm_C < thrsh_C:
             converged_C = True
             if only_C:
                 break
         else:
             converged_C = False
-        B_minus_A, C = _generates_Absil_lin_system(A, B, C)
+        logger.info('Generating linear system...')
+        ini_time = time.time()
+        B_minus_A, C = _generate_Absil_lin_system(A, B, C, U)
+        end_time = time.time()
+        elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
+        logger.info('Total time to generate linear system: {}'.\
+                    format(elapsed_time))
         if logger.level <= logging.DEBUG:
             logger.debug('lin_system, B-A:\n' + str_matrix(B_minus_A))
-            logger.debug('lin_system, C:\n' + str_matrix(C))
-        eta = linalg.solve(B_minus_A, C)
+            logger.debug('lin_system, C:\n' + str(C))
+##            logger.debug('determinant of B-A:\n' + str(linalg.det(B_minus_A)))
+        logger.info('Solving linear system...')
+        ini_time = time.time()
+        ###        eta = linalg.solve(B_minus_A, C)
+        eta = linalg.lstsq(B_minus_A, C, cond=None)[0]
+##        print (results) check for effective rank?
+##        exit()
+        end_time = time.time()
+        elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
+        logger.info('Total time to solve the linear system: {}'.\
+                    format(elapsed_time))
         if logger.level <= logging.DEBUG:
-            logger.debug('lin_system (solution), eta:\n' + str_matrix(eta))
-        Usvd_a, SGMsvd_a, VTsvd_a = linalg.svd(eta[:ci_wf.n_alpha])
-        Usvd_b, SGMsvd_b, VTsvd_b = linalg.svd(eta[ci_wf.n_alpha:])
+            logger.debug('lin_system (solution), eta:\n' + str(eta))
+        if restricted:
+            eta = np.reshape(eta, C.shape, order='C')
+            Usvd_a, SGMsvd_a, VTsvd_a = linalg.svd(eta,
+                                                   full_matrices=False)
+        else:
+            eta = (np.reshape(eta[:ci_wf.n_alpha*ci_wf.orb_dim],
+                              U[0].shape, order='C'),
+                   np.reshape(eta[ci_wf.n_alpha*ci_wf.orb_dim:],
+                              U[1].shape, order='C'))
+            # testing: projecting eta
+##            eta = (np.matmul((np.identity(U[0].shape[0]) - np.matmul(U[0], U[0].T)), eta[0]),
+##                   np.matmul((np.identity(U[1].shape[0]) - np.matmul(U[1], U[1].T)), eta[1]))
+            Usvd_a, SGMsvd_a, VTsvd_a = linalg.svd(eta[0],
+                                                   full_matrices=False)
+            Usvd_b, SGMsvd_b, VTsvd_b = linalg.svd(eta[1],
+                                                   full_matrices=False)
+        if check_equations:
+            ci_wf.check_Newton_Absil_eq(U, eta, eps = 0.0000001)
         if logger.level <= logging.DEBUG:
             logger.debug('SVD results, Usvd_a:\n'   + str_matrix(Usvd_a))
-            logger.debug('SVD results, SGMsvd_a:\n' + str_matrix(SGMsvd_a))
+            logger.debug('SVD results, SGMsvd_a:\n' + str(SGMsvd_a))
             logger.debug('SVD results, VTsvd_a:\n'  + str_matrix(VTsvd_a))
-            logger.debug('SVD results, Usvd_b:\n'   + str_matrix(Usvd_b))
-            logger.debug('SVD results, SGMsvd_b:\n' + str_matrix(SGMsvd_b))
-            logger.debug('SVD results, VTsvd_b:\n'  + str_matrix(VTsvd_b))
-        U = (U[0] @ VTsvd_a @ np.cos(SGMsvd_a) + Usvd_a @ np.sin(SGMsvd_a),
-             U[1] @ VTsvd_b @ np.cos(SGMsvd_b) + Usvd_b @ np.sin(SGMsvd_b))
+            if not restricted:
+                logger.debug('SVD results, Usvd_a:\n'   + str_matrix(Usvd_a))
+                logger.debug('SVD results, SGMsvd_a:\n' + str(SGMsvd_a))
+                logger.debug('SVD results, VTsvd_a:\n'  + str_matrix(VTsvd_a))
+        if restricted:
+            U = np.matmul(U, VTsvd_a.T * np.cos(SGMsvd_a))
+            U +=  Usvd_a * np.sin(SGMsvd_a)
+        else:
+            U = (np.matmul(U[0], VTsvd_a.T * np.cos(SGMsvd_a))
+                 + Usvd_a * np.sin(SGMsvd_a),
+                 np.matmul(U[1], VTsvd_b.T * np.cos(SGMsvd_b))
+                 + Usvd_b * np.sin(SGMsvd_b))
         if logger.level <= logging.DEBUG:
-            logger.debug('new U_a:\n' + str_matrix(U[0]))
-            logger.debug('new U_b:\n' + str_matrix(U[1]))
-        U = tuple(map(linalg.orth, U))
+            if restricted:
+                logger.debug('new U:\n' + str_matrix(U))
+            else:
+                logger.debug('new U_a:\n' + str_matrix(U[0]))
+                logger.debug('new U_b:\n' + str_matrix(U[1]))
+        if restricted:
+            U = linalg.orth(U)
+        else:
+            U = tuple(map(linalg.orth, U))
         if logger.level <= logging.DEBUG:
             logger.debug('new U_a, after orthogonalisation:\n' + str_matrix(U[0]))
             logger.debug('new U_b, after orthogonalisation:\n' + str_matrix(U[1]))
+        logger.info('Calculating f...')
+        ini_time = time.time()
+        ### Maybe use f from ci_wf.get_ABC_matrices(U), that is of previous iteration?
         f = ci_wf.distance_to_det(U)
-        norm_eta = 0.0
-        for icol in eta:
-            for eta_ij in icol:
-                norm_eta += eta_ij**2
-        norm_eta = math.sqrt(norm_eta)
-        logger.info('norm of eta matrix: {.5e}'.format(norm_eta))
+        end_time = time.time()
+        elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
+        logger.info('Total time to calculate f: {}'.\
+                    format(elapsed_time))
+        norm_eta = _get_norm_of_matrix(eta)
+        logger.info('norm of eta matrix: {:.5e}'.format(norm_eta))
         f_out.write('{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}\n'.\
                     format(i_iteration,
                            f,
@@ -432,8 +664,7 @@ def optimise_distance_to_CI(ci_wf
             break
     return Results(f = f,
                    U = U,
-                   norm = (norm_eta, norm_C)
+                   norm = (norm_eta, norm_C),
                    last_iteration = i_iteration,
                    converged = (converged_eta, converged_C),
                    n_pos_H_eigVal = n_pos_eigV)
-
