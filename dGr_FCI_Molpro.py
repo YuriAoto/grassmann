@@ -525,19 +525,6 @@ def rank_of_exc(determinant):
     return rank
 
 
-def str_matrix(X):
-    """Return a str of X."""
-    strM = []
-    for i in X:
-        strI = []
-        for j in i:
-            strI.append(' {0:10.6f} '.format(j)\
-                        if abs(j) > 1.0E-7 else
-                        (' ' + '-'*10 + ' '))
-        strM.append(''.join(strI))
-    return '\n'.join(strM)
-
-
 def get_trans_max_coef(wf):
     """
     Return Ua and Ub that transforms the orbitals
