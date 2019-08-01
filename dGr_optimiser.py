@@ -16,6 +16,8 @@ from collections import namedtuple
 import numpy as np
 from scipy import linalg
 
+from dGr_util import str_matrix
+
 logger = logging.getLogger(__name__)
 
 

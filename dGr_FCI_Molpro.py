@@ -58,6 +58,8 @@ import copy
 import math
 import re
 
+from dGr_util import str_matrix
+
 logger = logging.getLogger(__name__)
 
 molpro_FCI_header = ' PROGRAM * FCI (Full CI)     Author: P.J. Knowles, 1984\n'

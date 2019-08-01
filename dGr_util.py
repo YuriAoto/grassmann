@@ -10,7 +10,10 @@ sqrt2 = math.sqrt(2.0)
 
 def dist_from_ovlp(x):
     """Convert from overlap to distance."""
-    return sqrt2 * math.sqrt(1 - abs(x))
+    try:
+        return sqrt2 * math.sqrt(1 - abs(x))
+    except ValueError:
+        return 0.0
 
 def ovlp_Slater_dets(Ua, Ub, na, nb):
     """Calculate the overlap between two Slater determinants
@@ -38,3 +41,15 @@ def ovlp_Slater_dets(Ua, Ub, na, nb):
     The overlap between the determinants (float)
     """
     return linalg.det(Ua[:na,:na])*linalg.det(Ub[:nb,:nb])
+
+def str_matrix(X):
+    """Return a str of the 2D list or array X."""
+    strM = []
+    for i in X:
+        strI = []
+        for j in i:
+            strI.append(' {0:10.6f} '.format(j)\
+                        if abs(j) > 1.0E-7 else
+                        (' ' + '-'*10 + ' '))
+        strM.append(''.join(strI))
+    return '\n'.join(strM)
