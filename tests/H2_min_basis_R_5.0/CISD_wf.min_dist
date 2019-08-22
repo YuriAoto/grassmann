@@ -1,0 +1,24 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 1c8191434fb9b6cf20e12c73123465fe4bd0445c
+
+Directory:
+/home/yuriaoto/Documents/Geom_Elec_Str/dist_to_FCI/testing/H2_min_basis_R_5.0
+
+Command:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr --ini_orb UHF.out --HF_orb UHF.out --WF_orb RHF.out CISD_wf.out
+
+From command line and environment:
+External wave function, |extWF>: CISD_wf.out
+Orbital basis of |extWF>: RHF.out
+Hartree-Fock orbitals, |min E>: UHF.out
+Initial guess: Molpro output UHF.out
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: Level None
+qpy job ID: not in qpy
+
+Starting at 26 Jul 2019 - 14:56
+
