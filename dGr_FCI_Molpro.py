@@ -43,7 +43,7 @@ all possible Slater determinants), but it can be the true FCI wave function
 or a CID, or CISD wave function (with explicit zeros for other determinants)
 
 TODO:
-CCD, CCSD, MP2.
+Inherit from dGr_general_WF.Wave_Function
 
 Perhaps storing the orbital indices of the determinants starting at 0,
 like Python, is better than starting at 1, as Molprop does.
@@ -63,6 +63,7 @@ import math
 import re
 
 from dGr_util import str_matrix
+import dGr_Absil
 
 logger = logging.getLogger(__name__)
 
@@ -512,6 +513,7 @@ class Molpro_FCI_Wave_Function():
         for det in self.determinants:
             S += det[0]**2
         S = math.sqrt(S)
+        print('norm, inside FCI:', S)
         for det in self.determinants:
             det[0] /= S
 
@@ -552,8 +554,8 @@ class Molpro_FCI_Wave_Function():
             if abs(det[0]) < thresh_cI:
                 continue
             f += (det[0]
-                  * _calc_fI(Ua, [x-1 for x in det[1:self.n_alpha+1]])
-                  * _calc_fI(Ub, [x-1 for x in det[self.n_alpha+1:]]))
+                  * dGr_Absil.calc_fI(Ua, [x-1 for x in det[1:self.n_alpha+1]])
+                  * dGr_Absil.calc_fI(Ub, [x-1 for x in det[self.n_alpha+1:]]))
         if not assume_orth:
             Da = linalg.det(np.matmul(Ua.T, Ua))
             Db = linalg.det(np.matmul(Ub.T, Ub))
@@ -753,8 +755,8 @@ class Molpro_FCI_Wave_Function():
                 continue
             Ia = [x-1 for x in det[1:self.n_alpha+1]]
             Ib = [x-1 for x in det[self.n_alpha+1:]]
-            Fa = _calc_fI(Ua, Ia)
-            Fb = _calc_fI(Ub, Ib)
+            Fa = dGr_Absil.calc_fI(Ua, Ia)
+            Fb = dGr_Absil.calc_fI(Ub, Ib)
             Proj_a = np.identity(K)
             Ga = np.zeros(Ua.shape)
             if not restricted:
@@ -771,18 +773,18 @@ class Molpro_FCI_Wave_Function():
                             Proj_b[i,k] -= np.dot(Ub[i,:], Ub[k,:])
                         for j in range(na):
                             if j != l:
-                                Hkl_a[i,j] = _calc_H(Ua, Ia, i, j, k, l)
+                                Hkl_a[i,j] = dGr_Absil.calc_H(Ua, Ia, i, j, k, l)
                                 if not restricted:
-                                    Hkl_b[i,j] = _calc_H(Ub, Ib, i, j, k, l)
+                                    Hkl_b[i,j] = dGr_Absil.calc_H(Ub, Ib, i, j, k, l)
                             else:
                                 Ba[i,j,k,l] += det[0] * Fa * Fb * Proj_a[i,k]
                                 if not restricted:
                                     Bb[i,j,k,l] += det[0] * Fa * Fb * Proj_b[i,k]
-                    Ga[k,l] = _calc_G(Ua, Ia, k, l)
-                    Gb[k,l] = _calc_G(Ub, Ib, k, l)
+                    Ga[k,l] = dGr_Absil.calc_G(Ua, Ia, k, l)
+                    Gb[k,l] = dGr_Absil.calc_G(Ub, Ib, k, l)
 #                    Ga[k,l] += np.dot(Hkl_a[:,na-1], Ua[:,na-1])
 #                    if restricted:
-#                        Gb[k,l] = _calc_G(Ub, Ib, k, l)
+#                        Gb[k,l] = dGr_Absil.calc_G(Ub, Ib, k, l)
 #                    else:
 #                        Gb[k,l] += np.dot(Hkl_b[i,nb-1], Ub[i,nb-1])
                     Aa_a[k,l,:,:] += det[0] * Fb * np.matmul(Proj_a, Hkl_a)
@@ -801,80 +803,6 @@ class Molpro_FCI_Wave_Function():
             return ((Aa_a, Aa_b),
                     (Ab_a, Ab_b)), (Ba, Bb), (Ca, Cb)
 
-def _calc_fI(U, det_indices):
-    """Calculate the contribution of U[det_indices,:],
-
-    Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-
-    Return:
-    det(U[det_indices, :])
-    """
-    return linalg.det(U[det_indices, :])
-
-def _calc_G(U, det_indices, i, j):
-    """Calculate the element ij of matrix G
-    
-    Behaviour:
-    Calculates the following the determinant:
-    det(U[det_indices, :] <-j- e_i )
-    See _calc_H for details.
-    
-    Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-    i,j (int)             the indices
-
-    Return:
-    det(U[det_indices, :] <-j- e_i )
-    """
-    if i not in det_indices:
-        return 0.0
-    if U.shape[1] == 1:
-        return 1.0
-    sign = 1 if (j + det_indices.index(i))%2 == 0 else -1
-    row_ind = np.array([x for x in det_indices       if x!=i], dtype=int)
-    col_ind = np.array([x for x in range(U.shape[1]) if x!=j], dtype=int)
-    return sign*linalg.det(U[row_ind[:,None],col_ind])
-
-def _calc_H(U, det_indices, i, j, k, l):
-    """Calculate the element ijkl of matrix H
-    
-    Behaviour:
-    Calculates the following the determinant:
-    det(U[det_indices, :] <-j- e_i <-l- e_k )
-    where <-j- e_i means that the j-th column
-    of the matrix is replaced by the vector e_i
-    (with all zeros except at i, that has a 1).
-    i is between 0 and U.shape[0], and by expansion
-    on the replaced jth column, i+1 must be in det_indices
-    for non vanishing determinant.
-    Analogous for <-l- e_k.
-    if j == l (trying to replace the same column)
-    gives 0 (irrespective of i and k!)
-    
-    
-    Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-    i,j,k,l (int)         the indices
-
-    Return:
-    det(U[det_indices, :] <-j- e_i <-l- e_k )
-    """
-    if j == l or i == k:
-        return 0.0
-    if i not in det_indices or k not in det_indices:
-        return 0.0
-    sign = 1.0 if ((i<k) == (j<l)) else -1.0
-    if U.shape == 2:
-        return sign
-    if (j + det_indices.index(i) + l + det_indices.index(k))%2 == 1:
-        sign = -sign
-    row_ind = np.array([x for x in det_indices       if (x!=i and x!=k)], dtype=int)
-    col_ind = np.array([x for x in range(U.shape[1]) if (x!=j and x!=l)], dtype=int)
-    return sign*linalg.det(U[row_ind[:,None],col_ind])
 
 def rank_of_exc(determinant):
     """Return the excitation rank of the determinant.

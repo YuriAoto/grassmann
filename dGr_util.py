@@ -53,3 +53,12 @@ def str_matrix(X):
                         (' ' + '-'*10 + ' '))
         strM.append(''.join(strI))
     return '\n'.join(strM)
+
+def get_I(n, i, a):
+    """return range(n).remove(i) + [a]"""
+    if isinstance(i, int):
+        if not isinstance(a, int):
+            raise ValueError('Both i and a must be list or int!')
+        return [x for x in range(n) if x != i] + [a]
+    else:
+        return [x for x in range(n) if x not in i] + a
