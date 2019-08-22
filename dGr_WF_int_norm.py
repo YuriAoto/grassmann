@@ -36,7 +36,69 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         self.norm = None
         self.singles = None
         self.doubles = None
-       
+    
+    def all_dets(self):
+        """Generate all determinants, yielding normalised CI-like wave function"""
+        if self.norm is None:
+            raise ValueError('Norm has not been calculated yet!')
+        if self.WF_type != 'CISD':
+            raise NotImplementedError('Curently works only for CISD')
+        yield genWF.Ref_Det(c = 1.0/self.norm)
+        for S in self.singles:
+            yield genWF.Singly_Exc_Det(c = (S.t/self.norm
+                                            if (S.i + self.n_alpha-1) % 2 == 0 else
+                                            -S.t/self.norm),
+                                       i = S.i,
+                                       a = S.a,
+                                       spin = 1)
+            yield genWF.Singly_Exc_Det(c = (S.t/self.norm
+                                            if (S.i + self.n_beta-1) % 2 == 0 else
+                                            -S.t/self.norm),
+                                       i = S.i,
+                                       a = S.a,
+                                       spin = -1)
+        for D in self.doubles:
+            if D.a < D.b:
+                continue
+            coeff = D.t
+            if D.a != D.b:
+                t_compl = 0.0
+                for Dba in self.doubles:
+                    if (D.i == Dba.i
+                        and D.j == Dba.j
+                        and D.a == Dba.b
+                        and D.b == Dba.a):
+                        t_compl = Dba.t
+                        break
+                coeff = (coeff + t_compl)/2
+            if (D.i + D.j) % 2 == 1:
+                coeff = -coeff
+            coeff /= self.norm
+            yield genWF.Doubly_Exc_Det(c = coeff,
+                                       i = D.i, a = D.a, spin_ia = +1,
+                                       j = D.j, b = D.b, spin_jb = -1)
+            if D.a != D.b:
+                yield genWF.Doubly_Exc_Det(c = coeff,
+                                           i = D.i, a = D.b, spin_ia = +1,
+                                           j = D.j, b = D.a, spin_jb = -1)
+            if D.i != D.j:
+                yield genWF.Doubly_Exc_Det(c = coeff,
+                                           i = D.j, a = D.a, spin_ia = +1,
+                                           j = D.i, b = D.b, spin_jb = -1)
+                if D.a != D.b:
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.j, a = D.b, spin_ia = +1,
+                                               j = D.i, b = D.a, spin_jb = -1)
+                    coeff = (t_compl - D.t)/self.norm
+                    if (D.i + D.j) % 2 == 1:
+                        coeff = -coeff
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.i, a = D.a, spin_ia = +1,
+                                               j = D.j, b = D.b, spin_jb = +1)
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.i, a = D.a, spin_ia = -1,
+                                               j = D.j, b = D.b, spin_jb = -1)
+
     @classmethod
     def from_Molpro(cls, molpro_output):
         """Load the wave function from Molpro output."""
@@ -152,7 +214,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                     S_main.t, S_main.i, S_main.a,
                     D_main.t, D_main.i, D_main.j, D_main.a, D_main.b))
 
-    def distance_to_det(self, U, assume_orth = False):
+    def distance_to_det(self, U, thresh_cI=1E-10, assume_orth = False):
         """Calculates the distance to the determinant U
         
         See dGr_FCI_Molpro.Molpro_FCI_Wave_Function.distance_to_det
@@ -161,50 +223,38 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
             Ua, Ub = U
         else:
             Ua = Ub = U
-        f0_a = Absil.calc_fI(Ua, range(self.n_alpha))
-        f0_b = Absil.calc_fI(Ub, range(self.n_beta))
-        f = f0_a * f0_b
-        for S in self.singles:
-            fI_a = Absil.calc_fI(Ua, get_I(self.n_alpha, S.i, S.a)) * f0_b
-            fI_b = Absil.calc_fI(Ub, get_I(self.n_beta, S.i, S.a)) * f0_a
-            if (S.i + self.n_alpha-1) % 2 == 1:
-                fI_a *= -1
-            if (S.i + self.n_beta-1) % 2 == 1:
-                fI_b *= -1
-            f += S.t * (fI_a + fI_b)
-        for D in self.doubles:
-            if D.a < D.b:
+        for det in self.all_dets():
+            if abs(det.c) < thresh_cI:
                 continue
-            fI = (Absil.calc_fI(Ua, get_I(self.n_alpha, D.i, D.a))
-                  * Absil.calc_fI(Ub, get_I(self.n_beta, D.j, D.b)))
-            if D.a != D.b:
-                fI += (Absil.calc_fI(Ua, get_I(self.n_alpha, D.i, D.b))
-                       * Absil.calc_fI(Ub, get_I(self.n_beta, D.j, D.a)))
-            if D.i != D.j:
-                fI += (Absil.calc_fI(Ua, get_I(self.n_alpha, D.j, D.a))
-                       * Absil.calc_fI(Ub, get_I(self.n_beta, D.i, D.b)))
-                if D.a != D.b:
-                    fI += (Absil.calc_fI(Ua, get_I(self.n_alpha, D.j, D.b))
-                           * Absil.calc_fI(Ub, get_I(self.n_beta, D.i, D.a)))
-            t_compl = 0.0
-            if D.a != D.b:
-                fI /= 2    
-                for Dba in self.doubles:
-                    if (D.i == Dba.i
-                        and D.j == Dba.j
-                        and D.a == Dba.b
-                        and D.b == Dba.a):
-                        t_compl = Dba.t
-                        break
-            fI *= D.t + t_compl
-            if D.a != D.b and D.i != D.j:
-                fI2 = Absil.calc_fI(Ua, get_I(self.n_alpha, [D.i, D.j], [D.b, D.a])) * f0_b
-                fI2 += Absil.calc_fI(Ua, get_I(self.n_beta, [D.i, D.j], [D.b, D.a])) * f0_a
-                fI += fI2 * (t_compl - D.t)
-            if (D.i + D.j) % 2 == 1:
-                fI = -fI
-            f += fI
-        f /= self.norm
+            if isinstance(det, genWF.Ref_Det):
+                f0_a = Absil.calc_fI(Ua, get_I(self.n_alpha))
+                f0_b = Absil.calc_fI(Ub, get_I(self.n_beta))
+                f = det.c * f0_a * f0_b
+            else:
+                try:
+                    f
+                except NameError:
+                    raise NameError('First determinant has to be genWF.Ref_Det!')
+            if isinstance(det, genWF.Singly_Exc_Det):
+                if det.spin > 0:
+                    f += det.c * Absil.calc_fI(Ua, get_I(self.n_alpha, det.i, det.a)) * f0_b
+                else:
+                    f += det.c * Absil.calc_fI(Ub, get_I(self.n_beta, det.i, det.a)) * f0_a
+            elif isinstance(det, genWF.Doubly_Exc_Det):
+                if det.spin_ia * det.spin_jb < 0:
+                    f += (det.c
+                          * Absil.calc_fI(Ua, get_I(self.n_alpha, det.i, det.a))
+                          * Absil.calc_fI(Ub, get_I(self.n_beta,  det.j, det.b)))
+                elif det.spin_ia > 0:
+                    f += (det.c * f0_b
+                          * Absil.calc_fI(Ua, get_I(self.n_alpha,
+                                                    [det.i, det.j],
+                                                    sorted([det.a, det.b]))))
+                else:
+                    f += (det.c * f0_a
+                          * Absil.calc_fI(Ub, get_I(self.n_beta,
+                                                    [det.i, det.j],
+                                                    sorted([det.a, det.b]))))
         if not assume_orth:
             Da = linalg.det(np.matmul(Ua.T, Ua))
             Db = linalg.det(np.matmul(Ub.T, Ub))

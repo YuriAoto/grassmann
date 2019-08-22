@@ -54,11 +54,13 @@ def str_matrix(X):
         strM.append(''.join(strI))
     return '\n'.join(strM)
 
-def get_I(n, i, a):
+def get_I(n, i=None, a=None):
     """return range(n).remove(i) + [a]"""
+    if type(i) != type(a):
+        raise ValueError('Both i and a must be of same type!')
+    if i is None:
+        return range(n)
     if isinstance(i, int):
-        if not isinstance(a, int):
-            raise ValueError('Both i and a must be list or int!')
         return [x for x in range(n) if x != i] + [a]
     else:
         return [x for x in range(n) if x not in i] + a
