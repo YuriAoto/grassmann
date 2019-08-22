@@ -19,7 +19,7 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import str_matrix
-
+from dGr_absil import check_Newton_Absil_eq
 logger = logging.getLogger(__name__)
 
 
@@ -609,7 +609,7 @@ def optimise_distance_to_CI(ci_wf,
             Usvd_b, SGMsvd_b, VTsvd_b = linalg.svd(eta[1],
                                                    full_matrices=False)
         if check_equations:
-            ci_wf.check_Newton_Absil_eq(U, eta, eps = 0.0000001)
+            check_Newton_Absil_eq(ci_wf.distance_to_det, U, eta, eps = 0.0000001)
         if logger.level <= logging.DEBUG:
             logger.debug('SVD results, Usvd_a:\n'   + str_matrix(Usvd_a))
             logger.debug('SVD results, SGMsvd_a:\n' + str(SGMsvd_a))
