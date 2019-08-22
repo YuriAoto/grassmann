@@ -167,9 +167,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         for S in self.singles:
             fI_a = Absil.calc_fI(Ua, get_I(self.n_alpha, S.i, S.a)) * f0_b
             fI_b = Absil.calc_fI(Ub, get_I(self.n_beta, S.i, S.a)) * f0_a
-            if S.i + self.n_alpha % 2 == 1:
+            if (S.i + self.n_alpha-1) % 2 == 1:
                 fI_a *= -1
-            if S.i + self.n_beta % 2 == 1:
+            if (S.i + self.n_beta-1) % 2 == 1:
                 fI_b *= -1
             f += S.t * (fI_a + fI_b)
         for D in self.doubles:
@@ -201,7 +201,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                 fI2 = Absil.calc_fI(Ua, get_I(self.n_alpha, [D.i, D.j], [D.b, D.a])) * f0_b
                 fI2 += Absil.calc_fI(Ua, get_I(self.n_beta, [D.i, D.j], [D.b, D.a])) * f0_a
                 fI += fI2 * (t_compl - D.t)
-            if D.i + D.j % 2 == 1:
+            if (D.i + D.j) % 2 == 1:
                 fI = -fI
             f += fI
         f /= self.norm
