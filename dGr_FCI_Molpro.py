@@ -63,7 +63,7 @@ import math
 import re
 
 from dGr_util import str_matrix
-import dGr_Absil
+import dGr_Absil as Absil
 
 logger = logging.getLogger(__name__)
 
@@ -517,7 +517,7 @@ class Molpro_FCI_Wave_Function():
         for det in self.determinants:
             S += det[0]**2
         S = math.sqrt(S)
-        print('norm, inside FCI:', S)
+#        print('norm, inside FCI:', S)
         for det in self.determinants:
             det[0] /= S
 
@@ -558,8 +558,8 @@ class Molpro_FCI_Wave_Function():
             if abs(det[0]) < thresh_cI:
                 continue
             f += (det[0]
-                  * dGr_Absil.calc_fI(Ua, [x-1 for x in det[1:self.n_alpha+1]])
-                  * dGr_Absil.calc_fI(Ub, [x-1 for x in det[self.n_alpha+1:]]))
+                  * Absil.calc_fI(Ua, [x-1 for x in det[1:self.n_alpha+1]])
+                  * Absil.calc_fI(Ub, [x-1 for x in det[self.n_alpha+1:]]))
         if not assume_orth:
             Da = linalg.det(np.matmul(Ua.T, Ua))
             Db = linalg.det(np.matmul(Ub.T, Ub))
@@ -630,8 +630,8 @@ class Molpro_FCI_Wave_Function():
                 continue
             Ia = [x-1 for x in det[1:self.n_alpha+1]]
             Ib = [x-1 for x in det[self.n_alpha+1:]]
-            Fa = dGr_Absil.calc_fI(Ua, Ia)
-            Fb = dGr_Absil.calc_fI(Ub, Ib)
+            Fa = Absil.calc_fI(Ua, Ia)
+            Fb = Absil.calc_fI(Ub, Ib)
             Proj_a = np.identity(K)
             Ga = np.zeros(Ua.shape)
             if not restricted:
@@ -648,18 +648,18 @@ class Molpro_FCI_Wave_Function():
                             Proj_b[i,k] -= np.dot(Ub[i,:], Ub[k,:])
                         for j in range(na):
                             if j != l:
-                                Hkl_a[i,j] = dGr_Absil.calc_H(Ua, Ia, i, j, k, l)
+                                Hkl_a[i,j] = Absil.calc_H(Ua, Ia, i, j, k, l)
                                 if not restricted:
-                                    Hkl_b[i,j] = dGr_Absil.calc_H(Ub, Ib, i, j, k, l)
+                                    Hkl_b[i,j] = Absil.calc_H(Ub, Ib, i, j, k, l)
                             else:
                                 Ba[i,j,k,l] += det[0] * Fa * Fb * Proj_a[i,k]
                                 if not restricted:
                                     Bb[i,j,k,l] += det[0] * Fa * Fb * Proj_b[i,k]
-                    Ga[k,l] = dGr_Absil.calc_G(Ua, Ia, k, l)
-                    Gb[k,l] = dGr_Absil.calc_G(Ub, Ib, k, l)
+                    Ga[k,l] = Absil.calc_G(Ua, Ia, k, l)
+                    Gb[k,l] = Absil.calc_G(Ub, Ib, k, l)
 #                    Ga[k,l] += np.dot(Hkl_a[:,na-1], Ua[:,na-1])
 #                    if restricted:
-#                        Gb[k,l] = dGr_Absil.calc_G(Ub, Ib, k, l)
+#                        Gb[k,l] = Absil.calc_G(Ub, Ib, k, l)
 #                    else:
 #                        Gb[k,l] += np.dot(Hkl_b[i,nb-1], Ub[i,nb-1])
                     Aa_a[k,l,:,:] += det[0] * Fb * np.matmul(Proj_a, Hkl_a)
