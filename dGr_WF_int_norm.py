@@ -280,5 +280,107 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         return f
 
     def get_ABC_matrices(self, U, thresh_cI=1E-10):
-        """Calculates the arrays A,B,C needed for Absil's algorithm"""
-        pass
+        """Calculates the arrays A,B,C needed for Absil's algorithm
+        
+        See dGr_FCI_Molpro.Molpro_FCI_Wave_Function.distance_to_det
+        """
+        if isinstance(U, tuple):
+            Ua, Ub = U
+            restricted = False
+        else:
+            Ua = Ub = U
+            restricted = True
+        K, na = Ua.shape
+        nb = Ub.shape[1]
+        if na != nb:
+            raise NotImplementedError('We need both Ua and Ub with same shape!')
+        if K != self.orb_dim:
+            raise ValueError('First dimension of U must match orb_dim!')
+        if na != self.n_alpha:
+            raise ValueError('Second dimension of Ua must match the n_alpha!')
+        if nb != self.n_beta:
+            raise ValueError('Second dimension of Ua must match the n_beta!')
+        ABshape = Ua.shape*2
+        Aa_a = np.zeros(ABshape)
+        Aa_b = np.zeros(ABshape)
+        Ba = np.zeros(ABshape)
+        Ca = np.zeros(Ua.shape)
+        if not restricted:
+            Ab_a = np.zeros(ABshape)
+            Ab_b = np.zeros(ABshape)
+            Bb = np.zeros(ABshape)
+            Cb = np.zeros(Ub.shape)
+        for det in self.all_dets():
+            if abs(det.c) < thresh_cI:
+                continue
+            if isinstance(det, genWF.Ref_Det):
+                Ia = range(self.n_alpha)
+                Ib = range(self.n_beta)
+            elif isinstance(det, genWF.Singly_Exc_Det):
+                if det.spin > 0:
+                    Ia = get_I(self.n_alpha, det.i, det.a)
+                    Ib = range(self.n_beta)
+                else:
+                    Ia = range(self.n_alpha)
+                    Ib = get_I(self.n_beta, det.i, det.a)
+            elif isinstance(det, genWF.Doubly_Exc_Det):
+                if det.spin_ia * det.spin_jb < 0:
+                    Ia = get_I(self.n_alpha, det.i, det.a)
+                    Ib = get_I(self.n_beta,  det.j, det.b)
+                elif det.spin_ia > 0:
+                    Ia = get_I(self.n_alpha,
+                               [det.i, det.j],
+                               sorted([det.a, det.b]))
+                    Ib = range(self.n_beta)
+                else:
+                    Ia = range(self.n_alpha)
+                    Ib = get_I(self.n_beta,
+                               [det.i, det.j],
+                               sorted([det.a, det.b]))
+            Fa = Absil.calc_fI(Ua, Ia)
+            Fb = Absil.calc_fI(Ub, Ib)
+            Proj_a = np.identity(K)
+            Ga = np.zeros(Ua.shape)
+            if not restricted:
+                Gb = np.zeros(Ub.shape)
+                Proj_b = np.identity(K)
+            for k in range(K):
+                for l in range(na):
+                    Hkl_a = np.zeros(Ua.shape)
+                    if not restricted:
+                        Hkl_b = np.zeros(Ub.shape)
+                    for i in range(K):
+                        Proj_a[i,k] -= np.dot(Ua[i,:], Ua[k,:])
+                        if not restricted:
+                            Proj_b[i,k] -= np.dot(Ub[i,:], Ub[k,:])
+                        for j in range(na):
+                            if j != l:
+                                Hkl_a[i,j] = Absil.calc_H(Ua, Ia, i, j, k, l)
+                                if not restricted:
+                                    Hkl_b[i,j] = Absil.calc_H(Ub, Ib, i, j, k, l)
+                            else:
+                                Ba[i,j,k,l] += det[0] * Fa * Fb * Proj_a[i,k]
+                                if not restricted:
+                                    Bb[i,j,k,l] += det[0] * Fa * Fb * Proj_b[i,k]
+                    Ga[k,l] = Absil.calc_G(Ua, Ia, k, l)
+                    Gb[k,l] = Absil.calc_G(Ub, Ib, k, l)
+#                    Ga[k,l] += np.dot(Hkl_a[:,na-1], Ua[:,na-1])
+#                    if restricted:
+#                        Gb[k,l] = Absil.calc_G(Ub, Ib, k, l)
+#                    else:
+#                        Gb[k,l] += np.dot(Hkl_b[i,nb-1], Ub[i,nb-1])
+                    Aa_a[k,l,:,:] += det[0] * Fb * np.matmul(Proj_a, Hkl_a)
+                    if not restricted:
+                        Ab_b[k,l,:,:] += det[0] * Fa * np.matmul(Proj_b, Hkl_b)
+            det_G_FU = det[0] * (Ga - Fa * Ua)
+            Ca += Fb * det_G_FU
+            Aa_b += np.multiply.outer(det_G_FU, Gb)
+            if not restricted:
+                det_G_FU = det[0] * (Gb - Fb * Ub)
+                Cb += Fa * det_G_FU
+                Ab_a += np.multiply.outer(det_G_FU, Ga)
+        if restricted:
+            return (Aa_a, Aa_b), Ba, Ca
+        else:
+            return ((Aa_a, Aa_b),
+                    (Ab_a, Ab_b)), (Ba, Bb), (Ca, Cb)

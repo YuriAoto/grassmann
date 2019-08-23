@@ -13,6 +13,7 @@ from scipy import linalg
 
 from dGr_util import dist_from_ovlp, ovlp_Slater_dets
 import dGr_FCI_Molpro as FCI
+import dGr_WF_int_norm as IntN
 import dGr_optimiser
 
 logger = logging.getLogger(__name__)
@@ -69,25 +70,30 @@ def dGr_main(args):
         time.strftime("%d %b %Y - %H:%M",time.localtime(start_time))))
     toout()
     # ----- loading wave function
-    ext_wf = FCI.Molpro_FCI_Wave_Function(args.molpro_output,
-                                          args.state if args.state else '1.1',
-                                          FCI_file_name = args.WF_templ)
-    if logger.level <= logging.DEBUG:
-        logger.debug('|extWF>, loaded coefficients:\n' + str(ext_wf))
-        S = 0.0
-        for det in ext_wf.determinants:
-            S += det[0]**2
-        logger.debug('Norm of external WF: %f',
-                     math.sqrt(S))
+    #
+    if use_FCIopt:
+        ext_wf = FCI.Molpro_FCI_Wave_Function(args.molpro_output,
+                                              args.state if args.state else '1.1',
+                                              FCI_file_name = args.WF_templ)
+    else:
+        ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
+        ext_wf.calc_norm()
+    # if logger.level <= logging.DEBUG:
+    #     logger.debug('|extWF>, loaded coefficients:\n' + str(ext_wf))
+    #     S = 0.0
+    #     for det in ext_wf.determinants:
+    #         S += det[0]**2
+    #     logger.debug('Norm of external WF: %f',
+    #                  math.sqrt(S))
 
     if args.HF_orb != args.WF_orb:
         toout('Using as |min E> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
         Ua_HF_to_WF, Ub_HF_to_WF = FCI.transf_orb_from_to(args.WF_orb, args.HF_orb)
-        print_ovlp_D('min E', 'extWF',
-                     FCI.transform_wf(ext_wf,
-                                      Ua_HF_to_WF, Ub_HF_to_WF,
-                                      just_C0=True).determinants[0][0])
+#        print_ovlp_D('min E', 'extWF',
+#                     FCI.transform_wf(ext_wf,
+#                                      Ua_HF_to_WF, Ub_HF_to_WF,
+#                                      just_C0=True).determinants[0][0])
         print_ovlp_D('min E', 'WFref',
                      ovlp_Slater_dets(Ua_HF_to_WF,
                                       Ub_HF_to_WF,
@@ -95,7 +101,8 @@ def dGr_main(args):
                                       ext_wf.n_beta))
     else:
         toout('Using |WFref> (the reference of |extWF>) as |min E>:')
-    print_ovlp_D('WFref', 'extWF', ext_wf.determinants[0][0])
+#    print_ovlp_D('WFref', 'extWF', ext_wf.determinants[0][0])
+    print_ovlp_D('WFref', 'extWF', 1.0/ext_wf.norm)
 
     if args.ini_orb is not None:
         if isinstance(args.ini_orb, tuple):
@@ -107,13 +114,14 @@ def dGr_main(args):
     else:
         Ua, Ub = FCI.get_trans_max_coef(ext_wf)
         toout('Using initial guess for U from determinant with largest coefficient.')
-    Ua = Ua[:,:ext_wf.n_alpha]
-    Ub = Ub[:,:ext_wf.n_beta]
+    if not use_FCIopt:
+        Ua = Ua[:,:ext_wf.n_alpha]
+        Ub = Ub[:,:ext_wf.n_beta]
     logger.debug('Initial U for alpha orbitals:\n' + str(Ua))
     logger.debug('Initial U for beta orbitals:\n' + str(Ub))
 
-    toout('Number of determinants in the external wave function: {0:d}'.\
-          format(len(ext_wf.determinants)))
+#    toout('Number of determinants in the external wave function: {0:d}'.\
+#          format(len(ext_wf.determinants)))
     toout('Dimension of orbital space: {0:d}'.\
           format(ext_wf.orb_dim))
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.\
