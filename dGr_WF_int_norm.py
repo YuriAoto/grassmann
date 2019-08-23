@@ -60,8 +60,18 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         for D in self.doubles:
             if D.a < D.b:
                 continue
-            coeff = D.t
-            if D.a != D.b:
+            if D.a == D.b:
+                coeff = D.t / self.norm
+                if (D.i + D.j) % 2 == 1:
+                    coeff = -coeff
+                yield genWF.Doubly_Exc_Det(c = coeff,
+                                           i = D.i, a = D.a, spin_ia = +1,
+                                           j = D.j, b = D.b, spin_jb = -1)
+                if D.i != D.j:
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.j, a = D.a, spin_ia = +1,
+                                               j = D.i, b = D.b, spin_jb = -1)
+            else:
                 t_compl = 0.0
                 for Dba in self.doubles:
                     if (D.i == Dba.i
@@ -70,25 +80,15 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                         and D.b == Dba.a):
                         t_compl = Dba.t
                         break
-                coeff = (coeff + t_compl)/2
-            if (D.i + D.j) % 2 == 1:
-                coeff = -coeff
-            coeff /= self.norm
-            yield genWF.Doubly_Exc_Det(c = coeff,
-                                       i = D.i, a = D.a, spin_ia = +1,
-                                       j = D.j, b = D.b, spin_jb = -1)
-            if D.a != D.b:
-                yield genWF.Doubly_Exc_Det(c = coeff,
-                                           i = D.i, a = D.b, spin_ia = +1,
-                                           j = D.j, b = D.a, spin_jb = -1)
-            if D.i != D.j:
-                yield genWF.Doubly_Exc_Det(c = coeff,
-                                           i = D.j, a = D.a, spin_ia = +1,
-                                           j = D.i, b = D.b, spin_jb = -1)
-                if D.a != D.b:
+                if D.i == D.j:
+                    coeff = (D.t + t_compl) / (2 * self.norm)
                     yield genWF.Doubly_Exc_Det(c = coeff,
-                                               i = D.j, a = D.b, spin_ia = +1,
-                                               j = D.i, b = D.a, spin_jb = -1)
+                                               i = D.i, a = D.a, spin_ia = +1,
+                                               j = D.j, b = D.b, spin_jb = -1)
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.i, a = D.b, spin_ia = +1,
+                                               j = D.j, b = D.a, spin_jb = -1)
+                else:
                     coeff = (t_compl - D.t)/self.norm
                     if (D.i + D.j) % 2 == 1:
                         coeff = -coeff
@@ -98,6 +98,24 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                     yield genWF.Doubly_Exc_Det(c = coeff,
                                                i = D.i, a = D.a, spin_ia = -1,
                                                j = D.j, b = D.b, spin_jb = -1)
+                    coeff = D.t / self.norm
+                    if (D.i + D.j) % 2 == 1:
+                        coeff = -coeff
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.i, a = D.a, spin_ia = +1,
+                                               j = D.j, b = D.b, spin_jb = -1)
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.j, a = D.b, spin_ia = +1,
+                                               j = D.i, b = D.a, spin_jb = -1)
+                    coeff = t_compl / self.norm
+                    if (D.i + D.j) % 2 == 1:
+                        coeff = -coeff
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.i, a = D.b, spin_ia = +1,
+                                               j = D.j, b = D.a, spin_jb = -1)
+                    yield genWF.Doubly_Exc_Det(c = coeff,
+                                               i = D.j, a = D.a, spin_ia = +1,
+                                               j = D.i, b = D.b, spin_jb = -1)
 
     @classmethod
     def from_Molpro(cls, molpro_output):
