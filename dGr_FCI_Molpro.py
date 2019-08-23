@@ -359,6 +359,9 @@ class Molpro_FCI_Wave_Function():
                             det[0] = float(s[0]) if (self.n_alpha+s[1])%2 == 0 else -float(s[0])
                             break
                 if rk == 2:
+                    if exc_type == 'ab':
+                        ai_are_both_larger = ((exc_descr[0] > exc_descr[1])
+                                               == (exc_descr[2] > exc_descr[3]))
                     if len(exc_descr) != 4:
                         raise Exception('Length of exc_descr is not 4 for double excitation.')
                     for d in Cdbl:
@@ -376,8 +379,9 @@ class Molpro_FCI_Wave_Function():
                                         det[0] += float(d[0]) if (d[1] + d[2])%2 == 0 else -float(d[0])
                                     else:
                                         det[0] += float(d[0]) if (d[1] + d[2])%2 == 1 else -float(d[0])
-                                elif exc_type == 'ab' and d[3] == exc_descr[2]:
-                                    det[0] += float(d[0]) if (d[1] + d[2])%2 == 0 else -float(d[0])
+                                elif exc_type == 'ab':
+                                    if ai_are_both_larger == (d[3] > d[4]):
+                                        det[0] += float(d[0]) if (d[1] + d[2])%2 == 0 else -float(d[0])
         self.normalise()
 
     def load_CCSD_WF(self, Tsgl, Tdbl):
