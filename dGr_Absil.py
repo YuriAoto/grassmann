@@ -7,8 +7,11 @@ f(x) = <0|ext>
 where |0> is a Slater determinant and |ext> a correlated wave function
 
 """
+import logging
 import numpy as np
 from numpy import linalg
+
+logger = logging.getLogger(__name__)
 
 
 def calc_fI(U, det_indices):

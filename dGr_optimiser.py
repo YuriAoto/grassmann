@@ -19,7 +19,7 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import str_matrix
-from dGr_absil import check_Newton_Absil_eq
+from dGr_Absil import check_Newton_Absil_eq
 logger = logging.getLogger(__name__)
 
 

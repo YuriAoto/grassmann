@@ -59,7 +59,7 @@ def get_I(n, i=None, a=None):
     if type(i) != type(a):
         raise ValueError('Both i and a must be of same type!')
     if i is None:
-        return range(n)
+        return list(range(n))
     if isinstance(i, int):
         return [x for x in range(n) if x != i] + [a]
     else:
