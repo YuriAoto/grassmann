@@ -19,7 +19,7 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import str_matrix
-from dGr_Absil import check_Newton_Absil_eq
+import dGr_Absil as Absil
 logger = logging.getLogger(__name__)
 
 
@@ -281,117 +281,6 @@ def _get_norm_of_matrix(M):
                 norm += M_ij**2
     return math.sqrt(norm)
 
-def _generate_Absil_lin_system(A, B, C, U):
-    """Given the matrices A, B, C, reshape to get the linear system
-    
-    Behaviour:
-    
-    From the matrices A, B, C, reshape them to get the
-    matrix (a 2d array) B_minus_A and the vector (a 1D array) C,
-    such that
-    
-    B_minus_A @ eta = C
-    
-    is the linear system to calculate eta, in the step of
-    Absil's Newton-Grassmann optimisation
-    
-    Limitations:
-    
-    It assumes that the number of alpha and beta electrons are the same
-    
-    Parameters:
-    
-    A   (2-tuple of 4D array, for rescricted)
-        (A^a_a, A^a_b) = (A_same, A_mix)
-        
-        (2-tuple of 2-tuples of 4D arrays, for unrestricted)
-        ((A^a_a, A^a_b),
-         (A^b_a, A^b_b))
-    
-    B   (4D array, for rescricted)
-        B^a
-        (2-tuple of 4D array, for unrescricted)
-        (B^a, B^b)
-    
-    C   (2D array, for rescricted)
-        C^a
-        (2-tuple of 2D array, for unrescricted)
-        (C^a, C^b)
-    
-    U   (2D array, for rescricted)
-        Ua
-        (2-tuple of 2D array, for unrescricted)
-        (Ua, Ub)
-        The transformation matrix in this iteration
-        
-    Return:
-    
-    The 2D array A_minus_B and the 1D array Cn
-    """
-    restricted = not isinstance(C, tuple)
-    # n = nubmer of electrons
-    # K = nubmer of orbitals
-    # nK = nubmer of electrons times the number of spatial orbitals
-    if restricted:
-        K = A[0].shape[0]
-        n = A[0].shape[1]
-    else:
-        K = A[0][0].shape[0]
-        n = A[0][0].shape[1]
-    nK = n*K
-    # test all entries and shapes?
-    if restricted:
-        Cn = np.zeros(nK + n)
-        Cn[:nK] = np.ravel(C,order='C')
-    else:
-        Cn = np.zeros(2*(nK + n))
-        Cn[:2*nK] = np.concatenate((np.ravel(C[0], order='C'),
-                                    np.ravel(C[1], order='C')))
-    if restricted:
-        B_minus_A = np.zeros((nK + n, nK))
-        B_minus_A[:nK,:] = np.reshape(B, (nK, nK), order='C')
-        B_minus_A[:nK,:] -= np.reshape(A[0], (nK, nK), order='C')
-        B_minus_A[:nK,:] -= np.reshape(A[1], (nK, nK), order='C')
-        # --> Extra term due to normalisation
-        B_minus_A[:nK,:] += 2*np.multiply.outer(Cn[:nK], np.ravel(U, order='C'))
-        # --> Terms to guarantee orthogonality to U
-        B_minus_A[nK:,:] += U.T
-    else:
-        B_minus_A = np.zeros((2*(nK + n), 2*nK))
-        B_minus_A[:nK, :nK] = np.reshape(B[0],
-                                         (nK, nK),
-                                         order='C')
-        B_minus_A[:nK, :nK] -= np.reshape(A[0][0],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[nK:2*nK, nK:] = np.reshape(B[1],
-                                         (nK, nK),
-                                         order='C')
-        B_minus_A[nK:2*nK, nK:] -= np.reshape(A[1][1],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[:nK, nK:] -= np.reshape(A[0][1],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[nK:2*nK, :nK] -= np.reshape(A[1][0],
-                                          (nK, nK),
-                                          order='C')
-        # --> Extra term due to normalisation
-        B_minus_A[:nK, :nK] += np.multiply.outer(Cn[:nK],
-                                                 np.ravel(U[0], order='C'))
-        B_minus_A[:nK, nK:] += np.multiply.outer(Cn[:nK],
-                                                 np.ravel(U[1], order='C'))
-        B_minus_A[nK:2*nK, :nK] += np.multiply.outer(Cn[nK:2*nK],
-                                                 np.ravel(U[0], order='C'))
-        B_minus_A[nK:2*nK, nK:] += np.multiply.outer(Cn[nK:2*nK],
-                                                 np.ravel(U[1], order='C'))
-        # --> Terms to guarantee orthogonality to U
-        ## Can be made more efficiente if order = 'F' is used!!!
-        for iel in range(n):
-            for iorb in range(K):
-                B_minus_A[2*nK     + iel,      iel + n*iorb] = U[0][iorb,iel]
-                B_minus_A[2*nK + n + iel, nK + iel + n*iorb] = U[1][iorb,iel]
-    return B_minus_A, Cn
 
 def optimise_distance_to_CI(ci_wf,
                             max_iter = 20,
@@ -457,15 +346,6 @@ def optimise_distance_to_CI(ci_wf,
     Attributes that ci_wf must have:
     n_alpha, n_beta (int)              the number of alha ana beta electrons
     orb_dim (int)                      dimension of the orbital space
-    get_ABC_matrices (method)          given a transformation U to another orbital basis,
-                                       return the matrices A, B and C, that contain
-                                       the elements to calculate the Newton step.
-                                       See the documentation of _generate_Absil_lin_system
-                                       for a description of shapes of these matrices.
-    distance_to_det (method)           given a transformation U to another orbital basis,
-                                       calculates the distance between the external
-                                       wave function to the slater determinant associated to
-                                       U.
     
     Returns:
     
@@ -532,17 +412,17 @@ def optimise_distance_to_CI(ci_wf,
         ## testing f
         # Ua, Ub = U
         # Ua[2,2] += 0.1
-        # print(ci_wf.distance_to_det((Ua, Ub)))
-        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # print(Absil.distance_to_det(ci_wf,(Ua, Ub)))
+        # print(Absil.distance_to_det(ci_wf,(linalg.orth(Ua), Ub)))
         # Ua[4,1] -= 0.5
-        # print(ci_wf.distance_to_det((Ua, Ub)))
-        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # print(Absil.distance_to_det(ci_wf,(Ua, Ub)))
+        # print(Absil.distance_to_det(ci_wf,(linalg.orth(Ua), Ub)))
         # Ub[4,1] += 0.3
-        # print(ci_wf.distance_to_det((Ua, Ub)))
-        # print(ci_wf.distance_to_det((linalg.orth(Ua), Ub)))
+        # print(absil.distance_to_det(ci_wf,(Ua, Ub)))
+        # print(Absil.distance_to_det(ci_wf,(linalg.orth(Ua), Ub)))
         # exit()
 
-        A, B, C = ci_wf.get_ABC_matrices(U)
+        A, B, C = Absil.get_ABC_matrices(ci_wf, U)
         end_time = time.time()
         elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
         logger.info('Total time to calculate matrices A, B, C: {}'.\
@@ -571,7 +451,7 @@ def optimise_distance_to_CI(ci_wf,
             converged_C = False
         logger.info('Generating linear system...')
         ini_time = time.time()
-        B_minus_A, C = _generate_Absil_lin_system(A, B, C, U)
+        B_minus_A, C = Absil.generate_lin_system(A, B, C, U)
         end_time = time.time()
         elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
         logger.info('Total time to generate linear system: {}'.\
@@ -609,7 +489,7 @@ def optimise_distance_to_CI(ci_wf,
             Usvd_b, SGMsvd_b, VTsvd_b = linalg.svd(eta[1],
                                                    full_matrices=False)
         if check_equations:
-            check_Newton_Absil_eq(ci_wf.distance_to_det, U, eta, eps = 0.0000001)
+            Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps = 0.0000001)
         if logger.level <= logging.DEBUG:
             logger.debug('SVD results, Usvd_a:\n'   + str_matrix(Usvd_a))
             logger.debug('SVD results, SGMsvd_a:\n' + str(SGMsvd_a))
@@ -641,8 +521,8 @@ def optimise_distance_to_CI(ci_wf,
             logger.debug('new U_b, after orthogonalisation:\n' + str_matrix(U[1]))
         logger.info('Calculating f...')
         ini_time = time.time()
-        ### Maybe use f from ci_wf.get_ABC_matrices(U), that is of previous iteration?
-        f = ci_wf.distance_to_det(U)
+        ### Maybe use f from get_ABC_matrices(ci_wf, U), that is of previous iteration?
+        f = Absil.distance_to_det(ci_wf, U)
         end_time = time.time()
         elapsed_time = str(datetime.timedelta(seconds=(end_time - ini_time)))
         logger.info('Total time to calculate f: {}'.\
