@@ -3,10 +3,42 @@
 """
 
 import math
+import datetime
+import time
+import logging
 
 from scipy import linalg
 
+logger = logging.getLogger(__name__)
+
 sqrt2 = math.sqrt(2.0)
+
+
+class logtime():
+    """A context manager for logging time."""
+    
+    def __init__(self, action_type, out_stream=None, out_fmt=None):
+        self.action_type = action_type
+        self.out_stream = out_stream
+        self.end_time = None
+        self.elapsed_time = None
+        if out_fmt is None:
+            self.out_fmt = 'Elapsed time for ' + self.action_type + ': {}\n'
+        else:
+            self.out_fmt = out_fmt
+    
+    def __enter__(self):
+        self.ini_time = time.time()
+        logger.info(self.action_type + ' ...')
+        return self
+    
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.end_time = time.time()
+        self.elapsed_time = str(datetime.timedelta(seconds=(self.end_time - self.ini_time)))
+        logger.info('Total time for {}: {}'.\
+                    format(self.action_type, self.elapsed_time))
+        if self.out_stream is not None:
+            self.out_stream.write(self.out_fmt.format(self.elapsed_time))
 
 def dist_from_ovlp(x):
     """Convert from overlap to distance."""
