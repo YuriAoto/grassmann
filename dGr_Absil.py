@@ -1,16 +1,17 @@
 """Functions related to the Newton-Grassmann method of Absil
 
-Here, we consider the function f is given by 
+Here, we consider the function f given by
 
 f(x) = <0|ext>
 
-where |0> is a Slater determinant and |ext> a correlated wave function
+where |0> is a Slater determinant and |ext> a correlated wave function.
+The method searches for critical points of this function.
 
 """
 import math
 import logging
 import numpy as np
-from numpy import linalg
+from scipy import linalg
 
 import dGr_general_WF as genWF
 from dGr_util import get_I
@@ -19,11 +20,13 @@ logger = logging.getLogger(__name__)
 
 def _calc_fI(U, det_indices):
     """Calculate the contribution of U[det_indices,:] to f
-
+    
     Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-
+    U (numpy.ndarray)
+        The coefficients matrix
+    det_indices (list of int)
+        A list of subindices for the columns of U
+    
     Return:
     det(U[det_indices, :])
     """
@@ -33,15 +36,18 @@ def _calc_G(U, det_indices, i, j):
     """Calculate the element ij of matrix G
     
     Behaviour:
-    Calculates the following the determinant:
+    Calculates the following determinant:
     det(U[det_indices, :] <-j- e_i )
     See _calc_H for details.
     
     Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-    i,j (int)             the indices
-
+    U (numpy.ndarray)
+        The coefficients matrix
+    det_indices (list)
+        A list of subindices
+    i,j (int)
+        The indices
+    
     Return:
     det(U[det_indices, :] <-j- e_i )
     """
@@ -52,13 +58,13 @@ def _calc_G(U, det_indices, i, j):
     sign = 1 if (j + det_indices.index(i))%2 == 0 else -1
     row_ind = np.array([x for x in det_indices       if x!=i], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if x!=j], dtype=int)
-    return sign*linalg.det(U[row_ind[:,None],col_ind])
+    return sign * linalg.det(U[row_ind[:,None],col_ind])
 
 def _calc_H(U, det_indices, i, j, k, l):
     """Calculate the element ijkl of matrix H
     
     Behaviour:
-    Calculates the following the determinant:
+    Calculates the following determinant:
     det(U[det_indices, :] <-j- e_i <-l- e_k )
     where <-j- e_i means that the j-th column
     of the matrix is replaced by the vector e_i
@@ -70,12 +76,14 @@ def _calc_H(U, det_indices, i, j, k, l):
     if j == l (trying to replace the same column)
     gives 0 (irrespective of i and k!)
     
-    
     Parameters:
-    U (numpy.ndarray)     the coefficients matrix
-    det_indices (list)    a list of subindices
-    i,j,k,l (int)         the indices
-
+    U (numpy.ndarray)
+        The coefficients matrix
+    det_indices (list)
+        A list of subindices
+    i,j,k,l (int)
+        The indices
+    
     Return:
     det(U[det_indices, :] <-j- e_i <-l- e_k )
     """
@@ -90,287 +98,221 @@ def _calc_H(U, det_indices, i, j, k, l):
         sign = -sign
     row_ind = np.array([x for x in det_indices       if (x!=i and x!=k)], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if (x!=j and x!=l)], dtype=int)
-    return sign*linalg.det(U[row_ind[:,None],col_ind])
+    return sign * linalg.det(U[row_ind[:,None],col_ind])
 
-def distance_to_det(wf, U, thresh_cI=1E-10, assume_orth = False):
-    """Calculates the distance to the determinant U
-
-    See dGr_FCI_Molpro.Molpro_FCI_Wave_Function.distance_to_det
+def calc_all_F(wf, U):
+    """Calculate all F needed to an iteration
+    
+    Behaviour:
+    Calculate all possible _calc_fI for the spirreps
+    and string indices.
+    
+    Parameters:
+    wf (dGr_general_WF.Wave_Function)
+    U (list of np.ndarray)
+        See overlap_to_det for the details
+    
+    Return:
+    A wf.n_spirrep list of 1D np.ndarray, in the order of
+    spirrep for the list and string_indices for the array.
     """
-    if isinstance(U, tuple):
-        Ua, Ub = U
-    else:
-        Ua = Ub = U
-    for det in wf.all_dets():
-        if abs(det.c) < thresh_cI:
-            continue
-        if isinstance(det, genWF.Ref_Det):
-            f0_a = _calc_fI(Ua, get_I(wf.n_alpha))
-            f0_b = _calc_fI(Ub, get_I(wf.n_beta))
-            f = det.c * f0_a * f0_b
-        else:
-            try:
-                f
-            except NameError:
-                raise NameError('First determinant has to be genWF.Ref_Det!')
-        if isinstance(det, genWF.Singly_Exc_Det):
-            if det.spin > 0:
-                f += det.c * _calc_fI(Ua, get_I(wf.n_alpha, det.i, det.a)) * f0_b
-            else:
-                f += det.c * _calc_fI(Ub, get_I(wf.n_beta, det.i, det.a)) * f0_a
-        elif isinstance(det, genWF.Doubly_Exc_Det):
-            if det.spin_ia * det.spin_jb < 0:
-                f += (det.c
-                      * _calc_fI(Ua, get_I(wf.n_alpha, det.i, det.a))
-                      * _calc_fI(Ub, get_I(wf.n_beta,  det.j, det.b)))
-            elif det.spin_ia > 0:
-                f += (det.c * f0_b
-                      * _calc_fI(Ua, get_I(wf.n_alpha,
-                                                [det.i, det.j],
-                                                sorted([det.a, det.b]))))
-            else:
-                f += (det.c * f0_a
-                      * _calc_fI(Ub, get_I(wf.n_beta,
-                                                [det.i, det.j],
-                                                sorted([det.a, det.b]))))
-    if not assume_orth:
-        Da = linalg.det(np.matmul(Ua.T, Ua))
-        Db = linalg.det(np.matmul(Ub.T, Ub))
-        f /= math.sqrt(Da * Db)
-    return f
+    F = []
+    for spirrep in wf.spirrep_blocks():
+        F.append(np.zeros(len(wf)[spirrep]))
+        for i, I in enumerate(wf.string_indices(spirrep=spirrep)):
+            F[-1][i] = _calc_fI(U[spirrep], I)
+    return F
 
-
-def get_ABC_matrices(wf, U, thresh_cI=1E-10):
-    """Calculates the arrays A,B,C needed for Absil's algorithm
-
-    See dGr_FCI_Molpro.Molpro_FCI_Wave_Function.distance_to_det
-    """
-    if isinstance(U, tuple):
-        Ua, Ub = U
-        restricted = False
-    else:
-        Ua = Ub = U
-        restricted = True
-    K, na = Ua.shape
-    nb = Ub.shape[1]
-    if na != nb:
-        raise NotImplementedError('We need both Ua and Ub with same shape!')
-    if K != wf.orb_dim:
-        raise ValueError('First dimension of U must match orb_dim!')
-    if na != wf.n_alpha:
-        raise ValueError('Second dimension of Ua must match the n_alpha!')
-    if nb != wf.n_beta:
-        raise ValueError('Second dimension of Ua must match the n_beta!')
-    ABshape = Ua.shape*2
-    Aa_a = np.zeros(ABshape)
-    Aa_b = np.zeros(ABshape)
-    Ba = np.zeros(ABshape)
-    Ca = np.zeros(Ua.shape)
-    if not restricted:
-        Ab_a = np.zeros(ABshape)
-        Ab_b = np.zeros(ABshape)
-        Bb = np.zeros(ABshape)
-        Cb = np.zeros(Ub.shape)
-    for det in wf.all_dets():
-        if abs(det.c) < thresh_cI:
-            continue
-        if isinstance(det, genWF.Ref_Det):
-            Ia = range(wf.n_alpha)
-            Ib = range(wf.n_beta)
-        elif isinstance(det, genWF.Singly_Exc_Det):
-            if det.spin > 0:
-                Ia = get_I(wf.n_alpha, det.i, det.a)
-                Ib = range(wf.n_beta)
-            else:
-                Ia = range(wf.n_alpha)
-                Ib = get_I(wf.n_beta, det.i, det.a)
-        elif isinstance(det, genWF.Doubly_Exc_Det):
-            if det.spin_ia * det.spin_jb < 0:
-                Ia = get_I(wf.n_alpha, det.i, det.a)
-                Ib = get_I(wf.n_beta,  det.j, det.b)
-            elif det.spin_ia > 0:
-                Ia = get_I(wf.n_alpha,
-                           [det.i, det.j],
-                           sorted([det.a, det.b]))
-                Ib = range(wf.n_beta)
-            else:
-                Ia = range(wf.n_alpha)
-                Ib = get_I(wf.n_beta,
-                           [det.i, det.j],
-                           sorted([det.a, det.b]))
-        Fa = _calc_fI(Ua, Ia)
-        Fb = _calc_fI(Ub, Ib)
-        Proj_a = np.identity(K)
-        Ga = np.zeros(Ua.shape)
-        if not restricted:
-            Gb = np.zeros(Ub.shape)
-            Proj_b = np.identity(K)
-        for k in range(K):
-            for l in range(na):
-                Hkl_a = np.zeros(Ua.shape)
-                if not restricted:
-                    Hkl_b = np.zeros(Ub.shape)
-                for i in range(K):
-                    Proj_a[i,k] -= np.dot(Ua[i,:], Ua[k,:])
-                    if not restricted:
-                        Proj_b[i,k] -= np.dot(Ub[i,:], Ub[k,:])
-                    for j in range(na):
-                        if j != l:
-                            Hkl_a[i,j] = _calc_H(Ua, Ia, i, j, k, l)
-                            if not restricted:
-                                Hkl_b[i,j] = _calc_H(Ub, Ib, i, j, k, l)
-                        else:
-                            Ba[i,j,k,l] += det[0] * Fa * Fb * Proj_a[i,k]
-                            if not restricted:
-                                Bb[i,j,k,l] += det[0] * Fa * Fb * Proj_b[i,k]
-                Ga[k,l] = _calc_G(Ua, Ia, k, l)
-                Gb[k,l] = _calc_G(Ub, Ib, k, l)
-#                 Ga[k,l] += np.dot(Hkl_a[:,na-1], Ua[:,na-1])
-#                 if restricted:
-#                     Gb[k,l] = _calc_G(Ub, Ib, k, l)
-#                 else:
-#                     Gb[k,l] += np.dot(Hkl_b[i,nb-1], Ub[i,nb-1])
-                Aa_a[k,l,:,:] += det[0] * Fb * np.matmul(Proj_a, Hkl_a)
-                if not restricted:
-                    Ab_b[k,l,:,:] += det[0] * Fa * np.matmul(Proj_b, Hkl_b)
-        det_G_FU = det[0] * (Ga - Fa * Ua)
-        Ca += Fb * det_G_FU
-        Aa_b += np.multiply.outer(det_G_FU, Gb)
-        if not restricted:
-            det_G_FU = det[0] * (Gb - Fb * Ub)
-            Cb += Fa * det_G_FU
-            Ab_a += np.multiply.outer(det_G_FU, Ga)
-    if restricted:
-        return (Aa_a, Aa_b), Ba, Ca
-    else:
-        return ((Aa_a, Aa_b),
-                (Ab_a, Ab_b)), (Ba, Bb), (Ca, Cb)
-
-def generate_lin_system(A, B, C, U):
-    """Given the matrices A, B, C, reshape to get the linear system
+def overlap_to_det(wf, U, F=None, assume_orth=True):
+    """Calculate the overlap between wf and the determinant U
     
     Behaviour:
     
-    From the matrices A, B, C, reshape them to get the
-    matrix (a 2d array) B_minus_A and the vector (a 1D array) C,
-    such that
-    
-    B_minus_A @ eta = C
-    
-    is the linear system to calculate eta, in the step of
-    Absil's Newton-Grassmann optimisation
+    Calculates f(x) = <wf|U>, where wf is a normalised wave function
+    and U is a Slater determinant, not necessarily on the same orbital
+    basis of wf.
     
     Limitations:
-    
-    It assumes that the number of alpha and beta electrons are the same
+    Only for unrestricted cases (well, restricted cases work, if
+    the parameters are given in a redundant unrestricted format)
     
     Parameters:
     
-    A   (2-tuple of 4D array, for rescricted)
-        (A^a_a, A^a_b) = (A_same, A_mix)
-        
-        (2-tuple of 2-tuples of 4D arrays, for unrestricted)
-        ((A^a_a, A^a_b),
-         (A^b_a, A^b_b))
+    wf (dGr_general_WF.Wave_Function)
+        The external wave function
     
-    B   (4D array, for rescricted)
-        B^a
-        (2-tuple of 4D array, for unrescricted)
-        (B^a, B^b)
+    U (list of np.ndarray)
+        An element of the Stiefel manifold that represents a
+        Slater determinant. It should be a list such as
+        [U_a^1, ..., U_a^g, U_b^1, ..., U_b^g]
+        where U_sigma^i is the U for spin sigma (alpha=a or beta=b) and irrep i.
     
-    C   (2D array, for rescricted)
-        C^a
-        (2-tuple of 2D array, for unrescricted)
-        (C^a, C^b)
+    F (list of np.ndarray, default = None)
+        The result of calc_all_F. Calculate if None.
     
-    U   (2D array, for rescricted)
-        Ua
-        (2-tuple of 2D array, for unrescricted)
-        (Ua, Ub)
-        The transformation matrix in this iteration
+    assume_orth (bool, default = True)
+        If not True, the result is divided by the normalisation of U.
+        Remember that wf is assumed to be normalised already!
         
     Return:
-    
-    The 2D array A_minus_B and the 1D array Cn
+    The float <wf|U>
     """
-    restricted = not isinstance(C, tuple)
-    # n = nubmer of electrons
-    # K = nubmer of orbitals
-    # nK = nubmer of electrons times the number of spatial orbitals
-    if restricted:
-        K = A[0].shape[0]
-        n = A[0].shape[1]
-    else:
-        K = A[0][0].shape[0]
-        n = A[0][0].shape[1]
-    nK = n*K
-    # test all entries and shapes?
-    if restricted:
-        Cn = np.zeros(nK + n)
-        Cn[:nK] = np.ravel(C,order='C')
-    else:
-        Cn = np.zeros(2*(nK + n))
-        Cn[:2*nK] = np.concatenate((np.ravel(C[0], order='C'),
-                                    np.ravel(C[1], order='C')))
-    if restricted:
-        B_minus_A = np.zeros((nK + n, nK))
-        B_minus_A[:nK,:] = np.reshape(B, (nK, nK), order='C')
-        B_minus_A[:nK,:] -= np.reshape(A[0], (nK, nK), order='C')
-        B_minus_A[:nK,:] -= np.reshape(A[1], (nK, nK), order='C')
-        # --> Extra term due to normalisation
-        B_minus_A[:nK,:] += 2*np.multiply.outer(Cn[:nK], np.ravel(U, order='C'))
-        # --> Terms to guarantee orthogonality to U
-        B_minus_A[nK:,:] += U.T
-    else:
-        B_minus_A = np.zeros((2*(nK + n), 2*nK))
-        B_minus_A[:nK, :nK] = np.reshape(B[0],
-                                         (nK, nK),
-                                         order='C')
-        B_minus_A[:nK, :nK] -= np.reshape(A[0][0],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[nK:2*nK, nK:] = np.reshape(B[1],
-                                         (nK, nK),
-                                         order='C')
-        B_minus_A[nK:2*nK, nK:] -= np.reshape(A[1][1],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[:nK, nK:] -= np.reshape(A[0][1],
-                                          (nK, nK),
-                                          order='C')
-        B_minus_A[nK:2*nK, :nK] -= np.reshape(A[1][0],
-                                          (nK, nK),
-                                          order='C')
-        # --> Extra term due to normalisation
-        B_minus_A[:nK, :nK] += np.multiply.outer(Cn[:nK],
-                                                 np.ravel(U[0], order='C'))
-        B_minus_A[:nK, nK:] += np.multiply.outer(Cn[:nK],
-                                                 np.ravel(U[1], order='C'))
-        B_minus_A[nK:2*nK, :nK] += np.multiply.outer(Cn[nK:2*nK],
-                                                 np.ravel(U[0], order='C'))
-        B_minus_A[nK:2*nK, nK:] += np.multiply.outer(Cn[nK:2*nK],
-                                                 np.ravel(U[1], order='C'))
-        # --> Terms to guarantee orthogonality to U
-        ## Can be made more efficiente if order = 'F' is used!!!
-        for iel in range(n):
-            for iorb in range(K):
-                B_minus_A[2*nK     + iel,      iel + n*iorb] = U[0][iorb,iel]
-                B_minus_A[2*nK + n + iel, nK + iel + n*iorb] = U[1][iorb,iel]
-    return B_minus_A, Cn
+    if F is None:
+        F = calc_all_F(U, wf)
+    for I in wf.string_indices():
+        f_contr = 1.0
+        for spirrep, I_spirrep in enumerate(I):
+            f_contr *= F[spirrep][I_spirrep]
+        f = wf[I] * f_contr
+    if not assume_orth:
+        for U_spirrep in U:
+            f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
+    return f
 
+def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
+    """Generate the linear system for Absil's method
     
+    Behaviour:
+    Calculate the matrices that define the main linear system of
+    equations in Absil's method: X @ eta = C
+    
+    Limitations:
+    Only for unrestricted calculations
+    
+    Parameters:
+    U (list of np.ndarray)
+    wf (dGr_general_WF.Wave_Function)
+    F (list of np.ndarray, default=None)
+        See overlap_to_det for the details
+    
+    lim_XC (list of int)
+        Limits of each spirrep in the blocks of matrices X and C
+    
+    with_full_H (bool, default=True)
+        If True, calculates and store the full matrix H
+        If False, store only row-wise.
+        Although storing the full matrix uses more memory,
+        numpy's broadicasting should speed up the calculation
+    
+    Return:
+    The tuple (X, C), such that eta satisfies X @ eta = C
+    """
+    if not with_full_H:
+        raise NotImplementedError('with_full_H = False is not Implemented')
+    if F is None:
+        F = calc_all_F(U, wf)
+    K = [U_spirrep.shape[0] for U_spirrep in U]
+    n = [U_spirrep.shape[1] for U_spirrep in U]
+    sum_Kn = sum([K[i] * n[i] for i in range(len(K))])
+    sum_nn = sum([n[i]**2 for i in range(len(K))])
+    X = np.zeros((sum_Kn + sum_nn, sum_Kn))
+    C = np.zeros(sum_Kn + sum_nn)
+    for spirrep_1 in wf.spirrep_blocks():
+        Pi = np.identity(K[spirrep_1]) - U[spirrep_1] @ U[spirrep_1].T
+        for I_1 in wf.string_indices(spirrep=spirrep_1):
+            if len(I_1) != n[spirrep_1]:
+                continue
+            H = np.zeros((K[spirrep_1], n[spirrep_1],
+                          K[spirrep_1], n[spirrep_1]))
+            G_1 = np.zeros((K[spirrep_1], n[spirrep_1]))
+            for i in range(K[spirrep_1]):
+                for j in range(n[spirrep_1]):
+                    H[i,j,i,j] = -F[spirrep_1][I_1]
+                    for k range(i):
+                        for l in range(l):
+                            H[k,l,i,j] = _calc_H(U[spirrep_1],
+                                                 I_1,
+                                                 k, l, i, j)
+                            H[k,j,i,l] = H[i,l,k,j] = -H[k,l,i,j]
+                            H[i,j,k,l] = H[k,l,i,j]
+                    #  G_1[i,j] = np.dot(H[:,0,i,j], U[spirrep_1][:,0])
+                    G_1[i,j] = _calc_G(U[spirrep_1],
+                                       I_1,
+                                       i, j)
+            H = Pi @ (np.multiply.outer(Y, G_1) - H)
+            S = 0.0
+            for I_full in wf.string_indices(coupled_to=(spirrep_1, I_1)):
+                if map(len, I_full) != map(len, U):
+                    continue
+                F_contr = 1.0
+                for spirrep_other, I_other in I_full:
+                    if spirrep_other != spirrep_1:
+                        F_contr *= F[spirrep_other][I_other]
+                S += wf[I_full] * F_contr
+            X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
+              lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                  H,
+                  (K[spirrep_1] * n[spirrep_1],
+                   K[spirrep_1] * n[spirrep_1]),
+                  order='F').T
+            G_1 -= F[spirrep_1][I_1] * U[spirrep_1]
+            C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                G_1,
+                (K[spirrep_1] * n[spirrep_1],)
+                order='F')
+            for spirrep_2 in wf.spirrep_blocks():
+                if spirrep_2 <= spirrep_1:
+                    continue
+                G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
+                for I_2 in wf.string_indices(spirrep=spirrep_2,
+                                             coupled_to=(spirrep_1, I_1)):
+                    if len(I_2) != n[spirrep_2]:
+                        continue
+                    for k in range(K[spirrep_2]):
+                        for l in range(n[spirrep_2]):
+                            G[k,l] = _calc_G(U[spirrep_2],
+                                             I_2,
+                                             k, l)
+                    G_2 -= F[spirrep_2][I_2] * U[spirrep_2]
+                    S = 0.0
+                    for I_full in wf.string_indices(coupled_to=(spirrep_1, I_1,
+                                                                spirrep_2, I_2)):
+                        if map(len, I_full) != map(len, U):
+                            continue
+                        F_contr = 1.0
+                        for spirrep_other, I_other in I_full:
+                            if (spirrep_other != spirrep_1
+                                and spirrep_other != spirrep_2):
+                                F_contr *= F[spirrep_other][I_other]
+                        S += wf[I_full] * F_contr
+                    X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
+                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] += S * np.reshape(
+                          np.multiply.outer(G_1, G_2),
+                          (K[spirrep_1] * n[spirrep_1],
+                           K[spirrep_2] * n[spirrep_2]),
+                          order='F')
+            for spirrep_2 in wf.spirrep_blocks():
+                if spirrep_1 <= spirrep_2:
+                    X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
+                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] = \
+                    X[lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1],
+                      lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]].T
+    # Terms to guarantee orthogonality to U:
+    prev_ij = lim_XC[-1]
+    prev_kl = 0
+    for spirrep, U_spirrep in enumerate(U):
+        for i in range(n[spirrep]):
+            X[prev_ij: prev_ij + K[spirrep],
+              prev_kl: prev_kl + n[spirrep]] = U_spirrep.T
+            prev_ij += K[spirrep]
+            prev_kl += n[spirrep]
+    return X, C
+
 
 def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):
     """Check, numerically, if eta satisfies Absil equation
-
+    
     Parameters:
-    U (2D numpy.array or 2-tuple of 2D numpy.array)
-        Current Slater determinant. See distance_to_det.
-    eta (2D numpy.array or 2-tuple of 2D numpy.array)
-        Possible solution of Absil equation
-
+    wf (dGr_general_WF.Wave_Function)
+    U (list of np.ndarray)
+        See overlap_to_det for the details
+    eta (list of np.ndarray)
+        Possible solution of Absil equation, with same structure of U
+    eps (float)
+        Step size to calculate numerical derivatives (default = 0.001)
+    
     Behaviour:
-    Print in the log (info and/or warnings) main elements of
+    Print in the log (info and/or warnings) the main elements of
     Absil equation for the Newton step on the Grassmannian.
     """
     restricted = not isinstance(U, tuple)
@@ -447,16 +389,16 @@ def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):
     if not restricted:
         logger.info('RHS of Absil equation for beta (without the minus):\n%s', str(RHS_b))
     Ua, Ub = get_orig_U(shift = (eps*eta_a, eps*eta_b))
-    Proj_plus_a = np.identity(Ua.shape[0]) - Ua @ np.linalg.inv(Ua.T @ Ua) @ Ua.T
+    Proj_plus_a = np.identity(Ua.shape[0]) - Ua @ linalg.inv(Ua.T @ Ua) @ Ua.T
     Dgrad_plus_a = calc_grad((Ua, Ub))
     if not restricted:
-        Proj_plus_b = np.identity(Ub.shape[0]) - Ub @ np.linalg.inv(Ub.T @ Ub) @ Ub.T
+        Proj_plus_b = np.identity(Ub.shape[0]) - Ub @ linalg.inv(Ub.T @ Ub) @ Ub.T
         Dgrad_plus_a, Dgrad_plus_b = Dgrad_plus_a
     Ua, Ub = get_orig_U(shift = (-eps*eta_a, -eps*eta_b))
-    Proj_minus_a = np.identity(Ua.shape[0]) - Ua @ np.linalg.inv(Ua.T @ Ua) @ Ua.T
+    Proj_minus_a = np.identity(Ua.shape[0]) - Ua @ linalg.inv(Ua.T @ Ua) @ Ua.T
     Dgrad_minus_a = calc_grad((Ua, Ub))
     if not restricted:
-        Proj_minus_b = np.identity(Ub.shape[0]) - Ub @ np.linalg.inv(Ub.T @ Ub) @ Ub.T
+        Proj_minus_b = np.identity(Ub.shape[0]) - Ub @ linalg.inv(Ub.T @ Ub) @ Ub.T
         Dgrad_minus_a, Dgrad_minus_b = Dgrad_minus_a
     Dgrad_a = (Proj_plus_a @ Dgrad_plus_a - Proj_minus_a @ Dgrad_minus_a)/(2*eps)
     if not restricted:

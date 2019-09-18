@@ -18,7 +18,9 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import str_matrix, logtime
+from dGr_general_WF import Wave_Function
 import dGr_Absil as Absil
+
 logger = logging.getLogger(__name__)
 
 
@@ -309,65 +311,81 @@ def optimise_distance_to_CI(ci_wf,
     One of the steps is to solve the linear system X @ eta = C.
     The convergence is obtained by checking the norm of eta and/or C
     
+    Important convention:
+    For the spin/symmetry adaption, the code assumes that there is a
+    standard order for spin/irreducible representations, that is
+    followed everywhere.
+    For example, an unrestricted calculation with point group of order 2
+    has 4 possible combinations:
+    alpha/irrep_1, alpha/irrep_2, beta/irrep_1, beta/irrep_2
+    If ordered in this way, this leads to 0, 1, 2, 3, that will index
+    such combination.
+    Each one of these is a spirrep, and is what is yield by the function
+    ci_wf.spirrep_blocks.
+    The convention will be:
+    # Molpro's order for irreps, for restricted cases
+    # alpha first, beta later, with Molpro's order for irreps in each
+      block of spin, for unrestricted cases
+    
     Limitations:
     Only for unrestricted optimisations in the moment
     Does not check if we are in a maximum or saddle point
     
     Parameters:
     
-    ci_wf      an instance of a class that represents the external wave function.
-               Such class must have some attributes, explained below, and for this
-               we suggest to be a child class of dGr_general_WF.Wave_Function
+    ci_wf (dGr_general_WF.Wave_Function)
+        The external eave function
     
-    max_iter   the maximum number of iterations in the optimisation
-               (default = 20)
+    max_iter (int, default = 20)
+        The maximum number of iterations in the optimisation
     
-    f_out      the output stream (default = sys.stdout)
+    f_out (file object, default = sys.stdout)
+        The output
     
-    restricted  (bool, optional, default = False)
-                Optimise the spatial part of both alpha and beta equally.
-                It is not implemented yet!
+    restricted (bool, default = False)
+        Optimise the spatial part of both alpha and beta equally.
+        It is not implemented yet!
     
-    ini_U     if not None, it should be a list with the initial transformation
-              of orbitals from the basis of the ci_wf to the basis of the initial
-              Slater determinant.
-              The list is like:
-              [U_a^1, ..., U_a^g, U_b^1, ..., U_b^g]
-              where U_sigma^i is the U for spin sigma (alpha=a or beta=b) and irrep i.
-              If it is a restricted calculation, only one part should be given:
-              [U^1, ..., U^g]
-              If None, a column-truncated Identity is used as initial transformation.
-              (default = None)
+    ini_U (list of np.ndarray, default=None)
+        if not None, it should have the initial transformation
+        of orbitals from the basis of the ci_wf to the basis of the initial
+        Slater determinant.
+        The list is like:
+        [U_a^1, ..., U_a^g, U_b^1, ..., U_b^g]
+        where U_sigma^i is the U for spin sigma (alpha=a or beta=b) and irrep i.
+        If it is a restricted calculation, only one part should be given:
+        [U^1, ..., U^g]
+        If None, a column-truncated Identity is used as initial transformation.
+        (default = None)
     
-    occupation    a tuple, with the occupation of each spin-irrep block to be used
-                  in the optimization:
-                  (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
-                  This should be consistent to the spin and symmetry of the
-                  external wave function
-                  If None is given, uses ci_wf.ref_occ.
-                  If ini_U is given, this occupation is not considered, and the
-                  implicit occupation given by the number of columns of U is used.
+    occupation (tuple of int, default=None)
+        The occupation of each spin-irrep block to be used in the optimization:
+        (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
+        This should be consistent to the spin and symmetry of the external wave function
+        If None is given, uses ci_wf.ref_occ.
+        If ini_U is given, this occupation is not considered, and the
+        implicit occupation given by the number of columns of U is used.
     
-    thrsh_eta      Convergence threshold for the eta vector (default = 1.0E-5)
-    thrsh_C        Convergence threshold for the C vector (default = 1.0E-5)
+    thrsh_eta (float, optional, default = 1.0E-5)
+        Convergence threshold for the eta vector
     
-    only_C         If True, stops iterations if C vector passes in the convergence
-                   test, irrespective of the norm of eta (and does not go further
-                   in the iteration) (default = False)
+    thrsh_C (float, optional, default = 1.0E-5)
+        Convergence threshold for the C vector
     
-    only_eta       If True, stops iterations if eta vector passes in the convergence
-                   test, irrespective of the norm of C (and does not go further
-                   in the iteration) (default = False)
+    only_C (bool, default = False)
+        If True, stops the iterations if the C vector passes in the convergence
+        test, irrespective of the norm of eta (and does not go further
+        in the iteration)
     
-    check_equations   If True, checks numerically if the Absil equation is satisfied.
-                      It is slow and for testing purposes. (default = False)
+    only_eta (bool, default = False)
+        If True, stops the iterations if the eta vector passes in the convergence
+        test, irrespective of the norm of C (and does not go further
+        in the iteration)
     
-    Attributes that ci_wf must have:
-    n_alpha, n_beta (int)              the number of alpha and beta electrons
-    n_irrep (int)                      the number of irreducible representations
-    orb_dim (n_irrep-tuple of int)     dimension of the orbital space of each irrep
-    ref_occ (tuple of int)             occupation of reference determinant, per spin and irrep
-    
+    check_equations (bool, default = False)
+        If True, checks numerically if the Absil equation is satisfied.
+        It is slow and for testing purposes.
+        
     Return:
     
     The namedtuple Results. Some particularities are:
@@ -380,6 +398,8 @@ def optimise_distance_to_CI(ci_wf,
     implement restricted calculations
     calculate n_pos_H_eigVal
     """
+    if not isinstance(ci_wf, Wave_Function):
+        raise ValueError('ci_wf should be an instance of dGr_general_WF.Wave_Function.')
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
@@ -397,7 +417,7 @@ def optimise_distance_to_CI(ci_wf,
         if ((not isinstance(ini_U, list))
             or len(ini_U) != 2 * ci_wf.n_irrep):
             raise ValueError('ini_U must be a list,'
-                             +' of lenght 2*ci_wf.n_irrep, of numpy.array.')
+                             +' of lenght 2 * ci_wf.n_irrep of numpy.array.')
         sum_n_a = sum_n_b = 0
         for i in range(2 * ci_wf.n_irrep):
             i_irrep =  i % ci_wf.n_irrep
@@ -419,9 +439,9 @@ def optimise_distance_to_CI(ci_wf,
                                    + ' sum U.shape[1] = {1:} != {2:} = ci_wf.n_{0:}').\
                                   format(spin, sum_n, n))
         U = ini_U
-    spirrep_limits = [0]
+    lim_XC = [0]
     for i in range(2 * ci_wf.n_irrep):
-        spirrep_limits.append(spirrep_limits[-1] + U[i].shape[0] * U[i].shape[1])
+        lim_XC.append(lim_XC[-1] + U[i].shape[0] * U[i].shape[1])
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
     fmt_full =  '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -430,7 +450,8 @@ def optimise_distance_to_CI(ci_wf,
                 format('it.', 'f', '|eta|', '|C|', 'time in iteration'))
     for i_iteration in range(max_iter):
         with logtime('Calculating f') as T_calc_f:
-            f = Absil.distance_to_det(ci_wf, U)
+            all_F = Absil.calc_all_F(ci_wf, U)
+            f = Absil.distance_to_det(ci_wf, U, F=allF)
         f_out.write((fmt_ini if i_iteration == 0 else fmt_full).\
                     format(i_iteration,
                            f,
@@ -440,7 +461,7 @@ def optimise_distance_to_CI(ci_wf,
         if converged_C and converged_eta:
             break
         with logtime('Generating linear system') as T_gen_lin_system:
-            X, C = Absil.generate_lin_system(ci_wf, U)
+            X, C = Absil.generate_lin_system(ci_wf, U, lim_XC, F=allF)
         if logger.level <= logging.DEBUG:
             logger.debug('matrix X:\n' + str(X))
             logger.debug('matrix C:\n' + str_matrix(C))
@@ -469,10 +490,10 @@ def optimise_distance_to_CI(ci_wf,
         eta = []
         svd_res = []
         with logtime('Singular value decomposition of eta') as T_svd:
-            for i in 2 * ci_wf.n_irrep:
+            for i in range(2 * ci_wf.n_irrep):
                 eta.append(np.reshape(
-                    lin_sys_solution[0][spirrep_limits[i]:spirrep_limits[i+1]],
-                    U[i].shape, order='C'))
+                    lin_sys_solution[0][lim_XC[i]:lim_XC[i+1]],
+                    U[i].shape, order='F'))
                 svd_res.append(linalg.svd(eta[-1],
                                           full_matrices=False))
         if check_equations:
@@ -483,7 +504,7 @@ def optimise_distance_to_CI(ci_wf,
                 logger.debug('SVD results, Usvd_a:\n'   + str_matrix(svd_res[i][0]))
                 logger.debug('SVD results, SGMsvd_a:\n' + str(       svd_res[i][1]))
                 logger.debug('SVD results, VTsvd_a:\n'  + str_matrix(svd_res[i][2]))
-        for i in 2 * ci_wf.n_irrep:
+        for i in range(2 * ci_wf.n_irrep):
             U[i]  = np.matmul(U[i], svd_res[i][2].T * np.cos(svd_res[i][1]))
             U[i] += svd_res[i][0] * np.sin(svd_res[i][1])
         if logger.level <= logging.DEBUG:
@@ -494,11 +515,10 @@ def optimise_distance_to_CI(ci_wf,
         with logtime('Orthogonalisation of U') as T_orth_U:
             U = map(linalg.orth, U)
         if logger.level <= logging.DEBUG:
-            for i in 2 * ci_wf.n_irrep:
+            for i in range(2 * ci_wf.n_irrep):
                 logger.debug('new U for {} and irrep {}, after orthogonalisation:\n'.\
-                             format(
-                                 'alpha' if i < ci_wf.n_irrep else 'beta',
-                                 i % ci_wf.n_irrep) + str_matrix(U[i]))
+                             format('alpha' if i < ci_wf.n_irrep else 'beta',
+                                    i % ci_wf.n_irrep) + str_matrix(U[i]))
         elapsed_time = str(timedelta(seconds=(T_orth_U.end_time
                                               - T_calc_f.ini_time)))
     return Results(f = f,
