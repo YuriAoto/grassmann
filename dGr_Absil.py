@@ -22,12 +22,17 @@ def _calc_fI(U, det_indices):
     """Calculate the contribution of U[det_indices,:] to f
     
     Parameters:
+    -----------
+    
     U (numpy.ndarray)
         The coefficients matrix
+    
     det_indices (list of int)
         A list of subindices for the columns of U
     
     Return:
+    -------
+    
     det(U[det_indices, :])
     """
     return linalg.det(U[det_indices, :])
@@ -36,19 +41,27 @@ def _calc_G(U, det_indices, i, j):
     """Calculate the element ij of matrix G
     
     Behaviour:
+    ----------
+    
     Calculates the following determinant:
     det(U[det_indices, :] <-j- e_i )
     See _calc_H for details.
     
     Parameters:
+    -----------
+    
     U (numpy.ndarray)
         The coefficients matrix
+    
     det_indices (list)
         A list of subindices
+    
     i,j (int)
         The indices
     
     Return:
+    -------
+    
     det(U[det_indices, :] <-j- e_i )
     """
     if i not in det_indices:
@@ -64,6 +77,8 @@ def _calc_H(U, det_indices, i, j, k, l):
     """Calculate the element ijkl of matrix H
     
     Behaviour:
+    ----------
+    
     Calculates the following determinant:
     det(U[det_indices, :] <-j- e_i <-l- e_k )
     where <-j- e_i means that the j-th column
@@ -77,14 +92,20 @@ def _calc_H(U, det_indices, i, j, k, l):
     gives 0 (irrespective of i and k!)
     
     Parameters:
+    -----------
+    
     U (numpy.ndarray)
         The coefficients matrix
+    
     det_indices (list)
         A list of subindices
+    
     i,j,k,l (int)
         The indices
     
     Return:
+    -------
+    
     det(U[det_indices, :] <-j- e_i <-l- e_k )
     """
     if j == l or i == k:
@@ -104,15 +125,21 @@ def calc_all_F(wf, U):
     """Calculate all F needed to an iteration
     
     Behaviour:
+    ----------
+    
     Calculate all possible _calc_fI for the spirreps
     and string indices.
     
     Parameters:
+    -----------
     wf (dGr_general_WF.Wave_Function)
+    
     U (list of np.ndarray)
         See overlap_to_det for the details
     
     Return:
+    -------
+    
     A wf.n_spirrep list of 1D np.ndarray, in the order of
     spirrep for the list and string_indices for the array.
     """
@@ -127,16 +154,20 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     """Calculate the overlap between wf and the determinant U
     
     Behaviour:
+    ----------
     
     Calculates f(x) = <wf|U>, where wf is a normalised wave function
     and U is a Slater determinant, not necessarily on the same orbital
     basis of wf.
     
     Limitations:
+    ------------
+    
     Only for unrestricted cases (well, restricted cases work, if
     the parameters are given in a redundant unrestricted format)
     
     Parameters:
+    -----------
     
     wf (dGr_general_WF.Wave_Function)
         The external wave function
@@ -155,6 +186,8 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
         Remember that wf is assumed to be normalised already!
         
     Return:
+    -------
+    
     The float <wf|U>
     """
     if F is None:
@@ -173,17 +206,26 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
     """Generate the linear system for Absil's method
     
     Behaviour:
+    ----------
+    
     Calculate the matrices that define the main linear system of
     equations in Absil's method: X @ eta = C
     
     Limitations:
+    ------------
+    
     Only for unrestricted calculations
     
     Parameters:
+    -----------
+    
     U (list of np.ndarray)
+    
     wf (dGr_general_WF.Wave_Function)
+    
     F (list of np.ndarray, default=None)
-        See overlap_to_det for the details
+    
+        See overlap_to_det for the details of the above parameters
     
     lim_XC (list of int)
         Limits of each spirrep in the blocks of matrices X and C
@@ -195,6 +237,8 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
         numpy's broadicasting should speed up the calculation
     
     Return:
+    -------
+    
     The tuple (X, C), such that eta satisfies X @ eta = C
     """
     if not with_full_H:
@@ -303,15 +347,23 @@ def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):
     """Check, numerically, if eta satisfies Absil equation
     
     Parameters:
+    -----------
+    
     wf (dGr_general_WF.Wave_Function)
+    
     U (list of np.ndarray)
-        See overlap_to_det for the details
+
+        See overlap_to_det for the details of the above parameters
+
     eta (list of np.ndarray)
         Possible solution of Absil equation, with same structure of U
+    
     eps (float)
         Step size to calculate numerical derivatives (default = 0.001)
     
     Behaviour:
+    ----------
+    
     Print in the log (info and/or warnings) the main elements of
     Absil equation for the Newton step on the Grassmannian.
     """
