@@ -339,3 +339,22 @@ def load_CCSD_WF(self, Tsgl, Tdbl):
         logmsg.append('-------------------\n')
         logger.debug('\n'.join(logmsg))
     raise Exception('load_CCSD_WF: Not implemented yet!')
+
+
+
+def _get_norm_of_matrix(M):
+    """Return norm of M
+    
+    If M = array,              returns sqrt(sum Mij)
+    If M = (array_a, array_b), returns sqrt((sum M[0]ij + M[1]ij)/2)
+    """
+    norm = 0.0
+    if isinstance(M, tuple):
+        norm += _get_norm_of_matrix(M[0])
+        norm += _get_norm_of_matrix(M[1])
+        norm = norm/2
+    else:
+        for line in M:
+            for M_ij in line:
+                norm += M_ij**2
+    return math.sqrt(norm)
