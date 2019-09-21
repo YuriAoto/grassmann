@@ -5,10 +5,70 @@ Abstract base class for electronic wave functions.
 """
 import logging
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import Sequence, Mapping, Collection
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 logger = logging.getLogger(__name__)
+
+class Spirrep_String_Index(Collection):
+    """An string index for a single spirrep
+    
+    Attributes:
+    -----------
+    
+    standard_position_of_string (int)
+        The index of this string in the standard order
+    
+    occ_orb (np.ndarray)
+        An numpy array of int8 with the occupied orbitals
+    """
+    __slots__ = ('I_spirreps',
+                 'occ_orb')
+    
+    def __init__(self, n_elec):
+        self.standard_position_of_string = 0
+        self.occ_orb = np.zeros(n_elec, dtype=np.int8)
+    
+    def __contains__(self, x):
+        return x in self.occ_orb
+    
+    def __iter__(self):
+        return self.occ_orb
+    
+    def __len__(self):
+        return len(self.occ_orb)
+    
+    def __int__(self):
+        return self.standard_position_of_string
+
+class String_Index(Mapping):
+    """A full string index, for all spirreps
+    
+    Attributes:
+    -----------
+    
+    spirrep_indices (list of Spirrep_String_Index)
+        The index of each spirrep
+    """
+    __slots__ = ('spirrep_indices')
+    
+    def __init__(self, spirrep_indices=None):
+        if spirrep_indices is None:
+            self.spirrep_indices = []
+        else:
+            self.spirrep_indices = spirrep_indices
+    
+    def __iter__(self):
+        return self.spirrep_indices
+    
+    def __getitem__(self, spirrep):
+        return self.spirrep_indices[spirrep]
+    
+    def __len__(self):
+        return len(self.spirrep_indices)
+
 
 class Wave_Function(ABC, Sequence):
     """An abstract base class for electronic wave functions
@@ -17,6 +77,7 @@ class Wave_Function(ABC, Sequence):
     ----------
     
     n_irrep (int)                     the number of irreducible representations
+    n_strings (list of int)           the number string in each spirrep
     orb_dim (n_irrep-tuple of int)    dimension of the orbital space of each irrep
     n_elec (int)                      number of electrons
     n_alpha (int)                     number of alpha electrons
@@ -28,15 +89,15 @@ class Wave_Function(ABC, Sequence):
     
     Some rules about Sequence's abstract methods:
     
-    __getitem__ should accept values such as returned by string_indices and return
+    __getitem__ should accept an instance of String_Index and return
     the corresponding CI coefficient
     
-    __len__  should return a tuple of length n_irrep, with the total number of
-    strings that string_indices(spirrep=spirrep) will give
+    __len__  should return the number of distinct determinants
     """
     
     def __init__(self):
         self.n_irrep = 0
+        self.n_strings = [0]
         self.orb_dim = []
         self.n_elec = 0
         self.n_alpha = 0
@@ -59,21 +120,20 @@ class Wave_Function(ABC, Sequence):
         x.append('-'*50)
         return '\n'.join(x)
     
-    @abstractmethod
     def spirrep_blocks(self):
         """Yield the possible spin and irreps, as a single integer."""
-        pass
+        for spirrep in range(2 * n_irrep):
+            yield spirrep
     
     @abstractmethod
-    def string_indices(self, spirrep=None, coupled_to=None):
+    def string_indices(self, spirrep=None, coupled_to=None, no_occ_orb=False):
         """A generator that yields all string indices
         
         Behaviour:
         ----------
         
-        The indices I that this generator yield should be iterable,
-        giving the string index of each spirrep (in the sequence yield
-        by spirrep_blocks) of such determinant.
+        The indices that this generator yield should be an instance
+        of String_Index or of Spirrep_String_Index.
         The wave function should be indexable by the values
         that this function yield, returning the corresponding coefficient.
         That is, the following construction should print all
@@ -94,19 +154,24 @@ class Wave_Function(ABC, Sequence):
         Parameters:
         -----------
         
-        spirrep (int, as returned from spirrep_blocks, default=None)
-            If passed, only subindices of this spirrep are yield
+        spirrep (int, default=None)
+            If passed, Spirrep_String_Index of this spirrep are yield
         
         coupled_to (tuple, default=None)
             If passed, it should be a even-length tuple
             with each pair being (spirrep_i, I_i), and the function should
-            yield all subindices that have the subindice I for spirrep.
+            yield all String_Index that have the subindice I for spirrep,
+            or all Spirrep_String_Index of the given spirrep that are
+            coupled to spirrep
+        
+        no_occ_orb (bool, default=False)
+            If True, do not waste time filling the attribute occ_orb.
         
         Yield:
         ------
         
-        String subindices (of only one spirrep, if spirrep is passed) as a
-        list of integers
+        Instances of String_Index or of Spirrep_String_Index (if spirrep
+        was given)
         """
         pass
     

@@ -27,7 +27,7 @@ def _calc_fI(U, det_indices):
     U (numpy.ndarray)
         The coefficients matrix
     
-    det_indices (list of int)
+    det_indices (ndarray if int8)
         A list of subindices for the columns of U
     
     Return:
@@ -53,7 +53,7 @@ def _calc_G(U, det_indices, i, j):
     U (numpy.ndarray)
         The coefficients matrix
     
-    det_indices (list)
+    det_indices (ndarray if int8)
         A list of subindices
     
     i,j (int)
@@ -68,7 +68,7 @@ def _calc_G(U, det_indices, i, j):
         return 0.0
     if U.shape[1] == 1:
         return 1.0
-    sign = 1 if (j + det_indices.index(i))%2 == 0 else -1
+    sign = 1 if (j + np.where(det_indices == i))%2 == 0 else -1
     row_ind = np.array([x for x in det_indices       if x!=i], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if x!=j], dtype=int)
     return sign * linalg.det(U[row_ind[:,None],col_ind])
@@ -97,7 +97,7 @@ def _calc_H(U, det_indices, i, j, k, l):
     U (numpy.ndarray)
         The coefficients matrix
     
-    det_indices (list)
+    det_indices (ndarray if int8)
         A list of subindices
     
     i,j,k,l (int)
@@ -115,7 +115,7 @@ def _calc_H(U, det_indices, i, j, k, l):
     sign = 1.0 if ((i<k) == (j<l)) else -1.0
     if U.shape == 2:
         return sign
-    if (j + det_indices.index(i) + l + det_indices.index(k))%2 == 1:
+    if (j + np.where(det_indices == i) + l + np.where(det_indices == k)) % 2 == 1:
         sign = -sign
     row_ind = np.array([x for x in det_indices       if (x!=i and x!=k)], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if (x!=j and x!=l)], dtype=int)
@@ -145,9 +145,9 @@ def calc_all_F(wf, U):
     """
     F = []
     for spirrep in wf.spirrep_blocks():
-        F.append(np.zeros(len(wf)[spirrep]))
+        F.append(np.zeros(wf.n_strings[spirrep]))
         for i, I in enumerate(wf.string_indices(spirrep=spirrep)):
-            F[-1][i] = _calc_fI(U[spirrep], I)
+            F[-1][i] = _calc_fI(U[spirrep], I.occ_orb)
     return F
 
 def overlap_to_det(wf, U, F=None, assume_orth=True):
@@ -192,10 +192,10 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     """
     if F is None:
         F = calc_all_F(U, wf)
-    for I in wf.string_indices():
+    for I in wf.string_indices(no_occ_orb=True):
         f_contr = 1.0
         for spirrep, I_spirrep in enumerate(I):
-            f_contr *= F[spirrep][I_spirrep]
+            f_contr *= F[spirrep][int(I_spirrep)]
         f = wf[I] * f_contr
     if not assume_orth:
         for U_spirrep in U:
@@ -261,17 +261,17 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
             G_1 = np.zeros((K[spirrep_1], n[spirrep_1]))
             for i in range(K[spirrep_1]):
                 for j in range(n[spirrep_1]):
-                    H[i,j,i,j] = -F[spirrep_1][I_1]
+                    H[i,j,i,j] = -F[spirrep_1][int(I_1)]
                     for k range(i):
                         for l in range(l):
                             H[k,l,i,j] = _calc_H(U[spirrep_1],
-                                                 I_1,
+                                                 I_1.occ_orb,
                                                  k, l, i, j)
                             H[k,j,i,l] = H[i,l,k,j] = -H[k,l,i,j]
                             H[i,j,k,l] = H[k,l,i,j]
                     #  G_1[i,j] = np.dot(H[:,0,i,j], U[spirrep_1][:,0])
                     G_1[i,j] = _calc_G(U[spirrep_1],
-                                       I_1,
+                                       I_1.occ_orb,
                                        i, j)
             H = Pi @ (np.multiply.outer(Y, G_1) - H)
             S = 0.0
@@ -279,9 +279,9 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
                 if map(len, I_full) != map(len, U):
                     continue
                 F_contr = 1.0
-                for spirrep_other, I_other in I_full:
+                for spirrep_other, I_other in enumerate(I_full):
                     if spirrep_other != spirrep_1:
-                        F_contr *= F[spirrep_other][I_other]
+                        F_contr *= F[spirrep_other][int(I_other)]
                 S += wf[I_full] * F_contr
             X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
               lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
@@ -289,7 +289,7 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
                   (K[spirrep_1] * n[spirrep_1],
                    K[spirrep_1] * n[spirrep_1]),
                   order='F').T
-            G_1 -= F[spirrep_1][I_1] * U[spirrep_1]
+            G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
             C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
                 G_1,
                 (K[spirrep_1] * n[spirrep_1],)
@@ -305,9 +305,9 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
                     for k in range(K[spirrep_2]):
                         for l in range(n[spirrep_2]):
                             G[k,l] = _calc_G(U[spirrep_2],
-                                             I_2,
+                                             I_2.occ_orb,
                                              k, l)
-                    G_2 -= F[spirrep_2][I_2] * U[spirrep_2]
+                    G_2 -= F[spirrep_2][int(I_2)] * U[spirrep_2]
                     S = 0.0
                     for I_full in wf.string_indices(coupled_to=(spirrep_1, I_1,
                                                                 spirrep_2, I_2)):
@@ -317,7 +317,7 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
                         for spirrep_other, I_other in I_full:
                             if (spirrep_other != spirrep_1
                                 and spirrep_other != spirrep_2):
-                                F_contr *= F[spirrep_other][I_other]
+                                F_contr *= F[spirrep_other][int(I_other)]
                         S += wf[I_full] * F_contr
                     X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
                       lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] += S * np.reshape(
