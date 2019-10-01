@@ -13,6 +13,7 @@ from numpy import linalg
 from dGr_util import get_I
 import dGr_general_WF as genWF
 import dGr_Absil as Absil
+from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
     def all_dets(self):
         """Generate all determinants, yielding normalised CI-like wave function"""
         if self.norm is None:
-            raise ValueError('Norm has not been calculated yet!')
+            raise dGrValueError('Norm has not been calculated yet!')
         if self.WF_type != 'CISD':
             raise NotImplementedError('Curently works only for CISD')
         yield genWF.Ref_Det(c = 1.0/self.norm)
@@ -164,7 +165,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                                         a = int(lspl[2]) - 1 + new_wf.n_alpha))
                         if 'RESULTS' in l:
                             if not dbl_found:
-                                raise Exception('Double excitations not found!')
+                                raise dGrMolproInputError('Double excitations not found!')
                             break
         return new_wf
     

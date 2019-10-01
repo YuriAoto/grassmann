@@ -9,6 +9,8 @@ import logging
 
 from scipy import linalg
 
+from dGr_exceptions import *
+
 logger = logging.getLogger(__name__)
 
 sqrt2 = math.sqrt(2.0)
@@ -89,7 +91,7 @@ def str_matrix(X):
 def get_I(n, i=None, a=None):
     """return range(n).remove(i) + [a]"""
     if type(i) != type(a):
-        raise ValueError('Both i and a must be of same type!')
+        raise dGrValueError('Both i and a must be of same type!')
     if i is None:
         return list(range(n))
     if isinstance(i, int):

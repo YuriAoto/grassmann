@@ -8,8 +8,7 @@ import re
 import argparse
 from collections import namedtuple
 
-class ParseError(Exception):
-    pass
+from dGr_exceptions import *
 
 def __is_molpro_output(file):
     """Return True if file is a Molpro output."""
@@ -20,11 +19,11 @@ def __is_molpro_output(file):
     return False
 
 def __assert_molpro_output(file):
-    """Raise ParseError if file does not exist or is not Molpro file."""
+    """Raise dGrParseError if file does not exist or is not Molpro file."""
     if not os.path.isfile(file):
-        raise ParseError('File ' + file + ' not found!')
+        raise dGrParseError('File ' + file + ' not found!')
     if not __is_molpro_output(file):
-        raise ParseError('File ' + file + ' is not a Molpro output!')
+        raise dGrParseError('File ' + file + ' is not a Molpro output!')
 
 def parse_cmd_line():
     """Parse the command line for dGr, checking if it is all OK."""
@@ -56,18 +55,18 @@ def parse_cmd_line():
     if cmd_args.ini_orb is not None:
         try:
             __assert_molpro_output(cmd_args.ini_orb)
-        except ParseError as e:
+        except dGrParseError as e:
             if 'not a Molpro output' in str(e):
                 raise e
             else:
                 if not os.path.isfile(cmd_args.ini_orb + '_Ua.npy'):
-                    raise ParseError('Neither ' + cmd_args.ini_orb
-                                     + ' nor ' + cmd_args.ini_orb
-                                     + '_Ua.npy exist!')
+                    raise dGrParseError('Neither ' + cmd_args.ini_orb
+                                        + ' nor ' + cmd_args.ini_orb
+                                        + '_Ua.npy exist!')
                 if not os.path.isfile(cmd_args.ini_orb + '_Ub.npy'):
-                    raise ParseError('Neither ' + cmd_args.ini_orb
-                                     + ' nor ' + cmd_args.ini_orb
-                                     + '_Ub.npy exist!')
+                    raise dGrParseError('Neither ' + cmd_args.ini_orb
+                                        + ' nor ' + cmd_args.ini_orb
+                                        + '_Ub.npy exist!')
                 cmd_args.ini_orb = (cmd_args.ini_orb + '_Ua.npy',
                                     cmd_args.ini_orb + '_Ub.npy')
     if cmd_args.WF_orb is None:

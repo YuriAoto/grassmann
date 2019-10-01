@@ -262,7 +262,7 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
             for i in range(K[spirrep_1]):
                 for j in range(n[spirrep_1]):
                     H[i,j,i,j] = -F[spirrep_1][int(I_1)]
-                    for k range(i):
+                    for k in range(i):
                         for l in range(l):
                             H[k,l,i,j] = _calc_H(U[spirrep_1],
                                                  I_1.occ_orb,
@@ -292,7 +292,7 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
             G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
             C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
                 G_1,
-                (K[spirrep_1] * n[spirrep_1],)
+                (K[spirrep_1] * n[spirrep_1],),
                 order='F')
             for spirrep_2 in wf.spirrep_blocks():
                 if spirrep_2 <= spirrep_1:

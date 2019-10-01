@@ -20,6 +20,7 @@ from scipy import linalg
 from dGr_util import str_matrix, logtime
 from dGr_general_WF import Wave_Function
 import dGr_Absil as Absil
+from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def optimise_distance_to_FCI(fci_wf,
     for i_iteration in range(max_iter):
         logger.info('Starting iteration %d',
                     i_iteration)
-        if  logger.level <= logging.DEBUG:
+        if logger.level <= logging.DEBUG:
             logger.debug('Wave function:\n' + str(cur_wf))
         Jac, Hess = cur_wf.construct_Jac_Hess()
         logger.info('Hessian and Jacobian are built\n')
@@ -380,13 +381,13 @@ def optimise_distance_to_CI(ci_wf,
     calculate n_pos_H_eigVal
     """
     if not isinstance(ci_wf, Wave_Function):
-        raise ValueError('ci_wf should be an instance of dGr_general_WF.Wave_Function.')
+        raise dGrValueError('ci_wf should be an instance of dGr_general_WF.Wave_Function.')
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
     f = None
     if only_C and only_eta:
-        raise ValueError('Do not set both only_C and only_eta to True!')
+        raise dGrValueError('Do not set both only_C and only_eta to True!')
     if restricted:
         raise NotImplementedError('Restricted calculation is not working yet.')
     if ini_U is None:
@@ -397,18 +398,18 @@ def optimise_distance_to_CI(ci_wf,
     else:
         if ((not isinstance(ini_U, list))
             or len(ini_U) != 2 * ci_wf.n_irrep):
-            raise ValueError('ini_U must be a list,'
-                             +' of lenght 2 * ci_wf.n_irrep of numpy.array.')
+            raise dGrValueError('ini_U must be a list,'
+                                +' of lenght 2 * ci_wf.n_irrep of numpy.array.')
         sum_n_a = sum_n_b = 0
         for i in range(2 * ci_wf.n_irrep):
             i_irrep =  i % ci_wf.n_irrep
             if ini_U[i].shape[0] != ci_wf.orb_dim[i_irrep]:
-                raise ValueError (('Shape error in ini_U {0:} for irrep {1:}:'
-                                   + ' U.shape[0] = {2:} != {3:} = ci_wf.orb_dim').\
-                                  format('alpha' if i < ci_wf.n_irrep else 'beta',
-                                         i_irrep,
-                                         ini_U[i].shape[0],
-                                         ci_wf.orb_dim[i_irrep]))
+                raise dGrValueError (('Shape error in ini_U {0:} for irrep {1:}:'
+                                      + ' U.shape[0] = {2:} != {3:} = ci_wf.orb_dim').\
+                                     format('alpha' if i < ci_wf.n_irrep else 'beta',
+                                            i_irrep,
+                                            ini_U[i].shape[0],
+                                            ci_wf.orb_dim[i_irrep]))
             if i < ci_wf.n_irrep:
                 sum_n_a += ini_U[i].shape[1]
             else:
@@ -416,9 +417,9 @@ def optimise_distance_to_CI(ci_wf,
         for sum_n, n, spin in [(sum_n_a, ci_wf.n_alpha, 'alpha'),
                                (sum_n_b, ci_wf.n_beta,  'beta')]:
             if sum_n != n:
-                raise ValueError (('Shape error in ini_U {0:}:'
-                                   + ' sum U.shape[1] = {1:} != {2:} = ci_wf.n_{0:}').\
-                                  format(spin, sum_n, n))
+                raise dGrValueError (('Shape error in ini_U {0:}:'
+                                      + ' sum U.shape[1] = {1:} != {2:} = ci_wf.n_{0:}').\
+                                     format(spin, sum_n, n))
         U = ini_U
     lim_XC = [0]
     for i in range(2 * ci_wf.n_irrep):
