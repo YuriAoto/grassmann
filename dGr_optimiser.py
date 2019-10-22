@@ -1,11 +1,21 @@
-"""Optimiser of the distance to an external wave function
+"""Optimisers for the distance from the Grassmannian to an external wave function
 
-History
-    Aug 2018 - Start
-    Mar 2019 - Organise and comment the code
-               Add to git
+Here, we consider the function f given by
 
-Yuri
+f(x) = <0|ext>
+
+where |0> is a Slater determinant and |ext> a correlated wave function.
+The functions here are the optimisers.
+
+Classes:
+--------
+Results
+
+Functions:
+----------
+optimise_distance_to_FCI
+optimise_distance_to_CI
+
 """
 import copy
 import math
@@ -17,13 +27,14 @@ from collections import namedtuple
 import numpy as np
 from scipy import linalg
 
-from dGr_util import str_matrix, logtime
+from dGr_util import logtime
 from dGr_general_WF import Wave_Function
 import dGr_Absil as Absil
 from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
 
+np.set_printoptions(linewidth=150)
 
 class Results(namedtuple('Results',
                          ['f',
@@ -35,6 +46,7 @@ class Results(namedtuple('Results',
     """A namedtuple for the results of optimisation
     
     Attributes:
+    -----------
     f                  The value of the function (the overlap) in the end of the procedure
     U                  [U_sigma^i], the transformation matrices for the optimised orbitals
     norm               norm of vectors that should vanish at convergence
@@ -140,29 +152,24 @@ def optimise_distance_to_FCI(fci_wf,
         logger.info('Starting iteration %d',
                     i_iteration)
         if logger.level <= logging.DEBUG:
-            logger.debug('Wave function:\n' + str(cur_wf))
+            logger.debug('Wave function:\n%s', cur_wf)
         Jac, Hess = cur_wf.construct_Jac_Hess()
         logger.info('Hessian and Jacobian are built\n')
-        if logger.level <= 1:
-            logger.log(1, str(Jac))
-            logger.log(1, str(Hess))
+        logger.log(1, '%s', Jac)
+        logger.log(1, '%s', Hess)
         if check_jac_and_hess:
             num_Jac, num_Hess = cur_wf.construct_Jac_Hess(analytic=False)
             diff = 0.0
             for i,x in enumerate(num_Jac):
                 diff += abs(x-Jac[i])
-            logger.debug('Sum abs(diff(Jac, numJac)) = {0:10.6e}'.\
-                         format(diff))
+            logger.debug('Sum abs(diff(Jac, numJac)) = %s', diff)
             diff = 0.0
             for i1, x1 in enumerate(num_Hess):
                 for i2, x2 in enumerate(x1):
                     diff += abs(x2-Hess[i1][i2])
-            logger.debug('Sum abs(diff(Hess, numHess)) = {0:10.6e}'.\
-                         format(diff))
-            logger.debug('Analytic:\n%s',
-                         str(Jac), str(Hess))
-            logger.debug('Numeric:\n%s',
-                         str(num_Jac), str(num_Hess))
+            logger.debug('Sum abs(diff(Hess, numHess)) = %s', diff)
+            logger.debug('Analytic:\n%s\n\n%s', Jac, Hess)
+            logger.debug('Numeric:\n%s\n\n%s', num_Jac, num_Hess)
         eig_val, eig_vec = linalg.eigh(Hess)
         Hess_has_pos_eig = False
         Hess_dir_with_posEvec = None
@@ -194,22 +201,21 @@ def optimise_distance_to_FCI(fci_wf,
             #    gamma += j**2
             #gamma = -gamma/den
             gamma = 0.5
-            logger.info('Calculating z vector by Gradient descent;\n'
-                        + 'gamma = {0:.5f}\n'.format(gamma))
+            logger.info('Calculating z vector by Gradient descent;\n gamma = %s',
+                        gamma)
             max_c0 = cur_wf.determinants[0][0]
             max_i0 = 0
-            if logger.level <= 15:
-                logger.log(15, 'Current C0: {0:.4f}'.format(max_c0))
+            logger.log(15, 'Current C0: %.4f', max_c0)
             for i in range(6):
                 tmp_wf, tmp_Ua, tmp_Ub = cur_wf.calc_wf_from_z(i*gamma*Hess_dir_with_posEvec,
                                                                just_C0=True)
                 this_c0 = tmp_wf.determinants[0][0]
-                logger.debug('Attempting for i=%d: C0 = %f', i, this_c0)
+                logger.debug('Attempting for i=%d: C0 = %.4f', i, this_c0)
                 if abs(max_c0) < abs(this_c0):
                     max_c0 = this_c0
                     max_i0 = i
             z = max_i0*gamma*Hess_dir_with_posEvec
-            logger.info('z vector obtained: %d*gamma*Hess_dir_with_posEvec',
+            logger.info('z vector obtained: %d * gamma * Hess_dir_with_posEvec',
                         max_i0)
             try_uphill = False
         normZ = 0.0
@@ -230,10 +236,8 @@ def optimise_distance_to_FCI(fci_wf,
                            math.sqrt(normJ),
                            det_maxC))
         f_out.flush()
-        logger.info('Norm of z vector: {0:8.5e}'.\
-                    format(normZ))
-        logger.info('Norm of J vector: {0:8.5e}'.\
-                    format(normJ))
+        logger.info('Norm of z vector: %8.5e', normZ)
+        logger.info('Norm of J vector: %8.5e', normJ)
         if (not try_uphill
             and normJ < thrsh_J
             and normZ < thrsh_Z):
@@ -335,12 +339,15 @@ def optimise_distance_to_CI(ci_wf,
         where U_sigma^i is the U for spin sigma (alpha=a or beta=b) and irrep i.
         If it is a restricted calculation, only one part should be given:
         [U^1, ..., U^g]
-        If None, a column-truncated Identity is used as initial transformation.
+        If None, a column-truncated Identity for each irrep is used as
+        initial transformation, that is, the occupied orbitals are the first ones
+        in the MO basis of ci_wf.
     
     occupation (tuple of int, default=None)
-        The occupation of each spin-irrep block to be used in the optimization:
+        The occupation of each spirrep block to be used in the optimization:
         (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
-        This should be consistent to the spin and symmetry of the external wave function
+        This should be consistent to the spin and symmetry of the external
+        wave function.
         If None is given, uses ci_wf.ref_occ.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
@@ -385,6 +392,7 @@ def optimise_distance_to_CI(ci_wf,
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
+    zero_skip_linalg = 1.0E-8
     f = None
     if only_C and only_eta:
         raise dGrValueError('Do not set both only_C and only_eta to True!')
@@ -393,7 +401,7 @@ def optimise_distance_to_CI(ci_wf,
     if ini_U is None:
         U = []
         ini_occ = occupation if occupation is not None else ci_wf.ref_occ
-        for i in range(2 * ci_wf.n_irrep):
+        for i in ci_wf.spirrep_blocks(restricted = False):
             U.append(np.identity(ci_wf.orb_dim[i % ci_wf.n_irrep])[:,:(ini_occ[i])])
     else:
         if ((not isinstance(ini_U, list))
@@ -401,7 +409,7 @@ def optimise_distance_to_CI(ci_wf,
             raise dGrValueError('ini_U must be a list,'
                                 +' of lenght 2 * ci_wf.n_irrep of numpy.array.')
         sum_n_a = sum_n_b = 0
-        for i in range(2 * ci_wf.n_irrep):
+        for i in ci_wf.spirrep_blocks(restricted = False):
             i_irrep =  i % ci_wf.n_irrep
             if ini_U[i].shape[0] != ci_wf.orb_dim[i_irrep]:
                 raise dGrValueError (('Shape error in ini_U {0:} for irrep {1:}:'
@@ -423,6 +431,7 @@ def optimise_distance_to_CI(ci_wf,
         U = ini_U
     lim_XC = [0]
     for i in range(2 * ci_wf.n_irrep):
+        logger.debug('Ui shape = %s; Ui = %s', U[i].shape, U[i])
         lim_XC.append(lim_XC[-1] + U[i].shape[0] * U[i].shape[1])
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
@@ -433,7 +442,9 @@ def optimise_distance_to_CI(ci_wf,
     for i_iteration in range(max_iter):
         with logtime('Calculating f') as T_calc_f:
             all_F = Absil.calc_all_F(ci_wf, U)
-            f = Absil.distance_to_det(ci_wf, U, F=allF)
+            logger.debug('all_F:\n%s', all_F)
+            f = Absil.overlap_to_det(ci_wf, U, F=all_F)
+            logger.debug('just calculated f: %.5f', f)
         f_out.write((fmt_ini if i_iteration == 0 else fmt_full).\
                     format(i_iteration,
                            f,
@@ -443,12 +454,11 @@ def optimise_distance_to_CI(ci_wf,
         if converged_C and converged_eta:
             break
         with logtime('Generating linear system') as T_gen_lin_system:
-            X, C = Absil.generate_lin_system(ci_wf, U, lim_XC, F=allF)
-        if logger.level <= logging.DEBUG:
-            logger.debug('matrix X:\n' + str(X))
-            logger.debug('matrix C:\n' + str_matrix(C))
+            X, C = Absil.generate_lin_system(ci_wf, U, lim_XC, F=all_F)
+        logger.debug('matrix X:\n%s', X)
+        logger.debug('matrix C:\n%s', C)
         norm_C = linalg.norm(C)
-        logger.info('norm of matrix C: {:.5e}'.format(norm_C))
+        logger.info('norm of matrix C: %.5e', norm_C)
         if norm_C < thrsh_C:
             converged_C = True
             if only_C:
@@ -457,50 +467,64 @@ def optimise_distance_to_CI(ci_wf,
             converged_C = False
         with logtime('Solving linear system') as T_solve_lin_system:
             lin_sys_solution = linalg.lstsq(X, C, cond=None)
-        if logger.level <= logging.DEBUG:
-            logger.debug('Solution of the linear system, eta:\n'
-                         + str(lin_sys_solution[0]))
-        logger.info('Rank of matrix X: ' +  str(lin_sys_solution[2]))
+        logger.debug('Solution of the linear system, eta:\n%s',
+                     lin_sys_solution[0])
+        logger.info('Rank of matrix X: %d', lin_sys_solution[2])
         norm_eta = linalg.norm(lin_sys_solution[0])
         if norm_eta < thrsh_eta:
             converged_eta = True
             if only_eta:
                 break
-            else:
-                converged_eta = False
-        logger.info('Norm of matrix eta: {:.5e}'.format(norm_eta))
+        else:
+            converged_eta = False
+        logger.info('Norm of matrix eta: %.5e', norm_eta)
         eta = []
         svd_res = []
         with logtime('Singular value decomposition of eta') as T_svd:
-            for i in range(2 * ci_wf.n_irrep):
+            for i in ci_wf.spirrep_blocks(restricted=False):
                 eta.append(np.reshape(
                     lin_sys_solution[0][lim_XC[i]:lim_XC[i+1]],
                     U[i].shape, order='F'))
-                svd_res.append(linalg.svd(eta[-1],
-                                          full_matrices=False))
+                norm_eta_i = linalg.norm(eta[-1])
+                if norm_eta_i < zero_skip_linalg:
+                    svd_res.append((np.zeros(eta[-1].shape),
+                                    np.zeros((eta[-1].shape[1],)),
+                                    np.identity(eta[-1].shape[1])))
+                    logger.warning(
+                        'Skipping svd for spirrep block %d. Norm of eta[%d] = %.8f',
+                        i, i, norm_eta_i)
+                else:
+                    svd_res.append(linalg.svd(eta[-1],
+                                              full_matrices=False))
         if check_equations:
             with logtime('Cheking equations') as T_check_eq:
-                Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps = 0.0000001)
+                Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps = 0.0001)
         if logger.level <= logging.DEBUG:
             for i in range(2 * ci_wf.n_irrep):
-                logger.debug('SVD results, Usvd_a:\n'   + str_matrix(svd_res[i][0]))
-                logger.debug('SVD results, SGMsvd_a:\n' + str(       svd_res[i][1]))
-                logger.debug('SVD results, VTsvd_a:\n'  + str_matrix(svd_res[i][2]))
+                logger.debug('SVD results, Usvd_a:\n%s',svd_res[i][0])
+                logger.debug('SVD results, SGMsvd_a:\n%s', svd_res[i][1])
+                logger.debug('SVD results, VTsvd_a:\n%s', svd_res[i][2])
         for i in range(2 * ci_wf.n_irrep):
             U[i]  = np.matmul(U[i], svd_res[i][2].T * np.cos(svd_res[i][1]))
             U[i] += svd_res[i][0] * np.sin(svd_res[i][1])
         if logger.level <= logging.DEBUG:
             for i in range(2 * ci_wf.n_irrep):
-                logger.debug('new U for {} and irrep {}:\n'.\
-                             format('alpha' if i < ci_wf.n_irrep else 'beta',
-                                    i % ci_wf.n_irrep) + str_matrix(U[i]))
+                logger.debug('new U for %s and irrep %s:\n%s',
+                             'alpha' if i < ci_wf.n_irrep else 'beta',
+                             i % ci_wf.n_irrep,
+                             U[i])
         with logtime('Orthogonalisation of U') as T_orth_U:
-            U = map(linalg.orth, U)
+            for i, Ui in enumerate(U):
+                norm_Ui = linalg.norm(Ui)
+                if norm_Ui > zero_skip_linalg:
+                    U[i] = linalg.orth(Ui)
         if logger.level <= logging.DEBUG:
             for i in range(2 * ci_wf.n_irrep):
-                logger.debug('new U for {} and irrep {}, after orthogonalisation:\n'.\
-                             format('alpha' if i < ci_wf.n_irrep else 'beta',
-                                    i % ci_wf.n_irrep) + str_matrix(U[i]))
+                logger.debug(
+                    'new U for %s and irrep %s, after orthogonalisation:\n%s',
+                    'alpha' if i < ci_wf.n_irrep else 'beta',
+                    i % ci_wf.n_irrep,
+                    U[i])
         elapsed_time = str(timedelta(seconds=(T_orth_U.end_time
                                               - T_calc_f.ini_time)))
     return Results(f = f,

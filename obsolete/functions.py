@@ -1,3 +1,26 @@
+            self.norm = 1.0
+            for S in self.singles:
+                self.norm += 2 * S.t**2
+            for D in self.doubles:
+                if D.a == D.b:
+                    self.norm += (1 if D.i == D.j else 2) * D.t**2
+                elif D.a > D.b:
+                    t_compl = 0.0
+                    for Dba in self.doubles:
+                        if (D.i == Dba.i
+                            and D.j == Dba.j
+                            and D.a == Dba.b
+                            and D.b == Dba.a):
+                            t_compl = Dba.t
+                            break
+                    if D.i == D.j:
+                        self.norm += 0.5 * (D.t + t_compl)**2
+                    else:
+                        self.norm += 4 * (D.t**2 + t_compl**2 - D.t*t_compl)
+                else:
+                    continue
+
+
 elif self.WF_type == 'MRCI':
     if MRCI_ref_str == l:
         ref_found = True
@@ -358,3 +381,81 @@ def _get_norm_of_matrix(M):
             for M_ij in line:
                 norm += M_ij**2
     return math.sqrt(norm)
+
+
+
+def str_matrix(X):
+    """Return a str of the 2D list or array X."""
+    strM = []
+    for i in X:
+        strI = []
+        for j in i:
+            strI.append(' {0:10.6f} '.format(j)\
+                        if abs(j) > 1.0E-7 else
+                        (' ' + '-'*10 + ' '))
+        strM.append(''.join(strI))
+    return '\n'.join(strM)
+
+
+
+def _get_orbitals_from_Molpro_output(output_name):
+    """Load (last) orbitals from Molpro output.
+    
+    Parameters:
+    -----------
+    output_name (str)
+        Molpro output
+    
+    Behaviour:
+    ----------
+    This function loads always the last RHF or UHF orbitals.
+    
+    Returns:
+    --------
+    See get_orbitals
+    """
+    reading_orbitals = False
+    is_RHF = None
+    n_orb = None
+    coef_a = None
+    coef_b = None
+    logger.info('File: %s', output_name)
+    with open(output_name, 'r') as f: 
+        for l in f:
+            if 'NUMBER OF CONTRACTIONS' in l:
+                n_orb = int(l.split()[3])
+                if n_orb > 10:
+                    raise Exception ('Probably not valid for more than 10 orbitals')
+            if 'MOLECULAR ORBITALS' in l:
+                is_RHF = True
+                coef_a = np.zeros((n_orb,n_orb))
+                reading_orbitals = True
+                cur_coef = coef_a
+            if 'ELECTRON ORBITALS FOR POSITIVE SPIN' in l:
+                is_RHF = False
+                coef_a = np.zeros((n_orb,n_orb))
+                reading_orbitals = True
+                cur_coef = coef_a
+            if 'ELECTRON ORBITALS FOR NEGATIVE SPIN' in l:
+                is_RHF = False
+                coef_b = np.zeros((n_orb,n_orb))
+                reading_orbitals = True
+                cur_coef = coef_b
+            if 'HOMO' in l:
+                reading_orbitals = False
+            if reading_orbitals:
+                lspl = l.split()
+                if lspl:
+                    is_line_orb = re.match('(\d+)\.\d+$', lspl[0])
+                    if is_line_orb is not None:
+                        for i in range(n_orb):
+                            cur_coef[i][int(is_line_orb.group(1))-1] = float(l[24+i*10:24+(i+1)*10])
+    logger.info('coeff_a:\n' + str(coef_a))
+    if not is_RHF:
+        logger.info('coeff_b:\n' + str(coef_b))
+    if is_RHF:
+        return coef_a
+    else:
+        return coef_a, coef_b
+
+

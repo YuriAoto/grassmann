@@ -3,23 +3,20 @@
 
 Try `dGr --help` for the usage.
 
-History
-    Aug 2018 - Start
-    Mar 2019 - Add to git
-
-Yuri
+Yuri Aoto, 2018, 2019
 """
 import sys
 import logging
+import traceback
 
 import dGr_parser
 from dGr_main import dGr_main
+from dGr_exceptions import dGrParseError, dGrError
 
 assert sys.version_info >= (3, 5)
-
 try:
     cmd_line_args = dGr_parser.parse_cmd_line()
-except dGr_parser.ParseError as e:
+except dGrParseError as e:
     sys.exit(str(e))
 
 logfile = cmd_line_args.basename + '.min_dist' + cmd_line_args.state + '.log'
@@ -30,7 +27,40 @@ logging.basicConfig(filename=logfile,
                     filemode='w',
                     level=cmd_line_args.loglevel)
 logger = logging.getLogger(__name__)
-
-dGr_main(cmd_line_args)
-
+class myLogFilter():
+    """Define a filter for logging, to be attached to all handlers."""
+    def filter(self, rec):
+        """Return a boolean, indicating whether rec will be logged or not."""
+        if rec.funcName == '__enter__':
+            rec.funcName = 'Entering time management'
+        elif rec.funcName == '__exit__':
+            rec.funcName = 'Finishing time management'
+        if cmd_line_args.logfilter is not None:
+            return not cmd_line_args.logfilter.search(rec.funcName) is None
+        # print()
+        # print(rec)
+        # print(rec.__dict__)
+        # print()
+        return True
+for handler in logging.root.handlers:
+    handler.addFilter(myLogFilter())
+f_out = None
+with_error = False
+try:
+    f_out = open(cmd_line_args.basename + '.min_dist' + cmd_line_args.state, 'w')
+    dGr_main(cmd_line_args, f_out)
+except dGrError as e:
+    with_error = True
+    error_msg = ('dGrError: ' + str(e) +
+                 '\nHere is the traceback:\n' + traceback.format_exc())
+except:
+    with_error = True
+    error_msg = 'Unknown error:\n' + traceback.format_exc()
+finally:
+    if with_error and f_out is not None:
+        f_out.write('\n' + error_msg)
+    if f_out is not None:
+        f_out.close()
+    if with_error:
+        sys.exit(error_msg)
 exit()

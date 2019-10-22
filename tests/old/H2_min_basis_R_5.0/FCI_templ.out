@@ -1,0 +1,384 @@
+
+ Primary working directories    : /scr/yuriaoto/job.021030/molpro.NQ9PgV1qvg
+ Secondary working directories  : /scr/yuriaoto/job.021030/molpro.NQ9PgV1qvg
+ Wavefunction directory         : /scr/yuriaoto/job.021030/
+ Main file repository           : /scr/yuriaoto/job.021030/molpro.NQ9PgV1qvg/
+
+ id        : yuriaoto
+
+ Nodes             nprocs
+ t-rex.ufabc.int.br    1
+
+ Using customized tuning parameters: mindgm=8; mindgv=16; mindgc=1; mindgr=1; noblas=0; minvec=7
+ default implementation of scratch files=df  
+
+
+ Variables initialized (933), CPU time= 0.00 sec
+ ***,
+ memory,40,m
+ 
+ r = 2.0
+ basis = STO-3G
+ 
+ nosym
+ geom={H1;H2,H1,r}
+ 
+ {rhf}
+ 
+ {uhf,
+ rotate,1.1,2.1,45}
+ 
+ {fci
+ wf,2,1,0;
+ }
+ 
+ Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
+ Default parameters read. Elapsed time= 0.46 sec
+
+ Checking input...
+ Passed
+1
+
+
+                                         ***  PROGRAM SYSTEM MOLPRO  ***
+                                       Copyright, TTI GmbH Stuttgart, 2015
+                                    Version 2019.2 linked Abr  7 2019 15:10:35
+
+
+ **********************************************************************************************************************************
+ LABEL *                                                                                 
+  64 bit serial version                                                                  DATE: 13-Jun-19          TIME: 09:34:45  
+ **********************************************************************************************************************************
+
+ SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
+ **********************************************************************************************************************************
+ SETTING R              =         2.00000000                                  
+
+ Variable memory set to   40000000 words,  buffer space 
+
+ SETTING BASIS          =    STO-3G
+ ZSYMEL=NOSYM
+
+
+
+ Recomputing integrals since basis changed
+
+
+ Using spherical harmonics
+
+ Library entry H      S STO-3G               selected for orbital group  1
+
+
+ PROGRAM * SEWARD (Integral evaluation for generally contracted gaussian basis sets)     Author: Roland Lindh, 1990
+
+ Geometry written to block  1 of record 700
+
+ Orientation using atomic masses  
+ Molecule type: Linear
+ Rotational constants:     895.2621982    895.2621982      0.0000000 GHz  (calculated with average atomic masses)
+
+ Point group  C1  
+
+
+
+ ATOMIC COORDINATES
+
+ NR  ATOM    CHARGE       X              Y              Z
+
+   1  H1      1.00    0.000000000    0.000000000   -1.000000000
+   2  H2      1.00    0.000000000    0.000000000    1.000000000
+
+ NUCLEAR CHARGE:                    2
+ NUMBER OF PRIMITIVE AOS:           6
+ NUMBER OF SYMMETRY AOS:            6
+ NUMBER OF CONTRACTIONS:            2   (    2A   )
+ NUMBER OF CORE ORBITALS:           0   (    0A   )
+ NUMBER OF VALENCE ORBITALS:        2   (    2A   )
+
+
+ NUCLEAR REPULSION ENERGY    0.50000000
+
+ Eigenvalues of metric
+
+         1 0.537E+00 0.146E+01
+
+
+ Contracted 2-electron integrals neglected if value below      1.0D-11
+ AO integral compression algorithm  1   Integral accuracy      1.0D-11
+
+     0.262 MB (compressed) written to integral file (100.0%)
+
+
+ NUMBER OF SORTED TWO-ELECTRON INTEGRALS:          6.     BUFFER LENGTH:  32768
+ NUMBER OF SEGMENTS:   1  SEGMENT LENGTH:          6      RECORD LENGTH: 524288
+
+ Memory used in sort:       0.56 MW
+
+ SORT1 READ           7. AND WROTE           6. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.03 SEC
+ SORT2 READ           6. AND WROTE           6. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
+
+ FILE SIZES:   FILE 1:    30.2 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     34.4 MBYTE
+
+ OPERATOR DM      FOR CENTER  0  COORDINATES:    0.000000    0.000000    0.000000
+
+
+ **********************************************************************************************************************************
+ DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
+              1      19       29.93       500      610      700      900      950      970     1000      129      960     1100   
+                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
+                                         1400     1410     1200     1210     1080     1600     1650     1300     1700   
+                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
+
+ PROGRAMS   *        TOTAL       INT
+ CPU TIMES  *         0.28      0.16
+ REAL TIME  *         3.60 SEC
+ DISK USED  *        34.68 MB
+ **********************************************************************************************************************************
+
+
+ PROGRAM * RHF-SCF (CLOSED SHELL)       Authors: W. Meyer, H.-J. Werner
+
+
+ NUMBER OF ELECTRONS:       1+    1-    SPACE SYMMETRY=1    SPIN SYMMETRY: Singlet 
+ CONVERGENCE THRESHOLDS:    1.00E-05 (Density)    1.00E-07 (Energy)
+ MAX. NUMBER OF ITERATIONS:       60
+ INTERPOLATION TYPE:            DIIS
+ INTERPOLATION STEPS:              2 (START)      1 (STEP)
+ LEVEL SHIFTS:                  0.00 (CLOSED)  0.00 (OPEN) 
+
+
+
+ Orbital guess generated from atomic densities. Full valence occupancy:    1
+
+ Molecular orbital dump at record        2100.2
+
+ Initial occupancy:   1
+
+ ITERATION    DDIFF          GRAD             ENERGY        2-EL.EN.            DIPOLE MOMENTS         DIIS   ORB.
+    1      0.000D+00      0.000D+00        -1.04917090      1.232440    0.00000    0.00000   -0.00000    0    start
+    2      0.000D+00      0.139D-15        -1.04917090      1.232440    0.00000    0.00000   -0.00000    0    orth
+
+ Final occupancy:   1
+
+ !RHF STATE  1.1 Energy                -1.049170902035
+ Nuclear energy                         0.50000000
+ One-electron energy                   -2.16539074
+ Two-electron energy                    0.61621983
+ Virial quotient                       -0.90159536
+ !RHF STATE  1.1 Dipole moment          0.00000000     0.00000000    -0.00000000
+ Dipole moment /Debye                   0.00000000     0.00000000    -0.00000000
+
+ Orbital energies:
+
+         1.1          2.1
+     -0.466476     0.420927
+
+
+ HOMO      1.1    -0.466476 =     -12.6934eV
+ LUMO      2.1     0.420927 =      11.4540eV
+ LUMO-HOMO         0.887402 =      24.1474eV
+
+
+ **********************************************************************************************************************************
+ DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
+              1      19       29.93       500      610      700      900      950      970     1000      129      960     1100   
+                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
+                                         1400     1410     1200     1210     1080     1600     1650     1300     1700   
+                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
+
+              2       4        2.74       700     1000      520     2100   
+                                         GEOM     BASIS   MCVARS     RHF  
+
+ PROGRAMS   *        TOTAL   RHF-SCF       INT
+ CPU TIMES  *         0.34      0.06      0.16
+ REAL TIME  *         4.31 SEC
+ DISK USED  *        34.68 MB
+ **********************************************************************************************************************************
+
+
+ PROGRAM * UHF-SCF       Authors: W. Meyer, H.-J. Werner
+
+
+ NUMBER OF ELECTRONS:       1+    1-    SPACE SYMMETRY=1    SPIN SYMMETRY: Singlet 
+ CONVERGENCE THRESHOLDS:    1.00E-05 (Density)    1.00E-07 (Energy)
+ MAX. NUMBER OF ITERATIONS:       60
+ INTERPOLATION TYPE:            DIIS
+ INTERPOLATION STEPS:              2 (START)      1 (STEP)
+ LEVEL SHIFTS:                 -0.20 (ALPHA)  -0.20 (BETA) 
+
+
+
+ Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
+
+ Molecular orbital dump at record        2200.2
+
+ ROTATION OF BETA  ORBITALS   1.1    2.1       45.00 DEGREES
+
+ Initial alpha occupation   1
+ Initial beta  occupation   1
+
+ ITERATION    DDIFF          GRAD             ENERGY        2-EL.EN.            DIPOLE MOMENTS         DIIS
+    1      0.000D+00      0.000D+00        -0.81180783      1.229418    0.00000    0.00000    1.12806    0
+    2      0.258D+00      0.137D+00        -0.96089318      1.133340    0.00000    0.00000    0.69100    1
+    3      0.340D+00      0.107D+00        -1.03040791      1.112243    0.00000    0.00000   -0.09770    2
+    4      0.118D+00      0.343D-01        -1.03664843      1.156008    0.00000    0.00000    0.16310    3
+    5      0.105D+00      0.339D-01        -1.04771433      1.217583    0.00000    0.00000   -0.01323    3
+    6      0.137D-01      0.601D-02        -1.04885392      1.229012    0.00000    0.00000    0.00014    3
+    7      0.359D-02      0.202D-02        -1.04915897      1.232309    0.00000    0.00000    0.00004    3
+    8      0.143D-03      0.387D-03        -1.04917089      1.232440    0.00000    0.00000    0.00000    3
+    9      0.124D-06      0.977D-05        -1.04917090      1.232440    0.00000    0.00000   -0.00000    2
+   10      0.582D-07      0.294D-07        -1.04917090      1.232440    0.00000    0.00000   -0.00000    2
+
+ Final alpha occupancy:   1
+ Final beta  occupancy:   1
+
+ !UHF STATE  1.1 Energy                -1.049170902035
+ Nuclear energy                         0.50000000
+ One-electron energy                   -2.16539074
+ Two-electron energy                    0.61621983
+ Virial quotient                       -0.90159536
+ !UHF STATE  1.1 Dipole moment          0.00000000     0.00000000    -0.00000003
+ Dipole moment /Debye                   0.00000000     0.00000000    -0.00000009
+
+ Orbital energies for positive spin:
+
+         1.1          2.1
+     -0.466476     0.420927
+
+ Orbital energies for negative spin:
+
+         1.1          2.1
+     -0.466476     0.420927
+
+
+ HOMO      1.1    -0.466476 =     -12.6934eV
+ LUMO      2.1     0.420927 =      11.4540eV
+ LUMO-HOMO         0.887402 =      24.1474eV
+
+ EXPECTATION VALUE OF S**2:             0.00000000
+
+ Occupation number threshold for pseudo-canonical orbitals: 1.9990 (occupied), 0.0010 (virtual)
+
+ Number of pseudo-canonical occupied orbitals per symmetry:    1
+ Number of active natural orbitals per symmetry:               0
+
+ Natural orbitals saved to record    2200.2 (Orbital set 3)
+
+ Orbital spaces for UNO-CAS (Min. occupation: 0.020  Max. occupation: 1.980):
+
+ Closed:        1
+ Active:        0
+
+
+ **********************************************************************************************************************************
+ DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
+              1      19       29.93       500      610      700      900      950      970     1000      129      960     1100   
+                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
+                                         1400     1410     1200     1210     1080     1600     1650     1300     1700   
+                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
+
+              2       5        5.25       700     1000      520     2100     2200   
+                                         GEOM     BASIS   MCVARS     RHF      UHF  
+
+ PROGRAMS   *        TOTAL   UHF-SCF   RHF-SCF       INT
+ CPU TIMES  *         0.48      0.14      0.06      0.16
+ REAL TIME  *         5.88 SEC
+ DISK USED  *        35.25 MB
+ **********************************************************************************************************************************
+
+
+ PROGRAM * FCI (Full CI)     Author: P.J. Knowles, 1984
+
+
+   0 Spin projections
+
+ Molecular orbitals read from record     2200.2  Type=UHF/ALPHA (state 1.1)
+ Molecular orbitals read from record     2200.2  Type=UHF/BETA (state 1.1)
+
+ Frozen orbitals:              0 (  0  0  0  0  0  0  0  0)
+ Active orbitals:              2 (  2  0  0  0  0  0  0  0)
+ Active electrons:             2
+ Spin quantum number:          0.0
+ Orbital pairs:                     3       0       0       0       0       0       0       0
+ Strings:                           2       0       0       0       0       0       0       0
+                                    2       0       0       0       0       0       0       0
+ Determinants:                              4               0               0               0
+                                            0               0               0               0
+
+ Load integrals                1.2 sec
+ Transform integrals           1.2 sec
+ Storage for integrals:             55
+ Remaining memory:            39999929
+
+ Core energy:               0.50000000
+ Run Hamiltonian processor DAVIDSON
+ Symmetry:                   1
+ Trial vector:                  0.00
+ Result vector:                 0.00
+ Maximum iterations:           90
+ Convergence threshold:         0.0000100
+ RHS vector:                    0.00
+ Hamiltonian shift:             0.0000000
+ Output threshold:              0.0000000
+ Options:                        0
+ Number of roots:             1
+
+ Hamiltonian diagonaliser entered at time      1.25
+
+ Initial configuration generated:
+       1      1.0000000     -1.0491709
+
+ It  Tr    CPU  Convergence   Energy       Pop     dE(next)
+
+  1   1    1.2  1.00000000    -1.04917090
+                                           0.25 -0.04089840 -0.04089840
+  2   1    1.2  0.19244874    -1.08849631
+
+
+RESULTS FOR STATE  1.1
+=====================
+
+ Correlation energy                    -0.039325406168
+ !FCI STATE  1.1 Energy                -1.088496308203
+ CI Vector (threshold=  0.00    )
+       0.981307026872  1  1
+       0.000000000000  1  2
+       0.000000000000  2  1
+      -0.192448743853  2  2
+ /EOF
+
+
+ **********************************************************************************************************************************
+ DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
+              1      19       29.93       500      610      700      900      950      970     1000      129      960     1100   
+                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
+                                         1400     1410     1200     1210     1080     1600     1650     1300     1700   
+                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
+
+              2       5        5.25       700     1000      520     2100     2200   
+                                         GEOM     BASIS   MCVARS     RHF      UHF  
+
+ PROGRAMS   *        TOTAL       FCI   UHF-SCF   RHF-SCF       INT
+ CPU TIMES  *         0.49      0.00      0.14      0.06      0.16
+ REAL TIME  *         6.00 SEC
+ DISK USED  *        35.31 MB
+ **********************************************************************************************************************************
+ Molecular orbitals read from record     2200.2  Type=UHF/ALPHA (state 1.1)
+ Occupation numbers read from record     2200.2  Type=UHF/ALPHA (state 1.1)
+ Orbital energies read from record       2200.2  Type=UHF/ALPHA (state 1.1)
+ Redundancy group numbers read from rec  2200.2  Type=UHF/BETA (state 1.1)
+ Molecular orbitals read from record     2200.2  Type=UHF/BETA (state 1.1)
+ Occupation numbers read from record     2200.2  Type=UHF/BETA (state 1.1)
+ Orbital energies read from record       2200.2  Type=UHF/BETA (state 1.1)
+ Redundancy group numbers read from rec  2200.2  Type=UHF/BETA (state 1.1)
+ Molecular orbitals read from record     2200.2  Type=UHF/NATURAL (state 1.1)
+ Occupation numbers read from record     2200.2  Type=UHF/NATURAL (state 1.1)
+ Orbital energies read from record       2200.2  Type=UHF/NATURAL (state 1.1)
+ Redundancy group numbers read from rec  2200.2  Type=UHF/BETA (state 1.1)
+
+ FCI/STO-3G energy=     -1.088496308203
+
+             FCI         UHF-SCF         RHF-SCF
+     -1.08849631     -1.04917090     -1.04917090
+ **********************************************************************************************************************************
+ Molpro calculation terminated

@@ -1,0 +1,54 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 2aa059ca687f5285c7df78a9478091e3c6ffd720
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/Li2__R_5__631g__nosym
+
+Command:
+../../dGr CISD.out
+
+From command line and environment:
+External wave function, |extWF>: CISD.out
+Orbital basis of |extWF>: CISD.out
+Hartree-Fock orbitals, |min E>: CISD.out
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: Level None
+qpy job ID: not in qpy
+
+Starting at 21 Oct 2019 - 10:36
+
+Using |WFref> (the reference of |extWF>) as |min E>:
+|<WFref|extWF>| =   0.95322542 ; D(WFref, extWF) =   0.30585807
+Using the reference determinant (identity) as initial guess for U.
+Dimension of orbital space: alpha/beta: [ 18 ]
+Number of alpha and beta electrons: 3 3
+
+Starting optimisation
+------------------------------
+it.    f            |eta|        |C|          time in iteration
+0      0.95322542   ---          ---          ---
+1      0.95383519   0.03480890   0.03510703   0:21:09.862929
+
+Unknown error:
+Traceback (most recent call last):
+  File "../../dGr", line 54, in <module>
+    dGr_main(cmd_line_args, f_out)
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_main.py", line 146, in dGr_main
+    max_iter=20
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_optimiser.py", line 451, in optimise_distance_to_CI
+    X, C = Absil.generate_lin_system(ci_wf, U, lim_XC, F=all_F)
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_Absil.py", line 350, in generate_lin_system
+    I=I_2))):
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_WF_int_norm.py", line 1075, in string_indices
+    if I.is_coupled_to(coupled_to):
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_WF_int_norm.py", line 108, in is_coupled_to
+    or int(cpl.I) != int(self[cpl.spirrep])):
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_general_WF.py", line 70, in __int__
+    spirrep=self.spirrep)
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_WF_int_norm.py", line 750, in get_std_pos
+    return 1 + i[0] * self.n_ext[spirrep] + a[0]
+KeyboardInterrupt

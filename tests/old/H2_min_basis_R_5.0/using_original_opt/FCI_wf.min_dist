@@ -1,0 +1,49 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 1c8191434fb9b6cf20e12c73123465fe4bd0445c
+
+Directory:
+/home/yuriaoto/Documents/Geom_Elec_Str/dist_to_FCI/testing/H2_min_basis_R_5.0
+
+Command:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr --ini_orb UHF.out --WF_templ FCI_templ.out --HF_orb UHF.out --WF_orb RHF.out FCI_wf.out
+
+From command line and environment:
+External wave function, |extWF>: FCI_wf.out
+Template for |extWF>: FCI_templ.out
+Orbital basis of |extWF>: RHF.out
+Hartree-Fock orbitals, |min E>: UHF.out
+Initial guess: Molpro output UHF.out
+Using the optimiser to whole FCI (because --WF_templ was given)
+State: 
+Log level: Level None
+qpy job ID: not in qpy
+
+Starting at 26 Jul 2019 - 14:36
+
+Using as |min E> a Slater determinant different than |WFref>
+(the reference of |extWF>). We have:
+|<min E|extWF>| =   0.70901640 ; D(min E, extWF) =   0.76286774
+|<min E|WFref>| =   0.53677543 ; D(min E, WFref) =   0.96252229
+|<WFref|extWF>| =   0.75685327 ; D(WFref, extWF) =   0.69734744
+Number of determinants in the external wave function: 4
+Dimension of orbital space: 2
+Number of alpha and beta electrons: 1 1
+
+Starting optimisation
+------------------------------
+it.    f                        |z|          |Jac|        [det. largest coef.]
+0      0.70901640               3.09640204   0.26986124   
+1      0.75042102               0.62483815   0.18787264   
+2      0.75679492               0.18363847   0.05897989   
+3      0.75685354               0.00505300   0.00162381   
+4      0.75685354               0.00000011   0.00000003   
+------------------------------
+Iterations converged!
+|<min D|extWF>| =   0.75685354 ; D(min D, extWF) =   0.69734706
+|<refWF|min D>| =   1.00000035 ; D(refWF, min D) =   0.00000000
+|<min E|min D>| =   0.53677582 ; D(min E, min D) =   0.96252187
+
+Ending at 26 Jul 2019 - 14:36
+Total time: 0:00:00.069943

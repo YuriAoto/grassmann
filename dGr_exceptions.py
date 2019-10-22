@@ -1,5 +1,7 @@
 """Exceptions for dGr
 
+Necessary? Put them in the other modules?
+
 """
 
 class dGrError(Exception):

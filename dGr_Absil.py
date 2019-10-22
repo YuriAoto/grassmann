@@ -5,7 +5,20 @@ Here, we consider the function f given by
 f(x) = <0|ext>
 
 where |0> is a Slater determinant and |ext> a correlated wave function.
-The method searches for critical points of this function.
+The functions here are used to search critical points of this function
+by the Newton method on the Grassmannian, as described in:
+
+P-A Absil, R Mahony, and R Sepulchre, "Riemannian Geometry of Grassmann
+Manifolds with a View on Algorithmic Computation", Acta App. Math. 80,
+1999-220, 2004
+
+Functions:
+----------
+
+calc_all_F
+overlap_to_det
+generate_lin_system
+check_Newton_Absil_eq
 
 """
 import math
@@ -68,7 +81,7 @@ def _calc_G(U, det_indices, i, j):
         return 0.0
     if U.shape[1] == 1:
         return 1.0
-    sign = 1 if (j + np.where(det_indices == i))%2 == 0 else -1
+    sign = 1 if (j + np.where(det_indices == i)[0][0]) % 2 == 0 else -1
     row_ind = np.array([x for x in det_indices       if x!=i], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if x!=j], dtype=int)
     return sign * linalg.det(U[row_ind[:,None],col_ind])
@@ -113,16 +126,17 @@ def _calc_H(U, det_indices, i, j, k, l):
     if i not in det_indices or k not in det_indices:
         return 0.0
     sign = 1.0 if ((i<k) == (j<l)) else -1.0
-    if U.shape == 2:
+    if U.shape[1] == 2:
         return sign
-    if (j + np.where(det_indices == i) + l + np.where(det_indices == k)) % 2 == 1:
+    if (j + np.where(det_indices == i)[0][0] +
+        l + np.where(det_indices == k)[0][0]) % 2 == 1:
         sign = -sign
     row_ind = np.array([x for x in det_indices       if (x!=i and x!=k)], dtype=int)
     col_ind = np.array([x for x in range(U.shape[1]) if (x!=j and x!=l)], dtype=int)
     return sign * linalg.det(U[row_ind[:,None],col_ind])
 
 def calc_all_F(wf, U):
-    """Calculate all F needed to an iteration
+    """Calculate all F needed in an iteration
     
     Behaviour:
     ----------
@@ -144,10 +158,11 @@ def calc_all_F(wf, U):
     spirrep for the list and string_indices for the array.
     """
     F = []
-    for spirrep in wf.spirrep_blocks():
-        F.append(np.zeros(wf.n_strings[spirrep]))
-        for i, I in enumerate(wf.string_indices(spirrep=spirrep)):
-            F[-1][i] = _calc_fI(U[spirrep], I.occ_orb)
+    for spirrep in wf.spirrep_blocks(restricted = False):
+        F.append(np.zeros(wf.n_strings(spirrep, U[spirrep].shape[1])))
+        for I in wf.string_indices(spirrep=spirrep,
+                                   only_this_occ = U[spirrep].shape[1]):
+            F[-1][int(I)] = _calc_fI(U[spirrep], I.occ_orb)
     return F
 
 def overlap_to_det(wf, U, F=None, assume_orth=True):
@@ -191,18 +206,25 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     The float <wf|U>
     """
     if F is None:
-        F = calc_all_F(U, wf)
-    for I in wf.string_indices(no_occ_orb=True):
+        F = calc_all_F(wf, U)
+    f = 0.0
+    for I in wf.string_indices(no_occ_orb=True,
+                               only_this_occ=genWF.Orbitals_Sets(
+                                   list(map(lambda U_i: U_i.shape[1], U)))):
         f_contr = 1.0
         for spirrep, I_spirrep in enumerate(I):
+            if len(I_spirrep) == 0:
+                continue
+            I_spirrep.wf = wf
+            I_spirrep.spirrep = spirrep
             f_contr *= F[spirrep][int(I_spirrep)]
-        f = wf[I] * f_contr
+        f += wf[I] * f_contr
     if not assume_orth:
         for U_spirrep in U:
             f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
     return f
 
-def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
+def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
     """Generate the linear system for Absil's method
     
     Behaviour:
@@ -251,9 +273,13 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
     sum_nn = sum([n[i]**2 for i in range(len(K))])
     X = np.zeros((sum_Kn + sum_nn, sum_Kn))
     C = np.zeros(sum_Kn + sum_nn)
-    for spirrep_1 in wf.spirrep_blocks():
+    for spirrep_1 in wf.spirrep_blocks(restricted=False):
+        logger.debug('Starting spirrep_1 = %d', spirrep_1)
+        logger.debug('n_irrep = %d', wf.n_irrep)
         Pi = np.identity(K[spirrep_1]) - U[spirrep_1] @ U[spirrep_1].T
+        logger.debug('Pi = %s', Pi)
         for I_1 in wf.string_indices(spirrep=spirrep_1):
+            logger.debug('At I_1 = %s', I_1)
             if len(I_1) != n[spirrep_1]:
                 continue
             H = np.zeros((K[spirrep_1], n[spirrep_1],
@@ -262,27 +288,39 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
             for i in range(K[spirrep_1]):
                 for j in range(n[spirrep_1]):
                     H[i,j,i,j] = -F[spirrep_1][int(I_1)]
+                    logger.debug('H[ijij] = %s', H[i,j,i,j])
                     for k in range(i):
-                        for l in range(l):
+                        for l in range(j):
                             H[k,l,i,j] = _calc_H(U[spirrep_1],
                                                  I_1.occ_orb,
                                                  k, l, i, j)
                             H[k,j,i,l] = H[i,l,k,j] = -H[k,l,i,j]
                             H[i,j,k,l] = H[k,l,i,j]
+                            logger.debug('H[klij] = %s', H[k,l,i,j])
                     #  G_1[i,j] = np.dot(H[:,0,i,j], U[spirrep_1][:,0])
                     G_1[i,j] = _calc_G(U[spirrep_1],
                                        I_1.occ_orb,
                                        i, j)
-            H = Pi @ (np.multiply.outer(Y, G_1) - H)
+            logger.debug('current H:\n%s', H)
+            logger.debug('current G:\n%s', G_1)
+            H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
+            logger.debug('Pi (U G - H):\n%s', H)
             S = 0.0
-            for I_full in wf.string_indices(coupled_to=(spirrep_1, I_1)):
-                if map(len, I_full) != map(len, U):
+            logger.debug('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
+            for I_full in wf.string_indices(
+                    coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
+                                                    I=I_1),)):
+                logger.debug('Yielding this: %s', I_full)
+                if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
                     continue
                 F_contr = 1.0
                 for spirrep_other, I_other in enumerate(I_full):
-                    if spirrep_other != spirrep_1:
+                    if spirrep_other != spirrep_1 and len(I_other) > 0:
                         F_contr *= F[spirrep_other][int(I_other)]
+                logger.debug('F_contr = %s', F_contr)
+                logger.debug('wf[I_full] = %s', wf[I_full])
                 S += wf[I_full] * F_contr
+            logger.debug('S = %s; H:\n%s', S, H)
             X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
               lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
                   H,
@@ -290,43 +328,54 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
                    K[spirrep_1] * n[spirrep_1]),
                   order='F').T
             G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
+            logger.debug('S = %s; G_1:\n %s', S, G_1)
             C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
                 G_1,
                 (K[spirrep_1] * n[spirrep_1],),
                 order='F')
-            for spirrep_2 in wf.spirrep_blocks():
+            for spirrep_2 in wf.spirrep_blocks(restricted=False):
                 if spirrep_2 <= spirrep_1:
                     continue
                 G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
-                for I_2 in wf.string_indices(spirrep=spirrep_2,
-                                             coupled_to=(spirrep_1, I_1)):
+                for I_2 in wf.string_indices(
+                        spirrep=spirrep_2,
+                        coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
+                                                        I=I_1),)):
                     if len(I_2) != n[spirrep_2]:
                         continue
                     for k in range(K[spirrep_2]):
                         for l in range(n[spirrep_2]):
-                            G[k,l] = _calc_G(U[spirrep_2],
+                            G_2[k,l] = _calc_G(U[spirrep_2],
                                              I_2.occ_orb,
                                              k, l)
                     G_2 -= F[spirrep_2][int(I_2)] * U[spirrep_2]
                     S = 0.0
-                    for I_full in wf.string_indices(coupled_to=(spirrep_1, I_1,
-                                                                spirrep_2, I_2)):
-                        if map(len, I_full) != map(len, U):
+                    logger.debug('I_1 = %s; I_2 = %s', I_1, I_2)
+                    for I_full in wf.string_indices(
+                            coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
+                                                            I=I_1),
+                                        genWF.Spirrep_Index(spirrep=spirrep_2,
+                                                            I=I_2))):
+                        if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
                             continue
                         F_contr = 1.0
-                        for spirrep_other, I_other in I_full:
-                            if (spirrep_other != spirrep_1
+                        for spirrep_other, I_other in enumerate(I_full):
+                            if (wf.ref_occ[spirrep_other] > 0
+                                and spirrep_other != spirrep_1
                                 and spirrep_other != spirrep_2):
                                 F_contr *= F[spirrep_other][int(I_other)]
                         S += wf[I_full] * F_contr
+                    logger.debug('G_1:\n%s', G_1)
+                    logger.debug('G_2:\n%s', G_2)
+                    logger.debug('S = %s', S)
                     X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] += S * np.reshape(
+                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] -= S * np.reshape(
                           np.multiply.outer(G_1, G_2),
                           (K[spirrep_1] * n[spirrep_1],
                            K[spirrep_2] * n[spirrep_2]),
                           order='F')
-            for spirrep_2 in wf.spirrep_blocks():
-                if spirrep_1 <= spirrep_2:
+            for spirrep_2 in wf.spirrep_blocks(restricted=False):
+                if spirrep_1 > spirrep_2:
                     X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
                       lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] = \
                     X[lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1],
@@ -336,10 +385,14 @@ def generate_lin_system(U, wf, lim_XC, F=None, with_full_H=True):
     prev_kl = 0
     for spirrep, U_spirrep in enumerate(U):
         for i in range(n[spirrep]):
-            X[prev_ij: prev_ij + K[spirrep],
-              prev_kl: prev_kl + n[spirrep]] = U_spirrep.T
-            prev_ij += K[spirrep]
-            prev_kl += n[spirrep]
+            logger.debug('Adding U^T:\n%s', U_spirrep.T)
+            logger.debug('Position of U^T = [%s: %s + %s, %s: %s + %s',
+                         prev_ij, prev_ij, n[spirrep],
+                         prev_kl, prev_kl, K[spirrep])
+            X[prev_ij: prev_ij + n[spirrep],
+              prev_kl: prev_kl + K[spirrep]] = U_spirrep.T
+            prev_ij += n[spirrep]
+            prev_kl += K[spirrep]
     return X, C
 
 
@@ -425,21 +478,21 @@ def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):
     Proj_a = np.identity(Ua.shape[0]) - Ua @ Ua.T
     if not restricted:
         Proj_b = np.identity(Ub.shape[0]) - Ub @ Ub.T
-    logger.info('Proj_a:\n%s', str(Proj_a))
+    logger.info('Proj_a:\n%s', Proj_a)
     if not restricted:
-        logger.info('Proj_b:\n%s', str(Proj_b))
+        logger.info('Proj_b:\n%s', Proj_b)
     grad_a = calc_grad((Ua, Ub))
     if not restricted:
         grad_a, grad_b = grad_a
-    logger.info('grad_a:\n%s', str(grad_a))
+    logger.info('grad_a:\n%s', grad_a)
     if not restricted:
-        logger.info('grad_b:\n%s', str(grad_b))
+        logger.info('grad_b:\n%s', grad_b)
     RHS_a = Proj_a @ grad_a
     if not restricted:
         RHS_b = Proj_b @ grad_b
-    logger.info('RHS of Absil equation for alpha (without the minus):\n%s', str(RHS_a))
+    logger.info('RHS of Absil equation for alpha (without the minus):\n%s', RHS_a)
     if not restricted:
-        logger.info('RHS of Absil equation for beta (without the minus):\n%s', str(RHS_b))
+        logger.info('RHS of Absil equation for beta (without the minus):\n%s', RHS_b)
     Ua, Ub = get_orig_U(shift = (eps*eta_a, eps*eta_b))
     Proj_plus_a = np.identity(Ua.shape[0]) - Ua @ linalg.inv(Ua.T @ Ua) @ Ua.T
     Dgrad_plus_a = calc_grad((Ua, Ub))
@@ -458,27 +511,27 @@ def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):
     hess_a = (Dgrad_plus_a - Dgrad_minus_a)/(2*eps)
     if not restricted:
         hess_b = (Dgrad_plus_b - Dgrad_minus_b)/(2*eps)
-    logger.info('U.T @ eta (alpha):\n%s', str(Ua.T @ eta_a))
+    logger.info('U.T @ eta (alpha):\n%s', Ua.T @ eta_a)
     if not restricted:
-        logger.info('U.T @ eta (beta):\n%s', str(Ub.T @ eta_b))
-    logger.info('D(Pi grad f)(U)[eta], alpha:\n%s', str(Dgrad_a))
+        logger.info('U.T @ eta (beta):\n%s', Ub.T @ eta_b)
+    logger.info('D(Pi grad f)(U)[eta], alpha:\n%s', Dgrad_a)
     if not restricted:
-        logger.info('D(Pi grad f)(U)[eta], beta:\n%s', str(Dgrad_b))
-    logger.info('LHS of Absil, alpha:\n%s', str(Proj_a @ Dgrad_a))
+        logger.info('D(Pi grad f)(U)[eta], beta:\n%s', Dgrad_b)
+    logger.info('LHS of Absil, alpha:\n%s', Proj_a @ Dgrad_a)
     if not restricted:
-        logger.info('LHS of Absil, beta:\n%s', str(Proj_b @ Dgrad_b))
-    logger.info('hess (d/dt grad f(y + eta)), alpha:\n%s', str(hess_a))
+        logger.info('LHS of Absil, beta:\n%s', Proj_b @ Dgrad_b)
+    logger.info('hess (d/dt grad f(y + eta)), alpha:\n%s', hess_a)
     if not restricted:
-        logger.info('hess (d/dt grad f(y + eta)), beta:\n%s', str(hess_b))
+        logger.info('hess (d/dt grad f(y + eta)), beta:\n%s', hess_b)
     logger.info('LHS of Absil (using modified equation, '
                 + 'without projector), alpha:\n%s',
-                str(hess_a - eta_a @ Ua.T @ grad_a))
+                hess_a - eta_a @ Ua.T @ grad_a)
     if not restricted:
         logger.info('LHS of Absil (using modified equation, '
                     + 'without projector), beta:\n%s',
-                    str(hess_b - eta_b @ Ub.T @ grad_b))
+                    hess_b - eta_b @ Ub.T @ grad_b)
     logger.info('LHS of Absil (using modified equation), alpha:\n%s',
-                str(Proj_a @ hess_a - Proj_a @ eta_a @ Ua.T @ grad_a))
+                Proj_a @ hess_a - Proj_a @ eta_a @ Ua.T @ grad_a)
     if not restricted:
         logger.info('LHS of Absil (using modified equation), beta:\n%s',
-                    str(Proj_b @ hess_b - Proj_b @ eta_b @ Ub.T @ grad_b))
+                    Proj_b @ hess_b - Proj_b @ eta_b @ Ub.T @ grad_b)

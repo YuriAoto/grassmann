@@ -1,0 +1,35 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 2aa059ca687f5285c7df78a9478091e3c6ffd720
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/h2o__Req__sto3g
+
+Command:
+../../dGr CISD_FC.out
+
+From command line and environment:
+External wave function, |extWF>: CISD_FC.out
+Orbital basis of |extWF>: CISD_FC.out
+Hartree-Fock orbitals, |min E>: CISD_FC.out
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: Level None
+qpy job ID: not in qpy
+
+Starting at 21 Oct 2019 - 13:20
+
+
+Unknown error:
+Traceback (most recent call last):
+  File "../../dGr", line 54, in <module>
+    dGr_main(cmd_line_args, f_out)
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_main.py", line 79, in dGr_main
+    ext_wf.calc_norm()
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_WF_int_norm.py", line 1458, in calc_norm
+    for I in self.string_indices():
+  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_WF_int_norm.py", line 1005, in string_indices
+    I.C = sign * self.singles[i_spirrep][i_occ, a_virt] / self.norm
+TypeError: 'NoneType' object is not subscriptable

@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<molpro xmlns="http://www.molpro.net/schema/molpro-output"
+  xmlns:xsd="http://www.w3.org/1999/XMLSchema"
+  xmlns:cml="http://www.xml-cml.org/schema"
+  xmlns:stm="http://www.xml-cml.org/schema"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+ <molecule id="M377312F" method="RHF" basis="STO-3G" energy="-0.686415924943315">
+  <cml:molecule id="M377312F" spinMultiplicity="1" formalCharge="0">
+   <cml:symmetry pointGroup="D2h" irreducibleRepresentation="1"/>
+   <cml:atomArray>
+    <cml:atom id="a1" elementType="H" x3="0.0" y3="0.0" z3="-1.3229430273"/>
+    <cml:atom id="a2" elementType="H" x3="0.0" y3="0.0" z3="1.3229430273"/>
+   </cml:atomArray>
+   <cml:bondArray>
+   </cml:bondArray>
+  </cml:molecule>
+  <basisSet id="ORBITAL" length="2" angular="spherical" type="gaussian" groups="2"
+    cartesianLength="2" primitives="6">
+   <basisGroup id="1" minL="0" maxL="0" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      3.4252509 0.62391373 0.1688554
+    </basisExponents>
+    <basisContraction id="1">
+      0.154328970685349 0.535328142377303 0.444634541974548
+    </basisContraction>
+   </basisGroup>
+   <association xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="extended">
+    <bases xlink:type="locator" xlink:label="bases"
+      xlink:href="#xpointer(//molecule[@id='M377312F']//basisGroup[@id='1'])"/>
+    <atoms xlink:label="atoms"
+      xlink:href="#xpointer(//molecule[@id='M377312F']//atom[@id='a1' or @id='a2'])"/>
+    <associate xlink:type="arc" xlink:from="atoms" xlink:to="bases"/>
+   </association>
+  </basisSet>
+  <orbitals basis="ORBITAL" angular="cartesian" spin="closed" method="RHF" type="CANONICAL"
+    stateID="1" state_symmetry="1" state_nelec="2" state_ms2="0">
+   <orbital occupation="2.0" energy="-0.202785" symmetryID="1">
+     0.69422015472804 0.69422015472804
+   </orbital>
+   <orbital occupation="0.0" energy="0.038654" symmetryID="5">
+     0.720738756710576 -0.720738756710576
+   </orbital>
+  </orbitals>
+  <stm:metadataList>
+   <stm:metadata name="dc:date" content="2019-10-16T09:24:26-03:00"/>
+   <stm:metadata name="dc:creator" content="yuriaoto"/>
+   <stm:metadata name="cmlm:insilico" content="Molpro"/>
+  </stm:metadataList>
+  <platform>
+   <version major="2019" minor="2" SHA="3a8a58c585c929645742fb5a1b7541a4ad1da699"
+     integer_bits="64" parallelism="serial">
+    2019.2
+    <date year="2019" month="10" day="16" hour="9" minute="24" second="26">
+     2019-10-16T09:24:26
+    </date>
+   </version>
+   <licence id="yuriaoto"/>
+   <parallel processes="1" nodes="1" all_processes="1" openmp="1"/>
+   <machine hostname="" architecture="">
+     64 bit serial version
+   </machine>
+  </platform>
+ </molecule>
+</molpro>

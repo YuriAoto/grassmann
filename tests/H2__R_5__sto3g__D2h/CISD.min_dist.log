@@ -1,0 +1,1183 @@
+DEBUG: execute - cmd.py:
+Popen(['git', 'cat-file', '--batch-check'], cwd=/home/yuriaoto/Documents/Codes/min_dist_Gr, universal_newlines=False, shell=None)
+
+DEBUG: dGr_main - dGr_main.py:
+|extWF>, loaded coefficients:
+<Wave Function in Intermediate normalisation>
+--------------------------------------------------
+point group: D2h
+n irrep: 8
+orb dim: alpha/beta: [ 1 0 0 0 1 0 0 0 ]
+n core: alpha/beta: [ 0 0 0 0 0 0 0 0 ]
+n act: alpha: [ 0 0 0 0 0 0 0 0 ]
+ref occ: alpha/beta: [ 1 0 0 0 0 0 0 0 ]
+n electrons: 2
+n alpha: 1
+n beta: 1
+WF type: CISD
+source: From file CISD.out
+--------------------------------------------------
+Amplitudes of single excitations:
+
+Spirrep 0:
+[]
+
+Spirrep 1:
+[]
+
+Spirrep 2:
+[]
+
+Spirrep 3:
+[]
+
+Spirrep 4:
+[]
+
+Spirrep 5:
+[]
+
+Spirrep 6:
+[]
+
+Spirrep 7:
+[]
+
+==================================================
+Amplitudes of double excitations:
+
+N = 0 (i=0, j=0, i_irrep=0, j_irrep=0, exc_type=aa):
+
+a_irrep, b_irrep = 0, 0
+[]
+
+a_irrep, b_irrep = 1, 1
+[]
+
+a_irrep, b_irrep = 2, 2
+[]
+
+a_irrep, b_irrep = 3, 3
+[]
+
+a_irrep, b_irrep = 4, 4
+[[-0.86355553]]
+
+a_irrep, b_irrep = 5, 5
+[]
+
+a_irrep, b_irrep = 6, 6
+[]
+
+a_irrep, b_irrep = 7, 7
+[]
+
+--------------------------------------------------
+
+DEBUG: dGr_main - dGr_main.py:
+0.7568532707525315 R: [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ []
+-0.6535848273569358 D: [] ^ [] ^ [] ^ [] ^ [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [0] ^ [] ^ [] ^ []
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 0:
+[[1.]]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 1:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 2:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 3:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 4:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 5:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 6:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 7:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 8:
+[[1.]]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 9:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 10:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 11:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 12:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 13:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 14:
+[]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial orbitals for spirrep 15:
+[]
+
+INFO: dGr_main - dGr_main.py:
+Starting optimisation
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (1, 1); Ui = [[1.]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (1, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (1, 1); Ui = [[1.]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (1, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Ui shape = (0, 0); Ui = []
+
+INFO: Entering time management - dGr_util.py:
+Calculating f ...
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+all_F:
+[array([1.]), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([1.]), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64)]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+just calculated f:
+0.7568532707525315
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Calculating f: 0:00:00.010750
+
+INFO: Entering time management - dGr_util.py:
+Generating linear system ...
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+lim_XC = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = [[0.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+At I_1 = [0]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+H[ijij] = -1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+current H = [[[[-1.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+current G = [[1.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi (U G - H) = [[[[0.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+spirrep_1 = 0; I_1 = [0]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Yielding this: R: [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ []
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+F_contr = 1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+F_contr = 1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+wf[I_full] = 0.7568532707525315
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+H = [[[[0.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+S = 0.7568532707525315
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 1, changed 0,0:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+S = 0.7568532707525315; G_1 = [[0.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+I_1 = [0]; I_2 = [0]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+G_1 = [[0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+G_2 = [[0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+S = 0.7568532707525315
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 2, changed 0,8:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 1
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 2
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 3
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 4
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = [[1.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 5
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 6
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 7
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = [[0.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+At I_1 = [0]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+H[ijij] = -1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+current H = [[[[-1.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+current G = [[1.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi (U G - H) = [[[[0.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+spirrep_1 = 8; I_1 = [0]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Yielding this: R: [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [0] ^ [] ^ [] ^ [] ^ [] ^ [] ^ [] ^ []
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+F_contr = 1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+F_contr = 1.0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+wf[I_full] = 0.7568532707525315
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+H = [[[[0.]]]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+S = 0.7568532707525315
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 1, changed 8,8:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+S = 0.7568532707525315; G_1 = [[0.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,0:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,1:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,2:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,3:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,4:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,5:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,6:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+X, 3, changed 8,7:
+[[0. 0.]
+ [0. 0.]
+ [0. 0.]
+ [0. 0.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 9
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 10
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 11
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 12
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = [[1.]]
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 13
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 14
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Starting spirrep_1 = 15
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+n_irrep = 8
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Pi = []
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Adding U^T = [[1.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Position of U^T = [2: 2 + 1, 0: 0 + 1
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Adding U^T = [[1.]]
+
+DEBUG: generate_lin_system - dGr_Absil.py:
+Position of U^T = [3: 3 + 1, 1: 1 + 1
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Generating linear system: 0:00:00.012552
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix X:
+[[0. 0.]
+ [0. 0.]
+ [1. 0.]
+ [0. 1.]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C:
+[0. 0. 0. 0.]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 0.00000e+00
+
+INFO: Entering time management - dGr_util.py:
+Solving linear system ...
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Solving linear system: 0:00:00.000235
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+Solution of the linear system, eta:
+[0. 0.]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Rank of matrix X: 2
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Norm of matrix eta: 0.00000e+00
+
+INFO: Entering time management - dGr_util.py:
+Singular value decomposition of eta ...
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 0. Norm of eta[0] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 1. Norm of eta[1] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 2. Norm of eta[2] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 3. Norm of eta[3] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 4. Norm of eta[4] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 5. Norm of eta[5] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 6. Norm of eta[6] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 7. Norm of eta[7] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 8. Norm of eta[8] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 9. Norm of eta[9] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 10. Norm of eta[10] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 11. Norm of eta[11] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 12. Norm of eta[12] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 13. Norm of eta[13] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 14. Norm of eta[14] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 15. Norm of eta[15] = 0.000000
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Singular value decomposition of eta: 0:00:00.000852
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 0:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 1:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 2:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 3:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 4:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 5:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 6:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 7:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 0:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 1:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 2:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 3:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 4:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 5:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 6:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 7:
+
+
+INFO: Entering time management - dGr_util.py:
+Orthogonalisation of U ...
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Orthogonalisation of U: 0:00:00.000332
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 0, after orthogonalisation:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 1, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 2, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 3, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 4, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 5, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 6, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for alpha and irrep 7, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 0, after orthogonalisation:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 1, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 2, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 3, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 4, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 5, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 6, after orthogonalisation:
+
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U for beta and irrep 7, after orthogonalisation:
+
+
+INFO: Entering time management - dGr_util.py:
+Calculating f ...
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: string_indices - dGr_WF_int_norm.py:
+nel_case: 0
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+all_F:
+[array([1.]), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([1.]), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64), array([], dtype=float64)]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+just calculated f:
+0.7568532707525315
+
+INFO: Finishing time management - dGr_util.py:
+Total time for Calculating f: 0:00:00.003150
+
+INFO: dGr_main - dGr_main.py:
+Optimisation completed
+
+INFO: dGr_main - dGr_main.py:
+Saving U matrices in a .npz file: These make the transformation
+from the basis used to expand the external wave function
+(|extWF>) to the one that makes |min D> the first determinant.
+

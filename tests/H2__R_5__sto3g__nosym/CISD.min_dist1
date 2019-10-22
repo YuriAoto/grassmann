@@ -1,0 +1,49 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 2aa059ca687f5285c7df78a9478091e3c6ffd720
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/H2__R_5__sto3g__nosym
+
+Command:
+../../dGr --loglevel 0 --ini_orb UHF_orbitals.xml --HF_orb UHF_orbitals.xml --WF_orb RHF_orbitals.xml CISD.out
+
+From command line and environment:
+External wave function, |extWF>: CISD.out
+Orbital basis of |extWF>: RHF_orbitals.xml
+Hartree-Fock orbitals, |min E>: UHF_orbitals.xml
+Initial guess: Molpro output UHF_orbitals.xml
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: NOTSET
+qpy job ID: not in qpy
+
+Starting at 21 Oct 2019 - 09:13
+
+Using as |min E> a Slater determinant different than |WFref>
+(the reference of |extWF>). We have:
+|<min E|WFref>| =   0.53677503 ; D(min E, WFref) =   0.96252270
+|<WFref|extWF>| =   0.75685327 ; D(WFref, extWF) =   0.69734744
+Dimension of orbital space: alpha/beta: [ 2 ]
+Number of alpha and beta electrons: 1 1
+
+Starting optimisation
+------------------------------
+it.    f            |eta|        |C|          time in iteration
+0      0.70901675   ---          ---          ---
+1      0.75042816   9.58791405   0.07282404   0:00:00.022891
+2      0.75679487   0.39015220   0.03527687   0:00:00.021686
+3      0.75685327   0.03365977   0.00347206   0:00:00.021620
+4      0.75685327   0.00002539   0.00000262   0:00:00.021691
+5      0.75685327   0.00000000   0.00000000   0:00:00.021592
+------------------------------
+Iterations converged!
+WARNING: Unknown number of positive eigenvalue(s) of Hessian.
+|<min D|extWF>| =   0.75685327 ; D(min D, extWF) =   0.69734744
+|<refWF|min D>| =   1.00000000 ; D(refWF, min D) =   0.00000000
+|<min E|min D>| =   0.53677503 ; D(min E, min D) =   0.96252270
+
+Ending at 21 Oct 2019 - 09:13
+Total time: 0:00:00.130020

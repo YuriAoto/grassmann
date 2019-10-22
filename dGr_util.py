@@ -1,26 +1,96 @@
-""" Some useful functions and definitions
+"""Some useful functions and definitions
+
+Variables:
+----------
+zero
+sqrt2
+irrep_product
+number_of_irreducible_repr
+
+Classes:
+--------
+logtime
+
+Functions:
+----------
+dist_from_ovlp
+ovlp_Slater_dets
+get_I
 
 """
-
 import math
 import datetime
 import time
 import logging
 
+import numpy as np
 from scipy import linalg
 
 from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
 
+zero = 1.0E-10
 sqrt2 = math.sqrt(2.0)
+
+irrep_product = np.asarray([[0,1,2,3,4,5,6,7],
+                            [1,0,3,2,5,4,7,6],
+                            [2,3,0,1,6,7,4,5],
+                            [3,2,1,0,7,6,5,4],
+                            [4,5,6,7,0,1,2,3],
+                            [5,4,7,6,1,0,3,2],
+                            [6,7,4,5,2,3,0,1],
+                            [7,6,5,4,3,2,1,0]],
+                           dtype=np.uint8)
+
+number_of_irreducible_repr = {
+    'C1':1,
+    'Cs':2,
+    'C2':2,
+    'Ci':2,
+    'C2v':4,
+    'C2h':4,
+    'D2':4,
+    'D2h':8}
 
 
 class logtime():
-    """A context manager for logging time."""
+    """A context manager for logging execution time.
     
-    def __init__(self, action_type, out_stream=None, out_fmt=None):
+    Examples:
+    ----------
+    with logtime('Executing X'):
+        # Add time to log (with level INFO)
+        
+    with logtime('Executing X', log_level=logging.DEBUG):
+        # Add time to log (with level DEBUG)
+    
+    with logtime('Executing X', out_stream=sys.stdout):
+        # Add time to sys.stdout as well
+    
+    with logtime('Executing X',
+                 out_stream=sys.stdout,
+                 out_fmt="It took {} to run X"):
+        # Use out_fmt to write elapsed time to sys.stdout
+    
+    with logtime('Executing X') as T_X:
+        # Save info in object T_X
+    print(T_X.elapsed_time)
+    
+    with logtime('Executing X') as T_X:
+        # Save info in object T_X
+    with logtime('Executing X') as T_Y:
+        # Save info in object T_Y
+    print('Time for X and Y: ',
+          datetime.timedelta(seconds=(T_Y.end_time - T_X.ini_time)))
+    """
+    def __init__(self,
+                 action_type,
+                 log_level=logging.INFO,
+                 out_stream=None,
+                 out_fmt=None):
         self.action_type = action_type
+        self.log_level = log_level
         self.out_stream = out_stream
         self.end_time = None
         self.elapsed_time = None
@@ -31,65 +101,64 @@ class logtime():
     
     def __enter__(self):
         self.ini_time = time.time()
-        logger.info(self.action_type + ' ...')
+        logger.log(self.log_level,
+                   '%s ...',
+                   self.action_type)
         return self
     
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.end_time = time.time()
         self.elapsed_time = str(datetime.timedelta(seconds=(self.end_time - self.ini_time)))
-        logger.info('Total time for {}: {}'.\
-                    format(self.action_type, self.elapsed_time))
+        logger.info('Total time for %s: %s',
+                    self.action_type,
+                    self.elapsed_time)
         if self.out_stream is not None:
             self.out_stream.write(self.out_fmt.format(self.elapsed_time))
 
 def dist_from_ovlp(x):
-    """Convert from overlap to distance."""
+    """Convert from overlap to distance.
+    
+    See I. D'Amico et. al PRL 106 (2011) 050401
+    """
     try:
         return sqrt2 * math.sqrt(1 - abs(x))
     except ValueError:
         return 0.0
 
-def ovlp_Slater_dets(Ua, Ub, na, nb):
+def ovlp_Slater_dets(U, n):
     """Calculate the overlap between two Slater determinants
     
     Behaviour:
     
-    Given the transformation matrices (alpha and beta) between two
+    Given the transformation matrices between two
     MO basis, calculate the overlap between the first determinant
     associated with each basis. That is, calculates <phi 1|phi 2>,
-    where |phi i> are Slater determinants and Ua, Ub (see below)
-    are the matrices that transforms the orbitals from a basis B1
+    where |phi i> are Slater determinants and U (see below)
+    has the matrices that transforms the orbitals from a basis B1
     (where |phi 1> is the Slater determinant associated to the
     first orbitals) to a basis B2 (where |phi 2> is the Slater
     determinant associated to the first orbitals)
     
     Parameters:
-    
-    Ua      transformation matrix for alpha orbitals
-    Ub      transformation matrix for beta orbitals
-    na      number of alpha orbitals
-    nb      number of beta orbitals
+    -----------
+    U (list of np.ndarray)
+        transformation matrices
+    n (list of int)
+        number of orbitals
     
     Returns:
+    --------
     
     The overlap between the determinants (float)
     """
-    return linalg.det(Ua[:na,:na])*linalg.det(Ub[:nb,:nb])
-
-def str_matrix(X):
-    """Return a str of the 2D list or array X."""
-    strM = []
-    for i in X:
-        strI = []
-        for j in i:
-            strI.append(' {0:10.6f} '.format(j)\
-                        if abs(j) > 1.0E-7 else
-                        (' ' + '-'*10 + ' '))
-        strM.append(''.join(strI))
-    return '\n'.join(strM)
+    S = 1.0
+    for spirrep, Ui in enumerate(U):
+        if n[spirrep] > 0:
+            S *= linalg.det(Ui[:n[spirrep],:n[spirrep]])
+    return S
 
 def get_I(n, i=None, a=None):
-    """return range(n).remove(i) + [a]"""
+    """Return range(n).remove(i) + [a]"""
     if type(i) != type(a):
         raise dGrValueError('Both i and a must be of same type!')
     if i is None:

@@ -1,0 +1,44 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019
+
+Current git commit: 2aa059ca687f5285c7df78a9478091e3c6ffd720
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/h2o__Req__631g
+
+Command:
+../../dGr CISD_FC.out
+
+From command line and environment:
+External wave function, |extWF>: CISD_FC.out
+Orbital basis of |extWF>: CISD_FC.out
+Hartree-Fock orbitals, |min E>: CISD_FC.out
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: Level None
+qpy job ID: not in qpy
+
+Starting at 21 Oct 2019 - 13:32
+
+Using |WFref> (the reference of |extWF>) as |min E>:
+|<WFref|extWF>| =   0.98002307 ; D(WFref, extWF) =   0.19988460
+Using the reference determinant (identity) as initial guess for U.
+Dimension of orbital space: alpha/beta: [ 7 2 4 0 ]
+Number of alpha and beta electrons: 5 5
+
+Starting optimisation
+------------------------------
+it.    f            |eta|        |C|          time in iteration
+0      0.96795628   ---          ---          ---
+1      -0.96883789  0.04159193   0.04242155   0:00:16.690990
+2      -0.96883789  0.00006237   0.00006367   0:00:18.892289
+3      -0.96883789  0.00000001   0.00000001   0:00:21.062289
+------------------------------
+Iterations converged!
+WARNING: Unknown number of positive eigenvalue(s) of Hessian.
+|<min D|extWF>| =   0.96883789 ; D(min D, extWF) =   0.24964820
+|<min E|min D>| =   0.99913797 ; D(min E, min D) =   0.04152179
+
+Ending at 21 Oct 2019 - 13:33
+Total time: 0:00:56.835629

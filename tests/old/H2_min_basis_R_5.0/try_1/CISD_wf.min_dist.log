@@ -1,0 +1,1414 @@
+DEBUG: execute - cmd.py:
+Popen(['git', 'cat-file', '--batch-check'], cwd=/home/yuriaoto/Documents/Codes/min_dist_Gr, universal_newlines=False, shell=None)
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+File: H2_min_basis_R_5.0/RHF.out
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_a:
+[[ 0.69422   0.720739]
+ [ 0.69422  -0.720739]]
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+File: H2_min_basis_R_5.0/UHF.out
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_a:
+[[ 0.018081  1.000539]
+ [ 0.999159 -0.055558]]
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_b:
+[[ 0.999159  0.055558]
+ [ 0.018081 -1.000539]]
+
+DEBUG: transf_orb_from_to - dGr_FCI_Molpro.py:
+Ua:
+[[ 0.73264959  0.68060629]
+ [-0.6806056   0.73264871]]
+
+DEBUG: transf_orb_from_to - dGr_FCI_Molpro.py:
+Ub:
+[[ 0.73264959 -0.68060629]
+ [ 0.6806056   0.73264871]]
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+File: H2_min_basis_R_5.0/RHF.out
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_a:
+[[ 0.69422   0.720739]
+ [ 0.69422  -0.720739]]
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+File: H2_min_basis_R_5.0/UHF.out
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_a:
+[[ 0.018081  1.000539]
+ [ 0.999159 -0.055558]]
+
+INFO: get_orbitals - dGr_FCI_Molpro.py:
+coeff_b:
+[[ 0.999159  0.055558]
+ [ 0.018081 -1.000539]]
+
+DEBUG: transf_orb_from_to - dGr_FCI_Molpro.py:
+Ua:
+[[ 0.73264959  0.68060629]
+ [-0.6806056   0.73264871]]
+
+DEBUG: transf_orb_from_to - dGr_FCI_Molpro.py:
+Ub:
+[[ 0.73264959 -0.68060629]
+ [ 0.6806056   0.73264871]]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial U for alpha orbitals:
+[[ 0.73264959]
+ [-0.6806056 ]]
+
+DEBUG: dGr_main - dGr_main.py:
+Initial U for beta orbitals:
+[[0.73264959]
+ [0.6806056 ]]
+
+INFO: dGr_main - dGr_main.py:
+Starting optimisation
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating matrices A, B, C...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate matrices A, B, C: 0:00:00.000422
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, alpha):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, beta):
+[[[[ 0.35059303]
+   [-0.32590708]]]
+
+
+ [[[ 0.37740141]
+   [-0.35082866]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , alpha):
+[[[[ 0.35059303]
+   [ 0.32590708]]]
+
+
+ [[[-0.37740141]
+   [-0.35082866]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , beta):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(alpha):
+[[[[0.32843382]
+   [0.35354778]]]
+
+
+ [[[0.35354778]
+   [0.380583  ]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(beta):
+[[[[ 0.32843382]
+   [-0.35354778]]]
+
+
+ [[[-0.35354778]
+   [ 0.380583  ]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(alpha):
+   0.035048 
+   0.037727 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(beta):
+   0.035048 
+  -0.037727 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 2.26924e-01
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Generating linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to generate linear system: 0:00:00.000116
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, B-A:
+   0.354111    0.329694   -0.324915    0.349761 
+   0.381188    0.354906   -0.349761    0.376506 
+  -0.324915   -0.349761    0.354111   -0.329694 
+   0.349761    0.376506   -0.381188    0.354906 
+   0.732650   -0.680606  ----------  ---------- 
+ ----------  ----------    0.732650    0.680606 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, C:
+[ 0.03504766  0.03772704  0.03504766 -0.03772704  0.          0.        ]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Solving linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to solve the linear system: 0:00:00.000296
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system (solution), eta:
+[ 4.61445196  4.96730609  4.61445196 -4.96730609]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_a:
+[[4.61445196]
+ [4.96730609]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_b:
+[[ 4.61445196]
+ [-4.96730609]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ua:
+[[ 0.73264959]
+ [-0.6806056 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ub:
+[[0.73264959]
+ [0.6806056 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_a:
+[[0.46322457 0.49864542]
+ [0.49864542 0.53677602]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_b:
+[[ 0.46322457 -0.49864542]
+ [-0.49864542  0.53677602]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_a:
+[[0.03504737]
+ [0.03772735]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_b:
+[[ 0.03504737]
+ [-0.03772735]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for alpha (without the minus):
+[[0.03504737]
+ [0.03772735]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for beta (without the minus):
+[[ 0.03504737]
+ [-0.03772735]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (alpha):
+[[-4.59672901e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (beta):
+[[-4.59672901e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], alpha:
+[[-0.28985238]
+ [ 0.20094969]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], beta:
+[[-0.28856667]
+ [-0.20233371]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, alpha:
+[[-0.0340641 ]
+ [-0.03666858]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, beta:
+[[-0.0327784 ]
+ [ 0.03528457]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), alpha:
+[[-0.28865799]
+ [ 0.19984014]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), beta:
+[[-0.28588243]
+ [-0.19984014]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), alpha:
+[[-0.28865783]
+ [ 0.19984032]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), beta:
+[[-0.28588227]
+ [-0.19984032]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), alpha:
+[[-0.03406394]
+ [-0.03666841]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), beta:
+[[-0.03277823]
+ [ 0.03528439]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.680606 
+   0.732650 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[6.77991863]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.680606 
+   0.732650 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[6.77991863]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a:
+   0.968451 
+  -0.249202 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b:
+   0.968451 
+   0.249202 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a, after orthogonalisation:
+   0.968452 
+  -0.249202 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b, after orthogonalisation:
+   0.968452 
+   0.249202 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating f...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate f: 0:00:00.000129
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of eta matrix: 2.60383e+00
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating matrices A, B, C...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate matrices A, B, C: 0:00:00.000331
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, alpha):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, beta):
+[[[[ 0.04700167]
+   [-0.15773595]]]
+
+
+ [[[ 0.18265872]
+   [-0.61299628]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , alpha):
+[[[[ 0.04700167]
+   [ 0.15773595]]]
+
+
+ [[[-0.18265872]
+   [-0.61299628]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , beta):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(alpha):
+[[[[0.0466034 ]
+   [0.18111098]]]
+
+
+ [[[0.18111098]
+   [0.70383675]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(beta):
+[[[[ 0.0466034 ]
+   [-0.18111098]]]
+
+
+ [[[-0.18111098]
+   [ 0.70383675]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(alpha):
+   0.006211 
+   0.024136 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(beta):
+   0.006211 
+  -0.024136 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 1.57869e-01
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Generating linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to generate linear system: 0:00:00.000098
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, B-A:
+   0.052618    0.179563   -0.040987    0.159284 
+   0.204486    0.697822   -0.159284    0.619011 
+  -0.040987   -0.159284    0.052618   -0.179563 
+   0.159284    0.619011   -0.204486    0.697822 
+   0.968452   -0.249202  ----------  ---------- 
+ ----------  ----------    0.968452    0.249202 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, C:
+[ 0.00621079  0.0241365   0.00621079 -0.0241365   0.          0.        ]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Solving linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to solve the linear system: 0:00:00.000182
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system (solution), eta:
+[ 0.06867141  0.26687208  0.06867141 -0.26687208]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_a:
+[[0.06867141]
+ [0.26687208]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_b:
+[[ 0.06867141]
+ [-0.26687208]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ua:
+[[ 0.96845164]
+ [-0.24920158]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ub:
+[[0.96845164]
+ [0.24920158]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_a:
+[[0.06210143 0.24133968]
+ [0.24133968 0.93789857]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_b:
+[[ 0.06210143 -0.24133968]
+ [-0.24133968  0.93789857]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_a:
+[[0.00621079]
+ [0.0241365 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_b:
+[[ 0.00621079]
+ [-0.0241365 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for alpha (without the minus):
+[[0.00621079]
+ [0.0241365 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for beta (without the minus):
+[[ 0.00621079]
+ [-0.0241365 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (alpha):
+[[-7.59364684e-09]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (beta):
+[[-7.59364682e-09]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], alpha:
+[[-0.01269947]
+ [-0.02179346]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], beta:
+[[-0.01354169]
+ [ 0.0250665 ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, alpha:
+[[-0.00604828]
+ [-0.02350494]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, beta:
+[[-0.0068905 ]
+ [ 0.02677798]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), alpha:
+[[-0.01110223]
+ [-0.02220446]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), beta:
+[[-0.01387779]
+ [ 0.02498002]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), alpha:
+[[-0.01110223]
+ [-0.02220446]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), beta:
+[[-0.01387779]
+ [ 0.02498002]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), alpha:
+[[-0.00604828]
+ [-0.02350494]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), beta:
+[[-0.0068905 ]
+ [ 0.02677798]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.249202 
+   0.968452 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.27556572]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.249202 
+   0.968452 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.27556572]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a:
+   0.999719 
+   0.023708 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b:
+   0.999719 
+  -0.023708 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a, after orthogonalisation:
+   0.999719 
+   0.023708 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b, after orthogonalisation:
+   0.999719 
+  -0.023708 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating f...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate f: 0:00:00.000132
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of eta matrix: 5.24944e-01
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating matrices A, B, C...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate matrices A, B, C: 0:00:00.000338
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, alpha):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, beta):
+[[[[ 4.25395620e-04]
+   [ 1.54906820e-02]]]
+
+
+ [[[-1.79382581e-02]
+   [-6.53217475e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , alpha):
+[[[[ 4.25395620e-04]
+   [-1.54906820e-02]]]
+
+
+ [[[ 1.79382581e-02]
+   [-6.53217475e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , beta):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(alpha):
+[[[[ 4.25362997e-04]
+   [-1.79368825e-02]]]
+
+
+ [[[-1.79368825e-02]
+   [ 7.56369865e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(beta):
+[[[[4.25362997e-04]
+   [1.79368825e-02]]]
+
+
+ [[[1.79368825e-02]
+   [7.56369865e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(alpha):
+   0.000058 
+  -0.002447 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(beta):
+   0.000058 
+   0.002447 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 4.94730e-02
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Generating linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to generate linear system: 0:00:00.000093
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, B-A:
+   0.000483   -0.017936   -0.000367   -0.015492 
+  -0.020383    0.756312    0.015492    0.653275 
+  -0.000367    0.015492    0.000483    0.017936 
+  -0.015492    0.653275    0.020383    0.756312 
+   0.999719    0.023708  ----------  ---------- 
+ ----------  ----------    0.999719   -0.023708 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, C:
+[ 5.80265659e-05 -2.44688819e-03  5.80265659e-05  2.44688819e-03
+  0.00000000e+00  0.00000000e+00]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Solving linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to solve the linear system: 0:00:00.000161
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system (solution), eta:
+[ 0.00056253 -0.02372111  0.00056253  0.02372111]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_a:
+[[ 0.00056253]
+ [-0.02372111]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_b:
+[[0.00056253]
+ [0.02372111]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ua:
+[[0.99971893]
+ [0.02370777]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ub:
+[[ 0.99971893]
+ [-0.02370777]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_a:
+[[ 5.62058244e-04 -2.37011041e-02]
+ [-2.37011041e-02  9.99437942e-01]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_b:
+[[5.62058244e-04 2.37011041e-02]
+ [2.37011041e-02 9.99437942e-01]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_a:
+[[ 5.80274717e-05]
+ [-2.44688825e-03]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_b:
+[[5.80269166e-05]
+ [2.44688825e-03]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for alpha (without the minus):
+[[ 5.80265678e-05]
+ [-2.44688827e-03]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for beta (without the minus):
+[[5.80265675e-05]
+ [2.44688826e-03]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (alpha):
+[[-5.6300739e-11]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (beta):
+[[-5.63007422e-11]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], alpha:
+[[-5.80592187e-05]
+ [-1.37683484e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], beta:
+[[-5.64991934e-05]
+ [ 6.71606195e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, alpha:
+[[-1.56600986e-13]
+ [ 6.60361508e-12]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, beta:
+[[1.56002500e-06]
+ [6.57837781e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), beta:
+[[0.00277556]
+ [0.        ]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), alpha:
+[[-5.05333946e-13]
+ [ 2.13091305e-11]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), beta:
+[[ 2.77555756e-03]
+ [-8.14497156e-12]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), alpha:
+[[-5.05333946e-13]
+ [ 2.13091305e-11]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), beta:
+[[1.56002482e-06]
+ [6.57837705e-05]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.023708 
+  -0.999719 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.02372778]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.023708 
+  -0.999719 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[0.02372778]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a:
+   1.000000 
+  -0.000018 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b:
+   1.000000 
+   0.000018 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a, after orthogonalisation:
+   1.000000 
+  -0.000018 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b, after orthogonalisation:
+   1.000000 
+   0.000018 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating f...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate f: 0:00:00.000129
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of eta matrix: 1.54038e-01
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating matrices A, B, C...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate matrices A, B, C: 0:00:00.000326
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, alpha):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, beta):
+[[[[ 2.39474270e-10]
+   [-1.16258728e-05]]]
+
+
+ [[[ 1.34627970e-05]
+   [-6.53584827e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , alpha):
+[[[[ 2.39474270e-10]
+   [ 1.16258728e-05]]]
+
+
+ [[[-1.34627970e-05]
+   [-6.53584827e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , beta):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(alpha):
+[[[[2.3947427e-10]
+   [1.3462797e-05]]]
+
+
+ [[[1.3462797e-05]
+   [7.5685327e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(beta):
+[[[[ 2.3947427e-10]
+   [-1.3462797e-05]]]
+
+
+ [[[-1.3462797e-05]
+   [ 7.5685327e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(alpha):
+ ---------- 
+   0.000002 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(beta):
+ ---------- 
+  -0.000002 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 1.35533e-03
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Generating linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to generate linear system: 0:00:00.000105
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, B-A:
+ ----------    0.000013  ----------    0.000012 
+   0.000015    0.756853   -0.000012    0.653585 
+ ----------   -0.000012  ----------   -0.000013 
+   0.000012    0.653585   -0.000015    0.756853 
+   1.000000   -0.000018  ----------  ---------- 
+ ----------  ----------    1.000000    0.000018 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, C:
+[ 3.26749181e-11  1.83692420e-06  3.26749181e-11 -1.83692420e-06
+  0.00000000e+00  0.00000000e+00]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Solving linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to solve the linear system: 0:00:00.000185
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system (solution), eta:
+[ 3.16407822e-10  1.77878560e-05  3.16407822e-10 -1.77878560e-05]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_a:
+[[3.16407822e-10]
+ [1.77878560e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_b:
+[[ 3.16407822e-10]
+ [-1.77878560e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ua:
+[[ 1.0000000e+00]
+ [-1.7787856e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ub:
+[[1.0000000e+00]
+ [1.7787856e-05]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_a:
+[[3.16407789e-10 1.77878560e-05]
+ [1.77878560e-05 1.00000000e+00]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_b:
+[[ 3.16407789e-10 -1.77878560e-05]
+ [-1.77878560e-05  1.00000000e+00]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_a:
+[[5.55111512e-10]
+ [1.83630888e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_b:
+[[ 0.00000000e+00]
+ [-1.83630888e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for alpha (without the minus):
+[[3.26639982e-11]
+ [1.83630889e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for beta (without the minus):
+[[ 3.26639980e-11]
+ [-1.83630888e-06]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (alpha):
+[[-3.16407822e-17]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (beta):
+[[-3.16432953e-17]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], alpha:
+[[-3.26738723e-11]
+ [-8.47032947e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], beta:
+[[-3.26738723e-11]
+ [-1.05879118e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, alpha:
+[[-1.61007269e-19]
+ [-9.05152761e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, beta:
+[[ 8.49535746e-21]
+ [-4.77593047e-16]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), beta:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), alpha:
+[[-1.65306479e-19]
+ [-9.29322111e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), beta:
+[[ 1.03351455e-20]
+ [-5.81022553e-16]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), alpha:
+[[-1.65306479e-19]
+ [-9.29322111e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), beta:
+[[ 1.03351455e-20]
+ [-5.81022553e-16]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.000018 
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[1.7787856e-05]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+   0.000018 
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[1.7787856e-05]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a, after orthogonalisation:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b, after orthogonalisation:
+   1.000000 
+ ---------- 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating f...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate f: 0:00:00.000145
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of eta matrix: 4.21757e-03
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating matrices A, B, C...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate matrices A, B, C: 0:00:00.000356
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, alpha):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(alpha, beta):
+[[[[ 0.00000000e+00]
+   [ 4.90465360e-15]]]
+
+
+ [[[-5.67960419e-15]
+   [-6.53584827e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , alpha):
+[[[[ 0.00000000e+00]
+   [-4.90464918e-15]]]
+
+
+ [[[ 5.67959906e-15]
+   [-6.53584827e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix A(beta , beta):
+[[[[0.]
+   [0.]]]
+
+
+ [[[0.]
+   [0.]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(alpha):
+[[[[ 0.00000000e+00]
+   [-5.67960419e-15]]]
+
+
+ [[[-5.67960419e-15]
+   [ 7.56853271e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix B(beta):
+[[[[0.00000000e+00]
+   [5.67959906e-15]]]
+
+
+ [[[5.67959906e-15]
+   [7.56853271e-01]]]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(alpha):
+ ---------- 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+matrix C(beta):
+ ---------- 
+ ---------- 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of matrix C: 2.78379e-08
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Generating linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to generate linear system: 0:00:00.000095
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, B-A:
+ ----------  ----------  ----------  ---------- 
+ ----------    0.756853  ----------    0.653585 
+ ----------  ----------  ----------  ---------- 
+ ----------    0.653585  ----------    0.756853 
+   1.000000  ----------  ----------  ---------- 
+ ----------  ----------    1.000000  ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system, C:
+[-3.68056360e-29 -7.74955012e-16 -3.68056360e-29  7.74945455e-16
+  0.00000000e+00  0.00000000e+00]
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Solving linear system...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to solve the linear system: 0:00:00.000151
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+lin_system (solution), eta:
+[ 1.20115399e-30 -7.50423419e-15  5.56978888e-29  7.50422741e-15]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_a:
+[[ 1.20115399e-30]
+ [-7.50423419e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+eta_b:
+[[5.56978888e-29]
+ [7.50422741e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ua:
+[[1.00000000e+00]
+ [7.50423419e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Ub:
+[[ 1.00000000e+00]
+ [-7.50422741e-15]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_a:
+[[ 0.00000000e+00 -7.50423419e-15]
+ [-7.50423419e-15  1.00000000e+00]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+Proj_b:
+[[0.00000000e+00 7.50422741e-15]
+ [7.50422741e-15 1.00000000e+00]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_a:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+grad_b:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for alpha (without the minus):
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+RHS of Absil equation for beta (without the minus):
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (alpha):
+[[-5.51123824e-29]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+U.T @ eta (beta):
+[[-6.15545882e-31]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+D(Pi grad f)(U)[eta], beta:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil, beta:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+hess (d/dt grad f(y + eta)), beta:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation, without projector), beta:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), alpha:
+[[0.]
+ [0.]]
+
+INFO: check_Newton_Absil_eq - dGr_Absil.py:
+LHS of Absil (using modified equation), beta:
+[[0.]
+ [0.]]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+ ---------- 
+  -1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[7.50423419e-15]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, Usvd_a:
+ ---------- 
+  -1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, SGMsvd_a:
+[7.50423419e-15]
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+SVD results, VTsvd_a:
+   1.000000 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_a, after orthogonalisation:
+   1.000000 
+ ---------- 
+
+DEBUG: optimise_distance_to_CI - dGr_optimiser.py:
+new U_b, after orthogonalisation:
+   1.000000 
+ ---------- 
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Calculating f...
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+Total time to calculate f: 0:00:00.000134
+
+INFO: optimise_distance_to_CI - dGr_optimiser.py:
+norm of eta matrix: 8.66270e-08
+
+INFO: dGr_main - dGr_main.py:
+Optimisation completed
+
+INFO: dGr_main - dGr_main.py:
+Saving U matrices in .npy files: These make the transformation
+from the basis used to expand the external wave function
+(|extWF>) to the one that makes |min D> the first determinant.
+

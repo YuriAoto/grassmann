@@ -1,0 +1,12 @@
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 0. Norm of eta[0] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 1. Norm of eta[1] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 2. Norm of eta[2] = 0.000000
+
+WARNING: optimise_distance_to_CI - dGr_optimiser.py:
+Skipping svd for spirrep block 3. Norm of eta[3] = 0.000000
+
