@@ -15,7 +15,7 @@ import re
 import numpy as np
 from numpy import linalg
 
-from dGr_util import number_of_irreducible_repr, zero, irrep_product
+from dGr_util import number_of_irreducible_repr, zero, irrep_product, logtime
 import dGr_general_WF as genWF
 from dGr_exceptions import *
 
@@ -1044,31 +1044,24 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                 I.exc_type = 'S'
                 for i_spirrep in self.spirrep_blocks():
                     sign = (1 if
-                            (self.ref_occ[i_spirrep]
-                             - self.n_core[i_spirrep]) % 2 == 0
+                            self.n_corr_orb[i_spirrep] % 2 == 0
                             else -1)
-                    for i_occ in range(self.ref_occ[i_spirrep]
-                                       - self.n_core[i_spirrep]):
+                    for i_occ in range(self.n_corr_orb[i_spirrep]):
                         sign = -sign
                         if i_occ == 0:
                             I[i_spirrep][self.n_core[i_spirrep]:-1] = np.arange(
                                 self.n_core[i_spirrep] + 1,
                                 self.ref_occ[i_spirrep],
                                 dtype=np.uint8)
-                        for a_virt in range(self.orb_dim[i_spirrep]
-                                            - self.ref_occ[i_spirrep]):
+                        for a_virt in range(self.n_ext[i_spirrep]):
                             I.C = sign * self.singles[i_spirrep][i_occ, a_virt] / self.norm
                             I[i_spirrep][-1] = self.ref_occ[i_spirrep] + a_virt
-                            logger.debug('Almost yielding for %s', I)
                             if I.is_coupled_to(coupled_to):
-                                logger.debug('yield!')
                                 yield I
                             if self.restricted:
                                 I[i_spirrep], I[i_spirrep + self.n_irrep] = (
                                     I[i_spirrep + self.n_irrep], I[i_spirrep])
-                                logger.debug('Almost yielding for %s', I)
                                 if I.is_coupled_to(coupled_to):
-                                    logger.debug('yield!')
                                     yield I
                                 I[i_spirrep], I[i_spirrep + self.n_irrep] = (
                                     I[i_spirrep + self.n_irrep], I[i_spirrep])
@@ -1096,7 +1089,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                         if print_info_to_log:
                             to_log.append('irrep_a, irrep_b = {} {}'.format(irrep_a, irrep_b))
                         base_indices = self._make_occ_indices_for_doubles(
-                            i, j,
+                            i + self.n_core[irrep_i], j + self.n_core[irrep_j],
                             irrep_i, irrep_j,
                             irrep_a, irrep_b)
                         if only_this_occ is not None:
@@ -1236,7 +1229,6 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                 nel_case_cpl_to = len(coupled_to[0].I) - self.ref_occ[cpl_to.spirrep]
                 if -2 > nel_case_cpl_to < 2:
                     does_yield = False
-            logger.debug('nel_case: %s', nel_case)
             if does_yield:
                 if nel_case == -2:
                     if self._is_spirrep_coupled_to(-2, spirrep,
