@@ -1298,7 +1298,8 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                                     if j == n_electrons - 2:
                                         break
                                     if j == i - 1:
-                                        I[:i] = np.arange(1, i + 1)
+                                        I[self.n_core[spirrep]:i] = np.arange(
+                                            self.n_core[spirrep] + 1, i + 1)
                                     else:
                                         I[j] = j
                 elif nel_case == 1:
