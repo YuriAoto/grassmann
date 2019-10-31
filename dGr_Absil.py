@@ -27,7 +27,7 @@ import numpy as np
 from scipy import linalg
 
 import dGr_general_WF as genWF
-from dGr_util import get_I
+from dGr_util import get_I, logtime
 
 logger = logging.getLogger(__name__)
 
@@ -274,106 +274,106 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
     X = np.zeros((sum_Kn + sum_nn, sum_Kn))
     C = np.zeros(sum_Kn + sum_nn)
     for spirrep_1 in wf.spirrep_blocks(restricted=False):
-        logger.debug('Starting spirrep_1 = %d', spirrep_1)
-        logger.debug('n_irrep = %d', wf.n_irrep)
+        logger.info('Starting spirrep_1 = %d', spirrep_1)
+        logger.info('n_irrep = %d', wf.n_irrep)
         Pi = np.identity(K[spirrep_1]) - U[spirrep_1] @ U[spirrep_1].T
         logger.debug('Pi = %s', Pi)
         for I_1 in wf.string_indices(spirrep=spirrep_1):
-            logger.debug('At I_1 = %s', I_1)
-            if len(I_1) != n[spirrep_1]:
-                continue
-            H = np.zeros((K[spirrep_1], n[spirrep_1],
-                          K[spirrep_1], n[spirrep_1]))
-            G_1 = np.zeros((K[spirrep_1], n[spirrep_1]))
-            for i in range(K[spirrep_1]):
-                for j in range(n[spirrep_1]):
-                    H[i,j,i,j] = -F[spirrep_1][int(I_1)]
-                    logger.debug('H[ijij] = %s', H[i,j,i,j])
-                    for k in range(i):
-                        for l in range(j):
-                            H[k,l,i,j] = _calc_H(U[spirrep_1],
-                                                 I_1.occ_orb,
-                                                 k, l, i, j)
-                            H[k,j,i,l] = H[i,l,k,j] = -H[k,l,i,j]
-                            H[i,j,k,l] = H[k,l,i,j]
-                            logger.debug('H[klij] = %s', H[k,l,i,j])
-                    #  G_1[i,j] = np.dot(H[:,0,i,j], U[spirrep_1][:,0])
-                    G_1[i,j] = _calc_G(U[spirrep_1],
-                                       I_1.occ_orb,
-                                       i, j)
-            logger.debug('current H:\n%s', H)
-            logger.debug('current G:\n%s', G_1)
-            H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
-            logger.debug('Pi (U G - H):\n%s', H)
-            S = 0.0
-            logger.debug('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
-            for I_full in wf.string_indices(
-                    coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
-                                                    I=I_1),)):
-                logger.debug('Yielding this: %s', I_full)
-                if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
+            with logtime('Calc H, G') as T_1:
+                logger.debug('At I_1 = %s', I_1)
+                if len(I_1) != n[spirrep_1]:
                     continue
-                F_contr = 1.0
-                for spirrep_other, I_other in enumerate(I_full):
-                    if spirrep_other != spirrep_1 and len(I_other) > 0:
-                        F_contr *= F[spirrep_other][int(I_other)]
-                logger.debug('F_contr = %s', F_contr)
-                logger.debug('wf[I_full] = %s', wf[I_full])
-                S += wf[I_full] * F_contr
-            logger.debug('S = %s; H:\n%s', S, H)
-            X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-              lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
-                  H,
-                  (K[spirrep_1] * n[spirrep_1],
-                   K[spirrep_1] * n[spirrep_1]),
-                  order='F').T
-            G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
-            logger.debug('S = %s; G_1:\n %s', S, G_1)
-            C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
-                G_1,
-                (K[spirrep_1] * n[spirrep_1],),
-                order='F')
+                H = np.zeros((K[spirrep_1], n[spirrep_1],
+                              K[spirrep_1], n[spirrep_1]))
+                G_1 = np.zeros((K[spirrep_1], n[spirrep_1]))
+                for i in range(K[spirrep_1]):
+                    for j in range(n[spirrep_1]):
+                        H[i,j,i,j] = -F[spirrep_1][int(I_1)]
+                        for k in range(i):
+                            for l in range(j):
+                                H[k,l,i,j] = _calc_H(U[spirrep_1],
+                                                     I_1.occ_orb,
+                                                     k, l, i, j)
+                                H[k,j,i,l] = H[i,l,k,j] = -H[k,l,i,j]
+                                H[i,j,k,l] = H[k,l,i,j]
+                        #  G_1[i,j] = np.dot(H[:,0,i,j], U[spirrep_1][:,0])
+                        G_1[i,j] = _calc_G(U[spirrep_1],
+                                           I_1.occ_orb,
+                                           i, j)
+                logger.debug('current H:\n%s', H)
+                logger.debug('current G:\n%s', G_1)
+                H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
+                logger.debug('Pi (U G - H):\n%s', H)
+            with logtime('Calc S') as T_2:
+                S = 0.0
+                logger.info('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
+                for I_full in wf.string_indices(
+                        coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
+                                                        I=I_1),)):
+                    if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
+                        continue
+                    F_contr = 1.0
+                    for spirrep_other, I_other in enumerate(I_full):
+                        if spirrep_other != spirrep_1 and len(I_other) > 0:
+                            F_contr *= F[spirrep_other][int(I_other)]
+                    S += wf[I_full] * F_contr
+                logger.debug('S = %s; H:\n%s', S, H)
+            with logtime('Calc Xdiag, C') as T_3:
+                X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
+                  lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                      H,
+                      (K[spirrep_1] * n[spirrep_1],
+                       K[spirrep_1] * n[spirrep_1]),
+                      order='F').T
+                G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
+                logger.debug('S = %s; G_1:\n %s', S, G_1)
+                C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                    G_1,
+                    (K[spirrep_1] * n[spirrep_1],),
+                    order='F')
             for spirrep_2 in wf.spirrep_blocks(restricted=False):
                 if spirrep_2 <= spirrep_1:
                     continue
-                G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
-                for I_2 in wf.string_indices(
-                        spirrep=spirrep_2,
-                        coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
-                                                        I=I_1),)):
-                    if len(I_2) != n[spirrep_2]:
-                        continue
-                    for k in range(K[spirrep_2]):
-                        for l in range(n[spirrep_2]):
-                            G_2[k,l] = _calc_G(U[spirrep_2],
-                                             I_2.occ_orb,
-                                             k, l)
-                    G_2 -= F[spirrep_2][int(I_2)] * U[spirrep_2]
-                    S = 0.0
-                    logger.debug('I_1 = %s; I_2 = %s', I_1, I_2)
-                    for I_full in wf.string_indices(
+                logger.info('At spirrep_2 = %d', spirrep_2)
+                with logtime('spirrep_2'):
+                    G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
+                    for I_2 in wf.string_indices(
+                            spirrep=spirrep_2,
                             coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
-                                                            I=I_1),
-                                        genWF.Spirrep_Index(spirrep=spirrep_2,
-                                                            I=I_2))):
-                        if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
+                                                            I=I_1),)):
+                        if len(I_2) != n[spirrep_2]:
                             continue
-                        F_contr = 1.0
-                        for spirrep_other, I_other in enumerate(I_full):
-                            if (wf.ref_occ[spirrep_other] > 0
-                                and spirrep_other != spirrep_1
-                                and spirrep_other != spirrep_2):
-                                F_contr *= F[spirrep_other][int(I_other)]
-                        S += wf[I_full] * F_contr
-                    logger.debug('G_1:\n%s', G_1)
-                    logger.debug('G_2:\n%s', G_2)
-                    logger.debug('S = %s', S)
-                    X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] -= S * np.reshape(
-                          np.multiply.outer(G_1, G_2),
-                          (K[spirrep_1] * n[spirrep_1],
-                           K[spirrep_2] * n[spirrep_2]),
-                          order='F')
+                        logger.debug('I_2 = %s', I_2)
+                        for k in range(K[spirrep_2]):
+                            for l in range(n[spirrep_2]):
+                                G_2[k,l] = _calc_G(U[spirrep_2],
+                                                   I_2.occ_orb,
+                                                   k, l)
+                        G_2 -= F[spirrep_2][int(I_2)] * U[spirrep_2]
+                        S = 0.0
+                        for I_full in wf.string_indices(
+                                coupled_to=(genWF.Spirrep_Index(spirrep=spirrep_1,
+                                                                I=I_1),
+                                            genWF.Spirrep_Index(spirrep=spirrep_2,
+                                                                I=I_2))):
+                            if list(map(len, I_full)) != list(map(lambda x: x.shape[1], U)):
+                                continue
+                            F_contr = 1.0
+                            for spirrep_other, I_other in enumerate(I_full):
+                                if (wf.ref_occ[spirrep_other] > 0
+                                    and spirrep_other != spirrep_1
+                                    and spirrep_other != spirrep_2):
+                                    F_contr *= F[spirrep_other][int(I_other)]
+                            S += wf[I_full] * F_contr
+                        logger.debug('G_1:\n%s', G_1)
+                        logger.debug('G_2:\n%s', G_2)
+                        logger.debug('S = %s', S)
+                        X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
+                          lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] -= S * np.reshape(
+                              np.multiply.outer(G_1, G_2),
+                              (K[spirrep_1] * n[spirrep_1],
+                               K[spirrep_2] * n[spirrep_2]),
+                              order='F')
             for spirrep_2 in wf.spirrep_blocks(restricted=False):
                 if spirrep_1 > spirrep_2:
                     X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
