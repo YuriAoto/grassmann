@@ -16,6 +16,7 @@
   
   \begin{tabular}{l@{ - }l}
     24 mar 2019 & Start\\
+    31 oct 2019 & Adding Absil method\\
   \end{tabular}
 }\vspace{3cm}
 
@@ -46,9 +47,10 @@
   \HilbSp & The complete Hilbert space of quantum states\\
           &(within finite basis set approximation)\\
           & $\HilbSp = \Lambda^n (\mathcal{V}_\alpha \oplus \mathcal{V}_\beta)$\\
-  $\Psi$ & Elements of $\HilbSp$\\
-  $\Phi$ & Determinantal elements of $\HilbSp$\\
-  $\psi$ & Elements of $\mathcal{V}$\\
+  $\Psi$ & General Elements of $\HilbSp$\\
+  $\Phi$ & Elements of $Gr(n, 2K) \in \HilbSp$, that is, they can be expressed\\
+          & as a Slater determinant.\\
+  $\phi$, $\psi$ & Elements of $\mathcal{V}$\\
   \hline
 \end{tabular}
 \end{center}
@@ -57,28 +59,44 @@
 \section{Introduction}
 
 Let
-\begin{equation}
-  \ket{\Psi_\text{FCI}} = \sum_I c_I \ket{\Phi_I}
+\begin{equation}\label{eq:ext_wf}
+  \ket{\Psi_\text{ext}} = \sum_I c_I \ket{\Phi_I}
 \end{equation}
-be a $n$-electron normalised Full-CI like wave function represented in the orbital basis
+be a $n$-electron normalised CI like wave function represented in the orbital basis
 \begin{equation}
   \ket{\phi_I} = \phi_{I_1} \wedge \phi_{I_2} \wedge \dots \wedge \phi_{I_n}\,,
 \end{equation}
-where $\{\phi_p\}$ is an orthonormal basis for the space of one-electron wave functions and $I$ is an ordered multi-index.
+where
+\begin{equation}
+  \{\phi_p\}_{p=1}^K
+\end{equation}
+is an orthonormal basis for the space of one-electron wave functions and $I$ is an ordered multi-index.
 We want to find $\ket{\Phi} \in Gr$ such that $|\bracket{\Psi_\text{FCI}}{\Phi}|$ is maximum, where $Gr$ is the image of the Grassmannian in the space of the $n$-electron wave functions.
+
 Recall that
 \begin{equation}
-  D(\psi_1, \psi_2) = \sqrt{2}\sqrt{1 - |\bracket{\psi_1}{\psi_2}|}
+  D(\Psi_1, \Psi_2) = \sqrt{2}\sqrt{1 - |\bracket{\Psi_1}{\Psi_2}|}
 \end{equation}
 is a metric in $\projective \HilbSp$.\cite{}
 Also, $Gr$ is the set of all elements of $\HilbSp$ that can be written as a single Slater determinant (a decomposable element) for some orthonormal basis of $\mathcal{V}$.
+For this reason, such $\ket{\Phi}$ minimises the distance $D$ to the wave function $\ket{\Psi_\text{ext}}$ and it will be denoted $\ket{\Phi_\text{minD}}$.
+The subscript ``ext'' refers to \emph{external}, because we assume that $\ket{\Psi_\text{ext}}$ is external to the Grassmannian.
+
+We have developed and implemented two algorithms to calculate $\ket{\Phi_\text{minD}}$.
+The first uses the whole structure of a Full-CI wave function (that is, the full Hilbert space), because the external wave function has to be transformed to the MO basis of $\ket{\Phi_\text{minD}}$.
+Hence, even if we start with a CISD wave function for example, when we update $\ket{\Phi_\text{minD}}$ the orbitals change, and the external wave function is no longer just a CISD over that reference.
+The second uses the Newton method adapted to the Grassmannian, as proposed by Absil \etal{}\cite{}
+
+In any case, this document is intended to give the full formulas that are implemented in the present code.
+The detailed derivation of these expressions are not given here.
+
 
 \newpage
-\section{Minimisation with respect to FCI}
+\section{\textsf{\LARGE Algorithm 1}\\Using orbital rotations and the structure of a FCI wave function}
 
-To find $\ket{\Phi}$, it is equivalent to find the orbitals (namely, a basis of $\mathcal{V}$) such that 
+To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely, a basis of $\mathcal{V}$) such that 
 \begin{equation}
-  \ket{\Psi_\text{FCI}} = C_0 \ket{\Phi} +
+  \ket{\Psi_\text{FCI}} = C_0 \ket{\Phi_\text{minD}} +
   \sum_{
     \mathclap{\substack{I\\
         I \ne \{1,2,\dots,n\}}}
@@ -173,6 +191,254 @@ From this vector, the operator $\hat{K}$ is constructed and the orbital transfor
 \end{equation}
 This is done for the $\alpha$ and the $\beta$ orbitals and the wave function $\ket{\Psi_\text{FCI}}$ is transformed to the new orbital basis, by equation \ref{eq:trans_fci_orbital_basis}.
 This proceeds until convergence.
+
+
+\newpage
+\section{\textsf{\LARGE Algorithm 2}\\The Newton-Grassmann method of Absil}
+
+This method is based on the work of Absil \etal{}, where they propose a Newton method adapted to the geometry of the Grassmannian.
+The algorithm is actually on the Stiefel manifold, that is, the manifold of full-rank $K \times n$ matrices.
+These matrices contain the coefficients of the orbitals in a fixed basis, and thus form a redundant parametrisation for the Grassmannian, in the sense that there are several matrices to represent the same point in $Gr$, that can be transformed among themselves with multiplication by invertible $n \times n$ matrices (elements of the general linear group of degree $n$, $GL_n$).
+
+\subsection{General formulation from Absil}
+
+Thus, given $\ket{\Phi_0} \in Gr$, let $Y$ be the matrix whose entries are the coefficients of $\ket{\Phi_0}$ in some basis of $\mathcal{V}$.
+This is an element of the Stiefel manifild $ST(n,K)$.
+Let $f : Gr \to \real$ be any function we might want to optimise.
+This is defined on the Grassmannian.
+We will recall some definitions from Absil.\cite{}
+The version of this function on the Stiefel manifold is defined as:
+\begin{eqnarray}
+  f_{\lozenge} : ST &\to& \real\\
+  Y &\mapsto& f(\text{span}(Y))\,,
+\end{eqnarray}
+where $\text{span}(Y)$ is the vector space spanned by the columns of $Y$ (and thus in $Gr$).
+The gradient of $f_\lozenge$ at $Y$ is the matrix $K \times n$ whose entries are given by:
+\begin{equation}
+(\text{grad} f_\lozenge(Y))_{ij} = \frac{\partial f_\lozenge(Y)}{\partial Y_{ij}}(Y)\,,
+\end{equation}
+and the directional derivative of a function any smooth $F$, at $x$ in the direction of $y$:
+\begin{equation}
+  DF(x)[y] = \frac{d}{dt}F(x + ty)\big|_{t=0}\,.
+\end{equation}
+Finally, let
+\begin{equation}
+  \Pi_{W\perp} = I - W(W^TW)^{-1}W^T\,,
+\end{equation}
+be the projection into the orthogonal component of $W$.
+
+The calculation is done now in the Stiefel manifold.
+According to Absil:
+\begin{itemize}
+\item First solve the following equation for the unknown $\eta_{\lozenge Y} \in H_Y = \{Y_\perp K:K \in \real^{(K-n)\times n}\}$:
+  \begin{equation}\label{eq:Absil_main_eq}
+    \Pi_{Y\perp} D\left(\Pi_{\cdot{} \perp} \text{grad}f_\lozenge\left(\cdot{}\right) \right)
+    \left(Y\right)\left[\eta_{\lozenge Y}\right] = -\Pi_{Y\perp}\text{grad}f_\lozenge\left(Y\right)\,;
+  \end{equation}
+\item Update $\ket{\Phi_0} \to \ket{\Phi}$ by moving along the geodesic on the Grassmannian in the direction of $\text{span}(\eta_{\lozenge Y})$, what is done computing a singular value decomposition of $\eta_{\lozenge Y} = U \Sigma V^T$ and getting:
+  \begin{equation}
+    \ket{\Phi} = \text{span}(Y V \cos \Sigma + U \sin \Sigma)\,.
+  \end{equation}
+\end{itemize}
+
+\subsection{Application to obtain $\ket{\Phi_\text{minD}}$}
+
+We will now consider our specific function.
+Similarly to what we did in the first algorithm, we will just work without getting the absolute value.
+Thus, we will look for stationary points of:
+\begin{eqnarray}
+  f : Gr &\to& \real\\
+  \ket{\Phi} &\mapsto& \bracket{\Psi_\text{ext}}{\Phi}\,.
+\end{eqnarray}
+We will assume that the external wave function, $\ket{\Psi_\text{ext}}$, is eigenfunction of $S_z$, with eigenvalue $M_s$, and belongs to an irreducible representation (irrep, $\Gamma$) of the point group of the molecule.
+This means that, for all determinants of the expansion \ref{eq:ext_wf}, the following equations hold:
+\begin{equation}
+  n_\alpha - n_\beta = 2 Ms
+\end{equation}
+\begin{equation}\label{eq:irrep_condition}
+  \bigotimes_i \Gamma_i = \Gamma
+\end{equation}
+That is, all determinants have the same $Ms$ (that is half of the difference between alpha and beta orbitals) and belong to the same irrep $\Gamma$ (that is the direct product of the irrep of all occupied orbitals).
+We are thus assuming that we are using a basis for $\mathcal{V}$ for which all elements belong to an irrep.
+Let us further assume that the orbitals are ordered with all alpha coming first, followed by all beta orbitals, and they are ordered by irrep in each of these parts.
+Under these conditions, the $f_\lozenge$ is calculated as follows:
+
+\begin{eqnarray}
+  f_\lozenge(Y)
+  &=& \frac{1}{\sqrt{\text{det} \left( Y^T Y \right)}}
+      \sum_{I} c_I \text{det} \left( Y\big|_I \right)\\
+  &=& \frac{1}{\sqrt{
+      \text{det} \left( (Y_\alpha)^T Y_\alpha \right)
+      \text{det} \left( (Y_\beta)^T Y_\beta \right)
+      }}
+      \sum_{I} c_I
+      \text{det} \left( Y_\alpha\big|_{I_\alpha} \right)
+      \text{det} \left( Y_\beta\big|_{I_\beta} \right)\\\label{eq:f_diam_spin_irrep}
+  &=& \frac{1}{\sqrt{
+      \prod_{i=0}^{g-1}
+      \text{det} \left( (Y_\alpha^{\Gamma_i})^T Y_\alpha^{\Gamma_i} \right)
+      \text{det} \left( (Y_\beta^{\Gamma_i})^T Y_\beta^{\Gamma_i} \right)
+      }}
+      \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \prod_{i=0}^{g-1}
+  \text{det} \left( Y_\alpha^{\Gamma_i}\big|_{I_\alpha^{\Gamma_i}} \right)
+  \text{det} \left( Y_\beta^{\Gamma_i}\big|_{I_\beta^{\Gamma_i}} \right)
+\end{eqnarray}
+The above expressions seem very complicated, so let us look at then carefully.
+
+First of all, note that the first expression is general, in the second we consider the separation between $\alpha$ and $\beta$ orbitals, and in the third we consider the separation between orbitals of different irreps.
+In all versions, the term with the square root is to guarantee the normalization of the Slater determinant associated to $Y$.
+If the coefficients in $Y$ are for an orthonormal set of orbitals, the term in the square root is one.
+But we note that $f_\lozenge(Y) = f(\text{span}(Y))$ must hold for all $Y$ in the Stiefel manifold, and the normalisation factor is important to use equation \ref{eq:Absil_main_eq}, even if $Y$ is used normalised during computation.
+
+The notation $Y\big|_I$ means the submatrix of $Y$ formed with the rows that are in the multiindex $I$.
+For example, if
+\begin{equation}
+  Y =
+  \begin{pmatrix}
+    Y_{00} & Y_{01} & Y_{02}\\
+    Y_{10} & Y_{11} & Y_{12}\\
+    Y_{20} & Y_{21} & Y_{22}\\
+    Y_{30} & Y_{31} & Y_{32}\\
+    Y_{40} & Y_{41} & Y_{42}\\
+  \end{pmatrix}\,,
+\end{equation}
+and $I=\{0, 1, 2\}$, then
+\begin{equation}
+  Y\big|_I =
+  \begin{pmatrix}
+    Y_{00} & Y_{01} & Y_{02}\\
+    Y_{10} & Y_{11} & Y_{12}\\
+    Y_{20} & Y_{21} & Y_{22}\\
+  \end{pmatrix}\,,
+\end{equation}
+but if $I=\{0, 3, 4\}$, then
+\begin{equation}
+  Y\big|_I =
+  \begin{pmatrix}
+    Y_{00} & Y_{01} & Y_{02}\\
+    Y_{30} & Y_{31} & Y_{32}\\
+    Y_{40} & Y_{41} & Y_{42}\\
+  \end{pmatrix}\,,
+\end{equation}
+and so on.
+Thus, the first formula says that, after taking the normalisation into account, $f_\lozenge$ is calculated by summing the contribution of all determinants that contribute to $\ket{\Psi_\text{ext}}$, and this contribution is the CI coefficient times the determinant of $Y\big|_I$.
+
+Now, if the orbitals of a Slater determinant $\ket{\Phi}$ can be divided into $\alpha$ and $\beta$ orbitals, that do not mix, the matrix $Y$ is divided in two blocks, one for each spin:
+\begin{equation}
+  Y =
+  \begin{pmatrix}
+    Y_\alpha & 0\\
+    0 & Y_\beta\\
+  \end{pmatrix}
+  = Y_\alpha \oplus Y_\beta\,.
+\end{equation}
+The second equation follows easily from the first when we use this division into blocks, because the determinant of block diagonal matrices is the product of the determinant of each block.
+Furthermore, when we consider symmetry the matrix is further divided:
+\begin{equation}\label{eq:Y_spin_irrep_blocks}
+  Y =
+  \begin{pmatrix}
+    Y_\alpha^{\Gamma_0} & 0 & ... & 0\\
+    0 & Y_\alpha^{\Gamma_1} & ... & 0 \\
+    \vdots & \vdots & & \vdots\\
+    0 & 0 &\dots & Y_\beta^{\Gamma_{g-1}}\\
+  \end{pmatrix}
+  = Y_\alpha^{\Gamma_0} \oplus Y_\alpha^{\Gamma_1} \oplus \dots \oplus Y_\beta^{\Gamma_{g-1}}\,,
+\end{equation}
+leading to the last formula.
+In this case, however, the matrices $Y_\sigma^{\Gamma_i}$ might not be square, because by fixing the irrep of the wave function (and thus of its determinants) does not fix the occupation in each irrep block:
+it is possible to fulfil equation \ref{eq:irrep_condition} with more than one pattern in the occupation of the irreps $\Gamma_i$.
+In the summation over $I$, if this multi-index is associated to a determinant with an occupation per irrep different than the occupation if $Y$, some of the blocks $Y_\sigma^{\Gamma_i}$ are not square, although the direct sum of all of them is again square (because the total number of electrons do not change).
+However, one can show that the determinant of such block matrices are zero, and thus they do not contribute to $f_\lozenge$.
+This is indicated in the summation by ``$\text{occ}(I) = \text{occ}(Y)$'', that is, we can consider only the terms with the same occupation per irrep of $Y$.
+
+The notation $I_\sigma^{\Gamma_i}$ indicates the part of the multi-index $I$ associated to $\sigma$ and $\Gamma_i$.
+Because it is obvious that we can take submatrices of $Y_\alpha^{\Gamma_i}$ only restricting with subindices with same spin and irrep, the notation $Y_\alpha^{\Gamma_i}\big|_{I_\alpha^{\Gamma_i}}$ is rather redundant.
+Hence we will use $Y_\alpha^{\Gamma_i}\big|_{I}$ or $Y\big|_{I_\alpha^{\Gamma_i}}$ only.
+
+Because of the separation in spin and irrep blocks, we can show that the unknown matrix $\eta_{\lozenge Y}$ has the same division as the matrix $Y$:
+
+\begin{equation}\label{eq:eta_spin_irrep_blocks}
+  \eta_{\lozenge Y} =
+  \begin{pmatrix}
+    \eta_\alpha^{\Gamma_0} & 0 & ... & 0\\
+    0 & \eta_\alpha^{\Gamma_1} & ... & 0 \\
+    \vdots & \vdots & & \vdots\\
+    0 & 0 &\dots & \eta_\beta^{\Gamma_{g-1}}\\
+  \end{pmatrix}
+  = \eta_\alpha^{\Gamma_0} \oplus \eta_\alpha^{\Gamma_1} \oplus \dots \oplus \eta_\beta^{\Gamma_{g-1}}\,,
+\end{equation}
+where we dropped the subscript $\lozenge Y$ in the blocks for a cleaner notation.
+
+After a big exercise of linear algebra, we obtain the following system of linear equations as the main equation of this method (i.e. Equation \ref{eq:Absil_main_eq} using the present function $f$):
+\begin{equation}
+  \big( X_{\sigma \Gamma}^{\sigma' \Gamma'} \big)_{jk}^{il} \big( \eta_{\sigma' \Gamma'} \big)_{l}^{k} = \big( C_{\sigma \Gamma} \big)_{j}^{i}\,,
+\end{equation}
+with
+
+
+\begin{equation}
+  \big( C_{\sigma \Gamma} \big)_{j}^{i} =
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
+  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i
+\end{equation}
+
+\begin{eqnarray}
+  \big( X_{\sigma \Gamma}^{\sigma \Gamma} \big)_{jk}^{il} &=&
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
+  \left\{ \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i \big( (Y_\sigma^\Gamma)^T \big)_k^l
+  - \big( \Pi_{Y_\sigma^\Gamma \perp} \big)_\mu^i \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{\mu l} \right\}\\
+  &=& 
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
+  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)_\mu^i
+  \left( \big( G_{I_\sigma^\Gamma} \big)_j^\mu \big( (Y_\sigma^\Gamma)^T \big)_k^l
+  - \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{\mu l} \right)
+\end{eqnarray}
+
+\begin{equation}
+  \big( X_{\sigma \Gamma}^{\sigma' \Gamma'} \big)_{jk}^{il} =
+  -\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left(
+    \prod_{\substack{
+        \{\sigma'', \Gamma''\} \ne \{\sigma', \Gamma'\} \\
+        \{\sigma'', \Gamma''\} \ne \{\sigma , \Gamma \}}}
+    F_{I_{\sigma''}^{\Gamma''}} \right)
+  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i
+  \left( \left( G_{I_{\sigma'}^{\Gamma'}} - F_{I_{\sigma'}^{\Gamma'}} Y_{\sigma'}^{\Gamma'} \right)^T \right)_k^l
+\end{equation}
+
+where:
+
+\begin{equation}
+  F_{I_\sigma^\Gamma} = \text{det} \left( Y\big|_{I_\alpha^\Gamma} \right)
+\end{equation}
+
+\begin{equation}
+  \big( G_{I_\sigma^\Gamma} \big)_j^i = \text{det} \left( Y_\alpha^\Gamma \overset{j}{\leftarrow} e_i \right) \big|_I
+\end{equation}
+
+\begin{equation}
+  \big( H_{I_\sigma^\Gamma} \big)_{jk}^{il} =
+  \text{det} \left( Y_\alpha^\Gamma \overset{j}{\leftarrow} e_i
+    \overset{l}{\leftarrow} e_k \right) \big|_I
+\end{equation}
+
+\begin{equation}
+  \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{il} =
+  \left\{
+    \begin{array}{ll}
+      \big( H_{I_\sigma^\Gamma} \big)_{jk}^{il} & \text{ if } l \ne j\\
+      -F_{I_\sigma^\Gamma} \delta_{ik} & \text{ otherwise}
+    \end{array}
+  \right.
+\end{equation}
+
+The notation $A \overset{j}{\leftarrow}b$ means the matrix $A$ with the $j$-th column replaced by the vector $b$. The vector $e_i$ is the $i$-th element of the canonical basis ($0$ in every entry, except for the $i$-th entry where it is $1$).
+
 
 \end{document}
 
