@@ -429,10 +429,13 @@ def optimise_distance_to_CI(ci_wf,
                                       + ' sum U.shape[1] = {1:} != {2:} = ci_wf.n_{0:}').\
                                      format(spin, sum_n, n))
         U = ini_U
-    lim_XC = [0]
+    slice_XC = []
     for i in range(2 * ci_wf.n_irrep):
         logger.debug('Ui shape = %s; Ui = %s', U[i].shape, U[i])
-        lim_XC.append(lim_XC[-1] + U[i].shape[0] * U[i].shape[1])
+        slice_XC.append(slice(0
+                              if i == 0 else
+                              slice_XC[-1].stop,
+                              U[i].shape[0] * U[i].shape[1]))
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
     fmt_full =  '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -440,21 +443,9 @@ def optimise_distance_to_CI(ci_wf,
     f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.\
                 format('it.', 'f', '|eta|', '|C|', 'time in iteration'))
     for i_iteration in range(max_iter):
-        with logtime('Calculating f') as T_calc_f:
-            all_F = Absil.calc_all_F(ci_wf, U)
-            logger.debug('all_F:\n%s', all_F)
-            f = Absil.overlap_to_det(ci_wf, U, F=all_F)
-            logger.debug('just calculated f: %.5f', f)
-        f_out.write((fmt_ini if i_iteration == 0 else fmt_full).\
-                    format(i_iteration,
-                           f,
-                           norm_eta,
-                           norm_C,
-                           elapsed_time))
-        if converged_C and converged_eta:
-            break
         with logtime('Generating linear system') as T_gen_lin_system:
-            X, C = Absil.generate_lin_system(ci_wf, U, lim_XC, F=all_F)
+            f, X, C = Absil.generate_lin_system(ci_wf, U, slice_XC)
+        logger.debug('f: %.5f', f)
         logger.debug('matrix X:\n%s', X)
         logger.debug('matrix C:\n%s', C)
         norm_C = linalg.norm(C)
@@ -483,7 +474,7 @@ def optimise_distance_to_CI(ci_wf,
         with logtime('Singular value decomposition of eta') as T_svd:
             for i in ci_wf.spirrep_blocks(restricted=False):
                 eta.append(np.reshape(
-                    lin_sys_solution[0][lim_XC[i]:lim_XC[i+1]],
+                    lin_sys_solution[0][slice_XC[i]],
                     U[i].shape, order='F'))
                 norm_eta_i = linalg.norm(eta[-1])
                 if norm_eta_i < zero_skip_linalg:
@@ -526,7 +517,15 @@ def optimise_distance_to_CI(ci_wf,
                     i % ci_wf.n_irrep,
                     U[i])
         elapsed_time = str(timedelta(seconds=(T_orth_U.end_time
-                                              - T_calc_f.ini_time)))
+                                              - T_gen_lin_system.end_time)))
+        f_out.write(fmt_full.\
+                    format(i_iteration,
+                           f,
+                           norm_eta,
+                           norm_C,
+                           elapsed_time))
+        if converged_C and converged_eta:
+            break
     return Results(f = f,
                    U = U,
                    norm = (norm_eta, norm_C),

@@ -555,10 +555,14 @@ class Wave_Function(ABC, Sequence):
         self.n_act = Orbitals_Sets(self.n_irrep,
                                    occ_type='A')
     
-    def spirrep_blocks(self):
+    def spirrep_blocks(self, restricted=None):
         """Yield the possible spin and irreps, as a single integer."""
-        for spirrep in range(2 * self.n_irrep):
-            yield spirrep
+        if restricted is None:
+            restricted = self.restricted
+        for i in range(self.n_irrep * (1
+                                       if restricted else
+                                       2)):
+            yield i
     
     @property
     def n_irrep(self):

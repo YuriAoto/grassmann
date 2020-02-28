@@ -167,3 +167,20 @@ def get_I(n, i=None, a=None):
         return [x for x in range(n) if x != i] + [a]
     else:
         return [x for x in range(n) if x not in i] + a
+
+def triangular(n):
+    """The n-th trianglar number = \sum_i^n i"""
+    return ((n + 1) * n) // 2
+
+def get_ij_from_triang(n):
+    i = math.floor((math.sqrt(1 + 8*n) - 1)/2)
+    j = n - i * (i + 1) // 2
+    return i,j
+
+def get_n_from_triang(i, j, with_diag=True):
+    if with_diag:
+        return j + triangular(i)
+    else:
+        return j + triangular(i - 1)
+    
+    

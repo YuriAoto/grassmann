@@ -27,7 +27,8 @@ import numpy as np
 from scipy import linalg
 
 import dGr_general_WF as genWF
-from dGr_util import get_I, logtime
+from dGr_CISD_WF import Wave_Function_CISD
+from dGr_util import get_I, logtime, get_ij_from_triang, get_n_from_triang
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,8 @@ def _calc_fI(U, det_indices):
     
     det(U[det_indices, :])
     """
+    if len(det_indices) == 0:
+        return 1.0
     return linalg.det(U[det_indices, :])
 
 def _calc_G(U, det_indices, i, j):
@@ -224,8 +227,11 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
             f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
     return f
 
-def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
+def generate_lin_system(
+        wf, U, slice_XC, F=None, with_full_H=True):
     """Generate the linear system for Absil's method
+    
+    This is a wrapper to the actual functions.
     
     Behaviour:
     ----------
@@ -249,8 +255,8 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
     
         See overlap_to_det for the details of the above parameters
     
-    lim_XC (list of int)
-        Limits of each spirrep in the blocks of matrices X and C
+    slice_XC (list of slices)
+        Slices of each spirrep in the blocks of matrices X and C
     
     with_full_H (bool, default=True)
         If True, calculates and store the full matrix H
@@ -262,6 +268,406 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
     -------
     
     The tuple (X, C), such that eta satisfies X @ eta = C
+    """
+    if isinstance(wf, Wave_Function_CISD):
+        return _generate_lin_system_from_restricted_CISD(
+            wf, U, slice_XC)
+    elif isinstance(wf, genWF.Wave_Function):
+        return _generate_lin_system_from_genWF(
+            wf, U, slice_XC, F=F, with_full_H=with_full_H)
+    else:
+        raise dGrValueError('Unknown type of wave function')
+
+def _calc_Fprod(F0, indices, max_ind):
+    """Calculate the product of F0[i] with i not in indices"""
+    F = 1.0
+    for irrep in range(max_ind):
+        if irrep in indices:
+            continue
+        F *= F0[irrep]
+    return F
+
+def _all_singles(n_el, n_corr, n_ext):
+    """Generator that yield all single excitations, as (i,a,I)"""
+    n_core = n_el - n_corr
+    I = np.zeros(n_el, dtype=int)
+    I[:n_core] = np.arange(n_core)
+    I[n_core:-1] = np.arange(n_core + 1, n_el)
+    for i in range(n_corr):
+        for a in range(n_ext):
+            I[-1] = n_el + a
+            yield i, a, I
+        I[n_core + i] = n_core + i
+
+def _all_doubles(n_el, n_corr, n_ext):
+    """Generator that yield all double excitations, as (i,j,a,b,I)"""
+    n_core = n_el - n_corr
+    I = np.zeros(n_el, dtype=int)
+    I[:n_core] = np.arange(n_core)
+    I[n_core:-2] = np.arange(n_core + 2, n_el)
+    for j in range(n_corr):
+        for i in range(j+1, n_corr):
+            for a in range(n_ext):
+                I[-1] = n_el + a
+                for b in range(a):
+                    I[-2] = (n_el
+                             if b == 0 else
+                             (I[-2] + 1))
+                    yield i, j, a, b, I
+            I[i] = i
+        if j < n_corr:
+            I[j] = j
+            I[j+1:-2] = np.arange(j + 3, n_el, dtype=int)
+
+
+def _generate_lin_system_from_restricted_CISD(
+        wf, U, slice_XC):
+    """Generate the linear system for Absil's method
+    
+    This is the specific implementation, for a restricted CISD
+    wave function (dGr_CISD_WF.Wave_Function_CISD), using
+    restricted orbitals, and for the component of the Grassmannian
+    with same occupation as reference wave function
+    
+    Details:
+    -------
+    The indices of lists and arrays are in the following order:
+    
+    F0[irrep]
+    G0[irrep][p,q]
+    Fs[irrep][i,a]
+    Gs[irrep][i,a,p,q]
+    H[p,q,r,s]
+    
+    where:
+    irrep      runs over all irreps
+    p,r        run over all orbitals (of that irrep):
+               0 <= p,r < K[irrep]
+    q,s        run over all occupied orbitals (of that irrep):
+               0 <= q,s < n[irrep]
+    i,j        run over correlated occupied orbitals (of that irrep):
+               0 <= i,j < wf.n_corr_orb[irrep]
+    a,b        run over virtual orbitals (of that irrep):
+               0 <= a,b < wf.n_ext[irrep]
+    
+    The relation between indices and the notation for X:
+    
+    X[irrep,irrep2] = X_irrep^irrep2
+    
+    """
+    K = [U_irrep.shape[0] for U_irrep in U]
+    n = [U_irrep.shape[1] for U_irrep in U]
+    nK = [K[irrep]*n[irrep] for irrep in range(len(K))]
+    sum_Kn = sum([K[irrep] * n[irrep] for irrep in range(len(K))])
+    sum_nn = sum([n[irrep]**2 for irrep in range(len(K))])
+    X = np.zeros((sum_Kn + sum_nn, sum_Kn))
+    C = np.zeros(sum_Kn + sum_nn)
+    f = 1.0
+    Pi = []
+    F0 = []
+    G0 = []
+    Fs = []
+    Gs = []
+    L = []
+    Kmix = np.zeros((wf.n_irrep, wf.n_irrep))
+    Fp = np.zeros((wf.n_irrep, wf.n_irrep))
+    for irrep in wf.spirrep_blocks(restricted=True):
+        I = np.arange(n[irrep])
+        F0.append(_calc_fI(U[irrep], I))
+        f *= F0[irrep]
+        G0.append(np.zeros((K[irrep], n[irrep])))
+        Fs.append(np.zeros((wf.n_corr_orb[irrep], wf.n_ext[irrep])))
+        I = np.arange(n[irrep])
+        for p in range(K[irrep]):
+            for q in range(n[irrep]):
+                G0[irrep][p,q] = _calc_G(U[irrep], I,
+                                  p, q)
+        for i in range(wf.n_corr_orb[irrep]):
+            for a in range(wf.n_ext[irrep]):
+                Fs[irrep][i,a] = np.dot(U[irrep][a,:], G0[irrep][i,:])
+            if (i + n[irrep] - 1) % 2 == 1:
+                Fs[irrep][i,:] *= -1
+        Pi.append(np.identity(K[irrep]) - U[irrep] @ U[irrep].T)
+    f = wf.C0 * f**2
+    for irrep in wf.spirrep_blocks(restricted=True):
+        Gs.append(np.zeros((wf.n_corr_orb[irrep], wf.n_ext[irrep],
+                            K[irrep], n[irrep])))
+        H = np.zeros((K[irrep], n[irrep],
+                      K[irrep], n[irrep])) ### is this the best index order??
+        I = np.arange(n[irrep])
+        for p in range(K[irrep]):
+            for q in range(n[irrep]):
+                H[p,q,p,q] = -F0[irrep]
+                for r in range(p):
+                    for s in range(q):
+                        H[r,s,p,q] = _calc_H(U[irrep],
+                                             I,
+                                             r, s, p, q)
+                        H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
+                        H[p,q,r,s] = H[r,s,p,q]
+        for i in range(wf.n_corr_orb[irrep]):
+            for a in range(wf.n_ext[irrep]):
+                for p in range(n[irrep]):
+                    if p == i:
+                        continue
+                    for q in range(n[irrep]):
+                        Gs[irrep][i,a,p,q] = np.dot(U[irrep][a,:], H[p,q,i,:])
+                Gs[irrep][i,a,wf.ref_occ[irrep]+a,:] = G0[irrep][i,:]
+            if (i + n[irrep] - 1) % 2 == 1:
+                Gs[irrep][i,:,:,:] *= -1
+        D = 0.0
+        D2 = np.array(wf.Cs[irrep])
+        for irrep2 in wf.spirrep_blocks(restricted=True):
+            if irrep == irrep2:
+                D2 += np.einsum('iajb,ia->jb',
+                                wf.Csd[irrep][irrep2], Fs[irrep2]) / F0[irrep2]
+        for i in range(wf.n_corr_orb[irrep]):
+            sign = 1 if (i + n[irrep] - 1) % 2 == 0 else -1
+            for a in range(wf.n_ext[irrep]):
+                for j in range(i):
+                    ij = get_n_from_triang(i, j, with_diag=False)
+                    for b in range(a):
+                        ab = get_n_from_triang(a, b, with_diag=False)
+                        D += (wf.Cd[irrep][ij,ab] * sign
+                              * np.dot(U[irrep][a,:], Gs[irrep][j,b,i,:]))
+        L.append(np.einsum('ijkl,ij,kl',
+                           wf.Csd[irrep][irrep], Fs[irrep], Fs[irrep]))
+        L[-1] += 2 * F0[irrep] * (D + np.einsum('ia,ia',
+                                                Fs[irrep], wf.Cs[irrep]))
+        tmp = F0[irrep] * wf.C0 + D
+        C[slice_XC[irrep]] = np.ravel(G0[irrep]) * tmp
+        C[slice_XC[irrep]] += np.ravel(np.einsum('ijkl,ij,klmn->mn',
+                                                 wf.Csd[irrep][irrep], Fs[irrep], Gs[irrep]))
+        tmp += np.tensordot(D2, Fs[irrep], axes=2)
+        X[slice_XC[irrep],
+          slice_XC[irrep]] = np.reshape(H, (nK[irrep],
+                                            nK[irrep])) * tmp
+        ## Here, H_I0 in H is not needed anymore. We will use H for the "bigG"
+        H = wf.C0 * (np.einsum('ij,kl->ijkl', G0[irrep], G0[irrep]))
+        H += np.einsum('iajb,iapq,jbrs->pqrs', wf.Csd[irrep][irrep], Gs[irrep], Gs[irrep])
+        H += np.einsum('ia,iapq,rs->pqrs',
+                       D2, Gs[irrep], G0[irrep])
+        H += np.einsum('ia,pq,iars->pqrs',
+                       D2, G0[irrep], Gs[irrep])
+        Gs[irrep] = F0[irrep] * Gs[irrep] + np.einsum('ia,pq->iapq',
+                                                      Fs[irrep], G0[irrep])
+        C[slice_XC[irrep]] += np.ravel(np.einsum('ia,iapq->pq',
+                                                 D2, Gs[irrep]))
+        Gd = np.zeros((K[irrep], n[irrep]))
+        for i, j, a, b, I in _all_doubles(n[irrep],
+                                          wf.n_corr_orb[irrep],
+                                          wf.n_ext[irrep]):
+            ij = get_n_from_triang(i, j, with_diag=False)
+            ab = get_n_from_triang(a, b, with_diag=False)
+            for p in range(K[irrep]):
+                for q in range(n[irrep]):
+                    Gd[p,q] = _calc_G(U[irrep], I,
+                                      p, q)
+            C[slice_XC[irrep]] += np.ravel(F0[irrep] * wf.Cd[irrep][ij,ab] * Gd)
+            H += wf.Cd[irrep][ij,ab] * np.einsum('pq,rs->pqrs',
+                                                 Gd, G0[irrep])
+            H += wf.Cd[irrep][ij,ab] * np.einsum('pq,rs->pqrs',
+                                                 G0[irrep], Gd)
+        # Here: bigG is complete and is used only in the line below
+        X[slice_XC[irrep],
+          slice_XC[irrep]] += np.reshape(np.einsum('pqts,rt->pqrs',
+                                                   H, Pi[irrep]),
+                                         (nK[irrep], nK[irrep]))
+        # Now H will be used again to store H_I
+        for i, a, I in _all_singles(n[irrep],
+                                    wf.n_corr_orb[irrep],
+                                    wf.n_ext[irrep]):
+            for p in range(K[irrep]):
+                for q in range(n[irrep]):
+                    H[p,q,p,q] = -Fs[irrep][i,a]
+                    for r in range(p):
+                        for s in range(q):
+                            H[r,s,p,q] = _calc_H(U[irrep],
+                                                 I,
+                                                 r, s, p, q)
+                            H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
+                            H[p,q,r,s] = H[r,s,p,q]
+            tmp = D2[i,a] * F0[irrep] + np.tensordot(wf.Csd[irrep][irrep][i,a,:,:],
+                                                     Fs[irrep],
+                                                     axes=2)
+            X[slice_XC[irrep],
+              slice_XC[irrep]] += np.reshape(H,
+                                             (nK[irrep],
+                                              nK[irrep])) * tmp
+        for i, j, a, b, I in _all_doubles(n[irrep],
+                                          wf.n_corr_orb[irrep],
+                                          wf.n_ext[irrep]):
+            ij = get_n_from_triang(i, j, with_diag=False)
+            ab = get_n_from_triang(a, b, with_diag=False)
+            for p in range(K[irrep]):
+                for q in range(n[irrep]):
+                    H[p,q,p,q] = -_calc_fI(U[irrep], I)
+                    for r in range(p):
+                        for s in range(q):
+                            H[r,s,p,q] = _calc_H(U[irrep],
+                                                 I,
+                                                 r, s, p, q)
+                            H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
+                            H[p,q,r,s] = H[r,s,p,q]
+            tmp = F0[irrep] * wf.Cd[irrep][ij,ab]
+            X[slice_XC[irrep],
+              slice_XC[irrep]] += np.reshape(H,
+                                             (nK[irrep],
+                                              nK[irrep])) * tmp
+        D = 1.0
+        # Fill only X[irrep][irrep2] with irrep >= irrep2
+        for irrep2 in wf.spirrep_blocks(restricted=True):
+            if irrep2 == irrep:
+                continue
+            D *= F0[irrep2]
+            if irrep2 < irrep:
+                X[slice_XC[irrep],
+                  slice_XC[irrep2]] += F0[irrep2] * np.outer(C[slice_XC[irrep]],
+                                                             G0[irrep2])
+            elif irrep2 > irrep:
+                X[slice_XC[irrep2],
+                  slice_XC[irrep]] += F0[irrep2] * np.outer(G0[irrep2],
+                                                            C[slice_XC[irrep]])
+        D *= D
+        f += D * L[irrep]
+        X[slice_XC[irrep],
+          slice_XC[irrep]] -= np.outer(C[slice_XC[irrep]], U[irrep])
+        X[slice_XC[irrep],
+          slice_XC[irrep]] *= -D
+        C[slice_XC[irrep]] *= D
+    for irrep in wf.spirrep_blocks(restricted=True):
+        for irrep2 in range(irrep):
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] += np.reshape(np.einsum('iajb,iapq,jbrs->pqrs',
+                                                        wf.Csd[irrep][irrep2],
+                                                        Gs[irrep],
+                                                        Gs[irrep2]),
+                                              (nK[irrep],
+                                               nK[irrep2]))/2
+            Kmix[irrep,irrep2] = np.einsum('iajb,ia,jb',
+                                        wf.Csd[irrep][irrep2], Fs[irrep], Fs[irrep2])
+            Kmix[irrep,irrep2] *= 2 * F0[irrep] * F0[irrep2]
+            Kmix[irrep2,irrep] = Kmix[irrep,irrep2]
+            Fp[irrep,irrep2] = _calc_Fprod(F0, (irrep,irrep2), wf.n_irrep)
+            Fp[irrep,irrep2] *= Fp[irrep,irrep2]
+            Fp[irrep2,irrep] = Fp[irrep,irrep2]
+            Gd = np.einsum('ia,jbpq,jbia->pq',
+                           Fs[irrep2], Gs[irrep], wf.Csd[irrep][irrep2])
+            f += Fp[irrep,irrep2] * Kmix[irrep,irrep2]
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] -= np.outer(Gd, G0[irrep2])
+            Gd = np.einsum('ia,jbpq,iajb->pq',
+                           Fs[irrep], Gs[irrep2], wf.Csd[irrep][irrep2])
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] -= np.outer(G0[irrep], Gd)
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] *= Fp[irrep,irrep2]
+    for irrep in wf.spirrep_blocks(restricted=True):
+        H = np.zeros((K[irrep], n[irrep],
+                      K[irrep], n[irrep])) ### is this the best index order??
+        I = np.arange(n[irrep]) # I for reference
+        for p in range(K[irrep]):
+            for q in range(n[irrep]):
+                H[p,q,p,q] = -F0[irrep]
+                for r in range(p):
+                    for s in range(q):
+                        H[r,s,p,q] = _calc_H(U[irrep],
+                                             I,
+                                             r, s, p, q)
+                        H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
+                        H[p,q,r,s] = H[r,s,p,q]
+        H *= F0[irrep]
+        H += np.einsum('pq,ts,rt ->pqrs',
+                       G0[irrep], G0[irrep], Pi[irrep])
+        Gd = F0[irrep] * G0[irrep]
+        H -= np.einsum('pq,rs->pqrs',
+                       Gd, U[irrep])
+        H *= -1
+        D = 0.0
+        for irrep2 in wf.spirrep_blocks(restricted=True):
+            if irrep2 == irrep:
+                continue
+            D += L[irrep2] * Fp[irrep,irrep2]
+            for irrep3 in range(irrep2):
+                if irrep3 == irrep:
+                    continue
+                Fg1g2g3 = _calc_Fprod(F0,
+                                      (irrep, irrep2, irrep3),
+                                      wf.n_irrep)
+                D += Kmix[irrep2,irrep3] * Fg1g2g3**2
+        C[slice_XC[irrep]] += np.ravel(D * Gd)
+        X[slice_XC[irrep],
+          slice_XC[irrep]] += np.reshape(H,
+                                         (nK[irrep],
+                                          nK[irrep])) * D
+    for irrep in wf.spirrep_blocks(restricted=True):
+        C[slice_XC[irrep]] = np.ravel(Pi[irrep] @ np.reshape(C[slice_XC[irrep]],
+                                                             (K[irrep],
+                                                              n[irrep])))
+        X[slice_XC[irrep],
+          slice_XC[irrep]] = np.reshape(np.einsum('pt,tqrs->pqrs',
+                                                  Pi[irrep],
+                                                  np.reshape(X[slice_XC[irrep],
+                                                               slice_XC[irrep]],
+                                                             (K[irrep], n[irrep],
+                                                              K[irrep], n[irrep]))),
+                                        (nK[irrep],
+                                         nK[irrep]))
+        for irrep2 in range(irrep):
+            D = -wf.C0 * Fp[irrep,irrep2]
+            for irrep3 in wf.spirrep_blocks(restricted=True):
+                if irrep3 == irrep or irrep3 == irrep2:
+                    continue
+                Fg1g2g3 = _calc_Fprod(F0,
+                                      (irrep, irrep2, irrep3),
+                                      wf.n_irrep)
+                D += L[irrep3] * Fg1g2g3
+                for irrep4 in range(irrep3):
+                    if irrep4 == irrep or irrep4 == irrep2:
+                        continue
+                    Fg1g2g3g4 = _calc_Fprod(F0,
+                                            (irrep, irrep2, irrep3, irrep4),
+                                            wf.n_irrep)
+                    D += Kmix[irrep3][irrep4] * Fg1g2g3g4**2
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] += np.outer(G0[irrep], G0[irrep2]) * D * F0[irrep] * F0[irrep2]
+            X[slice_XC[irrep],
+              slice_XC[irrep2]] = np.reshape(np.einsum('pt,tqus,ru->pqrs',
+                                                       Pi[irrep],
+                                                       np.reshape(X[slice_XC[irrep],
+                                                                    slice_XC[irrep2]],
+                                                                  (K[irrep], n[irrep],
+                                                                   K[irrep2], n[irrep2])),
+                                                       Pi[irrep2]),
+                                             (nK[irrep],
+                                              nK[irrep2]))
+            X[slice_XC[irrep2],
+              slice_XC[irrep]] = X[slice_XC[irrep],
+                                   slice_XC[irrep2]].T
+    # Terms to guarantee orthogonality to U:
+    prev_ij = sum_Kn
+    prev_kl = 0
+    for irrep, U_irrep in enumerate(U):
+        for i in range(n[irrep]):
+            logger.debug('Adding U^T:\n%s', U_irrep.T)
+            logger.debug('Position of U^T = [%s: %s + %s, %s: %s + %s',
+                         prev_ij, prev_ij, n[irrep],
+                         prev_kl, prev_kl, K[irrep])
+            X[prev_ij: prev_ij + n[irrep],
+              prev_kl: prev_kl + K[irrep]] = U_irrep.T
+            prev_ij += n[irrep]
+            prev_kl += K[irrep]
+    return f,X,C
+
+def _generate_lin_system_from_genWF(
+        wf, U, slice_XC, F=None, with_full_H=True):
+    """Generate the linear system for Absil's method
+    
+    This is the general implementation, for a general wave function
+    (dGr_general_WF.Wave_Function)
+    
+    It is actually slow.
+    
     """
     if not with_full_H:
         raise NotImplementedError('with_full_H = False is not Implemented')
@@ -319,15 +725,15 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
                     S += wf[I_full] * F_contr
                 logger.debug('S = %s; H:\n%s', S, H)
             with logtime('Calc Xdiag, C') as T_3:
-                X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-                  lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                X[slice_XC[spirrep_1],
+                  slice_XC[spirrep_1]] += S * np.reshape(
                       H,
                       (K[spirrep_1] * n[spirrep_1],
                        K[spirrep_1] * n[spirrep_1]),
                       order='F').T
                 G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
                 logger.debug('S = %s; G_1:\n %s', S, G_1)
-                C[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]] += S * np.reshape(
+                C[slice_XC[spirrep_1]] += S * np.reshape(
                     G_1,
                     (K[spirrep_1] * n[spirrep_1],),
                     order='F')
@@ -368,20 +774,19 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
                         logger.debug('G_1:\n%s', G_1)
                         logger.debug('G_2:\n%s', G_2)
                         logger.debug('S = %s', S)
-                        X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-                          lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] -= S * np.reshape(
+                        X[slice_XC[spirrep_1],
+                          slice_XC[spirrep_2]] -= S * np.reshape(
                               np.multiply.outer(G_1, G_2),
                               (K[spirrep_1] * n[spirrep_1],
                                K[spirrep_2] * n[spirrep_2]),
                               order='F')
             for spirrep_2 in wf.spirrep_blocks(restricted=False):
                 if spirrep_1 > spirrep_2:
-                    X[lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1],
-                      lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1]] = \
-                    X[lim_XC[spirrep_2]:lim_XC[spirrep_2 + 1],
-                      lim_XC[spirrep_1]:lim_XC[spirrep_1 + 1]].T
+                    X[slice_XC[spirrep_1],
+                      slice_XC[spirrep_2]] = X[slice_XC[spirrep_2],
+                                               slice_XC[spirrep_1]].T
     # Terms to guarantee orthogonality to U:
-    prev_ij = lim_XC[-1]
+    prev_ij = sum_Kn
     prev_kl = 0
     for spirrep, U_spirrep in enumerate(U):
         for i in range(n[spirrep]):
@@ -394,6 +799,33 @@ def generate_lin_system(wf, U, lim_XC, F=None, with_full_H=True):
             prev_ij += n[spirrep]
             prev_kl += K[spirrep]
     return X, C
+
+
+def calc_storage_CISD(occ, corr, virt):
+    """Calculates the storage needed for the algorithm for CISD wave functions"""
+    n_inp = 1
+    n_out = Fs = Gd = G0 = Gs = bigG = H = others = 0
+    for irrep in range(len(occ)):
+        nv = corr[irrep] * virt[irrep]
+        nK = occ[irrep] * (virt[irrep] + occ[irrep])
+        n_inp += nK # Y
+        n_inp += nv # singles
+        n_inp += (virt[irrep]**2) * corr[irrep] * (corr[irrep] + 1)//2
+        n_inp += corr[irrep] * (corr[irrep] - 1) * virt[irrep] * (virt[irrep] - 1)//4
+        for irrep2 in range(irrep):
+            n_inp += nv * corr[irrep2] * virt[irrep2]
+        n_out += nK
+        Fs += nv
+        Gs += nv * nK
+        Gd = max(Gd, nK)
+        H = max(H, nK**2)
+        others = max(others, nv)
+    G0 = n_out
+    bigG = H
+    n_out = n_out * (n_out + 1)
+    others += 2*(1 + len(occ) + len(occ)**2)
+    total = n_inp + n_out + Fs + Gd + G0 + Gs + bigG + H + others
+    return (n_inp, n_out, Fs, Gd, G0, Gs, bigG, H, others, total)
 
 
 def check_Newton_Absil_eq(wf, U, eta, eps = 0.001):

@@ -15,7 +15,8 @@ import re
 import numpy as np
 from numpy import linalg
 
-from dGr_util import number_of_irreducible_repr, zero, irrep_product, logtime
+from dGr_util import (number_of_irreducible_repr, zero, irrep_product, logtime, triangular,
+                      get_ij_from_triang, get_n_from_triang)
 import dGr_general_WF as genWF
 from dGr_exceptions import *
 
@@ -33,21 +34,6 @@ molpro_CCSD_header = ' PROGRAM * CCSD (Closed-shell coupled cluster)     '\
 
 CC_sgl_str = 'I         SYM. A    A   T(IA)'
 CC_dbl_str = 'I         J         SYM. A    SYM. B    A         B      T(IJ, AB)'
-
-def _triangular(n):
-    """The n-th trianglar number = \sum_i^n i"""
-    return ((n + 1) * n) // 2
-
-def _get_ij_from_triang(n):
-    i = math.floor((math.sqrt(1 + 8*n) - 1)/2)
-    j = n - i * (i + 1) // 2
-    return i,j
-
-def _get_n_from_triang(i, j, with_diag=True):
-    if with_diag:
-        return j + _triangular(i)
-    else:
-        return j + _triangular(i - 1)
 
 class String_Index_for_SD(genWF.String_Index):
     """The string index for wave function with single and doubles
@@ -118,7 +104,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         (self.n_corr_orb[spirrep], self.n_ext[spirrep])
     
     doubles (list of list of np.ndarrays)
-        t_ij^ab = doubles[N][irrep_a][a,b]
+        t_ij^ab = doubles[N][irrep_a][ a,b]
         
         Each element of this list is associated
         to a pair i,j (N) of occupied orbitals.
@@ -139,9 +125,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         (orbital, irrep) the above ordering is:
         
         (0,0);(0,0)
-        (1,0);(0,0)   (1,0);(0,0)
-        (2,0);(0,0)   (2,0);(0,0)    (3,0);(0,0)
-        (0,1);(0,0)   (0,1);(0,0)    (0,1);(0,0)  (0,1);(0,1)
+        (1,0);(0,0)   (1,0);(1,0)
+        (2,0);(0,0)   (2,0);(1,0)    (3,0);(2,0)
+        (0,1);(0,0)   (0,1);(1,0)    (0,1);(2,0)  (0,1);(3,0)
         
         in the case of 3 occupied orbitals of first irrep and
         one for the second:
@@ -321,10 +307,10 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         n_bb = self.n_corr_beta * (self.n_corr_beta - 1) // 2
         if self.restricted or N < n_aa:
             exc_type = 'aa'
-            i,j = _get_ij_from_triang(N)
+            i,j = get_ij_from_triang(N)
         elif N < n_aa + n_bb:
             exc_type = 'bb'
-            i,j = _get_ij_from_triang(N - n_aa)
+            i,j = get_ij_from_triang(N - n_aa)
         else:
             exc_type = 'ab'
             i = (N - (n_aa + n_bb)) // self.n_corr_beta
@@ -369,9 +355,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         else:
             j += sum(self.n_corr_orb[self.n_irrep:self.n_irrep + j_irrep])
         if self.restricted:
-            pos_ij = _get_n_from_triang(i, j)
+            pos_ij = get_n_from_triang(i, j)
         elif exc_type[0] == exc_type[1]:
-            pos_ij = _get_n_from_triang(i, j, with_diag=False)
+            pos_ij = get_n_from_triang(i, j, with_diag=False)
         elif exc_type == 'ab':
             pos_ij = j + i * self.n_corr_beta
         return spin_shift + pos_ij
@@ -486,7 +472,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         if occ_case == -2:
             if len(i) != 2 or len(a) != 0:
                 return None
-            return _get_n_from_triang(max(i), min(i),
+            return get_n_from_triang(max(i), min(i),
                                       with_diag=False)
         elif occ_case == -1:
             if len(i) != 1 or len(a) != 0:
@@ -501,9 +487,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                 return 1 + i[0] * self.n_ext[spirrep] + a[0]
             if len(i) == 2:
                 return (1 + self.n_corr_orb[spirrep] * self.n_ext[spirrep]
-                        + (_get_n_from_triang(max(i), min(i), with_diag=False)
-                           * _triangular(self.n_ext[spirrep] - 1))
-                        + _get_n_from_triang(max(a), min(a), with_diag=False))
+                        + (get_n_from_triang(max(i), min(i), with_diag=False)
+                           * triangular(self.n_ext[spirrep] - 1))
+                        + get_n_from_triang(max(a), min(a), with_diag=False))
             return None
         elif occ_case == 1:
             if len(i) != 0 or len(a) != 1:
@@ -512,7 +498,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         elif occ_case == 2:
             if len(i) != 0 or len(a) != 2:
                 return None
-            return _get_n_from_triang(max(a), min(a),
+            return get_n_from_triang(max(a), min(a),
                                       with_diag=False)
         return None
 
@@ -920,7 +906,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         There are two holes and no particles. These two holes must be in
         different spin-orbitals. If these are i and j, with i > j:
         
-        std_pos = _get_n_from_triang(i - self.n_core[irrep],
+        std_pos = get_n_from_triang(i - self.n_core[irrep],
                                      j - self.n_core[irrep],
                                      with_diag=False)
         
@@ -956,17 +942,17 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         
         Then come the double excitations. There are
         
-        _triangular(self.n_ext[spirrep] - 1) * _triangular(self.n_corr_orb[spirrep] - 1)
+        triangular(self.n_ext[spirrep] - 1) * triangular(self.n_corr_orb[spirrep] - 1)
         
         of them. Again, indices of virtual orbitals run faster.
         If the holes are at i and j (i > j) and the particles at a and b (a > b)
         
         std_pos = (1 + self.n_corr_orb[spirrep] * self.n_ext[spirrep]
-                   + (_get_n_from_triang(i - self.n_core[irrep],
+                   + (get_n_from_triang(i - self.n_core[irrep],
                                          j - self.n_core[irrep],
                                          with_diag=False)
-                      * _triangular(self.n_ext[spirrep] - 1))
-                   + _get_n_from_triang(a - self.ref_occ[spirrep],
+                      * triangular(self.n_ext[spirrep] - 1))
+                   + get_n_from_triang(a - self.ref_occ[spirrep],
                                         b - self.ref_occ[spirrep],
                                         with_diag=False))
         
@@ -993,9 +979,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         There are two particles and no hole. These two particles must be in
         different spin-orbitals. If these are a and b, with a > b:
         
-        std_pos = _get_n_from_triang(a - self.ref_occ[spirrep],
-                                     b - self.ref_occ[spirrep],
-                                     with_diag=False)
+        std_pos = get_n_from_triang(a - self.ref_occ[spirrep],
+                                    b - self.ref_occ[spirrep],
+                                    with_diag=False)
         """
         print_info_to_log = print_info_to_log and logger.level <= logging.DEBUG
         if print_info_to_log:
@@ -1334,19 +1320,19 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         """
         diff_elec_to_ref = occupation - self.ref_occ[spirrep]
         if diff_elec_to_ref == -2:
-            return _triangular(self.n_corr_orb[spirrep] - 1)
+            return triangular(self.n_corr_orb[spirrep] - 1)
         if diff_elec_to_ref == -1:
             return self.n_corr_orb[spirrep]
         if diff_elec_to_ref == 0:
             return ((1 if self.ref_occ[spirrep] > 0 else 0)
                     + (self.n_corr_orb[spirrep]
                        * self.n_ext[spirrep])
-                    + (_triangular(self.n_ext[spirrep] - 1)
-                       * _triangular(self.n_corr_orb[spirrep] - 1)))
+                    + (triangular(self.n_ext[spirrep] - 1)
+                       * triangular(self.n_corr_orb[spirrep] - 1)))
         if diff_elec_to_ref == 1:
             return self.n_ext[spirrep]
         if diff_elec_to_ref == 2:
-            return _triangular(self.n_ext[spirrep] - 1)
+            return triangular(self.n_ext[spirrep] - 1)
         return 0
 
     def calc_wf_from_z(self):

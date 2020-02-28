@@ -14,10 +14,11 @@ import git
 import numpy as np
 from scipy import linalg
 
-from dGr_util import dist_from_ovlp, ovlp_Slater_dets
+from dGr_util import dist_from_ovlp, ovlp_Slater_dets, logtime
 import dGr_orbitals as orb
 import dGr_FCI_Molpro as FCI
 import dGr_WF_int_norm as IntN
+import dGr_CISD_WF as CISDwf
 import dGr_optimiser
 
 logger = logging.getLogger(__name__)
@@ -87,14 +88,25 @@ def dGr_main(args, f_out):
                                               args.state if args.state else '1.1',
                                               FCI_file_name = args.WF_templ)
     else:
-        ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
-        ext_wf.calc_norm()
-    if logger.level <= logging.DEBUG:
-        logger.debug('|extWF>, loaded coefficients:\n %r', ext_wf)
-        to_log = []
-        for I in ext_wf.string_indices():
-            to_log.append(str(ext_wf[I]) + ' ' + str(I))
-        logger.debug('\n'.join(to_log))
+        with logtime('Reading int. norm. from Molpro output'):
+            ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
+        with logtime('Transforming int. norm. WF into CISD wf'):
+            ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
+        logger.debug('ext_wf.C0:\n %r', ext_wf.C0)
+        for irrep in ext_wf.spirrep_blocks(restricted=True):
+            logger.debug('ext_wf.Cs[%d]:\n %r', irrep, ext_wf.Cs[irrep])
+        for irrep in ext_wf.spirrep_blocks(restricted=True):
+            logger.debug('ext_wf.Cd[%d]:\n %r', irrep, ext_wf.Cd[irrep])
+        for irrep in ext_wf.spirrep_blocks(restricted=True):
+            for irrep2 in range(irrep + 1):
+                logger.debug('ext_wf.Csd[%d][%d]:\n %r', irrep, irrep2, ext_wf.Csd[irrep][irrep2])
+#        ext_wf.calc_norm()
+    # if logger.level <= logging.DEBUG:
+    #     logger.debug('|extWF>, loaded coefficients:\n %r', ext_wf)
+    #     to_log = []
+    #     for I in ext_wf.string_indices():
+    #         to_log.append(str(ext_wf[I]) + ' ' + str(I))
+    #     logger.debug('\n'.join(to_log))
     if args.HF_orb != args.WF_orb:
         toout('Using as |min E> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
