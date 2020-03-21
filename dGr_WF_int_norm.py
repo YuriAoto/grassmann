@@ -1059,9 +1059,14 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                     (i, j,
                      irrep_i, irrep_j,
                      exc_type) = self.ij_from_N(N)
-                    ij_sign = 1 if (sum(self.ref_occ[:irrep_i])
-                                    + sum(self.ref_occ[:irrep_j])
-                                    + i + j) % 2 == 0 else -1
+#                    ij_sign = 1 if (sum(self.ref_occ[:irrep_i])
+#                                    + sum(self.ref_occ[:irrep_j])
+#                                    + i + j) % 2 == 0 else -1
+#  CHECK sign!!! The sign defined below give equal value if compared to
+#     convention used in CISD_WF. But might work for the determinants with
+#     same occupation of reference (as used in CISD_WF). 
+                    ij_sign = 1 if (i + self.ref_occ[irrep_i]
+                                    + j + self.ref_occ[irrep_j]) % 2 == 0 else -1
                     if print_info_to_log:
                         to_log.append(('\nN={}; i,irrep_i = {} {}; j,irrep_j = {} {};'
                                        + ' exc_type = {}; ij_sign = {}').\

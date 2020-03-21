@@ -20,6 +20,7 @@ import dGr_FCI_Molpro as FCI
 import dGr_WF_int_norm as IntN
 import dGr_CISD_WF as CISDwf
 import dGr_optimiser
+import dGr_Absil as Absil
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def dGr_main(args, f_out):
                      abs(ovlp),
                      dist_from_ovlp(ovlp)))
     toout('dGr - optimise the distance in the Grassmannian')
-    toout('Yuri Aoto - 2018, 2019')
+    toout('Yuri Aoto - 2018, 2019, 2020')
     toout()
     toout('Current git commit: ' + git_sha)
     toout()
@@ -90,23 +91,25 @@ def dGr_main(args, f_out):
     else:
         with logtime('Reading int. norm. from Molpro output'):
             ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
-        with logtime('Transforming int. norm. WF into CISD wf'):
-            ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
-        logger.debug('ext_wf.C0:\n %r', ext_wf.C0)
-        for irrep in ext_wf.spirrep_blocks(restricted=True):
-            logger.debug('ext_wf.Cs[%d]:\n %r', irrep, ext_wf.Cs[irrep])
-        for irrep in ext_wf.spirrep_blocks(restricted=True):
-            logger.debug('ext_wf.Cd[%d]:\n %r', irrep, ext_wf.Cd[irrep])
-        for irrep in ext_wf.spirrep_blocks(restricted=True):
-            for irrep2 in range(irrep + 1):
-                logger.debug('ext_wf.Csd[%d][%d]:\n %r', irrep, irrep2, ext_wf.Csd[irrep][irrep2])
-#        ext_wf.calc_norm()
-    # if logger.level <= logging.DEBUG:
-    #     logger.debug('|extWF>, loaded coefficients:\n %r', ext_wf)
-    #     to_log = []
-    #     for I in ext_wf.string_indices():
-    #         to_log.append(str(ext_wf[I]) + ' ' + str(I))
-    #     logger.debug('\n'.join(to_log))
+            ext_wf.calc_norm()
+        if args.check_algorithms:
+            ext_wf_CISD = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
+            toout('Checking the two algorithms. No optimization will be performed.')
+            logger.debug('CISD wave function:\n%r',ext_wf_CISD)
+        else:
+            if not args.use_general_algorithm:
+                with logtime('Transforming int. norm. WF into CISD wf'):
+                    ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
+                toout('Using algorithm specific for CISD wave function.')
+            else:
+                toout('Using algorithm for general wave function.')
+    logger.debug('External wave function:\n %r', ext_wf)
+    if logger.level <= logging.DEBUG and (args.use_general_algorithm
+                                          or args.check_algorithms):
+        x=[]
+        for I in ext_wf.string_indices():
+            x.append(str(I) + ': ' + str(ext_wf[I]))
+        logger.debug('The determinants:\n' + '\n'.join(x))
     if args.HF_orb != args.WF_orb:
         toout('Using as |min E> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
@@ -119,32 +122,45 @@ def dGr_main(args, f_out):
         toout('Using |WFref> (the reference of |extWF>) as |min E>:')
     if isinstance(ext_wf, IntN.Wave_Function_Int_Norm):
         print_ovlp_D('WFref', 'extWF', 1.0/ext_wf.norm)
+    if args.use_general_algorithm:
+        restricted = False
+    else:
+        restricted = True
     if args.ini_orb is not None:
         if args.ini_orb[-4:] == '.npz':
             U = []
-            ini_orb = np.load(args.ini_orb)
-            for k in ini_orb:
-                U.append(ini_orb[k])
+            with np.load(args.ini_orb) as ini_orb:
+                for k in range(len(ini_orb)):
+                    U.append(ini_orb['arr_' + str(k)])
         else:
             U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.Molecular_Orbitals.from_file(args.WF_orb))
     else:
         U = []
-        for spirrep in ext_wf.spirrep_blocks(restricted=False):
+        for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(ext_wf.orb_dim[spirrep]))
         toout('Using the reference determinant (identity) as initial guess for U.')
     if not use_FCIopt:
-        for spirrep in ext_wf.spirrep_blocks(restricted=False):
+        for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
             U[spirrep] = U[spirrep][:,:ext_wf.ref_occ[spirrep]]
-    for spirrep, Ui in enumerate(U):
-        logger.debug('Initial orbitals for spirrep %s:\n%s',
-                     spirrep, Ui)
 #    toout('Number of determinants in the external wave function: {0:d}'.\
 #          format(len(ext_wf.determinants)))
     toout('Dimension of orbital space: {0:}'.\
           format(ext_wf.orb_dim))
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.\
           format(ext_wf.n_alpha, ext_wf.n_beta))
+    toout('Occupation of reference wave function: {0:}'.\
+          format(ext_wf.ref_occ))
+    if args.check_algorithms:
+        Absil.compare_algorithms(ext_wf, ext_wf_CISD, U, f_out)
+        toout('Detailed information of comparison is written to the log file.')
+        toout()
+        end_time = time.time()
+        elapsed_time = str(datetime.timedelta(seconds = (end_time-start_time)))
+        toout('Ending at {}'.format(
+            time.strftime("%d %b %Y - %H:%M",time.localtime(end_time))))
+        toout('Total time: {}'.format(elapsed_time))
+        return
     toout()
     toout('Starting optimisation')
     toout('-'*30)

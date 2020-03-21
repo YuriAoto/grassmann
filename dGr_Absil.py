@@ -227,6 +227,81 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
             f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
     return f
 
+def compare_algorithms(wf_gen, wf_CISD, U, fout):
+    """Generate the linear system with two algorithms and compare results."""
+    slice_XC = []
+    for i in wf_CISD.spirrep_blocks(restricted=True):
+        if U[i].shape[1] > 0:
+            logger.debug('U[%d]:\n%r', i, U[i])
+        ini = 0 if i == 0 else slice_XC[-1].stop
+        slice_XC.append(slice(ini,
+                              ini + U[i].shape[0] * U[i].shape[1]))
+    f_CI, X_CI, C_CI = generate_lin_system(wf_CISD, U, slice_XC)
+    # Add more to slice_XC and U, because general algorithm is for unrestricted WF
+    for i in wf_CISD.spirrep_blocks(restricted=True):
+        ini = slice_XC[-1].stop
+        slice_XC.append(slice(ini,
+                              ini + U[i].shape[0] * U[i].shape[1]))
+        U.append(np.array(U[i]))
+    fgen, Xgen, Cgen = generate_lin_system(wf_gen, U, slice_XC)
+    logger.info('Original Xgen aa:\n%s',Xgen[slice_XC[0],
+                                             slice_XC[0]].reshape(U[0].shape
+                                                                  +U[0].shape,
+                                                                  order='F'))
+    logger.info('Original Xgen ab:\n%s',Xgen[slice_XC[0],
+                                             slice_XC[wf_gen.n_irrep]].reshape(U[0].shape
+                                                                               +U[0].shape,
+                                                                               order='F'))
+    sep='\n' + '='*30 + '\n'
+    sep2='\n' + '-'*30 + '\n'
+    logger.info(sep + 'f:\n'
+                + 'General algorithm:  %.12f\n'
+                + 'CISD-opt algorithm: %.12f', fgen, f_CI)
+    all_comp_is_true = np.allclose(fgen, f_CI)
+    fout.write('allclose for f: {}\n'.format(all_comp_is_true))
+    for i in wf_CISD.spirrep_blocks(restricted=True):
+        if U[i].shape[0]*U[i].shape[1] == 0:
+            continue
+        Mgen = Cgen[slice_XC[i]].reshape(U[i].shape,order='F')
+        M_CI = C_CI[slice_XC[i]].reshape(U[i].shape,order='C')
+        allclose = np.allclose(Mgen, M_CI)
+        all_comp_is_true = all_comp_is_true and allclose
+        fout.write('allclose for C[{}]: {}\n'.format(i, allclose))
+        logger.info(sep
+                    + 'C all close: %s' + sep2
+                    + 'C[irrep = %d]:\n'
+                    + 'General algorithm:\n%r\n' + sep2
+                    + 'CISD-opt algorithm:\n%r' + sep2
+                    + 'Cgen == C_CI:\n%r' + sep2
+                    + 'Cgen - C_CI:\n%r' + sep2,
+                    allclose,
+                    i, Mgen, M_CI, Mgen == M_CI, Mgen - M_CI)
+        for j in wf_CISD.spirrep_blocks(restricted=True):
+            if U[j].shape[0]*U[j].shape[1] == 0:
+                continue
+            Mgen = (Xgen[slice_XC[i],slice_XC[j]]
+                    + Xgen[slice_XC[i],slice_XC[j+wf_CISD.n_irrep]]).reshape(
+                        U[i].shape+U[j].shape,order='F')
+            M_CI = X_CI[slice_XC[i],slice_XC[j]].reshape(
+                U[i].shape+U[j].shape, order='C')
+            allclose = np.allclose(Mgen, M_CI)
+            all_comp_is_true = all_comp_is_true and allclose
+            fout.write('allclose for X[{},{}]: {}\n'.format(i, j, allclose))
+            logger.info(sep
+                        + 'X all close: %s' + sep2
+                        + 'X[irrep = %d, irrep = %d]:\n'
+                        + 'General algorithm:\n%r\n' + sep2
+                        + 'CISD-opt algorithm:\n%r' + sep2
+                        + 'Xgen == X_CI:\n%r' + sep2
+                        + 'Xgen - X_CI:\n%r' + sep2,
+                        allclose,
+                        i, j, Mgen, M_CI, Mgen == M_CI, Mgen - M_CI)
+    if all_comp_is_true:
+        fout.write('\nSuccess! All comparisons are OK!!\n')
+    else:
+        fout.write('\nWARNING! Some comparisons have failed!!\n')
+
+
 def generate_lin_system(
         wf, U, slice_XC, F=None, with_full_H=True):
     """Generate the linear system for Absil's method
@@ -302,6 +377,9 @@ def _all_singles(n_el, n_corr, n_ext):
 def _all_doubles(n_el, n_corr, n_ext):
     """Generator that yield all double excitations, as (i,j,a,b,I)"""
     n_core = n_el - n_corr
+#    print('--------')
+#    print('n_el = {}, n_corr = {}, n_ext = {}'.format(
+#        n_el, n_corr, n_ext))
     I = np.zeros(n_el, dtype=int)
     I[:n_core] = np.arange(n_core)
     I[n_core:-2] = np.arange(n_core + 2, n_el)
@@ -313,8 +391,9 @@ def _all_doubles(n_el, n_corr, n_ext):
                     I[-2] = (n_el
                              if b == 0 else
                              (I[-2] + 1))
+#                    print('i={},j={},a={},b={}\nI={}'.format(i,j,a,b,I))
                     yield i, j, a, b, I
-            I[i] = i
+            I[i-1] = i
         if j < n_corr:
             I[j] = j
             I[j+1:-2] = np.arange(j + 3, n_el, dtype=int)
@@ -347,9 +426,11 @@ def _generate_lin_system_from_restricted_CISD(
                0 <= q,s < n[irrep]
     i,j        run over correlated occupied orbitals (of that irrep):
                0 <= i,j < wf.n_corr_orb[irrep]
+               (add wf.n_core[irrep] to get corresponding position in U)
     a,b        run over virtual orbitals (of that irrep):
-               0 <= a,b < wf.n_ext[irrep]
-    
+               0 <= a,b < wf.n_ext[irrep] 
+               (add wf.ref_occ[irrep] to get corresponding position in U)
+   
     The relation between indices and the notation for X:
     
     X[irrep,irrep2] = X_irrep^irrep2
@@ -384,11 +465,16 @@ def _generate_lin_system_from_restricted_CISD(
                                   p, q)
         for i in range(wf.n_corr_orb[irrep]):
             for a in range(wf.n_ext[irrep]):
-                Fs[irrep][i,a] = np.dot(U[irrep][a,:], G0[irrep][i,:])
-            if (i + n[irrep] - 1) % 2 == 1:
+                Fs[irrep][i,a] = np.dot(U[irrep][wf.ref_occ[irrep] + a,:],
+                                        G0[irrep][wf.n_core[irrep] + i,:])
+            if (wf.n_core[irrep] + i + n[irrep] - 1) % 2 == 1:
                 Fs[irrep][i,:] *= -1
         Pi.append(np.identity(K[irrep]) - U[irrep] @ U[irrep].T)
+        if n[irrep] > 0:
+            logger.debug('For irrep = %d:\nF0 = %f\nFs:\n%r\nG0:\n%r\nPi:\n%r',
+                         irrep, F0[irrep], Fs[irrep], G0[irrep],  Pi[irrep])
     f = wf.C0 * f**2
+    logger.debug('C0 * Fprod (first contrib. to f(Y)) = %f', f)
     for irrep in wf.spirrep_blocks(restricted=True):
         Gs.append(np.zeros((wf.n_corr_orb[irrep], wf.n_ext[irrep],
                             K[irrep], n[irrep])))
@@ -408,43 +494,73 @@ def _generate_lin_system_from_restricted_CISD(
         for i in range(wf.n_corr_orb[irrep]):
             for a in range(wf.n_ext[irrep]):
                 for p in range(n[irrep]):
-                    if p == i:
+                    if p == wf.n_core[irrep] + i:
                         continue
                     for q in range(n[irrep]):
-                        Gs[irrep][i,a,p,q] = np.dot(U[irrep][a,:], H[p,q,i,:])
-                Gs[irrep][i,a,wf.ref_occ[irrep]+a,:] = G0[irrep][i,:]
-            if (i + n[irrep] - 1) % 2 == 1:
+                        Gs[irrep][i,a,p,q] = (
+                            np.dot(U[irrep][wf.ref_occ[irrep] + a,:],
+                                   H[p,q,wf.n_core[irrep] + i,:])
+                            - (U[irrep][wf.ref_occ[irrep] + a,q]
+                               * H[p,q,wf.n_core[irrep] + i,q]))
+                Gs[irrep][i,a,wf.ref_occ[irrep] + a,:] = G0[irrep][wf.n_core[irrep] + i,:]
+            if (wf.n_core[irrep] + i + n[irrep] - 1) % 2 == 1:
                 Gs[irrep][i,:,:,:] *= -1
+        if n[irrep] > 0:
+            logger.debug('For irrep = %d:\nH_I0:\n%r\nGs:\n%r',
+                         irrep, H, Gs[irrep])
         D = 0.0
         D2 = np.array(wf.Cs[irrep])
         for irrep2 in wf.spirrep_blocks(restricted=True):
             if irrep == irrep2:
-                D2 += np.einsum('iajb,ia->jb',
+                continue
+            if irrep > irrep2:
+                D2 += np.einsum('iajb,jb->ia',
                                 wf.Csd[irrep][irrep2], Fs[irrep2]) / F0[irrep2]
+            else:
+                D2 += np.einsum('iajb,ia->jb',
+                                wf.Csd[irrep2][irrep], Fs[irrep2]) / F0[irrep2]
         for i in range(wf.n_corr_orb[irrep]):
-            sign = 1 if (i + n[irrep] - 1) % 2 == 0 else -1
+            # Here, b<a always
+            sign = 1 if (wf.n_core[irrep] + i + n[irrep] + 1) % 2 == 1 else -1
             for a in range(wf.n_ext[irrep]):
                 for j in range(i):
                     ij = get_n_from_triang(i, j, with_diag=False)
                     for b in range(a):
                         ab = get_n_from_triang(a, b, with_diag=False)
-                        D += (wf.Cd[irrep][ij,ab] * sign
-                              * np.dot(U[irrep][a,:], Gs[irrep][j,b,i,:]))
-        L.append(np.einsum('ijkl,ij,kl',
-                           wf.Csd[irrep][irrep], Fs[irrep], Fs[irrep]))
-        L[-1] += 2 * F0[irrep] * (D + np.einsum('ia,ia',
-                                                Fs[irrep], wf.Cs[irrep]))
+                        tmp = sign * np.dot(U[irrep][wf.ref_occ[irrep] + a, :],
+                                            Gs[irrep][j, b, wf.n_core[irrep] + i, :])
+                        logger.debug('Current F_{i,j=%d,%d}^{a,b=%d,%d} = %f',
+                                     i, j, a, b, tmp)
+                        D += wf.Cd[irrep][ij,ab] * tmp
+        logger.debug('Cd[ijab]*Fd[ijab] (contr. of doubles) for irrep %d = %f',
+                     irrep, D)
+        tmp = np.einsum('ijkl,ij,kl',
+                        wf.Csd[irrep][irrep], Fs[irrep], Fs[irrep])
+        L.append(tmp)
+        logger.debug('L[%d] <- %f (contrib of doubles=singles*singles)',
+                     irrep, tmp)
+        tmp = np.einsum('ia,ia',
+                        Fs[irrep], wf.Cs[irrep])
+        logger.debug('Cs*Fs for irrep %d = %f (contrib of singles) ',
+                     irrep, tmp)
+        L[-1] += 2 * F0[irrep] * (D + tmp)
         tmp = F0[irrep] * wf.C0 + D
         C[slice_XC[irrep]] = np.ravel(G0[irrep]) * tmp
-        C[slice_XC[irrep]] += np.ravel(np.einsum('ijkl,ij,klmn->mn',
-                                                 wf.Csd[irrep][irrep], Fs[irrep], Gs[irrep]))
+        
+        logger.debug('C at 1 [%d]:\n%r',irrep, C[slice_XC[irrep]])
+        C[slice_XC[irrep]] += np.ravel(
+            np.einsum('ijkl,ij,klmn->mn',
+                      wf.Csd[irrep][irrep], Fs[irrep], Gs[irrep]))
+        logger.debug('C at 2 [%d]:\n%r',irrep, C[slice_XC[irrep]])
         tmp += np.tensordot(D2, Fs[irrep], axes=2)
         X[slice_XC[irrep],
           slice_XC[irrep]] = np.reshape(H, (nK[irrep],
                                             nK[irrep])) * tmp
         ## Here, H_I0 in H is not needed anymore. We will use H for the "bigG"
-        H = wf.C0 * (np.einsum('ij,kl->ijkl', G0[irrep], G0[irrep]))
-        H += np.einsum('iajb,iapq,jbrs->pqrs', wf.Csd[irrep][irrep], Gs[irrep], Gs[irrep])
+        H = wf.C0 * (np.einsum('ij,kl->ijkl',
+                               G0[irrep], G0[irrep]))
+        H += np.einsum('iajb,iapq,jbrs->pqrs',
+                       wf.Csd[irrep][irrep], Gs[irrep], Gs[irrep])
         H += np.einsum('ia,iapq,rs->pqrs',
                        D2, Gs[irrep], G0[irrep])
         H += np.einsum('ia,pq,iars->pqrs',
@@ -453,6 +569,9 @@ def _generate_lin_system_from_restricted_CISD(
                                                       Fs[irrep], G0[irrep])
         C[slice_XC[irrep]] += np.ravel(np.einsum('ia,iapq->pq',
                                                  D2, Gs[irrep]))
+        logger.debug('\hat{Gs}[irrep = %d]:\n%r',
+                     irrep, Gs[irrep])
+        logger.debug('C at 3:\n%r', C[slice_XC[irrep]])
         Gd = np.zeros((K[irrep], n[irrep]))
         for i, j, a, b, I in _all_doubles(n[irrep],
                                           wf.n_corr_orb[irrep],
@@ -468,28 +587,36 @@ def _generate_lin_system_from_restricted_CISD(
                                                  Gd, G0[irrep])
             H += wf.Cd[irrep][ij,ab] * np.einsum('pq,rs->pqrs',
                                                  G0[irrep], Gd)
+        logger.debug("bigG[%d]:\n%r", irrep, H)
         # Here: bigG is complete and is used only in the line below
         X[slice_XC[irrep],
           slice_XC[irrep]] += np.reshape(np.einsum('pqts,rt->pqrs',
                                                    H, Pi[irrep]),
                                          (nK[irrep], nK[irrep]))
-        # Now H will be used again to store H_I
+        logger.debug("bigG[%d] @ Pi[%d]:\n%r",
+                     irrep, irrep,
+                     np.einsum('pqts,rt->pqrs',
+                               H, Pi[irrep]))
         for i, a, I in _all_singles(n[irrep],
                                     wf.n_corr_orb[irrep],
                                     wf.n_ext[irrep]):
             for p in range(K[irrep]):
                 for q in range(n[irrep]):
                     H[p,q,p,q] = -Fs[irrep][i,a]
-                    for r in range(p):
-                        for s in range(q):
+                    for r in range(p + 1):
+                        for s in range(q + 1):
+                            if r == p and s == q:
+                                continue
                             H[r,s,p,q] = _calc_H(U[irrep],
                                                  I,
                                                  r, s, p, q)
                             H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
                             H[p,q,r,s] = H[r,s,p,q]
-            tmp = D2[i,a] * F0[irrep] + np.tensordot(wf.Csd[irrep][irrep][i,a,:,:],
-                                                     Fs[irrep],
-                                                     axes=2)
+            logger.debug('H_I_{i=%d}^{a=%d}[%d]:\n%r', i, a, irrep, H)
+            tmp = (D2[i,a] * F0[irrep]
+                   + np.tensordot(wf.Csd[irrep][irrep][i,a,:,:],
+                                  Fs[irrep],
+                                  axes=2))
             X[slice_XC[irrep],
               slice_XC[irrep]] += np.reshape(H,
                                              (nK[irrep],
@@ -509,12 +636,21 @@ def _generate_lin_system_from_restricted_CISD(
                                                  r, s, p, q)
                             H[r,q,p,s] = H[p,s,r,q] = -H[r,s,p,q]
                             H[p,q,r,s] = H[r,s,p,q]
+            logger.debug('i=%d,j=%d -> a=%d,b=%d (I=%r): H:\n%r',
+                         i, j, a, b, I, H)
             tmp = F0[irrep] * wf.Cd[irrep][ij,ab]
+            logger.debug('F0*Cd = %e', tmp)
+            logger.debug(X[slice_XC[irrep],
+                           slice_XC[irrep]])
             X[slice_XC[irrep],
               slice_XC[irrep]] += np.reshape(H,
                                              (nK[irrep],
                                               nK[irrep])) * tmp
+            logger.debug(X[slice_XC[irrep],
+                           slice_XC[irrep]])
         D = 1.0
+        logger.debug('bigH[%d] + bigG@Pi:\n%r', irrep, X[slice_XC[irrep],
+                                                         slice_XC[irrep]])
         # Fill only X[irrep][irrep2] with irrep >= irrep2
         for irrep2 in wf.spirrep_blocks(restricted=True):
             if irrep2 == irrep:
@@ -528,10 +664,27 @@ def _generate_lin_system_from_restricted_CISD(
                 X[slice_XC[irrep2],
                   slice_XC[irrep]] += F0[irrep2] * np.outer(G0[irrep2],
                                                             C[slice_XC[irrep]])
+            logger.debug('X[irrep2=%d,irrep=%d] (X_%d^%d):\n%r',
+                         irrep2, irrep, irrep2, irrep,
+                         X[slice_XC[irrep2],
+                           slice_XC[irrep]])
+            logger.debug('X[irrep=%d,irrep2=%d] (X_%d^%d):\n%r',
+                         irrep, irrep2, irrep, irrep2,
+                         X[slice_XC[irrep],
+                           slice_XC[irrep2]])
         D *= D
         f += D * L[irrep]
+        logger.debug('\Prod(irrep != %d) F0[irrep]**2 = %f', irrep, D)
         X[slice_XC[irrep],
           slice_XC[irrep]] -= np.outer(C[slice_XC[irrep]], U[irrep])
+        if n[irrep] > 0:
+            logger.debug('For irrep = %d:\nprod F0[i]**2 (for i != irrep) = %f'
+                         +'\nL = %f\nM:\n%r\n'
+                         +'-(MxU - bigG@Pi - bigH):\n%r',
+                         irrep, D,
+                         L[irrep], C[slice_XC[irrep]],
+                         X[slice_XC[irrep],
+                           slice_XC[irrep]])
         X[slice_XC[irrep],
           slice_XC[irrep]] *= -D
         C[slice_XC[irrep]] *= D
@@ -544,20 +697,39 @@ def _generate_lin_system_from_restricted_CISD(
                                                         Gs[irrep2]),
                                               (nK[irrep],
                                                nK[irrep2]))/2
+            logger.debug('X[irrep=%d,irrep2=%d] (X_%d^%d) after Csd:\n%r',
+                         irrep, irrep2, irrep, irrep2,
+                         X[slice_XC[irrep],
+                           slice_XC[irrep2]])
             Kmix[irrep,irrep2] = np.einsum('iajb,ia,jb',
-                                        wf.Csd[irrep][irrep2], Fs[irrep], Fs[irrep2])
+                                           wf.Csd[irrep][irrep2],
+                                           Fs[irrep], Fs[irrep2])
             Kmix[irrep,irrep2] *= 2 * F0[irrep] * F0[irrep2]
             Kmix[irrep2,irrep] = Kmix[irrep,irrep2]
-            Fp[irrep,irrep2] = _calc_Fprod(F0, (irrep,irrep2), wf.n_irrep)
+            Fp[irrep,irrep2] = _calc_Fprod(F0, (irrep, irrep2), wf.n_irrep)
             Fp[irrep,irrep2] *= Fp[irrep,irrep2]
             Fp[irrep2,irrep] = Fp[irrep,irrep2]
+            f += Fp[irrep,irrep2] * Kmix[irrep,irrep2]
             Gd = np.einsum('ia,jbpq,jbia->pq',
                            Fs[irrep2], Gs[irrep], wf.Csd[irrep][irrep2])
-            f += Fp[irrep,irrep2] * Kmix[irrep,irrep2]
+            if n[irrep] > 0 and n[irrep2] > 0:
+                logger.debug('For irrep=%d, irrep2=%d:\n'
+                             + '\Prod(i != irrep, irrep2) F0[i]**2 = %f\n'
+                             + 'Kmix[irrep,irrep2] = %f\n'
+                             + 'Fs[irrep2]Gs[irrep]Csd[irrep,irrep2]:\n%r',
+                             irrep, irrep2,
+                             Fp[irrep][irrep2],
+                             Kmix[irrep,irrep2],
+                             Gd)
             X[slice_XC[irrep],
               slice_XC[irrep2]] -= np.outer(Gd, G0[irrep2])
             Gd = np.einsum('ia,jbpq,iajb->pq',
                            Fs[irrep], Gs[irrep2], wf.Csd[irrep][irrep2])
+            if n[irrep] > 0 and n[irrep2] > 0:
+                logger.debug('For irrep=%d, irrep2=%d:\n'
+                             + 'Fs[irrep]Gs[irrep2]Csd[irrep,irrep2]:\n%r',
+                             irrep, irrep2,
+                             Gd)
             X[slice_XC[irrep],
               slice_XC[irrep2]] -= np.outer(G0[irrep], Gd)
             X[slice_XC[irrep],
@@ -601,18 +773,33 @@ def _generate_lin_system_from_restricted_CISD(
                                          (nK[irrep],
                                           nK[irrep])) * D
     for irrep in wf.spirrep_blocks(restricted=True):
-        C[slice_XC[irrep]] = np.ravel(Pi[irrep] @ np.reshape(C[slice_XC[irrep]],
-                                                             (K[irrep],
-                                                              n[irrep])))
+        logger.debug('C before proj (irrep = %d):\n%r',
+                     irrep, C)
+        C[slice_XC[irrep]] = np.ravel(
+            Pi[irrep] @ np.reshape(C[slice_XC[irrep]],
+                                   (K[irrep],
+                                    n[irrep])))
+        logger.debug('X after reshape:\n%r',
+                     np.reshape(X[slice_XC[irrep],
+                                  slice_XC[irrep]],
+                                (K[irrep], n[irrep],
+                                 K[irrep], n[irrep])))
+        logger.debug('projX before re-reshape:\n%r',
+                     np.einsum('pt,tqrs->pqrs',
+                               Pi[irrep], np.reshape(X[slice_XC[irrep],
+                                                       slice_XC[irrep]],
+                                                     (K[irrep], n[irrep],
+                                                      K[irrep], n[irrep]))))
         X[slice_XC[irrep],
-          slice_XC[irrep]] = np.reshape(np.einsum('pt,tqrs->pqrs',
-                                                  Pi[irrep],
-                                                  np.reshape(X[slice_XC[irrep],
-                                                               slice_XC[irrep]],
-                                                             (K[irrep], n[irrep],
-                                                              K[irrep], n[irrep]))),
-                                        (nK[irrep],
-                                         nK[irrep]))
+          slice_XC[irrep]] = np.reshape(
+              np.einsum('pt,tqrs->pqrs',
+                        Pi[irrep],
+                        np.reshape(X[slice_XC[irrep],
+                                     slice_XC[irrep]],
+                                   (K[irrep], n[irrep],
+                                    K[irrep], n[irrep]))),
+              (nK[irrep],
+               nK[irrep]))
         for irrep2 in range(irrep):
             D = -wf.C0 * Fp[irrep,irrep2]
             for irrep3 in wf.spirrep_blocks(restricted=True):
@@ -621,7 +808,7 @@ def _generate_lin_system_from_restricted_CISD(
                 Fg1g2g3 = _calc_Fprod(F0,
                                       (irrep, irrep2, irrep3),
                                       wf.n_irrep)
-                D += L[irrep3] * Fg1g2g3
+                D += L[irrep3] * Fg1g2g3**2
                 for irrep4 in range(irrep3):
                     if irrep4 == irrep or irrep4 == irrep2:
                         continue
@@ -630,33 +817,43 @@ def _generate_lin_system_from_restricted_CISD(
                                             wf.n_irrep)
                     D += Kmix[irrep3][irrep4] * Fg1g2g3g4**2
             X[slice_XC[irrep],
-              slice_XC[irrep2]] += np.outer(G0[irrep], G0[irrep2]) * D * F0[irrep] * F0[irrep2]
+              slice_XC[irrep2]] += (np.outer(G0[irrep],
+                                             G0[irrep2])
+                                    * D * F0[irrep] * F0[irrep2])
+            logger.debug('X[irrep=%d,irrep2=%d] (before projection):\n%r',
+                         irrep, irrep2,
+                         X[slice_XC[irrep],
+                           slice_XC[irrep2]])
             X[slice_XC[irrep],
-              slice_XC[irrep2]] = np.reshape(np.einsum('pt,tqus,ru->pqrs',
-                                                       Pi[irrep],
-                                                       np.reshape(X[slice_XC[irrep],
-                                                                    slice_XC[irrep2]],
-                                                                  (K[irrep], n[irrep],
-                                                                   K[irrep2], n[irrep2])),
-                                                       Pi[irrep2]),
-                                             (nK[irrep],
-                                              nK[irrep2]))
+              slice_XC[irrep2]] = -2 * np.reshape(
+                  np.einsum('pt,tqus,ru->pqrs',
+                            Pi[irrep],
+                            np.reshape(X[slice_XC[irrep],
+                                         slice_XC[irrep2]],
+                                       (K[irrep], n[irrep],
+                                        K[irrep2], n[irrep2])),
+                            Pi[irrep2]),
+                  (nK[irrep],
+                   nK[irrep2]))
             X[slice_XC[irrep2],
               slice_XC[irrep]] = X[slice_XC[irrep],
                                    slice_XC[irrep2]].T
     # Terms to guarantee orthogonality to U:
-    prev_ij = sum_Kn
-    prev_kl = 0
+    shift_irrep_pq = 0
+    pos_rs = 0
     for irrep, U_irrep in enumerate(U):
-        for i in range(n[irrep]):
-            logger.debug('Adding U^T:\n%s', U_irrep.T)
-            logger.debug('Position of U^T = [%s: %s + %s, %s: %s + %s',
-                         prev_ij, prev_ij, n[irrep],
-                         prev_kl, prev_kl, K[irrep])
-            X[prev_ij: prev_ij + n[irrep],
-              prev_kl: prev_kl + K[irrep]] = U_irrep.T
-            prev_ij += n[irrep]
-            prev_kl += K[irrep]
+        for p in range(K[irrep]):
+            pos_pq = sum_Kn + shift_irrep_pq
+            for q in range(n[irrep]):
+                logger.debug('To guarantee orthogonality:\n'
+                             +' Adding at [%d: %d + %d, %d] U[%d,:]:\n%r',
+                             pos_pq, pos_pq, n[irrep], pos_rs,
+                             p, U_irrep[p,:])
+                X[pos_pq: pos_pq + n[irrep],
+                  pos_rs] = U_irrep[p,:]
+                pos_rs += 1
+                pos_pq += n[irrep]
+        shift_irrep_pq += n[irrep]**2
     return f,X,C
 
 def _generate_lin_system_from_genWF(
@@ -672,7 +869,8 @@ def _generate_lin_system_from_genWF(
     if not with_full_H:
         raise NotImplementedError('with_full_H = False is not Implemented')
     if F is None:
-        F = calc_all_F(U, wf)
+        F = calc_all_F(wf, U)
+    f = overlap_to_det(wf, U, F)
     K = [U_spirrep.shape[0] for U_spirrep in U]
     n = [U_spirrep.shape[1] for U_spirrep in U]
     sum_Kn = sum([K[i] * n[i] for i in range(len(K))])
@@ -732,7 +930,7 @@ def _generate_lin_system_from_genWF(
                        K[spirrep_1] * n[spirrep_1]),
                       order='F').T
                 G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
-                logger.debug('S = %s; G_1:\n %s', S, G_1)
+                logger.debug('spirrep=%d: S = %s; G_1:\n %s', spirrep_1, S, G_1)
                 C[slice_XC[spirrep_1]] += S * np.reshape(
                     G_1,
                     (K[spirrep_1] * n[spirrep_1],),
@@ -798,7 +996,7 @@ def _generate_lin_system_from_genWF(
               prev_kl: prev_kl + K[spirrep]] = U_spirrep.T
             prev_ij += n[spirrep]
             prev_kl += K[spirrep]
-    return X, C
+    return f, X, C
 
 
 def calc_storage_CISD(occ, corr, virt):

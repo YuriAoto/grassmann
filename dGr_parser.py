@@ -10,9 +10,17 @@ import sys
 import re
 import argparse
 import textwrap
+import logging
 from collections import namedtuple
 
 from dGr_exceptions import *
+
+loglevels = {'critical': logging.CRITICAL,
+             'error': logging.ERROR,
+             'warning': logging.WARNING,
+             'info': logging.INFO,
+             'debug': logging.DEBUG,
+             'notset': logging.NOTSET}
 
 def __is_molpro_xml_file(file):
     """Return True if file is a Molpro xml file."""
@@ -82,11 +90,20 @@ def parse_cmd_line():
                         + ' to be used as template')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
-    parser.add_argument('-l', '--loglevel', type=int,
+    parser.add_argument('-l', '--loglevel',
                         help='set log level (integer)')
     parser.add_argument('--logfilter',
                         help='regular expression to filter function names'
                         +' for logging (for debug)')
+    parser.add_argument('--use_general_algorithm',
+                        help='use the general Absil algorithm for a general'
+                        +' wave function',
+                        action='store_true')
+    parser.add_argument('--check_algorithms',
+                        help='check if matrices C and X calculated'
+                        +' with the CISD-opt and general algorithms are'
+                        +' equivalent',
+                        action='store_true')
     cmd_args = parser.parse_args()
     file_name = cmd_args.molpro_output
     cmd_args.basename = re.sub('\.out$', '', cmd_args.molpro_output)
@@ -101,10 +118,18 @@ def parse_cmd_line():
                 if not os.path.isfile(cmd_args.ini_orb + '_U.npz'):
                     raise dGrParseError('Neither ' + cmd_args.ini_orb
                                         + ' nor ' + cmd_args.ini_orb
-                                        + '_U.npy exist!')
+                                        + '_U.npz exist!')
                 cmd_args.ini_orb = cmd_args.ini_orb + '_U.npz'
             else:
                 raise e
+    if cmd_args.check_algorithms and cmd_args.use_general_algorithm:
+        raise dGrParseError('Options --check_algorithms and --use_general_algorithm'
+                            + ' are incompatible: with --check_algorithms both'
+                            + ' algorithms will be use in one iteration.')
+    if cmd_args.check_algorithms and cmd_args.WF_templ is not None:
+        raise dGrParseError('Options --check_algorithms and --WF_templ'
+                            + ' are incompatible: --check_algorithms'
+                            + ' is only for Absil algorithm.')
     if cmd_args.WF_orb is None:
         cmd_args.WF_orb = cmd_args.molpro_output
     else:
@@ -118,4 +143,14 @@ def parse_cmd_line():
     if cmd_args.logfilter is not None:
         cmd_args.logfilter = re.compile(cmd_args.logfilter)
     cmd_args.state = cmd_args.state if cmd_args.state is not None else ''
+    if cmd_args.loglevel is not None:
+        try:
+            cmd_args.loglevel = int(cmd_args.loglevel)
+        except ValueError:
+            try:
+                cmd_args.loglevel = loglevels[cmd_args.loglevel.lower()]
+            except KeyError:
+                raise dGrParseError('This is not a valid log level: '+ cmd_args.loglevel)
+    else:
+        cmd_args.loglevel = logging.WARNING
     return cmd_args

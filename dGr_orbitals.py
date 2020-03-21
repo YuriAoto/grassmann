@@ -30,10 +30,10 @@ class Molecular_Orbitals():
     
     1st MO      2nd MO    ...    nth MO
     
-    C[0][0]    C[1][1]    ...    C[1][n-1]   -> coef of 1st basis function
-    C[1][0]    C[2][1]    ...    C[2][n-1]   -> coef of 2nd basis function
+    C[0,0]    C[1,1]    ...    C[1,n-1]   -> coef of 1st basis function
+    C[1,0]    C[2,1]    ...    C[2,n-1]   -> coef of 2nd basis function
     ...        ...        ...    ...
-    C[n-1][0]  C[n-1][1]  ...    C[n][n-1]   -> coef of nth basis function
+    C[n-1,0]  C[n-1,1]  ...    C[n-1,n-1]   -> coef of nth basis function
     
     There are n_irrep (restricted=True) or 2*n_irrep (restricted=False)
     such np.ndarray, each of shape (basis lenght, n orb of irrep).

@@ -29,6 +29,7 @@ from scipy import linalg
 
 from dGr_util import logtime
 from dGr_general_WF import Wave_Function
+from dGr_CISD_WF import Wave_Function_CISD
 import dGr_Absil as Absil
 from dGr_exceptions import *
 
@@ -328,7 +329,7 @@ def optimise_distance_to_CI(ci_wf,
     
     restricted (bool, default = False)
         Optimise the spatial part of both alpha and beta equally.
-        It is not implemented yet!
+        It is not explicitly used! The code decides when use restricted calculation
     
     ini_U (list of np.ndarray, default=None)
         if not None, it should have the initial transformation
@@ -396,20 +397,27 @@ def optimise_distance_to_CI(ci_wf,
     f = None
     if only_C and only_eta:
         raise dGrValueError('Do not set both only_C and only_eta to True!')
-    if restricted:
-        raise NotImplementedError('Restricted calculation is not working yet.')
+    restricted = isinstance(ci_wf,Wave_Function_CISD)
     if ini_U is None:
         U = []
         ini_occ = occupation if occupation is not None else ci_wf.ref_occ
-        for i in ci_wf.spirrep_blocks(restricted = False):
+        for i in ci_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(ci_wf.orb_dim[i % ci_wf.n_irrep])[:,:(ini_occ[i])])
     else:
-        if ((not isinstance(ini_U, list))
-            or len(ini_U) != 2 * ci_wf.n_irrep):
-            raise dGrValueError('ini_U must be a list,'
-                                +' of lenght 2 * ci_wf.n_irrep of numpy.array.')
+        if not isinstance(ini_U, list):
+            raise dGrValueError('ini_U must be a list of numpy.array.')
+        if restricted:
+            if len(ini_U) != ci_wf.n_irrep:
+                raise dGrValueError('ini_U must be a list,'
+                                    +' of lenght ci_wf.n_irrep of numpy.array'
+                                    +' (for restricted calculations).')
+        else:
+            if len(ini_U) != 2 * ci_wf.n_irrep:
+                raise dGrValueError('ini_U must be a list,'
+                                    +' of lenght ci_wf.n_irrep of numpy.array'
+                                    +' (for unrestricted calculations).')
         sum_n_a = sum_n_b = 0
-        for i in ci_wf.spirrep_blocks(restricted = False):
+        for i in ci_wf.spirrep_blocks(restricted=restricted):
             i_irrep =  i % ci_wf.n_irrep
             if ini_U[i].shape[0] != ci_wf.orb_dim[i_irrep]:
                 raise dGrValueError (('Shape error in ini_U {0:} for irrep {1:}:'
@@ -422,20 +430,27 @@ def optimise_distance_to_CI(ci_wf,
                 sum_n_a += ini_U[i].shape[1]
             else:
                 sum_n_b += ini_U[i].shape[1]
-        for sum_n, n, spin in [(sum_n_a, ci_wf.n_alpha, 'alpha'),
-                               (sum_n_b, ci_wf.n_beta,  'beta')]:
+        for sum_n, n, spin in [(sum_n_a, ci_wf.n_alpha, (''
+                                                         if restricted else
+                                                         ' alpha')),
+                               (sum_n_b, ci_wf.n_beta,  ' beta')]:
             if sum_n != n:
-                raise dGrValueError (('Shape error in ini_U {0:}:'
+                raise dGrValueError (('Shape error in ini_U{0:}:'
                                       + ' sum U.shape[1] = {1:} != {2:} = ci_wf.n_{0:}').\
                                      format(spin, sum_n, n))
+            if restricted:
+                break
         U = ini_U
     slice_XC = []
-    for i in range(2 * ci_wf.n_irrep):
-        logger.debug('Ui shape = %s; Ui = %s', U[i].shape, U[i])
-        slice_XC.append(slice(0
-                              if i == 0 else
-                              slice_XC[-1].stop,
-                              U[i].shape[0] * U[i].shape[1]))
+    for i in ci_wf.spirrep_blocks(restricted=restricted):
+        if U[i].shape[1] > 0:
+            logger.debug('U[%d]; shape = %s:\n%s', i, U[i].shape, U[i])
+        else:
+            logger.debug('No electrons in irrep = %d', i)
+        ini = 0 if i == 0 else slice_XC[-1].stop
+        slice_XC.append(slice(ini,
+                              ini + U[i].shape[0] * U[i].shape[1]))
+    logger.debug('slice_XC:\n%r', slice_XC)
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
     fmt_full =  '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -445,6 +460,9 @@ def optimise_distance_to_CI(ci_wf,
     for i_iteration in range(max_iter):
         with logtime('Generating linear system') as T_gen_lin_system:
             f, X, C = Absil.generate_lin_system(ci_wf, U, slice_XC)
+        if logger.level <= logging.DEBUG:
+            np.save('X_matrix-{}.npy'.format(i_iteration), X)
+            np.save('C_matrix-{}.npy'.format(i_iteration), C)
         logger.debug('f: %.5f', f)
         logger.debug('matrix X:\n%s', X)
         logger.debug('matrix C:\n%s', C)
@@ -472,10 +490,13 @@ def optimise_distance_to_CI(ci_wf,
         eta = []
         svd_res = []
         with logtime('Singular value decomposition of eta') as T_svd:
-            for i in ci_wf.spirrep_blocks(restricted=False):
+            for i in ci_wf.spirrep_blocks(restricted=restricted):
                 eta.append(np.reshape(
                     lin_sys_solution[0][slice_XC[i]],
-                    U[i].shape, order='F'))
+                    U[i].shape, order=('C'
+                                       if isinstance(ci_wf,
+                                                     Wave_Function_CISD) else
+                                       'F')))
                 norm_eta_i = linalg.norm(eta[-1])
                 if norm_eta_i < zero_skip_linalg:
                     svd_res.append((np.zeros(eta[-1].shape),
@@ -491,15 +512,15 @@ def optimise_distance_to_CI(ci_wf,
             with logtime('Cheking equations') as T_check_eq:
                 Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps = 0.0001)
         if logger.level <= logging.DEBUG:
-            for i in range(2 * ci_wf.n_irrep):
+            for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug('SVD results, Usvd_a:\n%s',svd_res[i][0])
                 logger.debug('SVD results, SGMsvd_a:\n%s', svd_res[i][1])
                 logger.debug('SVD results, VTsvd_a:\n%s', svd_res[i][2])
-        for i in range(2 * ci_wf.n_irrep):
+        for i in ci_wf.spirrep_blocks(restricted=restricted):
             U[i]  = np.matmul(U[i], svd_res[i][2].T * np.cos(svd_res[i][1]))
             U[i] += svd_res[i][0] * np.sin(svd_res[i][1])
         if logger.level <= logging.DEBUG:
-            for i in range(2 * ci_wf.n_irrep):
+            for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug('new U for %s and irrep %s:\n%s',
                              'alpha' if i < ci_wf.n_irrep else 'beta',
                              i % ci_wf.n_irrep,
@@ -510,7 +531,7 @@ def optimise_distance_to_CI(ci_wf,
                 if norm_Ui > zero_skip_linalg:
                     U[i] = linalg.orth(Ui)
         if logger.level <= logging.DEBUG:
-            for i in range(2 * ci_wf.n_irrep):
+            for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug(
                     'new U for %s and irrep %s, after orthogonalisation:\n%s',
                     'alpha' if i < ci_wf.n_irrep else 'beta',

@@ -102,7 +102,23 @@ class Wave_Function_CISD(genWF.Wave_Function):
 
     def __len__(self):
         raise NotImplementedError('len() is not implemented for CISD_WF!')
-    
+
+    def __repr__(self):
+        x = ['C0 = {}'.format(self.C0)]
+        for irrep in self.spirrep_blocks(restricted=True):
+            x.append('Cs[{}]:\n {}'.\
+                     format(irrep, repr(self.Cs[irrep])))
+        for irrep in self.spirrep_blocks(restricted=True):
+            x.append('Cd[{}]:\n {}'.\
+                     format(irrep, repr(self.Cd[irrep])))
+        for irrep in self.spirrep_blocks(restricted=True):
+            for irrep2 in range(irrep + 1):
+                x.append('Csd[{}][{}]:\n {}'.\
+                         format(irrep, irrep2, repr(self.Csd[irrep][irrep2])))
+        return ('<(Partial) CISD Wave Function>\n'
+                + super().__repr__() + '\n'
+                + '\n'.join(x))
+
     def initialize_SD_lists(self):
         """Initialise the lists of coefficients for singles and doubles with zeros."""
         self.C0 = 0.0
@@ -167,7 +183,11 @@ class Wave_Function_CISD(genWF.Wave_Function):
                 for a in range(new_wf.n_ext[i_irrep]):
                     for b in range(new_wf.n_ext[j_irrep]):
                         new_wf.Csd[i_irrep][j_irrep][i,a,j,b] = doubles[j_irrep][b,a]
+                if (i + new_wf.ref_occ[i_irrep] + j + new_wf.ref_occ[j_irrep]) % 2 == 1:
+                    new_wf.Csd[i_irrep][j_irrep][i,:,j,:] *= -1
             else:
+                if i != j:
+                    ij = get_n_from_triang(i, j, with_diag=False)
                 for a in range(new_wf.n_ext[i_irrep]):
                     for b in range(new_wf.n_ext[j_irrep]):
                         if a == b and i == j:
@@ -177,16 +197,15 @@ class Wave_Function_CISD(genWF.Wave_Function):
                             new_wf.Csd[i_irrep][j_irrep][j,a,i,b] += doubles[i_irrep][a,b]
                         elif i == j: # a != b
                             new_wf.Csd[i_irrep][j_irrep][i,a,j,b] += (doubles[i_irrep][a,b]
-                                                                      + doubles[i_irrep][b,a])/ 2
+                                                                      + doubles[i_irrep][b,a])/2
                         else: # a != b and i != j
                             if a > b:
                                 new_wf.Csd[i_irrep][j_irrep][i,a,j,b] += doubles[i_irrep][a,b]
                                 new_wf.Csd[i_irrep][j_irrep][j,a,i,b] += doubles[i_irrep][b,a]
-                            else:
-                                new_wf.Csd[i_irrep][j_irrep][i,a,j,b] += doubles[i_irrep][b,a]
-                                new_wf.Csd[i_irrep][j_irrep][j,a,i,b] += doubles[i_irrep][a,b]
+                            else: # b > a
+                                new_wf.Csd[i_irrep][j_irrep][j,a,i,b] += doubles[i_irrep][b,a]
+                                new_wf.Csd[i_irrep][j_irrep][i,a,j,b] += doubles[i_irrep][a,b]
                 if i != j:
-                    ij = get_n_from_triang(i, j, with_diag=False)
                     for a in range(new_wf.n_ext[i_irrep]):
                         for b in range(a):
                             # Increment ab instead?? Check the order
@@ -194,8 +213,9 @@ class Wave_Function_CISD(genWF.Wave_Function):
                             new_wf.Cd[i_irrep][ij,ab] = (doubles[i_irrep][b,a]
                                                          - doubles[i_irrep][a,b])
                 if (i + j) % 2 == 1:
-                    new_wf.Csd[i_irrep][j_irrep][:,a,:,b] *= -1
-                    new_wf.Cd[i_irrep][:,ab] *= -1
+                    new_wf.Csd[i_irrep][j_irrep][i,:,j,:] *= -1
+                    new_wf.Csd[i_irrep][j_irrep][j,:,i,:] *= -1
+                    new_wf.Cd[i_irrep][ij,:] *= -1
         if intN_wf.norm is None:
             intN_wf.calc_norm()
         new_wf.C0 /= intN_wf.norm
