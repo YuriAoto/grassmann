@@ -280,6 +280,13 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
             raise ValueError('We do not know how to calculate the norm for '
                              +  self.WF_type + '!')
 
+    @property
+    def C0(self):
+        """The coefficient of reference"""
+        if self.norm is None:
+            self.calc_norm()
+        return 1.0/self.norm
+
     def get_irrep(self, i, alpha_orb):
         prev_corr_sum = corr_sum = 0
         shift = (0

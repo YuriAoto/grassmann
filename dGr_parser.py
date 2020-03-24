@@ -108,7 +108,12 @@ def parse_cmd_line():
     file_name = cmd_args.molpro_output
     cmd_args.basename = re.sub('\.out$', '', cmd_args.molpro_output)
     cmd_args.wdir = os.getcwd()
-    cmd_args.command = ' '.join(sys.argv)
+    cmd_args.command = ''
+    for i, arg in enumerate(sys.argv):
+        cmd_args.command +=  arg + ' ' + ('\\\n'
+                                          if (arg[0] != '-'
+                                              and i != len(sys.argv) - 1) else
+                                          '')
     __assert_molpro_output(cmd_args.molpro_output)
     if cmd_args.ini_orb is not None:
         try:

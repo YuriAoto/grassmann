@@ -119,13 +119,9 @@ def dGr_main(args, f_out):
                      ovlp_Slater_dets(HF_in_basis_of_refWF,
                                       ext_wf.ref_occ))
     else:
-        toout('Using |WFref> (the reference of |extWF>) as |min E>:')
-    if isinstance(ext_wf, IntN.Wave_Function_Int_Norm):
-        print_ovlp_D('WFref', 'extWF', 1.0/ext_wf.norm)
-    if args.use_general_algorithm:
-        restricted = False
-    else:
-        restricted = True
+        toout('Using |WFref> (the reference of |extWF>) as |min E>.')
+    print_ovlp_D('WFref', 'extWF', ext_wf.C0)
+    restricted = not args.use_general_algorithm
     if args.ini_orb is not None:
         if args.ini_orb[-4:] == '.npz':
             U = []
@@ -229,7 +225,9 @@ def dGr_main(args, f_out):
             if Ui.shape[1] > 0:
                 res.U[spirrep] = linalg.inv(HF_in_basis_of_refWF[spirrep]) @ Ui
     print_ovlp_D('min E', 'min D',
-                 ovlp_Slater_dets(res.U,
+                 ovlp_Slater_dets((2 * res.U)
+                                  if restricted else
+                                  res.U,
                                   ext_wf.ref_occ))
     toout()
     end_time = time.time()
