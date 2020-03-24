@@ -5,6 +5,7 @@ Try `dGr --help` for the usage.
 
 Yuri Aoto, 2018, 2019
 """
+import os
 import sys
 import logging
 import traceback
@@ -19,10 +20,25 @@ try:
 except dGrParseError as e:
     sys.exit(str(e))
 
-logfile = cmd_line_args.basename + '.min_dist' + cmd_line_args.state + '.log'
+name_extra = cmd_line_args.state
+if name_extra:
+    name_extra = '_' + name_extra
+if cmd_line_args.check_algorithms:
+    name_extra += '_chk_alg'
+output_name = cmd_line_args.basename + '.min_dist' + name_extra
+logfile_name = output_name + '.log'
+
+if os.path.exists(output_name) or os.path.exists(logfile_name):
+    i_backup = '_0'
+    while (os.path.exists(output_name + i_backup)
+           or os.path.exists(logfile_name + i_backup)):
+        i_backup = '_' + str(int(i_backup[1:]) + 1)
+    os.rename(output_name, output_name + i_backup)
+    os.rename(logfile_name, logfile_name + i_backup)
+
 log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
               + '\n%(message)s\n')
-logging.basicConfig(filename=logfile,
+logging.basicConfig(filename=logfile_name,
                     format=log_format,
                     filemode='w',
                     level=cmd_line_args.loglevel)
@@ -47,7 +63,7 @@ for handler in logging.root.handlers:
 f_out = None
 with_error = False
 try:
-    f_out = open(cmd_line_args.basename + '.min_dist' + cmd_line_args.state, 'w')
+    f_out = open(output_name, 'w')
     dGr_main(cmd_line_args, f_out)
 except dGrError as e:
     with_error = True
