@@ -8,7 +8,6 @@ Directory:
 
 Command:
 ../../dGr \
---use_general_algorithm \
 --HF_orb UHF_orbitals.xml \
 --WF_orb RHF_orbitals.xml \
 CISD.out 
@@ -25,7 +24,7 @@ qpy job ID: not in qpy
 
 Starting at 25 Mar 2020 - 15:38
 
-Using algorithm for general wave function.
+Using algorithm specific for CISD wave function.
 Using as |min E> a Slater determinant different than |WFref>
 (the reference of |extWF>). We have:
 |<min E|WFref>| =   0.55328600 ; D(min E, WFref) =   0.94521320
@@ -38,15 +37,15 @@ Occupation of reference wave function: alpha/beta: [ 1 0 0 0 ]
 Starting optimisation
 ------------------------------
 it.    f            |eta|        |C|          time in iteration
-0      0.78181588   0.15396558   0.11935595   0:00:00.000997
-1      0.79089561   0.00236626   0.00187733   0:00:00.000931
-2      0.79089783   0.00000001   0.00000001   0:00:00.000750
+0      0.78181588   0.10887010   0.08439740   0:00:00.000896
+1      0.79089561   0.00167320   0.00132747   0:00:00.000679
+2      0.79089783   0.00000001   0.00000000   0:00:00.000617
 ------------------------------
 Iterations converged!
 WARNING: Unknown number of positive eigenvalue(s) of Hessian.
 |<min D|extWF>| =   0.79089783 ; D(min D, extWF) =   0.64668720
 |<refWF|min D>| =   0.98855277 ; D(refWF, min D) =   0.15130914
-|<min E|min D>| =   0.56030668 ; D(min E, min D) =   0.93775617
+|<min E|min D>| =   0.56030666 ; D(min E, min D) =   0.93775620
 
 Ending at 25 Mar 2020 - 15:38
-Total time: 0:00:00.561673
+Total time: 0:00:00.070924
