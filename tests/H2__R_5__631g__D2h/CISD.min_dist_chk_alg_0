@@ -8,7 +8,7 @@ Directory:
 
 Command:
 ../../dGr \
---use_general_algorithm \
+--check_algorithms \
 CISD.out 
 
 From command line and environment:
@@ -23,25 +23,19 @@ qpy job ID: not in qpy
 
 Starting at 25 Mar 2020 - 15:18
 
-Using algorithm for general wave function.
+Checking the two algorithms. No optimization will be performed.
 Using |WFref> (the reference of |extWF>) as |min E>.
 |<WFref|extWF>| =   0.78177113 ; D(WFref, extWF) =   0.66064948
 Using the reference determinant (identity) as initial guess for U.
 Dimension of orbital space: alpha/beta: [ 2 0 0 0 2 0 0 0 ]
 Number of alpha and beta electrons: 1 1
 Occupation of reference wave function: alpha/beta: [ 1 0 0 0 0 0 0 0 ]
+allclose for f: True
+allclose for C[0]: True
+allclose for X[0,0]: True
 
-Starting optimisation
-------------------------------
-it.    f            |eta|        |C|          time in iteration
-0      0.78177113   0.11143589   0.08681768   0:00:00.001265
-1      0.78657844   0.00090903   0.00071695   0:00:00.000996
-2      0.78657877   0.00000000   0.00000000   0:00:00.000883
-------------------------------
-Iterations converged!
-WARNING: Unknown number of positive eigenvalue(s) of Hessian.
-|<min D|extWF>| =   0.78657877 ; D(min D, extWF) =   0.65333182
-|<min E|min D>| =   0.99390433 ; D(min E, min D) =   0.11041438
+Success! All comparisons are OK!!
+Detailed information of comparison is written to the log file.
 
 Ending at 25 Mar 2020 - 15:18
-Total time: 0:00:00.078833
+Total time: 0:00:00.037647
