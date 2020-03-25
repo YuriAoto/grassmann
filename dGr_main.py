@@ -114,8 +114,9 @@ def dGr_main(args, f_out):
     if args.HF_orb != args.WF_orb:
         toout('Using as |min E> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
-        HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(args.HF_orb).in_the_basis_of(
-            orb.Molecular_Orbitals.from_file(args.WF_orb))
+        HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
+            args.HF_orb).in_the_basis_of(
+                orb.Molecular_Orbitals.from_file(args.WF_orb))
         print_ovlp_D('min E', 'WFref',
                      ovlp_Slater_dets(HF_in_basis_of_refWF,
                                       ext_wf.ref_occ))

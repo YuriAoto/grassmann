@@ -28,12 +28,12 @@ class Molecular_Orbitals():
     The orbitals are stored in one or more np.ndarray
     with the coefficients of the i-th orbital in the i-th column:
     
-    1st MO      2nd MO    ...    nth MO
+    1st MO    2nd MO    ...    nth MO
     
     C[0,0]    C[1,1]    ...    C[1,n-1]   -> coef of 1st basis function
     C[1,0]    C[2,1]    ...    C[2,n-1]   -> coef of 2nd basis function
-    ...        ...        ...    ...
-    C[n-1,0]  C[n-1,1]  ...    C[n-1,n-1]   -> coef of nth basis function
+    ...       ...       ...    ...
+    C[K-1,0]  C[K-1,1]  ...    C[K-1,n-1]   -> coef of nth basis function
     
     There are n_irrep (restricted=True) or 2*n_irrep (restricted=False)
     such np.ndarray, each of shape (basis lenght, n orb of irrep).
@@ -49,11 +49,26 @@ class Molecular_Orbitals():
     
     Attributes:
     -----------
+    name (str)
+        A name for these orbitals
+    
     n_irrep (int)
         Number of ireducible representations
     
     restricted (bool)
         True if both alpha and beta orbitals are the same
+    
+    in_the_basis (str)
+        The basis that is being used to expand the orbitals, that is, the basis
+        of which the coefficients refer.
+    
+    basis_is_per_irrep (bool)
+        If True, np.ndarray for spirrep i is square, and have the coefficients
+        of elements of the basis of that irrep (that is, K == n above).
+        If False, np.ndarray for spirrep i has the coefficients of all elements
+        of the basis (because the basis is not symmetry adapted, or perhaps with
+        0 for other irreps). Thus, there are possibly more rows than columns
+        (K >= n).
     
     Data model:
     -----------
@@ -68,12 +83,17 @@ class Molecular_Orbitals():
 
     """
     def __init__(self):
+        self.name = ''
         self._basis_len = 0
         self.n_irrep = None
         self.restricted = True
         self._coefficients = None
+        self.in_the_basis = ''
+        self.basis_is_per_irrep = False
 
     def __getitem__(self, key):
+        if self.restricted and key > self.n_irrep:
+            key -= self.n_irrep
         return self._coefficients[key]
 
     def __iter__(self):
@@ -83,7 +103,8 @@ class Molecular_Orbitals():
         return self._basis_len
 
     def __str__(self):
-        x = []
+        x = ['Orbitals {} (in the basis {}):'.format(
+            self.name, self.in_the_basis)]
         for spirrep, orb_spirrep in enumerate(self._coefficients):
             irrep = spirrep % self.n_irrep
             if irrep == 0:
@@ -116,6 +137,22 @@ class Molecular_Orbitals():
         raise dGrValueError('We can read orbitals from xml files only.')
 
     @classmethod
+    def identity(cls, orb_dim, n_elec,
+                 name='',
+                 basis='',
+                 basis_is_per_irrep=False):
+        raise NotImplemented('Not implemented!! (should we accept few orbitals??)')
+        new_orbitals = cls()
+        new_orbitals.name = name
+        new_orbitals.basis_is_per_irrep = basis_is_per_irrep
+        new_orbitals.in_the_basis = basis
+        new_orbitals.n_irrep = n_irrep
+        new_orbitals._basis_len = basis_len
+        for i in range(n_irrep):
+            new_orbitals.append(np.identity(orb_dim[i])[:,:n_elec[i]])
+        return new_orbitals
+
+    @classmethod
     def _get_orbitals_from_Molpro_xml(cls, xml_file):
         """Load orbitals from Molpro xml file.
         
@@ -140,6 +177,8 @@ class Molecular_Orbitals():
             else:
                 raise dGrParseException('Unknown type of orbital: ' + orb_type)
         new_orbitals = cls()
+        new_orbitals.name = xml_file[:-4]
+        new_orbitals.basis_is_per_irrep = False
         tree = ET.parse(xml_file)
         molpro = tree.getroot()
         ns = {'molpro': 'http://www.molpro.net/schema/molpro-output',
@@ -148,6 +187,7 @@ class Molecular_Orbitals():
               'stm':'http://www.xml-cml.org/schema',
               'xhtml':'http://www.w3.org/1999/xhtm'}
         molecule = molpro[0]
+        new_orbitals.in_the_basis = molecule.attrib['basis']
         point_group = molecule.find('cml:molecule',ns).find('cml:symmetry',ns).attrib['pointGroup']
         new_orbitals.n_irrep = number_of_irreducible_repr[point_group]
         new_orbitals._basis_len = int(molecule.find('molpro:basisSet',ns).attrib['length'])
@@ -185,9 +225,9 @@ class Molecular_Orbitals():
                     list(map(float,orb.text.split())))
                 cur_orb[spirrep] += 1
         return new_orbitals
-
+    
     def in_the_basis_of(self, other):
-        """Return the coefficients of self on the basis of other.
+        """Return self in the basis of other.
         
         Parameters:
         -----------
@@ -199,7 +239,6 @@ class Molecular_Orbitals():
         
         Behaviour:
         ----------
-        
         If the orbitals in self are in a square matrix C_self
         and the orbitals in other are in a square matrix C_other,
         this function returns the transformation matrix U such that:
@@ -215,26 +254,24 @@ class Molecular_Orbitals():
         
         Returns:
         --------
-        U as a list of np.ndarrays, each entry for a spirrep.
+        A new instance of Molecular_Orbitals, that contains the orbitals
+        self in the basis of other.
         
-        TODO:
-        -----
-        Maybe return an instance of Molecular_Orbitals and use this
-        throughout the code for U?
-        Note that in our current implementation U[i].shape[0] is the
-        orbital dimension of spirrep i, whereas in Molecular_Orbitals
-        (as comes from Molpro) store coefficients of non-symmetry adapted
-        basis, and thus implementation U[i].shape[0] is the length of the
-        basis, irrespective of the irrep.
         """
         logger.debug("MO (other):\n%s", other)
         logger.debug("MO (self):\n%s", self)
         if len(self) != len(other):
             raise dGrValueError('Orbitals do not have the same basis length!')
+        U = Molecular_Orbitals()
+        U.name = self.name
+        U._basis_len = len(self)
+        U.in_the_basis = other.name
+        U.basis_is_per_irrep = True
         if other.n_irrep == self.n_irrep:
-            n_irrep = self.n_irrep
+            U.n_irrep = self.n_irrep
         else:
-            n_irrep = 1
+            U.n_irrep = 1
+        U.restricted = other.restricted and self.restricted
         C_inv = np.zeros((len(other), len(other)))
         if not other.restricted:
             C_inv_beta = np.zeros((len(other), len(other)))
@@ -258,7 +295,7 @@ class Molecular_Orbitals():
         for n in range(self.n_irrep):
             Ua[:,lim_irrep[n]:lim_irrep[n + 1]] = C_inv @ self[n]
         logger.debug('Ua:\n%s',Ua)
-        if not other.restricted or not self.restricted:
+        if not U.restricted:
             Ub = np.zeros((len(other), len(other)))
             for n in range(self.n_irrep):
                 Ub[:,lim_irrep[n]:lim_irrep[n + 1]] = (
@@ -268,8 +305,8 @@ class Molecular_Orbitals():
                     @ (self[n]
                        if self.restricted else
                        self[n + self.n_irrep]))
-        U = []
-        for n in range(n_irrep):
+        U._coefficients = []
+        for n in range(U.n_irrep):
             i_inf, i_sup = lim_irrep[n], lim_irrep[n + 1]
             if not np.allclose(Ua[:i_inf, i_inf:i_sup],
                                np.zeros((i_inf,i_sup - i_inf))):
@@ -278,9 +315,9 @@ class Molecular_Orbitals():
                                np.zeros((len(other) - i_sup, i_sup - i_inf))):
                 logger.warning('Not all zero:\n%s',
                                Ua[i_sup:, i_inf:i_sup])
-            U.append(Ua[i_inf:i_sup, i_inf:i_sup])
-        if not other.restricted or not self.restricted:
-            for n in range(n_irrep):
+            U._coefficients.append(Ua[i_inf:i_sup, i_inf:i_sup])
+        if not U.restricted:
+            for n in range(U.n_irrep):
                 i_inf, i_sup = lim_irrep[n], lim_irrep[n + 1]
                 if not np.allclose(Ub[:i_inf, i_inf:i_sup],
                                    np.zeros((i_inf,i_sup - i_inf))):
@@ -289,6 +326,7 @@ class Molecular_Orbitals():
                                    np.zeros((len(other) - i_sup, i_sup - i_inf))):
                     logger.warning('Not all zero:\n%s',
                                    Ub[i_sup:, i_inf:i_sup])
-                U.append(Ub[i_inf:i_sup,
-                            i_inf:i_sup])
+                U._coefficients.append(Ub[i_inf:i_sup,
+                                          i_inf:i_sup])
+        logger.debug('MO (self) in the basis of MO (other):\n%s', U)
         return U
