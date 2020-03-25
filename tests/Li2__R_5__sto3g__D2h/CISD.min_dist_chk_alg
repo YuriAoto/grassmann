@@ -8,13 +8,15 @@ Directory:
 
 Command:
 ../../dGr \
---use_general_algorithm \
+--ini_orb restricted_ini \
+--check_algorithms \
 CISD.out 
 
 From command line and environment:
 External wave function, |extWF>: CISD.out
 Orbital basis of |extWF>: CISD.out
 Hartree-Fock orbitals, |min E>: CISD.out
+Initial guess: Zipped numpy file restricted_ini_U.npz
 Using the optimiser based on the geometry of the Grassmannian. See:
    P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
 State: 
@@ -23,25 +25,22 @@ qpy job ID: not in qpy
 
 Starting at 25 Mar 2020 - 16:04
 
-Using algorithm for general wave function.
+Checking the two algorithms. No optimization will be performed.
 Using |WFref> (the reference of |extWF>) as |min E>.
 |<WFref|extWF>| =   0.95368773 ; D(WFref, extWF) =   0.30434279
-Using the reference determinant (identity) as initial guess for U.
 Dimension of orbital space: alpha/beta: [ 3 1 1 0 3 1 1 0 ]
 Number of alpha and beta electrons: 3 3
 Occupation of reference wave function: alpha/beta: [ 2 0 0 0 1 0 0 0 ]
+allclose for f: True
+allclose for C[0]: True
+allclose for X[0,0]: True
+allclose for X[0,4]: True
+allclose for C[4]: True
+allclose for X[4,0]: True
+allclose for X[4,4]: True
 
-Starting optimisation
-------------------------------
-it.    f            |eta|        |C|          time in iteration
-0      0.95368773   0.05793390   0.06069587   0:00:00.001684
-1      -0.95544293  0.00012925   0.00013584   0:00:00.001584
-2      0.95544294   0.00000000   0.00000000   0:00:00.001241
-------------------------------
-Iterations converged!
-WARNING: Unknown number of positive eigenvalue(s) of Hessian.
-|<min D|extWF>| =   0.95544294 ; D(min D, extWF) =   0.29851989
-|<min E|min D>| =   0.99833024 ; D(min E, min D) =   0.05778856
+Success! All comparisons are OK!!
+Detailed information of comparison is written to the log file.
 
 Ending at 25 Mar 2020 - 16:04
-Total time: 0:00:05.320080
+Total time: 0:00:01.742897
