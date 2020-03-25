@@ -111,8 +111,11 @@ def parse_cmd_line():
     cmd_args.command = ''
     for i, arg in enumerate(sys.argv):
         cmd_args.command +=  arg + ' ' + ('\\\n'
-                                          if (arg[0] != '-'
-                                              and i != len(sys.argv) - 1) else
+                                          if (i != len(sys.argv) - 1
+                                              and (arg[0] != '-'
+                                                   or arg == '--check_algorithms'
+                                                   or arg == '--use_general_algorithm'))
+                                          else
                                           '')
     __assert_molpro_output(cmd_args.molpro_output)
     if cmd_args.ini_orb is not None:

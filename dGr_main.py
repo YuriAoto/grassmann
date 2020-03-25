@@ -23,6 +23,7 @@ import dGr_optimiser
 import dGr_Absil as Absil
 
 logger = logging.getLogger(__name__)
+loglevel = logging.getLogger().getEffectiveLevel()
 
 def dGr_main(args, f_out):
     """The main function to calculate the distance to the Grassmannian.
@@ -104,8 +105,8 @@ def dGr_main(args, f_out):
             else:
                 toout('Using algorithm for general wave function.')
     logger.debug('External wave function:\n %r', ext_wf)
-    if logger.level <= logging.DEBUG and (args.use_general_algorithm
-                                          or args.check_algorithms):
+    if loglevel <= logging.DEBUG and (args.use_general_algorithm
+                                      or args.check_algorithms):
         x=[]
         for I in ext_wf.string_indices():
             x.append(str(I) + ': ' + str(ext_wf[I]))
@@ -216,10 +217,12 @@ def dGr_main(args, f_out):
     logger.info('Saving U matrices in a .npz file: These make the transformation\n'
                 'from the basis used to expand the external wave function\n'
                 '(|extWF>) to the one that makes |min D> the first determinant.')
-    np.savez(args.basename + '-min_dist_U', *U)
+    np.savez(args.basename + '.min_dist_U', *res.U)
     if args.HF_orb != args.WF_orb:
         print_ovlp_D('refWF', 'min D',
-                     ovlp_Slater_dets(res.U,
+                     ovlp_Slater_dets((2 * res.U)
+                                      if restricted else
+                                      res.U,
                                       ext_wf.ref_occ))
         for spirrep, Ui in enumerate(U):
             if Ui.shape[1] > 0:

@@ -33,8 +33,18 @@ if os.path.exists(output_name) or os.path.exists(logfile_name):
     while (os.path.exists(output_name + i_backup)
            or os.path.exists(logfile_name + i_backup)):
         i_backup = '_' + str(int(i_backup[1:]) + 1)
-    os.rename(output_name, output_name + i_backup)
-    os.rename(logfile_name, logfile_name + i_backup)
+    try:
+        os.rename(output_name, output_name + i_backup)
+    except FileNotFoundError:
+        pass
+    try:
+        os.rename(output_name + '_U.npz', output_name + '_U.npz' + i_backup)
+    except FileNotFoundError:
+        pass
+    try:
+        os.rename(logfile_name, logfile_name + i_backup)
+    except FileNotFoundError:
+        pass
 
 log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
               + '\n%(message)s\n')
@@ -53,6 +63,7 @@ class myLogFilter():
             rec.funcName = 'Finishing time management'
         if cmd_line_args.logfilter is not None:
             return not cmd_line_args.logfilter.search(rec.funcName) is None
+        # Uncomment this to check for possible records to filter
         # print()
         # print(rec)
         # print(rec.__dict__)

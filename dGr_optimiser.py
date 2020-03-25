@@ -34,6 +34,7 @@ import dGr_Absil as Absil
 from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
+loglevel = logging.getLogger().getEffectiveLevel()
 
 np.set_printoptions(linewidth=150)
 
@@ -152,7 +153,7 @@ def optimise_distance_to_FCI(fci_wf,
     for i_iteration in range(max_iter):
         logger.info('Starting iteration %d',
                     i_iteration)
-        if logger.level <= logging.DEBUG:
+        if loglevel <= logging.DEBUG:
             logger.debug('Wave function:\n%s', cur_wf)
         Jac, Hess = cur_wf.construct_Jac_Hess()
         logger.info('Hessian and Jacobian are built\n')
@@ -460,7 +461,7 @@ def optimise_distance_to_CI(ci_wf,
     for i_iteration in range(max_iter):
         with logtime('Generating linear system') as T_gen_lin_system:
             f, X, C = Absil.generate_lin_system(ci_wf, U, slice_XC)
-        if logger.level <= logging.DEBUG:
+        if loglevel <= logging.DEBUG:
             np.save('X_matrix-{}.npy'.format(i_iteration), X)
             np.save('C_matrix-{}.npy'.format(i_iteration), C)
         logger.debug('f: %.5f', f)
@@ -502,7 +503,7 @@ def optimise_distance_to_CI(ci_wf,
                     svd_res.append((np.zeros(eta[-1].shape),
                                     np.zeros((eta[-1].shape[1],)),
                                     np.identity(eta[-1].shape[1])))
-                    logger.warning(
+                    logger.info(
                         'Skipping svd for spirrep block %d. Norm of eta[%d] = %.8f',
                         i, i, norm_eta_i)
                 else:
@@ -511,7 +512,7 @@ def optimise_distance_to_CI(ci_wf,
         if check_equations:
             with logtime('Cheking equations') as T_check_eq:
                 Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps = 0.0001)
-        if logger.level <= logging.DEBUG:
+        if loglevel <= logging.DEBUG:
             for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug('SVD results, Usvd_a:\n%s',svd_res[i][0])
                 logger.debug('SVD results, SGMsvd_a:\n%s', svd_res[i][1])
@@ -519,7 +520,7 @@ def optimise_distance_to_CI(ci_wf,
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             U[i]  = np.matmul(U[i], svd_res[i][2].T * np.cos(svd_res[i][1]))
             U[i] += svd_res[i][0] * np.sin(svd_res[i][1])
-        if logger.level <= logging.DEBUG:
+        if loglevel <= logging.DEBUG:
             for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug('new U for %s and irrep %s:\n%s',
                              'alpha' if i < ci_wf.n_irrep else 'beta',
@@ -530,7 +531,7 @@ def optimise_distance_to_CI(ci_wf,
                 norm_Ui = linalg.norm(Ui)
                 if norm_Ui > zero_skip_linalg:
                     U[i] = linalg.orth(Ui)
-        if logger.level <= logging.DEBUG:
+        if loglevel <= logging.DEBUG:
             for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug(
                     'new U for %s and irrep %s, after orthogonalisation:\n%s',
