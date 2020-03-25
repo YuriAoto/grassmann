@@ -1,13 +1,15 @@
 dGr - optimise the distance in the Grassmannian
-Yuri Aoto - 2018, 2019
+Yuri Aoto - 2018, 2019, 2020
 
-Current git commit: 2aa059ca687f5285c7df78a9478091e3c6ffd720
+Current git commit: 33bb0547f37ac5d5d0d760a6441f0fa68ca33435
 
 Directory:
 /home/yuriaoto/Documents/Codes/min_dist_Gr/tests/Li2__R_5__ccpVDZ__D2h
 
 Command:
-../../dGr --loglevel 0 CISD.out
+../../dGr \
+--use_general_algorithm \
+CISD.out 
 
 From command line and environment:
 External wave function, |extWF>: CISD.out
@@ -16,29 +18,30 @@ Hartree-Fock orbitals, |min E>: CISD.out
 Using the optimiser based on the geometry of the Grassmannian. See:
    P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
 State: 
-Log level: NOTSET
+Log level: WARNING
 qpy job ID: not in qpy
 
-Starting at 22 Oct 2019 - 12:17
+Starting at 25 Mar 2020 - 16:09
 
-Using |WFref> (the reference of |extWF>) as |min E>:
+Using algorithm for general wave function.
+Using |WFref> (the reference of |extWF>) as |min E>.
 |<WFref|extWF>| =   0.95098835 ; D(WFref, extWF) =   0.31308673
 Using the reference determinant (identity) as initial guess for U.
 Dimension of orbital space: alpha/beta: [ 7 3 3 1 7 3 3 1 ]
 Number of alpha and beta electrons: 3 3
+Occupation of reference wave function: alpha/beta: [ 2 0 0 0 1 0 0 0 ]
 
 Starting optimisation
 ------------------------------
 it.    f            |eta|        |C|          time in iteration
-0      0.95098835   ---          ---          ---
-1      0.95130296   0.02485271   0.02536760   0:00:39.909880
-2      -0.95130296  0.00001028   0.00001044   0:00:46.569518
-3      -0.95130296  0.00000000   0.00000000   0:00:45.505627
+0      0.95098835   0.02485438   0.02536760   0:00:00.002186
+1      0.95130298   0.00001028   0.00001045   0:00:00.002013
+2      -0.95130298  0.00000000   0.00000000   0:00:00.001578
 ------------------------------
 Iterations converged!
 WARNING: Unknown number of positive eigenvalue(s) of Hessian.
-|<min D|extWF>| =   0.95130296 ; D(min D, extWF) =   0.31208026
-|<min E|min D>| =   0.99969146 ; D(min E, min D) =   0.02484116
+|<min D|extWF>| =   0.95130298 ; D(min D, extWF) =   0.31208019
+|<min E|min D>| =   0.99969142 ; D(min E, min D) =   0.02484283
 
-Ending at 22 Oct 2019 - 12:19
-Total time: 0:02:12.499414
+Ending at 25 Mar 2020 - 16:11
+Total time: 0:02:04.042739

@@ -1,0 +1,46 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: 33bb0547f37ac5d5d0d760a6441f0fa68ca33435
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/Li2__R_5__ccpVDZ__C2
+
+Command:
+../../dGr \
+--ini_orb restricted_ini \
+--check_algorithms \
+CISD_FC.out 
+
+From command line and environment:
+External wave function, |extWF>: CISD_FC.out
+Orbital basis of |extWF>: CISD_FC.out
+Hartree-Fock orbitals, |min E>: CISD_FC.out
+Initial guess: Zipped numpy file restricted_ini_U.npz
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: WARNING
+qpy job ID: not in qpy
+
+Starting at 25 Mar 2020 - 17:15
+
+Checking the two algorithms. No optimization will be performed.
+Using |WFref> (the reference of |extWF>) as |min E>.
+|<WFref|extWF>| =   0.95058985 ; D(WFref, extWF) =   0.31435695
+Dimension of orbital space: alpha/beta: [ 14 14 ]
+Number of alpha and beta electrons: 3 3
+Occupation of reference wave function: alpha/beta: [ 2 1 ]
+allclose for f: True
+allclose for C[0]: True
+allclose for X[0,0]: True
+allclose for X[0,1]: True
+allclose for C[1]: True
+allclose for X[1,0]: True
+allclose for X[1,1]: True
+
+Success! All comparisons are OK!!
+Detailed information of comparison is written to the log file.
+
+Ending at 25 Mar 2020 - 17:15
+Total time: 0:00:05.961011
