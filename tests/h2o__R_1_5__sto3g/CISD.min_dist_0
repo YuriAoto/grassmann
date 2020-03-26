@@ -8,7 +8,6 @@ Directory:
 
 Command:
 ../../dGr \
---use_general_algorithm \
 CISD.out 
 
 From command line and environment:
@@ -23,7 +22,7 @@ qpy job ID: not in qpy
 
 Starting at 26 Mar 2020 - 09:08
 
-Using algorithm for general wave function.
+Using algorithm specific for CISD wave function.
 Using |WFref> (the reference of |extWF>) as |min E>.
 |<WFref|extWF>| =   0.91838427 ; D(WFref, extWF) =   0.40401912
 Using the reference determinant (identity) as initial guess for U.
@@ -34,14 +33,14 @@ Occupation of reference wave function: alpha/beta: [ 3 1 1 0 ]
 Starting optimisation
 ------------------------------
 it.    f            |eta|        |C|          time in iteration
-0      0.91838427   0.05122695   0.05147170   0:00:00.003311
-1      -0.91969316  0.00009589   0.00009419   0:00:00.003096
-2      -0.91969316  0.00000000   0.00000000   0:00:00.002437
+0      0.91838427   0.03622292   0.03639599   0:00:00.001923
+1      0.91969316   0.00006780   0.00006660   0:00:00.001801
+2      0.91969316   0.00000000   0.00000000   0:00:00.001475
 ------------------------------
 Iterations converged!
 WARNING: Unknown number of positive eigenvalue(s) of Hessian.
 |<min D|extWF>| =   0.91969316 ; D(min D, extWF) =   0.40076636
 |<min E|min D>| =   0.99869337 ; D(min E, min D) =   0.05112013
 
-Ending at 26 Mar 2020 - 09:09
-Total time: 0:00:15.076535
+Ending at 26 Mar 2020 - 09:08
+Total time: 0:00:00.131569

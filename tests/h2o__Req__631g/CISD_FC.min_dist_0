@@ -4,44 +4,42 @@ Yuri Aoto - 2018, 2019, 2020
 Current git commit: ee23eca0c83f6afe46735b32fb5fb03e97372df8
 
 Directory:
-/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/h2o__R_1_5__sto3g
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/h2o__Req__631g
 
 Command:
 ../../dGr \
---use_general_algorithm \
-CISD.out 
+CISD_FC.out 
 
 From command line and environment:
-External wave function, |extWF>: CISD.out
-Orbital basis of |extWF>: CISD.out
-Hartree-Fock orbitals, |min E>: CISD.out
+External wave function, |extWF>: CISD_FC.out
+Orbital basis of |extWF>: CISD_FC.out
+Hartree-Fock orbitals, |min E>: CISD_FC.out
 Using the optimiser based on the geometry of the Grassmannian. See:
    P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
 State: 
 Log level: WARNING
 qpy job ID: not in qpy
 
-Starting at 26 Mar 2020 - 09:08
+Starting at 26 Mar 2020 - 08:56
 
-Using algorithm for general wave function.
+Using algorithm specific for CISD wave function.
 Using |WFref> (the reference of |extWF>) as |min E>.
-|<WFref|extWF>| =   0.91838427 ; D(WFref, extWF) =   0.40401912
+|<WFref|extWF>| =   0.98002307 ; D(WFref, extWF) =   0.19988460
 Using the reference determinant (identity) as initial guess for U.
-Dimension of orbital space: alpha/beta: [ 4 1 2 0 ]
+Dimension of orbital space: alpha/beta: [ 7 2 4 0 ]
 Number of alpha and beta electrons: 5 5
 Occupation of reference wave function: alpha/beta: [ 3 1 1 0 ]
 
 Starting optimisation
 ------------------------------
 it.    f            |eta|        |C|          time in iteration
-0      0.91838427   0.05122695   0.05147170   0:00:00.003311
-1      -0.91969316  0.00009589   0.00009419   0:00:00.003096
-2      -0.91969316  0.00000000   0.00000000   0:00:00.002437
+0      0.98002307   0.01604903   0.01590030   0:00:00.002345
+1      0.98027813   0.00000724   0.00000718   0:00:00.002100
 ------------------------------
 Iterations converged!
 WARNING: Unknown number of positive eigenvalue(s) of Hessian.
-|<min D|extWF>| =   0.91969316 ; D(min D, extWF) =   0.40076636
-|<min E|min D>| =   0.99869337 ; D(min E, min D) =   0.05112013
+|<min D|extWF>| =   0.98027813 ; D(min D, extWF) =   0.19860446
+|<min E|min D>| =   0.99974269 ; D(min E, min D) =   0.02268524
 
-Ending at 26 Mar 2020 - 09:09
-Total time: 0:00:15.076535
+Ending at 26 Mar 2020 - 08:56
+Total time: 0:00:00.157614
