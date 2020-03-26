@@ -1,0 +1,45 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: a15df6e047a1c3712c1989dfd009f5e303530c5e
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/tests/He8_cage_1.5__D2h_cc-pVDZ
+
+Command:
+../../dGr \
+CISD.out 
+
+From command line and environment:
+External wave function, |extWF>: CISD.out
+Orbital basis of |extWF>: CISD.out
+Hartree-Fock orbitals, |min E>: CISD.out
+Using the optimiser based on the geometry of the Grassmannian. See:
+   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.
+State: 
+Log level: WARNING
+qpy job ID: not in qpy
+
+Starting at 26 Mar 2020 - 15:01
+
+Using algorithm specific for CISD wave function.
+Using |WFref> (the reference of |extWF>) as |min E>.
+|<WFref|extWF>| =   0.97454232 ; D(WFref, extWF) =   0.22564431
+Using the reference determinant (identity) as initial guess for U.
+Dimension of orbital space: alpha/beta: [ 5 5 5 5 5 5 5 5 ]
+Number of alpha and beta electrons: 8 8
+Occupation of reference wave function: alpha/beta: [ 1 1 1 1 1 1 1 1 ]
+
+Starting optimisation
+------------------------------
+it.    f            |eta|        |C|          time in iteration
+0      0.97454232   0.00171191   0.00176893   0:00:00.002147
+1      0.97454535   0.00000001   0.00000001   0:00:00.001578
+------------------------------
+Iterations converged!
+WARNING: Unknown number of positive eigenvalue(s) of Hessian.
+|<min D|extWF>| =   0.97454535 ; D(min D, extWF) =   0.22563089
+|<min E|min D>| =   0.99999707 ; D(min E, min D) =   0.00242101
+
+Ending at 26 Mar 2020 - 15:01
+Total time: 0:00:00.330169
