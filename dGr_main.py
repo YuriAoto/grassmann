@@ -15,6 +15,7 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import dist_from_ovlp, ovlp_Slater_dets, logtime
+from dGr_exceptions import *
 import dGr_orbitals as orb
 import dGr_FCI_Molpro as FCI
 import dGr_WF_int_norm as IntN
@@ -114,12 +115,25 @@ def dGr_main(args, f_out):
     if args.HF_orb != args.WF_orb:
         toout('Using as |min E> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
-        HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
-            args.HF_orb).in_the_basis_of(
-                orb.Molecular_Orbitals.from_file(args.WF_orb))
-        print_ovlp_D('min E', 'WFref',
-                     ovlp_Slater_dets(HF_in_basis_of_refWF,
-                                      ext_wf.ref_occ))
+        try:
+            HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
+                args.HF_orb).in_the_basis_of(
+                    orb.Molecular_Orbitals.from_file(args.WF_orb))
+        except dGrValueError as e:
+            if 'keepspherical' in str(e):
+                logger.error(str(e))
+                toout('ERROR:\n   '
+                      + str(e).replace(':', ':\n  ') + '\n'
+                      + '   Ignoring Hartree-Fock orbitals in ' + args.HF_orb)
+                args.HF_orb = args.WF_orb
+            else:
+                raise e
+        except Exception as e:
+            raise e
+        else:
+            print_ovlp_D('min E', 'WFref',
+                         ovlp_Slater_dets(HF_in_basis_of_refWF,
+                                          ext_wf.ref_occ))
     else:
         toout('Using |WFref> (the reference of |extWF>) as |min E>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)

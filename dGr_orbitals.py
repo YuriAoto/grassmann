@@ -221,8 +221,19 @@ class Molecular_Orbitals():
                 continue
             for orb in orb_set:
                 spirrep = spin_shift + int(orb.attrib['symmetryID']) - 1
-                new_orbitals._coefficients[spirrep][:,cur_orb[spirrep]] = np.array(
-                    list(map(float,orb.text.split())))
+                try:
+                    new_orbitals._coefficients[spirrep][:,cur_orb[spirrep]] = np.array(
+                        list(map(float,orb.text.split())))
+                except ValueError as e:
+                    if 'could not broadcast input array from shape' in str(e):
+                        raise dGrValueError('Lenght error in file '
+                                            + xml_file
+                                            + ': did you use "keepspherical"'
+                                            + ' in Molpro\'s "put" command?')
+                    else:
+                        raise e
+                except Exception as e:
+                    raise e
                 cur_orb[spirrep] += 1
         return new_orbitals
     
