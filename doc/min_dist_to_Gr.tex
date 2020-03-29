@@ -23,36 +23,51 @@
 
 \section{Notation}
 
-
 \begin{center}
-\begin{tabular}{ll}
-  \hline
-  \Hamilt & The electronic Hamiltonian\\
-  $n_\alpha$ & The number of alpha electrons\\
-  $n_\beta$ & The number of beta electrons\\
-  $n$ & The total number of electrons\\
-          & $n = n_\alpha + n_\beta$\\
-  $\mathcal{V}$ & The space of spatial one-electron wave functions\\
-          &(The full space of one-electron wave functions is\\
-          &assumed to be a direct sum of two such spaces,\\
-          &the first associated to $\alpha$-spin and the second\\
-          &to $\beta$-spin electrons. A subscript might be used,\\
-          &but the space is the same: $\mathcal{V_\alpha} = \mathcal{V_\beta} = \mathcal{V}$)\\
-  $N$ & The dimension of $\mathcal{V}$: $N = \text{dim }\mathcal{V}$\\
-  $i$,$j$,$k$,$l$&orbital indices for occupied orbitals\\
-          & (the context should make clear the reference determinant)\\
-  $a$,$b$,$c$,$d$&orbital indices for virtual orbitals\\
-          & (the context should make clear the reference determinant)\\
-  $\sigma(p)$ &spin ($\alpha$ or $\beta$) of orbital with index $p$\\
-  \HilbSp & The complete Hilbert space of quantum states\\
-          &(within finite basis set approximation)\\
-          & $\HilbSp = \Lambda^n (\mathcal{V}_\alpha \oplus \mathcal{V}_\beta)$\\
-  $\Psi$ & General Elements of $\HilbSp$\\
-  $\Phi$ & Elements of $Gr(n, 2K) \in \HilbSp$, that is, they can be expressed\\
-          & as a Slater determinant.\\
-  $\phi$, $\psi$ & Elements of $\mathcal{V}$\\
-  \hline
-\end{tabular}
+  \begin{tabular}{ll}
+    \hline
+    \Hamilt             & The electronic Hamiltonian                                               \\
+    $g$                 & Number of irreducible representations (short: irrep) in the point group  \\
+    $\Gamma$            & An irreducible representation, or an index that runs over all irreps     \\
+    $\sigma$            & spin ($\alpha$ or $\beta$)                                               \\
+    $n_\sigma^\Gamma$   & The number of electrons with spin $\sigma$ and irrep $\Gamma$            \\
+                        & (This might refer to a particular configuration, or to the reference     \\
+                        & determinant. The context should make it clear.)                          \\
+    $n_\sigma$          & The number of electrons with spin $\sigma$                               \\
+                        & $n_\sigma = \sum_{\Gamma=1}^g n_\sigma^\Gamma$                           \\
+    $n$                 & The total number of electrons                                            \\
+                        & $n = n_\alpha + n_\beta$                                                 \\
+    $\orbSp{}$          & The space of spatial orbitals (one-electron wave functions)              \\
+                        & (The full space of one-electron wave functions is assumed to be a direct \\
+                        & sum of two such spaces, the first associated to $\alpha$-spin and the    \\
+                        & second to $\beta$-spin electrons. A subscript might be used, but the     \\
+                        & space is the same: $\mathcal{V_\alpha} = \mathcal{V_\beta} = \orbSp{}$)  \\
+    $\orbSp{}^{\Gamma}$ & The space of orbitals of irreducible representation (short: irrep)
+                          $\Gamma$                                                                 \\
+                        & (\orbSp{} is the direct sum of all such $\orbSp{}^{\Gamma}$:
+                          $\orbSp{} = \bigoplus_{\Gamma = 1}^g \orbSp{}^\Gamma$)                   \\
+    $I, J$              & Multi-indices, usually of size $n$, $n_\sigma$, or $n_\sigma^\Gamma$,
+                          depending on the context.                                                \\
+    $K$                 & The dimension of $\orbSp{}$: $K = \text{dim }\orbSp{}$                   \\
+    $i$,$j$,$k$,$l$     & indices for occupied and orbitals, that are correlated in the wave       
+                          function                                                                 \\
+                        & (the context should make clear the reference determinant and which wave  \\
+                        & function they refer to)                                                  \\
+    $a$,$b$,$c$,$d$     & indices for virtual orbitals                                             \\
+                        & (the context should make clear the reference determinant)                \\
+    $p$,$r$             & indices running over all $K$ orbitals                                    \\
+    $q$,$s$             & indices running over all $n$ occupied orbitals (correlated and not
+                          correlated)                                                              \\
+    $\sigma(p)$         & spin of orbital $p$                                                      \\
+    \HilbSp             & The complete Hilbert space of quantum states                             \\
+                        & (within finite basis set approximation)                                  \\
+                        & $\HilbSp = \bigwedge^n (\orbSp{}_\alpha \oplus \orbSp{}_\beta)$          \\
+    $\Psi$              & General elements of $\HilbSp$                                            \\
+    $\Phi$              & Elements of $Gr(n, 2K) \in \HilbSp$, that is, they can be expressed      \\
+                        & as a Slater determinant.                                                 \\
+    $\phi$, $\psi$      & Elements of $\orbSp{}$ (orbitals)                                        \\
+    \hline
+  \end{tabular}
 \end{center}
 
 \newpage
@@ -78,14 +93,20 @@ Recall that
   D(\Psi_1, \Psi_2) = \sqrt{2}\sqrt{1 - |\bracket{\Psi_1}{\Psi_2}|}
 \end{equation}
 is a metric in $\projective \HilbSp$.\cite{}
-Also, $Gr$ is the set of all elements of $\HilbSp$ that can be written as a single Slater determinant (a decomposable element) for some orthonormal basis of $\mathcal{V}$.
+Also, $Gr$ is the set of all elements of $\HilbSp$ that can be written as a single Slater determinant (a decomposable element) for some orthonormal basis of $\orbSp{}$.
 For this reason, such $\ket{\Phi}$ minimises the distance $D$ to the wave function $\ket{\Psi_\text{ext}}$ and it will be denoted $\ket{\Phi_\text{minD}}$.
 The subscript ``ext'' refers to \emph{external}, because we assume that $\ket{\Psi_\text{ext}}$ is external to the Grassmannian.
 
-We have developed and implemented two algorithms to calculate $\ket{\Phi_\text{minD}}$.
+
+We have developed and implemented three algorithms to calculate $\ket{\Phi_\text{minD}}$.
 The first uses the whole structure of a Full-CI wave function (that is, the full Hilbert space), because the external wave function has to be transformed to the MO basis of $\ket{\Phi_\text{minD}}$.
 Hence, even if we start with a CISD wave function for example, when we update $\ket{\Phi_\text{minD}}$ the orbitals change, and the external wave function is no longer just a CISD over that reference.
-The second uses the Newton method adapted to the Grassmannian, as proposed by Absil \etal{}\cite{}
+The second and third use the Newton method adapted to the Grassmannian, as proposed by Absil \etal{} \cite{}.
+The second is a general implementation that works for, in principle, any wave function.
+The third is specific for closed shell restricted CISD wave functions.
+
+For these last two cases spin adaption is implemented.
+However, for these last two cases we have algorithms that find critical points, but do not test for tru maximum
 
 In any case, this document is intended to give the full formulas that are implemented in the present code.
 The detailed derivation of these expressions are not given here.
@@ -94,7 +115,7 @@ The detailed derivation of these expressions are not given here.
 \newpage
 \section{\textsf{\LARGE Algorithm 1}\\Using orbital rotations and the structure of a FCI wave function}
 
-To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely, a basis of $\mathcal{V}$) such that 
+To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely, a basis of $\orbSp{}$) such that 
 \begin{equation}
   \ket{\Psi_\text{FCI}} = C_0 \ket{\Phi_\text{minD}} +
   \sum_{
@@ -103,7 +124,7 @@ To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely,
       }
     c_I \ket{\Phi_I}\,,
 \end{equation}
-and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\bracket{\Psi_\text{FCI}}{\Phi}|$.
+and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\bracket{\Psi_\text{FCI}}{\Phi_\text{minD}}|$.
 
 \subsection{Parametrisation by orbital rotations}
 We parametrise $Gr$ by the orbital rotations as\cite{}
@@ -112,26 +133,26 @@ We parametrise $Gr$ by the orbital rotations as\cite{}
 \end{equation}
 where
 \begin{eqnarray}
-  \hat{K} &=& \sum_{i,a} K_i^a(a_a^\dagger a_i - a_i^\dagger a_a)\\
-          &=& \sum_{i,a} K_i^a(a_i^a - a_a^i)\,
+  \hat{K} &=& \sum_{q,a} K_q^a(a_a^\dagger a_q - a_i^\dagger a_q)\\
+          &=& \sum_{q,a} K_q^a(a_q^a - a_a^q)\,
 \end{eqnarray}
 This parametrisation comes from the most general 
 \begin{equation}
-  \hat{K} = \sum_{p,q} K_q^pa_p^\dagger a_q\,,
+  \hat{K} = \sum_{p,r} K_r^pa_p^\dagger a_r\,,
 \end{equation}
-but using that $K_q^p$ is anti-symmetric (so that $e^{-\hat{K}}$ is orthogonal), and excluding rotations within the occupied or virtual spaces of $\ket{\Phi_0}$, that are redundant (do not alter the Slater determinant with $\ket{\Phi_0}$).
+but using that $K_r^p$ is anti-symmetric (so that $e^{-\hat{K}}$ is orthogonal), and excluding rotations within the occupied or virtual spaces of $\ket{\Phi_0}$, that are redundant (do not alter the Slater determinant with $\ket{\Phi_0}$).
 For $\hat{K} = 0$ it is clear that $\ket{\Phi} = \ket{\Phi_0}$.
 
 Let
 \begin{equation}
-  f(K_i^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
+  f(K_q^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
 \end{equation}
-where the argument $K_i^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
-Note that rotations that mix $\alpha$ and $\beta$ orbitals.
+where the argument $K_q^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
+Note that rotations that mix $\alpha$ and $\beta$ orbitals are not considered.
 We will also assume that $\bracket{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remains true for all steps
 of our optimisation.
-If $\bracket{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function and
-if $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
+If $\bracket{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function.
+If $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
 
 \subsection{Jacobian and Hessian}
 
@@ -140,23 +161,23 @@ The expressions at $\hat{K} = 0$ are given below.
 For the derivation of the expressions, see that hand notes.
 
 \begin{equation}
-  \frac{\partial f(\hat{K} = 0)}{\partial K_i^a} = (-1)^{n_{\sigma(i)} - i + 1} C_i^a
+  \frac{\partial f(\hat{K} = 0)}{\partial K_q^a} = (-1)^{n_{\sigma(q)} - q + 1} C_q^a
 \end{equation}
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_i^a \partial K_j^b} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^a \partial K_s^b} =
   \left\{
     \begin{array}{lcr}
-      -C_0 & \quad\quad & (i = j, a = b)\\
-      0 & \quad\quad & (i \ne j, a = b)\\
-      0 & \quad\quad & (i = j, a \ne b)\\
-      (-1)^{n_{\sigma(i)}+n_{\sigma(j)}-i-j}C_{ij}^{ab} & \quad\quad & (\sigma(i) \ne \sigma(j))\\
-      (-1)^{i+j+1}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a<b)\\
-      (-1)^{i+j}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a>b)\\
+      -C_0 & \quad\quad & (q = s, a = b)\\
+      0   &  \quad\quad & (q \ne s, a = b)\\
+      0   &  \quad\quad & (q = s, a \ne b)\\
+      (-1)^{n_{\sigma(q)}+n_{\sigma(s)}-q-s}C_{qs}^{ab} & \quad\quad & (\sigma(q) \ne \sigma(s))\\
+      (-1)^{q+s+1}C_{qs}^{ab} & \quad\quad & (\sigma(q) = \sigma(s), q<s, a<b)\\
+      (-1)^{q+s}C_{qs}^{ab} & \quad\quad & (\sigma(q) = \sigma(s), q<s, a>b)\\
     \end{array}
   \right.
 \end{equation}
-In these equations, $C_i^a$ and $C_{ij}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
+In these equations, $C_q^a$ and $C_{qs}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
 The canonical order of the orbitals is assumed to be ``first all $\alpha$, then all $\beta$''.
 
 \subsection{Transformation of the wave function}
@@ -164,7 +185,7 @@ In the optimisation process, $\ket{\Phi}$ varies and we would need the Jacobian 
 The expressions are much more complicated and we avoid this by making a full transformation of $\ket{\Psi_\text{FCI}}$ to the new orbital basis.
 Let $U = e^{-\hat{K}}$ be the matrix that transform the orbital basis:
 \begin{equation}
-  \phi_p = \sum_q \phi'_q U_{qp}\,.
+  \phi_p = \sum_r \phi'_r U_{rp}\,.
 \end{equation}
 Given the coefficients $C_I$ of the expansion in the first basis, we want to know the coefficients $C'_I$ such that
 \begin{equation}
@@ -180,8 +201,8 @@ Such transformation is the most time consuming step.
 
 
 \subsection{Newton-Raphson step}
-Starting from a orbital basis $\{\phi_p\}$ such that the first determinant (that is, with the first $n_\alpha$ $\alpha$ orbitals and first $n_\beta$ $\beta$ occupied) is $\ket{\Phi_0}$, we calculate the Jacobian $\mathbf{J}$ and the Hessian $\mathbf{H}$ as shown above.
-The Newton step (in the space of the $K_i^a$ parameters) is
+Starting from an orbital basis $\{\phi_p\}$ such that the first determinant (that is, with the first $n_\alpha$ $\alpha$ orbitals and first $n_\beta$ $\beta$ occupied) is $\ket{\Phi_0}$, we calculate the Jacobian $\mathbf{J}$ and the Hessian $\mathbf{H}$ as shown above.
+The Newton step (in the space of the $K_q^a$ parameters) is
 \begin{equation}
   \mathbf{z} = -\mathbf{H}^{-1} \mathbf{J}\,.
 \end{equation}
@@ -200,9 +221,11 @@ This method is based on the work of Absil \etal{}, where they propose a Newton m
 The algorithm is actually on the Stiefel manifold, that is, the manifold of full-rank $K \times n$ matrices.
 These matrices contain the coefficients of the orbitals in a fixed basis, and thus form a redundant parametrisation for the Grassmannian, in the sense that there are several matrices to represent the same point in $Gr$, that can be transformed among themselves with multiplication by invertible $n \times n$ matrices (elements of the general linear group of degree $n$, $GL_n$).
 
+This algorithm has been submitted to the CNMAC 2020, in the category of ``complete works''. [ADD REFERENCE IF ACCEPTED]
+
 \subsection{General formulation from Absil}
 
-Thus, given $\ket{\Phi_0} \in Gr$, let $Y$ be the matrix whose entries are the coefficients of $\ket{\Phi_0}$ in some basis of $\mathcal{V}$.
+Thus, given $\ket{\Phi_0} \in Gr$, let $Y$ be the matrix whose entries are the coefficients of $\ket{\Phi_0}$ in some basis of $\orbSp{}$.
 This is an element of the Stiefel manifild $ST(n,K)$.
 Let $f : Gr \to \real$ be any function we might want to optimise.
 This is defined on the Grassmannian.
@@ -215,7 +238,7 @@ The version of this function on the Stiefel manifold is defined as:
 where $\text{span}(Y)$ is the vector space spanned by the columns of $Y$ (and thus in $Gr$).
 The gradient of $f_\lozenge$ at $Y$ is the matrix $K \times n$ whose entries are given by:
 \begin{equation}
-(\text{grad} f_\lozenge(Y))_{ij} = \frac{\partial f_\lozenge(Y)}{\partial Y_{ij}}(Y)\,,
+(\text{grad} f_\lozenge(Y))^p_q = \frac{\partial f_\lozenge(Y)}{\partial Y^p_q}(Y)\,,
 \end{equation}
 and the directional derivative of a function any smooth $F$, at $x$ in the direction of $y$:
 \begin{equation}
@@ -256,33 +279,33 @@ This means that, for all determinants of the expansion \ref{eq:ext_wf}, the foll
   n_\alpha - n_\beta = 2 Ms
 \end{equation}
 \begin{equation}\label{eq:irrep_condition}
-  \bigotimes_i \Gamma_i = \Gamma
+  \bigotimes_q \Gamma(\phi_{I_q}) = \Gamma(\ket{\Psi_\text{ext}}) = \Gamma(\ket{\Phi})
 \end{equation}
 That is, all determinants have the same $Ms$ (that is half of the difference between alpha and beta orbitals) and belong to the same irrep $\Gamma$ (that is the direct product of the irrep of all occupied orbitals).
-We are thus assuming that we are using a basis for $\mathcal{V}$ for which all elements belong to an irrep.
+We are thus assuming that we are using a basis for $\orbSp{}$ for which all elements belong to an irrep.
 Let us further assume that the orbitals are ordered with all alpha coming first, followed by all beta orbitals, and they are ordered by irrep in each of these parts.
 Under these conditions, the $f_\lozenge$ is calculated as follows:
 
 \begin{eqnarray}
   f_\lozenge(Y)
   &=& \frac{1}{\sqrt{\text{det} \left( Y^T Y \right)}}
-      \sum_{I} c_I \text{det} \left( Y\big|_I \right)\\
+      \sum_{I} c_I \, \text{det} \left( Y\big|_I \right)\\
   &=& \frac{1}{\sqrt{
-      \text{det} \left( (Y_\alpha)^T Y_\alpha \right)
-      \text{det} \left( (Y_\beta)^T Y_\beta \right)
+      \text{det} \Big( (Y_\alpha)^T Y_\alpha \Big)
+      \text{det} \Big( (Y_\beta)^T Y_\beta \Big)
       }}
-      \sum_{I} c_I
+      \sum_{I} c_I \,
       \text{det} \left( Y_\alpha\big|_{I_\alpha} \right)
       \text{det} \left( Y_\beta\big|_{I_\beta} \right)\\\label{eq:f_diam_spin_irrep}
   &=& \frac{1}{\sqrt{
-      \prod_{i=0}^{g-1}
-      \text{det} \left( (Y_\alpha^{\Gamma_i})^T Y_\alpha^{\Gamma_i} \right)
-      \text{det} \left( (Y_\beta^{\Gamma_i})^T Y_\beta^{\Gamma_i} \right)
+      \prod_\Gamma
+      \text{det} \Big( (Y_\alpha^\Gamma)^T Y_\alpha^\Gamma \Big)
+      \text{det} \Big( (Y_\beta^\Gamma)^T Y_\beta^\Gamma \Big)
       }}
-      \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \prod_{i=0}^{g-1}
-  \text{det} \left( Y_\alpha^{\Gamma_i}\big|_{I_\alpha^{\Gamma_i}} \right)
-  \text{det} \left( Y_\beta^{\Gamma_i}\big|_{I_\beta^{\Gamma_i}} \right)
+      \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I \,
+  \prod_\Gamma
+  \text{det} \Big( Y_\alpha^\Gamma\big|_{I_\alpha^\Gamma} \Big)
+  \text{det} \Big( Y_\beta^\Gamma\big|_{I_\beta^\Gamma} \Big)
 \end{eqnarray}
 The above expressions seem very complicated, so let us look at then carefully.
 
@@ -296,29 +319,29 @@ For example, if
 \begin{equation}
   Y =
   \begin{pmatrix}
-    Y_{00} & Y_{01} & Y_{02}\\
-    Y_{10} & Y_{11} & Y_{12}\\
-    Y_{20} & Y_{21} & Y_{22}\\
-    Y_{30} & Y_{31} & Y_{32}\\
-    Y_{40} & Y_{41} & Y_{42}\\
+    Y^1_1 & Y^1_2 & Y^1_3\\
+    Y^2_1 & Y^2_2 & Y^2_3\\
+    Y^3_1 & Y^3_2 & Y^3_3\\
+    Y^4_1 & Y^4_2 & Y^4_3\\
+    Y^5_1 & Y^5_2 & Y^5_3\\
   \end{pmatrix}\,,
 \end{equation}
-and $I=\{0, 1, 2\}$, then
+and $I=\{1, 2, 3\}$, then
 \begin{equation}
   Y\big|_I =
   \begin{pmatrix}
-    Y_{00} & Y_{01} & Y_{02}\\
-    Y_{10} & Y_{11} & Y_{12}\\
-    Y_{20} & Y_{21} & Y_{22}\\
+    Y^1_1 & Y^1_2 & Y^1_3\\
+    Y^2_1 & Y^2_2 & Y^2_3\\
+    Y^3_1 & Y^3_2 & Y^3_3\\
   \end{pmatrix}\,,
 \end{equation}
-but if $I=\{0, 3, 4\}$, then
+but if $I=\{1, 4, 5\}$, then
 \begin{equation}
   Y\big|_I =
   \begin{pmatrix}
-    Y_{00} & Y_{01} & Y_{02}\\
-    Y_{30} & Y_{31} & Y_{32}\\
-    Y_{40} & Y_{41} & Y_{42}\\
+    Y^1_1 & Y^1_2 & Y^1_3\\
+    Y^4_1 & Y^4_2 & Y^4_3\\
+    Y^5_1 & Y^5_2 & Y^5_3\\
   \end{pmatrix}\,,
 \end{equation}
 and so on.
@@ -338,106 +361,126 @@ Furthermore, when we consider symmetry the matrix is further divided:
 \begin{equation}\label{eq:Y_spin_irrep_blocks}
   Y =
   \begin{pmatrix}
-    Y_\alpha^{\Gamma_0} & 0 & ... & 0\\
-    0 & Y_\alpha^{\Gamma_1} & ... & 0 \\
+    Y_\alpha^{\Gamma_1} & 0 & ... & 0\\
+    0 & Y_\alpha^{\Gamma_2} & ... & 0 \\
     \vdots & \vdots & & \vdots\\
-    0 & 0 &\dots & Y_\beta^{\Gamma_{g-1}}\\
+    0 & 0 &\dots & Y_\beta^{\Gamma_g}\\
   \end{pmatrix}
-  = Y_\alpha^{\Gamma_0} \oplus Y_\alpha^{\Gamma_1} \oplus \dots \oplus Y_\beta^{\Gamma_{g-1}}\,,
+  = Y_\alpha^{\Gamma_1} \oplus Y_\alpha^{\Gamma_2} \oplus \dots \oplus Y_\beta^{\Gamma_g}\,,
 \end{equation}
 leading to the last formula.
-In this case, however, the matrices $Y_\sigma^{\Gamma_i}$ might not be square, because by fixing the irrep of the wave function (and thus of its determinants) does not fix the occupation in each irrep block:
-it is possible to fulfil equation \ref{eq:irrep_condition} with more than one pattern in the occupation of the irreps $\Gamma_i$.
-In the summation over $I$, if this multi-index is associated to a determinant with an occupation per irrep different than the occupation if $Y$, some of the blocks $Y_\sigma^{\Gamma_i}$ are not square, although the direct sum of all of them is again square (because the total number of electrons do not change).
+In this case, however, the matrices $Y_\sigma^\Gamma$ might not be square, because by fixing the irrep of the wave function (and thus of its determinants) does not fix the occupation in each irrep block:
+it is possible to fulfil equation \ref{eq:irrep_condition} with more than one pattern in the occupation of the irreps $\Gamma$.
+In the summation over $I$, if this multi-index is associated to a determinant with an occupation per irrep different than the occupation if $Y$, some of the blocks $Y_\sigma^{\Gamma}$ are not square, although the direct sum of all of them is again square (because the total number of electrons does not change).
 However, one can show that the determinant of such block matrices are zero, and thus they do not contribute to $f_\lozenge$.
 This is indicated in the summation by ``$\text{occ}(I) = \text{occ}(Y)$'', that is, we can consider only the terms with the same occupation per irrep of $Y$.
 
-The notation $I_\sigma^{\Gamma_i}$ indicates the part of the multi-index $I$ associated to $\sigma$ and $\Gamma_i$.
-Because it is obvious that we can take submatrices of $Y_\alpha^{\Gamma_i}$ only restricting with subindices with same spin and irrep, the notation $Y_\alpha^{\Gamma_i}\big|_{I_\alpha^{\Gamma_i}}$ is rather redundant.
-Hence we will use $Y_\alpha^{\Gamma_i}\big|_{I}$ or $Y\big|_{I_\alpha^{\Gamma_i}}$ only.
+The notation $I_\sigma^\Gamma$ indicates the part of the multi-index $I$ associated to $\sigma$ and $\Gamma$.
+Because it is obvious that we can take submatrices of $Y_\alpha^\Gamma$ only restricting with subindices with same spin and irrep, the notation $Y_\alpha^\Gamma\big|_{I_\alpha^\Gamma}$ is rather redundant.
+Hence we will use $Y_\alpha^\Gamma\big|_{I}$ or $Y\big|_{I_\alpha^\Gamma}$ only.
 
 Because of the separation in spin and irrep blocks, we can show that the unknown matrix $\eta_{\lozenge Y}$ has the same division as the matrix $Y$:
 
 \begin{equation}\label{eq:eta_spin_irrep_blocks}
   \eta_{\lozenge Y} =
   \begin{pmatrix}
-    \eta_\alpha^{\Gamma_0} & 0 & ... & 0\\
-    0 & \eta_\alpha^{\Gamma_1} & ... & 0 \\
+    \eta_\alpha^{\Gamma_1} & 0 & ... & 0\\
+    0 & \eta_\alpha^{\Gamma_2} & ... & 0 \\
     \vdots & \vdots & & \vdots\\
-    0 & 0 &\dots & \eta_\beta^{\Gamma_{g-1}}\\
+    0 & 0 &\dots & \eta_\beta^{\Gamma_g}\\
   \end{pmatrix}
-  = \eta_\alpha^{\Gamma_0} \oplus \eta_\alpha^{\Gamma_1} \oplus \dots \oplus \eta_\beta^{\Gamma_{g-1}}\,,
+  = \eta_\alpha^{\Gamma_1} \oplus \eta_\alpha^{\Gamma_2} \oplus \dots \oplus \eta_\beta^{\Gamma_g}\,,
 \end{equation}
 where we dropped the subscript $\lozenge Y$ in the blocks for a cleaner notation.
 
 After a big exercise of linear algebra, we obtain the following system of linear equations as the main equation of this method (i.e. Equation \ref{eq:Absil_main_eq} using the present function $f$):
 \begin{equation}
-  \big( X_{\sigma \Gamma}^{\sigma' \Gamma'} \big)_{jk}^{il} \big( \eta_{\sigma' \Gamma'} \big)_{l}^{k} = \big( C_{\sigma \Gamma} \big)_{j}^{i}\,,
+  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma' \Gamma'} \big)^{pr}_{qs} \big( \eta_{\sigma' \Gamma'} \big)^r_s
+  = \big( \mathbf{C}_{\sigma \Gamma} \big)^p_q\,,
 \end{equation}
+
 with
 
-
-\begin{equation}
-  \big( C_{\sigma \Gamma} \big)_{j}^{i} =
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i
-\end{equation}
-
 \begin{eqnarray}
-  \big( X_{\sigma \Gamma}^{\sigma \Gamma} \big)_{jk}^{il} &=&
+  \big( \mathbf{C}_{\sigma \Gamma} \big)^p_q &=&
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
   \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left\{ \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i \big( (Y_\sigma^\Gamma)^T \big)_k^l
-  - \big( \Pi_{Y_\sigma^\Gamma \perp} \big)_\mu^i \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{\mu l} \right\}\\
-  &=& 
+  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q\\
+  &=&
+  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
   \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)_\mu^i
-  \left( \big( G_{I_\sigma^\Gamma} \big)_j^\mu \big( (Y_\sigma^\Gamma)^T \big)_k^l
-  - \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{\mu l} \right)
+  \left( G_{I_\sigma^\Gamma} \right)^{\bar{p}}_q
 \end{eqnarray}
 
-\begin{equation}
-  \big( X_{\sigma \Gamma}^{\sigma' \Gamma'} \big)_{jk}^{il} =
-  -\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
+\begin{eqnarray}
+  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma \Gamma} \big)^{pr}_{qs} &=&
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
+  \left\{ \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q \big( Y_\sigma^\Gamma \big)^r_s
+  - \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}} \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{\bar{p}r}_{qs} \right\}\\
+  &=&
+  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
+  \left\{ \big( G_{I_\sigma^\Gamma} \big)^{\bar{p}}_q \big( Y_\sigma^\Gamma \big)^r_s
+  - \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{{\bar{p}}r}_{qs} \right\}
+\end{eqnarray}
+
+\begin{eqnarray}
+  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma' \Gamma'} \big)^{pr}_{qs} &=&
+  -%%\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
   \left(
     \prod_{\substack{
         \{\sigma'', \Gamma''\} \ne \{\sigma', \Gamma'\} \\
         \{\sigma'', \Gamma''\} \ne \{\sigma , \Gamma \}}}
     F_{I_{\sigma''}^{\Gamma''}} \right)
-  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)_j^i
-  \left( \left( G_{I_{\sigma'}^{\Gamma'}} - F_{I_{\sigma'}^{\Gamma'}} Y_{\sigma'}^{\Gamma'} \right)^T \right)_k^l
-\end{equation}
+  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q
+  \left( G_{I_{\sigma'}^{\Gamma'}} - F_{I_{\sigma'}^{\Gamma'}} Y_{\sigma'}^{\Gamma'} \right)^r_s\\
+  &=&
+  -%%\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
+  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
+  \big( \Pi_{Y_{\sigma'}^{\Gamma'} \perp} \big)^{\bar{r}}_u
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \left(
+    \prod_{\substack{
+        \{\sigma'', \Gamma''\} \ne \{\sigma', \Gamma'\} \\
+        \{\sigma'', \Gamma''\} \ne \{\sigma , \Gamma \}}}
+    F_{I_{\sigma''}^{\Gamma''}} \right)
+  \left( G_{I_\sigma^\Gamma}  \right)^{\bar{p}}_q
+  \left( G_{I_{\sigma'}^{\Gamma'}} \right)^{\bar{r}}_s
+\end{eqnarray}
 
-where:
-
-\begin{equation}
-  F_{I_\sigma^\Gamma} = \text{det} \left( Y\big|_{I_\alpha^\Gamma} \right)
-\end{equation}
-
-\begin{equation}
-  \big( G_{I_\sigma^\Gamma} \big)_j^i = \text{det} \left( Y_\alpha^\Gamma \overset{j}{\leftarrow} e_i \right) \big|_I
-\end{equation}
-
-\begin{equation}
-  \big( H_{I_\sigma^\Gamma} \big)_{jk}^{il} =
-  \text{det} \left( Y_\alpha^\Gamma \overset{j}{\leftarrow} e_i
-    \overset{l}{\leftarrow} e_k \right) \big|_I
-\end{equation}
+where the last equations hold for ${\{\sigma,\Gamma\} \ne \{\sigma',\Gamma'\}}$ and:
 
 \begin{equation}
-  \big( \tilde{H}_{I_\sigma^\Gamma} \big)_{jk}^{il} =
+  F_{I_\sigma^\Gamma} = \text{det} \left( Y\big|_{I_\sigma^\Gamma} \right)
+\end{equation}
+
+\begin{equation}
+  \big( G_{I_\sigma^\Gamma} \big)^p_q = \text{det} \left( Y_\sigma^\Gamma \overset{q}{\leftarrow} e_p \right) \big|_I
+\end{equation}
+
+\begin{equation}
+  \big( H_{I_\sigma^\Gamma} \big)^{pr}_{qs} =
+  \text{det} \left( Y_\sigma^\Gamma \overset{q}{\leftarrow} e_p
+    \overset{s}{\leftarrow} e_r \right) \big|_I
+\end{equation}
+
+\begin{equation}
+  \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{pr}_{qs} =
   \left\{
     \begin{array}{ll}
-      \big( H_{I_\sigma^\Gamma} \big)_{jk}^{il} & \text{ if } l \ne j\\
-      -F_{I_\sigma^\Gamma} \delta_{ik} & \text{ otherwise}
+      \big( H_{I_\sigma^\Gamma} \big)^{pr}_{qs} & \text{ if } s \ne q\\
+      -F_{I_\sigma^\Gamma} \delta_{pr} & \text{ otherwise}
     \end{array}
   \right.
 \end{equation}
 
-The notation $A \overset{j}{\leftarrow}b$ means the matrix $A$ with the $j$-th column replaced by the vector $b$. The vector $e_i$ is the $i$-th element of the canonical basis ($0$ in every entry, except for the $i$-th entry where it is $1$).
+The notation $A \overset{q}{\leftarrow}b$ means the matrix $A$ with the $q$-th column replaced by the vector $b$.
+The vector $e_p$ is the $p$-th element of the canonical basis ($0$ in every entry, except for the $p
+$-th entry where it is $1$).
 
 
 \end{document}

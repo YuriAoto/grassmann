@@ -1,20 +1,3 @@
-#--------------------------------------------
-Investigate the following error:
-
-⎧<yuriaoto@YAA-debian><0><19:13,Wed,25-Mar-2020>
-⎭<~/Documents/Codes/min_dist_Gr/tests/Li2__R_5__ccpVDZ__nosym (master)> ../../dGr --HF_orb UHF_orbitals.xml --WF_orb RHF_orbitals.xml CISD_FC.out
-Unknown error:
-Traceback (most recent call last):
-  File "../../dGr", line 78, in <module>
-    dGr_main(cmd_line_args, f_out)
-  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_main.py", line 118, in dGr_main
-    args.HF_orb).in_the_basis_of(
-  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_orbitals.py", line 136, in from_file
-    return cls._get_orbitals_from_Molpro_xml(file_name)
-  File "/home/yuriaoto/Documents/Codes/min_dist_Gr/dGr_orbitals.py", line 225, in _get_orbitals_from_Molpro_xml
-    list(map(float,orb.text.split())))
-ValueError: could not broadcast input array from shape (30) into shape (28)
-
 
 #--------------------------------------------
 Make better code for generate_orb.py
