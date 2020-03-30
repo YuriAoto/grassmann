@@ -5,6 +5,42 @@
 
 \input{general_preambl}
 
+\newcommand{\Dss}{\ensuremath{\mathcal{C}}}
+\newcommand{\Dmixaa}{\ensuremath{\mathcal{A}}}
+\newcommand{\Dmixab}{\ensuremath{\mathcal{B}}}
+\newcommand{\Dmix}{\ensuremath{\mathcal{D}}}
+
+\newcommand{\matG}{\ensuremath{{\mathbf{G}}}}
+\newcommand{\matM}{\ensuremath{{\bm{\mathcal{M}}}}}
+\newcommand{\bigG}{\ensuremath{{\mathscr{G}}}}
+\newcommand{\bigH}{\ensuremath{{\mathscr{H}}}}
+
+% Symbols for irreducible representation, irrep
+\newcommand{\irp}{\ensuremath{\Gamma}}
+\newcommand{\irpP}{{\ensuremath{\Gamma'}}}
+\newcommand{\irpPP}{{\ensuremath{\Gamma''}}}
+\newcommand{\irpPPP}{{\ensuremath{\Gamma'''}}}
+\newcommand{\irpB}{{\ensuremath{\overline{\Gamma}}}}
+\newcommand{\irpBB}{{\ensuremath{\overline{\overline{\Gamma}}}}}
+
+\newcommand{\sumijabrestr}{\ensuremath{
+    \quad\sum_{\mathclap{\left.\substack{(i>j)\\(a>b)}\right\}\in\irp}}\quad}}
+\newcommand{\sumijabfull}{\ensuremath{
+    \quad\sum_{\mathclap{\left.\substack{(i,a)\\(j,b)}\right\}\in\irp}}\quad}}
+\newcommand{\sumijabmix}{\ensuremath{
+    \quad\sum_{\mathclap{\substack{(i,a)\in\irp\\(j,b)\in\irpP}}}\quad}}
+
+\newcommand{\sumB}{\ensuremath{
+    \sum_{\irpB \ne \irp}}}
+\newcommand{\sumBB}{\ensuremath{
+    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp\\\irpBB \ne \irp}}}}}
+
+\newcommand{\sumBp}{\ensuremath{
+    \sum_{\irpB \ne \irp,\irpP}}}
+\newcommand{\sumBBp}{\ensuremath{
+    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp,\irpP\\\irpBB \ne \irp,\irpP}}}}}
+
+
 \begin{document}
 
 \begin{center}
@@ -17,24 +53,27 @@
   \begin{tabular}{l@{ - }l}
     24 mar 2019 & Start\\
     31 oct 2019 & Adding Absil method\\
+    30 mar 2020 & Adding procedure for CISD wave function\\
   \end{tabular}
 }\vspace{3cm}
 
 
 \section{Notation}
 
+TODO: (??) Change position of spin and irrep in the notation? ($n_\sigma^\irp \to n_\irp^\sigma$)
+
 \begin{center}
   \begin{tabular}{ll}
     \hline
     \Hamilt             & The electronic Hamiltonian                                               \\
     $g$                 & Number of irreducible representations (short: irrep) in the point group  \\
-    $\Gamma$            & An irreducible representation, or an index that runs over all irreps     \\
+    $\irp$            & An irreducible representation, or an index that runs over all irreps     \\
     $\sigma$            & spin ($\alpha$ or $\beta$)                                               \\
-    $n_\sigma^\Gamma$   & The number of electrons with spin $\sigma$ and irrep $\Gamma$            \\
+    $n_\sigma^\irp$   & The number of electrons with spin $\sigma$ and irrep $\irp$            \\
                         & (This might refer to a particular configuration, or to the reference     \\
                         & determinant. The context should make it clear.)                          \\
     $n_\sigma$          & The number of electrons with spin $\sigma$                               \\
-                        & $n_\sigma = \sum_{\Gamma=1}^g n_\sigma^\Gamma$                           \\
+                        & $n_\sigma = \sum_{\irp=1}^g n_\sigma^\irp$                           \\
     $n$                 & The total number of electrons                                            \\
                         & $n = n_\alpha + n_\beta$                                                 \\
     $\orbSp{}$          & The space of spatial orbitals (one-electron wave functions)              \\
@@ -42,13 +81,16 @@
                         & sum of two such spaces, the first associated to $\alpha$-spin and the    \\
                         & second to $\beta$-spin electrons. A subscript might be used, but the     \\
                         & space is the same: $\mathcal{V_\alpha} = \mathcal{V_\beta} = \orbSp{}$)  \\
-    $\orbSp{}^{\Gamma}$ & The space of orbitals of irreducible representation (short: irrep)
-                          $\Gamma$                                                                 \\
-                        & (\orbSp{} is the direct sum of all such $\orbSp{}^{\Gamma}$:
-                          $\orbSp{} = \bigoplus_{\Gamma = 1}^g \orbSp{}^\Gamma$)                   \\
-    $I, J$              & Multi-indices, usually of size $n$, $n_\sigma$, or $n_\sigma^\Gamma$,
+    $\orbSp{}^\irp$ & The space of orbitals of irreducible representation (short: irrep)
+                          $\irp$                                                                 \\
+                        & (\orbSp{} is the direct sum of all such $\orbSp{}^\irp$:
+                          $\orbSp{} = \bigoplus_{\irp = 1}^g \orbSp{}^\irp$)                   \\
+    $I, J$              & Multi-indices, usually of size $n$, $n_\sigma$, or $n_\sigma^\irp$,
                           depending on the context.                                                \\
     $K$                 & The dimension of $\orbSp{}$: $K = \text{dim }\orbSp{}$                   \\
+    $K_\irp$          & The dimension of $\orbSp{}^\irp$:
+                          $K_\irp = \text{dim }\orbSp{}^\irp$                                  \\
+                        & $\sum_\irp K_\irp = K$                                               \\
     $i$,$j$,$k$,$l$     & indices for occupied and orbitals, that are correlated in the wave       
                           function                                                                 \\
                         & (the context should make clear the reference determinant and which wave  \\
@@ -79,7 +121,7 @@ Let
 \end{equation}
 be a $n$-electron normalised CI like wave function represented in the orbital basis
 \begin{equation}
-  \ket{\phi_I} = \phi_{I_1} \wedge \phi_{I_2} \wedge \dots \wedge \phi_{I_n}\,,
+  \ket{\phi_I} = \phi_{I_1} \w \phi_{I_2} \w \dots \w \phi_{I_n}\,,
 \end{equation}
 where
 \begin{equation}
@@ -210,12 +252,12 @@ From this vector, the operator $\hat{K}$ is constructed and the orbital transfor
 \begin{equation}
   U = e^{-\hat{K}}\,.
 \end{equation}
-This is done for the $\alpha$ and the $\beta$ orbitals and the wave function $\ket{\Psi_\text{FCI}}$ is transformed to the new orbital basis, by equation \ref{eq:trans_fci_orbital_basis}.
+This is done for the $\alpha$ and the $\beta$ orbitals and the wave function $\ket{\Psi_\text{FCI}}$ is transformed to the new orbital basis, by equation \eqref{eq:trans_fci_orbital_basis}.
 This proceeds until convergence.
 
 
 \newpage
-\section{\textsf{\LARGE Algorithm 2}\\The Newton-Grassmann method of Absil}
+\section{The Newton-Grassmann method of Absil}
 
 This method is based on the work of Absil \etal{}, where they propose a Newton method adapted to the geometry of the Grassmannian.
 The algorithm is actually on the Stiefel manifold, that is, the manifold of full-rank $K \times n$ matrices.
@@ -264,7 +306,9 @@ According to Absil:
   \end{equation}
 \end{itemize}
 
-\subsection{Application to obtain $\ket{\Phi_\text{minD}}$}
+\subsection{\textsf{\LARGE Algorithm 2}
+  Direct application to obtain $\ket{\Phi_\text{minD}}$}
+\label{sec:alg_two}
 
 We will now consider our specific function.
 Similarly to what we did in the first algorithm, we will just work without getting the absolute value.
@@ -273,20 +317,21 @@ Thus, we will look for stationary points of:
   f : Gr &\to& \real\\
   \ket{\Phi} &\mapsto& \bracket{\Psi_\text{ext}}{\Phi}\,.
 \end{eqnarray}
-We will assume that the external wave function, $\ket{\Psi_\text{ext}}$, is eigenfunction of $S_z$, with eigenvalue $M_s$, and belongs to an irreducible representation (irrep, $\Gamma$) of the point group of the molecule.
-This means that, for all determinants of the expansion \ref{eq:ext_wf}, the following equations hold:
+We will assume that the external wave function, $\ket{\Psi_\text{ext}}$, is eigenfunction of $S_z$, with eigenvalue $M_s$, and belongs to an irreducible representation (irrep, $\irp$) of the point group of the molecule.
+This means that, for all determinants of the expansion in Equation~\eqref{eq:ext_wf}, the following equations hold:
 \begin{equation}
   n_\alpha - n_\beta = 2 Ms
 \end{equation}
 \begin{equation}\label{eq:irrep_condition}
-  \bigotimes_q \Gamma(\phi_{I_q}) = \Gamma(\ket{\Psi_\text{ext}}) = \Gamma(\ket{\Phi})
+  \bigotimes_q \irp(\phi_{I_q}) = \irp(\ket{\Psi_\text{ext}}) = \irp(\ket{\Phi})
 \end{equation}
-That is, all determinants have the same $Ms$ (that is half of the difference between alpha and beta orbitals) and belong to the same irrep $\Gamma$ (that is the direct product of the irrep of all occupied orbitals).
+That is, all determinants have the same $Ms$ (that is half of the difference between alpha and beta orbitals) and belong to the same irrep $\irp$ (that is the direct product of the irrep of all occupied orbitals).
 We are thus assuming that we are using a basis for $\orbSp{}$ for which all elements belong to an irrep.
 Let us further assume that the orbitals are ordered with all alpha coming first, followed by all beta orbitals, and they are ordered by irrep in each of these parts.
 Under these conditions, the $f_\lozenge$ is calculated as follows:
 
 \begin{eqnarray}
+  \label{eq:gen_f}
   f_\lozenge(Y)
   &=& \frac{1}{\sqrt{\text{det} \left( Y^T Y \right)}}
       \sum_{I} c_I \, \text{det} \left( Y\big|_I \right)\\
@@ -298,21 +343,21 @@ Under these conditions, the $f_\lozenge$ is calculated as follows:
       \text{det} \left( Y_\alpha\big|_{I_\alpha} \right)
       \text{det} \left( Y_\beta\big|_{I_\beta} \right)\\\label{eq:f_diam_spin_irrep}
   &=& \frac{1}{\sqrt{
-      \prod_\Gamma
-      \text{det} \Big( (Y_\alpha^\Gamma)^T Y_\alpha^\Gamma \Big)
-      \text{det} \Big( (Y_\beta^\Gamma)^T Y_\beta^\Gamma \Big)
+      \prod_\irp
+      \text{det} \Big( (Y_\alpha^\irp)^T Y_\alpha^\irp \Big)
+      \text{det} \Big( (Y_\beta^\irp)^T Y_\beta^\irp \Big)
       }}
       \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I \,
-  \prod_\Gamma
-  \text{det} \Big( Y_\alpha^\Gamma\big|_{I_\alpha^\Gamma} \Big)
-  \text{det} \Big( Y_\beta^\Gamma\big|_{I_\beta^\Gamma} \Big)
+  \prod_\irp
+  \text{det} \Big( Y_\alpha^\irp\big|_{I_\alpha^\irp} \Big)
+  \text{det} \Big( Y_\beta^\irp\big|_{I_\beta^\irp} \Big)
 \end{eqnarray}
 The above expressions seem very complicated, so let us look at then carefully.
 
 First of all, note that the first expression is general, in the second we consider the separation between $\alpha$ and $\beta$ orbitals, and in the third we consider the separation between orbitals of different irreps.
 In all versions, the term with the square root is to guarantee the normalization of the Slater determinant associated to $Y$.
 If the coefficients in $Y$ are for an orthonormal set of orbitals, the term in the square root is one.
-But we note that $f_\lozenge(Y) = f(\text{span}(Y))$ must hold for all $Y$ in the Stiefel manifold, and the normalisation factor is important to use equation \ref{eq:Absil_main_eq}, even if $Y$ is used normalised during computation.
+But we note that $f_\lozenge(Y) = f(\text{span}(Y))$ must hold for all $Y$ in the Stiefel manifold, and the normalisation factor is important to use equation \eqref{eq:Absil_main_eq}, even if $Y$ is used normalised during computation.
 
 The notation $Y\big|_I$ means the submatrix of $Y$ formed with the rows that are in the multiindex $I$.
 For example, if
@@ -361,119 +406,119 @@ Furthermore, when we consider symmetry the matrix is further divided:
 \begin{equation}\label{eq:Y_spin_irrep_blocks}
   Y =
   \begin{pmatrix}
-    Y_\alpha^{\Gamma_1} & 0 & ... & 0\\
-    0 & Y_\alpha^{\Gamma_2} & ... & 0 \\
+    Y_\alpha^{\irp_1} & 0 & ... & 0\\
+    0 & Y_\alpha^{\irp_2} & ... & 0 \\
     \vdots & \vdots & & \vdots\\
-    0 & 0 &\dots & Y_\beta^{\Gamma_g}\\
+    0 & 0 &\dots & Y_\beta^{\irp_g}\\
   \end{pmatrix}
-  = Y_\alpha^{\Gamma_1} \oplus Y_\alpha^{\Gamma_2} \oplus \dots \oplus Y_\beta^{\Gamma_g}\,,
+  = Y_\alpha^{\irp_1} \oplus Y_\alpha^{\irp_2} \oplus \dots \oplus Y_\beta^{\irp_g}\,,
 \end{equation}
 leading to the last formula.
-In this case, however, the matrices $Y_\sigma^\Gamma$ might not be square, because by fixing the irrep of the wave function (and thus of its determinants) does not fix the occupation in each irrep block:
-it is possible to fulfil equation \ref{eq:irrep_condition} with more than one pattern in the occupation of the irreps $\Gamma$.
-In the summation over $I$, if this multi-index is associated to a determinant with an occupation per irrep different than the occupation if $Y$, some of the blocks $Y_\sigma^{\Gamma}$ are not square, although the direct sum of all of them is again square (because the total number of electrons does not change).
+In this case, however, the matrices $Y_\sigma^\irp$ might not be square, because by fixing the irrep of the wave function (and thus of its determinants) does not fix the occupation in each irrep block:
+it is possible to fulfil equation \eqref{eq:irrep_condition} with more than one pattern in the occupation of the irreps $\irp$.
+In the summation over $I$, if this multi-index is associated to a determinant with an occupation per irrep different than the occupation if $Y$, some of the blocks $Y_\sigma^\irp$ are not square, although the direct sum of all of them is again square (because the total number of electrons does not change).
 However, one can show that the determinant of such block matrices are zero, and thus they do not contribute to $f_\lozenge$.
 This is indicated in the summation by ``$\text{occ}(I) = \text{occ}(Y)$'', that is, we can consider only the terms with the same occupation per irrep of $Y$.
 
-The notation $I_\sigma^\Gamma$ indicates the part of the multi-index $I$ associated to $\sigma$ and $\Gamma$.
-Because it is obvious that we can take submatrices of $Y_\alpha^\Gamma$ only restricting with subindices with same spin and irrep, the notation $Y_\alpha^\Gamma\big|_{I_\alpha^\Gamma}$ is rather redundant.
-Hence we will use $Y_\alpha^\Gamma\big|_{I}$ or $Y\big|_{I_\alpha^\Gamma}$ only.
+The notation $I_\sigma^\irp$ indicates the part of the multi-index $I$ associated to $\sigma$ and $\irp$.
+Because it is obvious that we can take submatrices of $Y_\alpha^\irp$ only restricting with subindices with same spin and irrep, the notation $Y_\alpha^\irp\big|_{I_\alpha^\irp}$ is rather redundant.
+Hence we will use $Y_\alpha^\irp\big|_{I}$ or $Y\big|_{I_\alpha^\irp}$ only.
 
 Because of the separation in spin and irrep blocks, we can show that the unknown matrix $\eta_{\lozenge Y}$ has the same division as the matrix $Y$:
 
 \begin{equation}\label{eq:eta_spin_irrep_blocks}
   \eta_{\lozenge Y} =
   \begin{pmatrix}
-    \eta_\alpha^{\Gamma_1} & 0 & ... & 0\\
-    0 & \eta_\alpha^{\Gamma_2} & ... & 0 \\
+    \eta_\alpha^{\irp_1} & 0 & ... & 0\\
+    0 & \eta_\alpha^{\irp_2} & ... & 0 \\
     \vdots & \vdots & & \vdots\\
-    0 & 0 &\dots & \eta_\beta^{\Gamma_g}\\
+    0 & 0 &\dots & \eta_\beta^{\irp_g}\\
   \end{pmatrix}
-  = \eta_\alpha^{\Gamma_1} \oplus \eta_\alpha^{\Gamma_2} \oplus \dots \oplus \eta_\beta^{\Gamma_g}\,,
+  = \eta_\alpha^{\irp_1} \oplus \eta_\alpha^{\irp_2} \oplus \dots \oplus \eta_\beta^{\irp_g}\,,
 \end{equation}
 where we dropped the subscript $\lozenge Y$ in the blocks for a cleaner notation.
 
-After a big exercise of linear algebra, we obtain the following system of linear equations as the main equation of this method (i.e. Equation \ref{eq:Absil_main_eq} using the present function $f$):
+After a big exercise of linear algebra, we obtain the following system of linear equations as the main equation of this method (i.e. Equation \eqref{eq:Absil_main_eq} using the present function $f$):
 \begin{equation}
-  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma' \Gamma'} \big)^{pr}_{qs} \big( \eta_{\sigma' \Gamma'} \big)^r_s
-  = \big( \mathbf{C}_{\sigma \Gamma} \big)^p_q\,,
+  \big( \mathbf{X}_{\sigma \irp}^{\sigma' \irpP} \big)^{pr}_{qs} \big( \eta_{\sigma' \irpP} \big)^r_s
+  = \big( \mathbf{C}_{\sigma \irp} \big)^p_q\,,
 \end{equation}
 
 with
 
 \begin{eqnarray}
-  \big( \mathbf{C}_{\sigma \Gamma} \big)^p_q &=&
+  \big( \mathbf{C}_{\sigma \irp} \big)^p_q &=&
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q\\
+  \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
+  \left( G_{I_\sigma^\irp} - F_{I_\sigma^\irp} Y_\sigma^\irp  \right)^p_q\\
   &=&
-  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
+  \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left( G_{I_\sigma^\Gamma} \right)^{\bar{p}}_q
+  \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
+  \left( G_{I_\sigma^\irp} \right)^{\bar{p}}_q
 \end{eqnarray}
 
 \begin{eqnarray}
-  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma \Gamma} \big)^{pr}_{qs} &=&
+  \big( \mathbf{X}_{\sigma \irp}^{\sigma \irp} \big)^{pr}_{qs} &=&
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left\{ \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q \big( Y_\sigma^\Gamma \big)^r_s
-  - \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}} \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{\bar{p}r}_{qs} \right\}\\
+  \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
+  \left\{ \left( G_{I_\sigma^\irp} - F_{I_\sigma^\irp} Y_\sigma^\irp  \right)^p_q \big( Y_\sigma^\irp \big)^r_s
+  - \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}} \big( \tilde{H}_{I_\sigma^\irp} \big)^{\bar{p}r}_{qs} \right\}\\
   &=&
-  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
+  \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
-  \left( \prod_{\{\sigma', \Gamma'\} \ne \{\sigma, \Gamma\}} F_{I_{\sigma'}^{\Gamma'}} \right)
-  \left\{ \big( G_{I_\sigma^\Gamma} \big)^{\bar{p}}_q \big( Y_\sigma^\Gamma \big)^r_s
-  - \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{{\bar{p}}r}_{qs} \right\}
+  \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
+  \left\{ \big( G_{I_\sigma^\irp} \big)^{\bar{p}}_q \big( Y_\sigma^\irp \big)^r_s
+  - \big( \tilde{H}_{I_\sigma^\irp} \big)^{{\bar{p}}r}_{qs} \right\}
 \end{eqnarray}
 
 \begin{eqnarray}
-  \big( \mathbf{X}_{\sigma \Gamma}^{\sigma' \Gamma'} \big)^{pr}_{qs} &=&
-  -%%\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
+  \big( \mathbf{X}_{\sigma \irp}^{\sigma' \irpP} \big)^{pr}_{qs} &=&
+  -%%\left( 1 - \delta_{\{\sigma,\irp\} \, \{\sigma',\irpP\}} \right)
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
   \left(
     \prod_{\substack{
-        \{\sigma'', \Gamma''\} \ne \{\sigma', \Gamma'\} \\
-        \{\sigma'', \Gamma''\} \ne \{\sigma , \Gamma \}}}
-    F_{I_{\sigma''}^{\Gamma''}} \right)
-  \left( G_{I_\sigma^\Gamma} - F_{I_\sigma^\Gamma} Y_\sigma^\Gamma  \right)^p_q
-  \left( G_{I_{\sigma'}^{\Gamma'}} - F_{I_{\sigma'}^{\Gamma'}} Y_{\sigma'}^{\Gamma'} \right)^r_s\\
+        \{\sigma'', \irpPP\} \ne \{\sigma', \irpP\} \\
+        \{\sigma'', \irpPP\} \ne \{\sigma , \irp \}}}
+    F_{I_{\sigma''}^{\irpPP}} \right)
+  \left( G_{I_\sigma^\irp} - F_{I_\sigma^\irp} Y_\sigma^\irp  \right)^p_q
+  \left( G_{I_{\sigma'}^\irpP} - F_{I_{\sigma'}^\irpP} Y_{\sigma'}^\irpP \right)^r_s\\
   &=&
-  -%%\left( 1 - \delta_{\{\sigma,\Gamma\} \, \{\sigma',\Gamma'\}} \right)
-  \big( \Pi_{Y_\sigma^\Gamma \perp} \big)^p_{\bar{p}}
-  \big( \Pi_{Y_{\sigma'}^{\Gamma'} \perp} \big)^{\bar{r}}_u
+  -%%\left( 1 - \delta_{\{\sigma,\irp\} \, \{\sigma',\irpP\}} \right)
+  \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
+  \big( \Pi_{Y_{\sigma'}^\irpP \perp} \big)^{\bar{r}}_u
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
   \left(
     \prod_{\substack{
-        \{\sigma'', \Gamma''\} \ne \{\sigma', \Gamma'\} \\
-        \{\sigma'', \Gamma''\} \ne \{\sigma , \Gamma \}}}
-    F_{I_{\sigma''}^{\Gamma''}} \right)
-  \left( G_{I_\sigma^\Gamma}  \right)^{\bar{p}}_q
-  \left( G_{I_{\sigma'}^{\Gamma'}} \right)^{\bar{r}}_s
+        \{\sigma'', \irpPP\} \ne \{\sigma', \irpP\} \\
+        \{\sigma'', \irpPP\} \ne \{\sigma , \irp \}}}
+    F_{I_{\sigma''}^{\irpPP}} \right)
+  \left( G_{I_\sigma^\irp}  \right)^{\bar{p}}_q
+  \left( G_{I_{\sigma'}^\irpP} \right)^{\bar{r}}_s
 \end{eqnarray}
 
-where the last equations hold for ${\{\sigma,\Gamma\} \ne \{\sigma',\Gamma'\}}$ and:
+where the last equations hold for ${\{\sigma,\irp\} \ne \{\sigma',\irpP\}}$ and:
 
 \begin{equation}
-  F_{I_\sigma^\Gamma} = \text{det} \left( Y\big|_{I_\sigma^\Gamma} \right)
+  F_{I_\sigma^\irp} = \text{det} \left( Y\big|_{I_\sigma^\irp} \right)
 \end{equation}
 
 \begin{equation}
-  \big( G_{I_\sigma^\Gamma} \big)^p_q = \text{det} \left( Y_\sigma^\Gamma \overset{q}{\leftarrow} e_p \right) \big|_I
+  \big( G_{I_\sigma^\irp} \big)^p_q = \text{det} \left( Y_\sigma^\irp \overset{q}{\leftarrow} e_p \right) \big|_I
 \end{equation}
 
 \begin{equation}
-  \big( H_{I_\sigma^\Gamma} \big)^{pr}_{qs} =
-  \text{det} \left( Y_\sigma^\Gamma \overset{q}{\leftarrow} e_p
+  \big( H_{I_\sigma^\irp} \big)^{pr}_{qs} =
+  \text{det} \left( Y_\sigma^\irp \overset{q}{\leftarrow} e_p
     \overset{s}{\leftarrow} e_r \right) \big|_I
 \end{equation}
 
 \begin{equation}
-  \big( \tilde{H}_{I_\sigma^\Gamma} \big)^{pr}_{qs} =
+  \big( \tilde{H}_{I_\sigma^\irp} \big)^{pr}_{qs} =
   \left\{
     \begin{array}{ll}
-      \big( H_{I_\sigma^\Gamma} \big)^{pr}_{qs} & \text{ if } s \ne q\\
-      -F_{I_\sigma^\Gamma} \delta_{pr} & \text{ otherwise}
+      \big( H_{I_\sigma^\irp} \big)^{pr}_{qs} & \text{ if } s \ne q\\
+      -F_{I_\sigma^\irp} \delta_{pr} & \text{ otherwise}
     \end{array}
   \right.
 \end{equation}
@@ -481,6 +526,678 @@ where the last equations hold for ${\{\sigma,\Gamma\} \ne \{\sigma',\Gamma'\}}$ 
 The notation $A \overset{q}{\leftarrow}b$ means the matrix $A$ with the $q$-th column replaced by the vector $b$.
 The vector $e_p$ is the $p$-th element of the canonical basis ($0$ in every entry, except for the $p
 $-th entry where it is $1$).
+
+
+\subsection{\textsf{\LARGE Algorithm 3} The case of a CISD wave function}
+
+Although Algorithm 2 already offers an improved procedure to calculate $\ket{\Psi_\text{minD}}$, as compared to Algorithm 1, it is still too general.
+It can be made much more efficient if the equations are adapted to a specific kind of wave function.
+In this section we will describe the equations for $\ket{\Psi_\text{ext}}$ being of the type single reference, closed shell, restricted configuration interaction with single and double excitations: a CISD wave function.
+
+\subsubsection{The structure of a CISD wave function}
+
+Let $\ket{\Phi_0}$ be the reference determinant of closed shell and restricted type:
+It has even number of electrons, with the same occupied $\alpha$ and $\beta$ orbitals:
+\begin{eqnarray}
+  \ketbig{\Phi_0}
+  &=& \phi_1^{\irp=1} \w \phi_2^{\irp=1} \w
+      \dots \w \phi_{n_g}^{\irp=g} \w
+      \overline{\phi}_1^{\irp=1} \w \overline{\phi}_2^{\irp=1} \w
+      \dots \w \overline{\phi}_{n_g}^{\irp=g}\\
+  &=& \ketbig{\Phi_0}_1 \w \ketbig{\Phi_0}_2 \w
+      \dots \w \ketbig{\Phi_0}_g \w
+      \ketbig{\overline{\Phi}_0}_1 \w \ketbig{\overline{\Phi}_0}_2 \w
+      \dots \w \ketbig{\overline{\Phi}_0}_g\\
+  &=& \ketbig{\Phi_0} \w \ketbig{\overline{\Phi}_0}\,.
+\end{eqnarray}
+As can be seen in equations above, we will use the convention of an over line to indicate that it corresponds to $\beta$ spin, whereas no over line indicates $\alpha$ spin.
+Furthermore, $\ketbig{\Phi_0}_\irp$ corresponds to the part of $\ket{\Phi_0}$ for irrep $\irp$ and $\alpha$ spin (that is, the subspace of $\orbSp{}$ spanned by the occupied alpha orbitals of irrep $\irp$ in the reference).
+$\ketbig{\overline{\Phi}_0}_\irp$ is the same for the $\beta$ part.
+We will also use the standard convention of denoting excited Slater determinants by subscripts for holes (``excited from'') and superscripts for particles (``excited to'').
+Thus, for example:
+
+\begin{equation}
+  \ketbig{\Phi_i^a}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
+  \dots \w \phi_{n_\irp}^\irp \w \phi_a^\irp
+\end{equation}
+\begin{equation}
+  \ketbig{\Phi_{ij}^{ab}}_\irp = \phi_1^\irp \w \dots
+  \w \hat{\phi}_j^\irp \w \dots \w \hat{\phi}_i^\irp \w
+  \dots \w \phi_{n_\irp}^\irp \w \phi_b^\irp \w \phi_a^\irp
+\end{equation}
+\begin{equation}
+  \ketbig{\Phi_i}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
+  \dots \w \phi_{n_\irp}^\irp
+\end{equation}
+\begin{equation}
+  \ketbig{\Phi^{ab}}_\irp = \phi_1^\irp \w \dots
+  \dots \w \phi_{n_\irp}^\irp \w \phi_b^\irp \w \phi_a^\irp\,.
+\end{equation}
+In these equations we are using the convention that a hat ($\hat{\phantom{a}}$) over an orbital indicates its absence in the product.
+Note that in the last two cases the number of electrons in $\ketbig{\Phi}_\irp$ is not preserved:
+These cases appear in the wave function, as discussed in Sect.~\ref{sec:alg_two}.
+
+The restricted closed shell CISD wave function is given as:
+
+\newcommand{\Qquad}{\qquad\qquad\qquad\qquad}
+
+\begin{equation}
+  \label{eq:CISDwf}
+  \begin{split}
+    \ket{\Psi_\text{CISD}} =
+    & C_0 \ketbig{\Phi_0}\\
+    & + \sum_\irp\sum_{(i,a) \in \irp} C_{i}^{a, \irp}
+    \Big(
+    \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_i^a}_\irp
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}
+    \\ & \Qquad
+    {} + \ketbig{\Phi_0}
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_i^a}_\irp
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g
+    \Big)\\
+    & + \sum_\irp\sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+    \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_{ij}^{ab}}_\irp
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}
+    \\ & \Qquad
+    {} + \ketbig{\Phi_0}
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{ij}^{ab}}_\irp
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g
+    \Big)\\
+    & + \sum_\irp \sumijabfull \Dss_{ij}^{ab, \irp} \,
+    \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{j}^{b}}_\irp
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g\\
+    & + \sum_{\irp > \irpP} \sumijabmix \Dmixaa_{ij}^{ab, \irp\irpP}
+    \Big(
+    \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_{j}^{b}}_\irpP
+    \w \dots
+    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}
+    \\ & \Qquad
+    {} + \ketbig{\Phi_0}
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{a}^{a}}_\irp
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g
+    \Big)\\
+    & + \sum_{\irp > \irpP} \sumijabmix \Dmixab_{ij}^{ab, \irp\irpP}
+    \Big(
+    \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_{j}^{b}}_\irpP
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{i}^{a}}_\irp
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g
+    \\ & \Qquad
+    {} + \ketbig{\Phi_0}_1
+    \w \dots
+    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \dots
+    \w \ketbig{\Phi_0}_g
+    \w \ketbig{\overline{\Phi}_0}_1
+    \w \dots
+    \w \ketbig{\overline{\Phi}_{a}^{a}}_\irpP
+    \w \dots
+    \w \ketbig{\overline{\Phi}_0}_g
+    \Big)\\
+    & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
+    c_I \ketbig{\Phi_I}\\
+    = & C_0 \ketbig{\Phi_0}\\
+    & + \sum_\irp\sum_{(i,a) \in \irp} C_{i}^{a, \irp}
+    \Big(
+    \ketbig{\Phi_i^a}_\irp
+    + \ketbig{\overline{\Phi}_i^a}_\irp
+    \Big)\\
+    & + \sum_\irp\sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+    \ketbig{\Phi_{ij}^{ab}}_\irp
+    + \ketbig{\overline{\Phi}_{ij}^{ab}}_\irp
+    \Big)\\
+    & + \sum_\irp\sumijabfull\Dss_{ij}^{ab, \irp} \,
+    \ketbig{\Phi_{i}^{a}}_\irp
+    \dots
+    \ketbig{\overline{\Phi}_{j}^{b}}_\irp\\
+    & + \sum_{\irp > \irpP} \sumijabmix \Dmixaa_{ij}^{ab, \irp\irpP}
+    \Big(
+    \ketbig{\Phi_{j}^{b}}_\irpP
+    \dots
+    \ketbig{\Phi_{i}^{a}}_\irp
+    + \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \dots
+    \ketbig{\overline{\Phi}_{i}^{a}}_\irp
+    \Big)\\
+    &  + \sum_{\irp > \irpP}\sumijabmix \Dmixab_{ij}^{ab, \irp\irpP}
+    \Big(
+    \ketbig{\Phi_{j}^{b}}_\irpP
+    \dots
+    \ketbig{\overline{\Phi}_{i}^{a}}_\irp
+    + \ketbig{\Phi_{i}^{a}}_\irp
+    \dots
+    \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \Big)\\
+    & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
+    c_I \ketbig{\Phi_I}\,.
+  \end{split}
+\end{equation}
+
+In these equations, the first term is the contribution of reference wave function.
+The second is the contribution of single excitations, with corresponding $\alpha$ and $\beta$ excitations having the same coefficient, as it is a restricted wave function over restricted reference.
+Third term is the contribution of double excitations that are totally within the same \emph{spirrep} block (spin and irrep). For these, we obviously cannot have $i=j$ or $a=b$, and the restrictions in the summation guarantee that we count each excited determinant once.
+Fourth term considers the contribution of double excitations within the same irrep, but made of a single excitation in $\alpha$ and a single excitation in $\beta$.
+There is no restriction in the summation in this case, but because $\ket{\Psi_\text{CISD}}$ is a restricted wave function, the coefficients obey $\Dss_{ij}^{ab, \irp} =  \Dss_{ji}^{ba, \irp}$.
+Fifth and sixth terms are the contributions of double excitations that are made of single excitations in different irreps:
+The fifth term is for these both single excitations happening in the same spin, whereas in the sixth term these single excitations are in opposite spins.
+These are all the terms that have, for all spirreps, the same number of electrons as in reference wave function.
+Determinants that have some irrep with number of electrons different than in the reference determinant are collected in the last term, and they do not contribute neither to $f_\lozenge$ nor to the matrices used in the optimisation.
+In the second of the above equations we have compacted the notation, showing only the spirrep block(s) that differ from the corresponding reference block. 
+
+\subsubsection{The equations}
+
+Using the wave function of Equation~\eqref{eq:CISDwf} in the equations of Algorithm 2, a number of simplifications and collection of similar terms can be made, with final equations described in this section.
+We first start by defining some intermediates:
+\begin{eqnarray}
+  \mathcal{F}_0 &=& \prod_\irp F_{I_0^\irp}^2\\
+  \mathcal{F}_0^\irp &=& \prod_{\irpP \ne \irp} F_{I_0^\irpP}^2\\
+  \mathcal{F}_0^{\irp\irpP} &=&
+    \prod_{\substack{{\irpPP \ne \irp}\\{\irpPP \ne \irpP}}} F_{I_0^{\irpPP}}^2\,,
+\end{eqnarray}
+with analogous definitions for $\mathcal{F}_0^{\irp\irpP\irpPP}$ and so on.
+\begin{eqnarray}
+  \Dmix_{ij}^{ab, \irp\irp} &=& \Dss_{ij}^{ab, \irp}\\
+  \Dmix_{ij}^{ab, \irp\irpP} &=& \Dmixaa_{ij}^{ab, \irp\irpP} + \Dmixab_{ij}^{ab, \irp\irpP}
+                            \quad\text{ for }\irp \ne \irpP\,,
+\end{eqnarray}
+that is, the coefficients of double excitations coming from single excitations at different spirrep blocks are merged in a single quantity $\Dmix$.
+As it will be seen below, $\Dmixaa_{ij}^{ab, \irp\irpP}$ and $\Dmixab_{ij}^{ab, \irp\irpP}$ always appear summed.
+\begin{equation}
+  \label{eq:K_for_CISD}
+  \mathcal{K}^{\irp\irpP} = 2 \sumijabmix \Dmix_{ij}^{ab, \irp\irpP}
+  F_{I_0^\irp} F_{I_0^\irpP} F_{I_i^{a,\irp}} F_{I_j^{b,\irpP}}
+  \quad\text{ for }\irp \ne \irpP
+\end{equation}
+Here, ${I_0^\irp}$ is the multi-index of the reference for irrep $\irp$, whereas ${I_i^{a,\irp}}$ is the multi-index for the single excitation from $i$ to $a$, also in $\irp$.
+The other type of multi-index that will appear is, obviously, ${I_{ij}^{ab,\irp}}$, for double excitations.
+
+\begin{equation}
+  \label{eq:L_for_CISD}
+  \mathcal{L}^\irp = 2 F_{I_0^\irp}
+  \left(
+    \sum_{(i,a) \in \irp} C_{i}^{a, \irp} F_{I_i^{a,\irp}}
+    + \sumijabrestr C_{ij}^{ab, \irp}  F_{I_{ij}^{ab,\irp}}
+  \right)
+  + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+  F_{I_i^{a,\irp}} F_{I_j^{b,\irp}}
+\end{equation}
+
+Note the factor $2$: it is there because we have the same contribution for $\alpha$ and $\beta$ excitations totally within a spirerp block.
+With the so far defined quantities, we are able to calculate $f_\lozenge(Y)$, assuming $Y$ orthonormal:
+\begin{equation}
+  \label{eq:f_for_CISD}
+  f_\lozenge(Y) = C_0 \mathcal{F}_0
+  + \sum_\irp \mathcal{F}_0^\irp\mathcal{L}^\irp
+  + \sum_{\irp > \irpP} \mathcal{F}_0^{\irp\irpP}\mathcal{K}^{\irp\irpP}\,.
+\end{equation}
+
+It is not difficult to understand the origin of each term of Equation~\eqref{eq:f_for_CISD} (compare to Equation~\eqref{eq:gen_f}):
+The first is clearly the contribution from the reference determinant, that is the product of all $F_{I_0^\irp}$, for all $\irp$ and for each spin.
+Since it is a closed shell restricted wave function, this is just $\mathcal{F}_0$.
+The second term of Equation~\eqref{eq:f_for_CISD} is the contribution of all excitations within the same irrep:
+for all such excitations, the other irrep blocks contribute with a $F_{I_0^\irpP}^2$, that form a common $\mathcal{F}_0^\irp$;
+the contribution of the irrep in question is the coefficient, times an appropriate $F_{I^\irp}$, as can be seen in Equation~\eqref{eq:L_for_CISD}.
+Finally, last term is the contribution of excitations at mixed irreps (say $\irp$ and $\irpP$):
+each determinant contribute with one $F_{I_0^\irp}$, one $F_{I_0^\irpP}$ (from the spins where no excitations occurred, whichever they are), and the $F_{I^\irp}$ and $F_{I^\irpP}$ of corresponding single excitations.
+This is clearly seen in \eqref{eq:K_for_CISD}, and the contribution of remaining irreps forms $\mathcal{F}_0^{\irp\irpP}$.
+
+For the matrices $\mathbf{X}$ and $\mathbf{C}$, the interpretation is more elaborated but follows similar line.
+We will define more quantities.
+These quantities are matrices with shape $(K_\irp,n^\irp)$, such as $Y^\irp$ and $\mathbf{C}_{I^\irp}$, or tensors
+\footnote{Tensors in the sense of multidimensional array objects, such as a numpy array. Probably the indices convention used here does not follow the rules of contravariant and covariant tensors, although I tried to use a meaningful convention.}
+of shape $(K_\irp,n^\irp,K_\irpP,n^\irpP)$, such as $H_{I^{\irp\irpP}}$ and $\mathbf{X}^\irp_\irpP$.
+For completeness and for reference, we will give the expressions for the multi-dimensional quantities and for the individual elements.
+
+\begin{eqnarray}
+  \hat{\matG}_{ia}^\irp
+  &=& F_{I_0^\irp} \matG_{I_i^{a,\irp}}
+      + F_{I_i^{a,\irp}} \matG_{I_0^\irp}\\
+  \big( \hat{\matG}_{ia}^\irp \big)^p_q
+  &=& F_{I_0^\irp} \big( \matG_{I_i^{a,\irp}}\big)^p_q
+      + F_{I_i^{a,\irp}} \big( \matG_{I_0^\irp}\big)^p_q
+\end{eqnarray}
+
+\begin{equation}
+  \overline{C}_i^{a,\irp} = C_{i}^{a, \irp}
+  + \sum_{\irpB \ne \irp} \frac{1}{F_{I_0^{\irpB}}}
+  \sum_{(j,b) \in \irpB} F_{I_j^{b,\irpB}} \Dmix_{ij}^{ab, \irp\irpB}
+\end{equation}
+
+% ================== equation for matM
+\begin{equation}
+  \begin{split}
+    \matM^\irp = &
+    C_0 F_{I_0^\irp} \matG_{I_0^\irp}\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \hat{\matG}_{ia}^\irp \\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        F_{I_0^\irp} \matG_{I_{ij}^{ab,\irp}} + F_{I_{ij}^{ab,\irp}} \matG_{I_0^\irp}
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+    F_{I_i^{a,\irp}} \matG_{I_j^{b,\irp}}\\
+  \end{split}
+\end{equation}
+\begin{equation}
+  \begin{split}
+    \Big(\matM^\irp\Big)^p_q = &
+    C_0 F_{I_0^\irp} \big( \matG_{I_0^\irp} \big)^p_q\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \big( \hat{\matG}_{ia}^\irp \big)^p_q\\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        F_{I_0^\irp} \big( \matG_{I_{ij}^{ab,\irp}} \big)^p_q
+        + F_{I_{ij}^{ab,\irp}} \big( \matG_{I_0^\irp} \big)^p_q
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp} F_{I_i^{a,\irp}}
+    \big( \matG_{I_j^{b,\irp}} \big)^p_q
+  \end{split}
+\end{equation}
+% ================== END: equation for matM
+
+% ================== equation for bigG
+\begin{equation}
+  \begin{split}
+    \bigG^\irp = &
+    C_0 \matG_{I_0^\irp} \otimes \matG_{I_0^\irp}\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \Big(
+        \matG_{I_i^{a,\irp}} \otimes \matG_{I_0^\irp}
+        + \matG_{I_0^\irp} \otimes \matG_{I_i^{a,\irp}}
+    \Big)\\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        \matG_{I_0^\irp} \otimes \matG_{I_{ij}^{ab,\irp}}
+        + \matG_{I_{ij}^{ab,\irp}} \otimes \matG_{I_0^\irp}
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+    \matG_{I_i^{a,\irp}} \otimes \matG_{I_j^{b,\irp}}\\
+  \end{split}
+\end{equation}
+\begin{equation}
+  \begin{split}
+    \Big(\bigG^\irp\Big)^{pr}_{qs} = &
+    C_0 \big( \matG_{I_0^\irp} \big)^p_q \big( \matG_{I_0^\irp} \big)^r_s\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \Big(
+        \big( \matG_{I_i^{a,\irp}} \big)^p_q \big( \matG_{I_0^\irp} \big)^r_s
+        + \big( \matG_{I_0^\irp} \big)^p_q \big( \matG_{I_i^{a,\irp}} \big)^r_s
+    \Big)\\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        \big( \matG_{I_0^\irp} \big)^p_q \big( \matG_{I_{ij}^{ab,\irp}} \big)^r_s
+        + \big( \matG_{I_{ij}^{ab,\irp}} \big)^p_q \big( \matG_{I_0^\irp} \big)^r_s
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+    \big( \matG_{I_i^{a,\irp}} \big)^p_q \big( \matG_{I_j^{b,\irp}} \big)^r_s
+  \end{split}
+\end{equation}
+% ================== END: equation for bigG
+
+% ================== equation for bigH
+\begin{equation}
+  \begin{split}
+    \bigH^\irp = &
+    C_0 F_{I_0^\irp} \tilde{H}_{I_0^\irp}\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \Big(
+        F_{I_0^\irp} \tilde{H}_{I_{i}^{a,\irp}}
+        + F_{I_{i}^{a,\irp}} \tilde{H}_{I_0^\irp}
+    \Big)\\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        F_{I_0^\irp} \tilde{H}_{I_{ij}^{ab,\irp}}
+        + F_{I_{ij}^{ab,\irp}} \tilde{H}_{I_0^\irp}
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+    F_{I_i^{a,\irp}} \tilde{H}_{I_j^{b,\irp}}
+  \end{split}
+\end{equation}
+\begin{equation}
+  \begin{split}
+    \Big( \bigH^\irp \Big)^p_q = &
+    C_0 F_{I_0^\irp} \big( \tilde{H}_{I_0^\irp} \big)^{pr}_{qs}\\
+    & + \sum_{(i,a) \in \irp} \overline{C}_i^{a,\irp}
+    \Big(
+        F_{I_0^\irp} \big( \tilde{H}_{I_{i}^{a,\irp}} \big)^{pr}_{qs}
+        + F_{I_{i}^{a,\irp}} \big( \tilde{H}_{I_0^\irp} \big)^{pr}_{qs}
+    \Big)\\
+    & + \sumijabrestr C_{ij}^{ab, \irp}
+    \Big(
+        F_{I_0^\irp} \big( \tilde{H}_{I_{ij}^{ab,\irp}} \big)^{pr}_{qs}
+        + F_{I_{ij}^{ab,\irp}} \big( \tilde{H}_{I_0^\irp} \big)^{pr}_{qs}
+    \Big)\\
+    & + \sumijabfull \Dmix_{ij}^{ab, \irp\irp}
+    F_{I_i^{a,\irp}} \big( \tilde{H}_{I_j^{b,\irp}} \big)^{pr}_{qs}
+  \end{split}
+\end{equation}
+% ================== END: equation for bigH
+
+Although these equations seem very complicated and too big, the terms are very similar to what we have for $\mathcal{L}^\irp$:
+a term for the reference determinant (okay, that is not in $\mathcal{L}^\irp$, but in $f_\lozenge$), a term for ``single excitations'', another for double excitations in a spirrep block, and a term for double excitations in $\irp$, but coming from single excitations in opposite spins.
+However, the term for ``single excitations'' contains a contribution from double excitations that occur partially in $\irp$ and partially in another irrep, $\irpB$, that is indeed a single excitation in $\irp$.
+
+Finally:
+\begin{equation}
+  \mathbf{C}_\irp =
+  \Pi_{Y^\irp \perp} \Big\{
+  \mathcal{F}_0^\irp \matM^\irp
+  + \Big(
+      \sumB \mathcal{F}_0^{\irp\irpB} \mathcal{L}^\irpB
+      + \sumBB \mathcal{F}_0^{\irp\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+  \Big) F_{I_0^\irp} \matG_{I_0^\irp}
+  \Big\}
+\end{equation}
+\begin{equation}
+  \big( \mathbf{C}_\irp \big)^p_q =
+  \big( \Pi_{Y^\irp \perp} \big)^p_{\bar{p}} \Big\{
+  \mathcal{F}_0^\irp \big( \matM^\irp \big)^{\bar{p}}_q
+  + \Big(
+      \sumB \mathcal{F}_0^{\irp\irpB} \mathcal{L}^\irpB
+      + \sumBB \mathcal{F}_0^{\irp\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+  \Big) F_{I_0^\irp} \big( \matG_{I_0^\irp} \big)^{\bar{p}}_q
+  \Big\}
+\end{equation}
+
+\begin{equation}
+  \begin{split}
+    \mathbf{X}_\irp^\irp = &
+    (\Pi_{Y^\irp \perp} \otimes \mathbb{1})
+    \bigg\{ \mathcal{F}_0^\irp
+    \Big(
+        \matM^\irp \otimes Y^\irp
+        - (\mathbb{1} \otimes \Pi_{Y^\irp \perp}) \bigG^\irp
+        - \bigH^\irp
+    \Big)\\
+    & +
+    \Big(
+        \sumB \mathcal{F}_0^{\irp\irpB} \mathcal{L}^\irpB
+        + \sumBB \mathcal{F}_0^{\irp\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+    \Big)
+    \Big(
+        F_{I_0^\irp} \matG_{I_0^\irp} \otimes Y^\irp
+        - \matG_{I_0^\irp} \otimes (\Pi_{Y^\irp \perp} \matG_{I_0^\irp})
+        - F_{I_0^\irp} \tilde{H}_{I_0^\irp}
+    \Big)
+    \bigg\}
+  \end{split}
+\end{equation}
+\begin{equation}
+  \begin{split}
+    \big( \mathbf{X}_\irp^\irp \big)^{pr}_{qs} = &
+    \big( \Pi_{Y^\irp \perp} \big)^p_{\bar{p}} \bigg\{ \mathcal{F}_0^\irp
+    \Big(
+        \big( \matM^\irp \big)^{\bar{p}}_q \big( Y^\irp \big)^r_s
+        - \big( \Pi_{Y^\irp \perp} \big)^r_{\bar{r}} \big( \bigG^\irp \big)^{\bar{p}\bar{r}}_{qs}
+        - \big( \bigH^\irp \big)^{\bar{p}r}_{qs}
+    \Big)\\
+    & +
+    \Big(
+        \sumB \mathcal{F}_0^{\irp\irpB} \mathcal{L}^\irpB
+        + \sumBB \mathcal{F}_0^{\irp\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+    \Big)
+    \Big(
+        F_{I_0^\irp} \big( \matG_{I_0^\irp} \big)^{\bar{p}}_q \big( Y^\irp \big)^r_s
+        - \big( \matG_{I_0^\irp} \big)^{\bar{p}}_q
+          \big( \Pi_{Y^\irp \perp} \big)^r_{\bar{r}}
+          \big( \matG_{I_0^\irp} \big)^{\bar{r}}_s
+        - F_{I_0^\irp} \big( \tilde{H}_{I_0^\irp} \big)^{\bar{p}r}_{qs}
+    \Big)
+    \bigg\}
+  \end{split}
+\end{equation}
+
+\begin{equation}
+  \begin{split}
+    \mathbf{X}_\irp^\irpP = &
+    -2 (\Pi_{Y^\irp \perp} \otimes \Pi_{Y^\irpP \perp})
+    \Bigg\{ \mathcal{F}_0^{\irp\irpP}
+    \bigg\{
+    F_{I_0^\irpP} \matM^\irp \otimes \matG_{I_0^\irpP}
+    + F_{I_0^\irp} \matG_{I_0^\irp} \otimes \matM^\irpP\\
+    & + \frac{1}{2} \sumijabmix \Dmix_{ij}^{ab, \irp\irpP}
+      \hat{\matG}_{ia}^\irp \otimes \hat{\matG}_{jb}^\irpP\\
+    & - \Big(
+        \sum_{(i,a)\in\irp} \hat{\matG}_{ia}^\irp
+        \sum_{(j,b)\in\irpP} F_{I_j^{b,\irpP}} \Dmix_{ij}^{ab, \irp\irpP}
+    \Big) \otimes \matG_{I_0^\irpP}\\
+    & - \matG_{I_0^\irp} \otimes \Big(
+        \sum_{(j,b)\in\irpP} \hat{\matG}_{jb}^\irpP
+        \sum_{(i,a)\in\irp} F_{I_i^{a,\irpP}} \Dmix_{ij}^{ab, \irp\irpP}
+    \Big)
+    \bigg\}\\
+    & + 
+    \Big(
+        -C_0 \mathcal{F}_0^{\irp\irpP}
+        + \sumBp \mathcal{F}_0^{\irp\irpP\irpB} \mathcal{L}^\irpB
+        + \sumBBp \mathcal{F}_0^{\irp\irpP\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+    \Big)
+    F_{I_0^\irp} F_{I_0^\irpP} \matG_{I_0^\irp} \otimes \matG_{I_0^\irpP}
+    \Bigg\}
+  \end{split}
+\end{equation}
+\begin{equation}
+  \begin{split}
+    \big( \mathbf{X}_\irp^\irpP \big)^{pr}_{qs} = &
+    -2 \big( \Pi_{Y^\irp \perp} \big)^p_{\bar{p}} \big( \Pi_{Y^\irpP \perp} \big)^r_{\bar{r}}
+    \Bigg\{ \mathcal{F}_0^{\irp\irpP}
+    \bigg\{
+    F_{I_0^\irpP} \big( \matM^\irp \big)^{\bar{p}}_q \big( \matG_{I_0^\irpP} \big)^{\bar{r}}_s
+    + F_{I_0^\irp} \big( \matG_{I_0^\irp} \big)^{\bar{p}}_q \big( \matM^\irpP \big)^{\bar{r}}_s\\
+    & + \frac{1}{2} \sumijabmix \Dmix_{ij}^{ab, \irp\irpP}
+      \big( \hat{\matG}_{ia}^\irp \big)^{\bar{p}}_q \big( \hat{\matG}_{jb}^\irpP \big)^{\bar{r}}_s\\
+    & - \Big(
+        \sum_{(i,a)\in\irp} \big( \hat{\matG}_{ia}^\irp \big)^{\bar{p}}_q
+        \sum_{(j,b)\in\irpP} F_{I_j^{b,\irpP}} \Dmix_{ij}^{ab, \irp\irpP}
+    \Big) \big( \matG_{I_0^\irpP} \big)^{\bar{r}}_s\\
+    & - \big( \matG_{I_0^\irp} \big)^{\bar{p}}_q \Big(
+        \sum_{(j,b)\in\irpP} \big( \hat{\matG}_{jb}^\irpP \big)^{\bar{r}}_s
+        \sum_{(i,a)\in\irp} F_{I_i^{a,\irpP}} \Dmix_{ij}^{ab, \irp\irpP}
+    \Big)
+    \bigg\}\\
+    & + 
+    \Big(
+        -C_0 \mathcal{F}_0^{\irp\irpP}
+        + \sumBp \mathcal{F}_0^{\irp\irpP\irpB} \mathcal{L}^\irpB
+        + \sumBBp \mathcal{F}_0^{\irp\irpP\irpB\,\irpBB} \mathcal{K}^{\irpB\,\irpBB}
+    \Big)
+    F_{I_0^\irp} F_{I_0^\irpP}
+    \big( \matG_{I_0^\irp} \big)^{\bar{p}}_{q} \big( \matG_{I_0^\irpP} \big)^{\bar{r}}_s
+    \Bigg\}
+  \end{split}
+\end{equation}
+
+The notation $\otimes$ used in the above equations deserves some comments.
+It stands for the outer product, and in the above equations it always represents the outer product of two 2D matrices.
+For convenience, regular 2D matrices are put in bold face in the examples below, whereas its elements are in regular font.
+It results in a 4D object, according to the following expression:
+\begin{equation}
+  \big( A \otimes B \big)^{pr}_{qs} = A^p_q B^r_s\,.
+\end{equation}
+That is, the entries of $\mathbf{A} \otimes \mathbf{B}$ are the products of all possible pairs of elements of the regular matrices $\mathbf{A}$ and $\mathbf{B}$.
+This is more easily visualised as a ``matrix of matrices'':
+a matrix of the same shape of $\mathbf{A}$, where each entry is a matrix of the shape pf $\mathbf{B}$.
+For example, if $\mathbf{A}$ is $3 \times 2$ and $\mathbf{B}$ is $2 \times 2$:
+\begin{equation}
+  \mathbf{A} \otimes \mathbf{B} =
+  \begin{pmatrix}
+    \begin{pmatrix}
+      A^1_1B^1_1 & A^1_1B^1_2 \\
+      A^1_1B^2_1 & A^1_1B^2_2 \\
+    \end{pmatrix}
+    &
+    \begin{pmatrix}
+      A^1_2B^1_1 & A^1_2B^1_2 \\
+      A^1_2B^2_1 & A^1_2B^2_2 \\
+    \end{pmatrix}
+    \\
+    \begin{pmatrix}
+      A^2_1B^1_1 & A^2_1B^1_2 \\
+      A^2_1B^2_1 & A^2_1B^2_2 \\
+    \end{pmatrix}
+    &
+    \begin{pmatrix}
+      A^2_2B^1_1 & A^2_2B^1_2 \\
+      A^2_2B^2_1 & A^2_2B^2_2 \\
+    \end{pmatrix}
+    \\
+    \begin{pmatrix}
+      A^3_1B^1_1 & A^3_1B^1_2 \\
+      A^3_1B^2_1 & A^3_1B^2_2 \\
+    \end{pmatrix}
+    &
+    \begin{pmatrix}
+      A^3_2B^1_1 & A^3_2B^1_2 \\
+      A^3_2B^2_1 & A^3_2B^2_2 \\
+    \end{pmatrix}
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    A^1_1
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+    &
+    A^1_2
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+    \\
+    A^2_1
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+    &
+    A^2_2
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+    \\
+    A^3_1
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+    &
+    A^3_2
+    \begin{pmatrix}
+      B^1_1 & B^1_2 \\
+      B^2_1 & B^2_2 \\
+    \end{pmatrix}
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    A^1_1\mathbf{B} & A^1_2\mathbf{B} \\
+    A^2_1\mathbf{B} & A^2_2\mathbf{B} \\
+    A^3_1\mathbf{B} & A^3_2\mathbf{B}
+  \end{pmatrix}
+\end{equation}
+
+Hence, it is quite clear that $\mathbf{X}_\irp^\irpP$ is a ``$K_\irp \times n^\irp$ matrix of $K_\irpP \times n^\irpP$ matrices'', leading to a 4D object of shape $(K_\irp, n^\irp,K_\irpP, n^\irpP)$.
+Some of its terms are indeed outer products of $K_\irp \times n^\irp$ matrices with $K_\irpP \times n^\irpP$ matrices.
+There are also some projections, carried out by the matrices $\Pi_{Y^\irp \perp}$.
+Whenever $\Pi_{Y^\irp \perp}$ acts over a regular matrix, the operation is an usual matrix multiplication, as in the expression for $\mathbf{C}_\irp$.
+However, in the expressions for $\mathbf{X}_\irp^\irpP$, projections might act on the ``external big matrix'', with indices $pq$, or over the ``internal small matrices'', with indices $rs$.
+The first case is done with $\Pi_{Y^\irp \perp} \otimes \mathbb{1}$, the second with $\mathbb{1} \otimes \Pi_{Y^\irpP \perp}$, whereas $\Pi_{Y^\irp \perp} \otimes \Pi_{Y^\irpP \perp}$ will carry projections at both levels.
+Note that the notation is totally compatible with the interpretation of ``matrix of matrices'':
+for example, if $A$ is a $3 \times 2$ matrix of $K \times n$ matrices, $\mathbf{\Pi}$ is $3 \times 3$, and $\mathbf{\Pi}'$ is $K \times K$, then $\mathbf{\Pi} \otimes \mathbf{\Pi}'$ acting on $A$:
+\begin{equation}
+  \begin{split}
+    ( \mathbf{\Pi} \otimes \mathbf{\Pi}' ) A & =
+    \begin{pmatrix}
+      \Pi^1_1\mathbf{\Pi}' & \Pi^1_2\mathbf{\Pi}' & \Pi^1_3\mathbf{\Pi}'\\
+      \Pi^2_1\mathbf{\Pi}' & \Pi^2_2\mathbf{\Pi}' & \Pi^2_3\mathbf{\Pi}'\\
+      \Pi^3_1\mathbf{\Pi}' & \Pi^3_2\mathbf{\Pi}' & \Pi^3_3\mathbf{\Pi}'
+    \end{pmatrix}
+    \begin{pmatrix}
+      \mathbf{A}^1_1 & \mathbf{A}^1_2 \\
+      \mathbf{A}^2_1 & \mathbf{A}^2_2 \\
+      \mathbf{A}^3_1 & \mathbf{A}^3_2
+    \end{pmatrix}\\
+    & =
+    \begin{pmatrix}
+      \Pi^1_1 \mathbf{\Pi}' \mathbf{A}^1_1
+      + \Pi^1_2 \mathbf{\Pi}' \mathbf{A}^2_1
+      + \Pi^1_3 \mathbf{\Pi}' \mathbf{A}^3_1 &&
+      \Pi^1_1 \mathbf{\Pi}' \mathbf{A}^1_2
+      + \Pi^1_2 \mathbf{\Pi}' \mathbf{A}^2_2
+      + \Pi^1_3 \mathbf{\Pi}' \mathbf{A}^3_2 \\
+      \Pi^2_1 \mathbf{\Pi}' \mathbf{A}^1_1
+      + \Pi^2_2 \mathbf{\Pi}' \mathbf{A}^2_1
+      + \Pi^2_3 \mathbf{\Pi}' \mathbf{A}^3_1 &&
+      \Pi^2_1 \mathbf{\Pi}' \mathbf{A}^1_2
+      + \Pi^2_2 \mathbf{\Pi}' \mathbf{A}^2_2
+      + \Pi^2_3 \mathbf{\Pi}' \mathbf{A}^3_2 \\
+      \Pi^3_1 \mathbf{\Pi}' \mathbf{A}^1_1
+      + \Pi^3_2 \mathbf{\Pi}' \mathbf{A}^2_1
+      + \Pi^3_3 \mathbf{\Pi}' \mathbf{A}^3_1 &&
+      \Pi^3_1 \mathbf{\Pi}' \mathbf{A}^1_2
+      + \Pi^3_2 \mathbf{\Pi}' \mathbf{A}^2_2
+      + \Pi^3_3 \mathbf{\Pi}' \mathbf{A}^3_2 \\
+    \end{pmatrix}\\
+    & =
+    ( \mathbf{\Pi} \otimes \mathbb{1} )
+    \begin{pmatrix}
+      \mathbf{\Pi}' \mathbf{A}^1_1 & \mathbf{\Pi}' \mathbf{A}^1_2 \\
+      \mathbf{\Pi}' \mathbf{A}^2_1 & \mathbf{\Pi}' \mathbf{A}^2_2 \\
+      \mathbf{\Pi}' \mathbf{A}^3_1 & \mathbf{\Pi}' \mathbf{A}^3_2
+    \end{pmatrix}\\
+    & =
+    ( \mathbb{1} \otimes \mathbf{\Pi}' )
+    \begin{pmatrix}
+      \Pi^1_1 \mathbf{A}^1_1 + \Pi^1_2 \mathbf{A}^2_1 + \Pi^1_3 \mathbf{A}^3_1 &&
+      \Pi^1_1 \mathbf{A}^1_2 + \Pi^1_2 \mathbf{A}^2_2 + \Pi^1_3 \mathbf{A}^3_2 \\
+      \Pi^2_1 \mathbf{A}^1_1 + \Pi^2_2 \mathbf{A}^2_1 + \Pi^2_3 \mathbf{A}^3_1 &&
+      \Pi^2_1 \mathbf{A}^1_2 + \Pi^2_2 \mathbf{A}^2_2 + \Pi^2_3 \mathbf{A}^3_2 \\
+      \Pi^3_1 \mathbf{A}^1_1 + \Pi^3_2 \mathbf{A}^2_1 + \Pi^3_3 \mathbf{A}^3_1 &&
+      \Pi^3_1 \mathbf{A}^1_2 + \Pi^3_2 \mathbf{A}^2_2 + \Pi^3_3 \mathbf{A}^3_2 \\
+    \end{pmatrix}\,.
+  \end{split}
+\end{equation}
 
 
 \end{document}
