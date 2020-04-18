@@ -175,7 +175,7 @@ We parametrise $Gr$ by the orbital rotations as\cite{}
 \end{equation}
 where
 \begin{eqnarray}
-  \hat{K} &=& \sum_{q,a} K_q^a(a_a^\dagger a_q - a_i^\dagger a_q)\\
+  \hat{K} &=& \sum_{q,a} K_q^a(a_a^\dagger a_q - a_q^\dagger a_a)\\
           &=& \sum_{q,a} K_q^a(a_q^a - a_a^q)\,
 \end{eqnarray}
 This parametrisation comes from the most general 
@@ -195,6 +195,18 @@ We will also assume that $\bracket{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remain
 of our optimisation.
 If $\bracket{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function.
 If $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
+
+\subsubsection{spin and symmetry restricted}
+
+If the orbital rotations will preserve spin and symmetry, the operator $\hat{K}$ can be written as:
+\begin{equation}
+  \hat{K} = \sum_\irp \sum_{(q,a) \in \irp} K_q^{a,\irp}(E_{aq}^\irp - E_{qa}^\irp),
+\end{equation}
+where the singlet excitation operator is defined as:
+\begin{equation}
+  E_{pq} = a_{p\alpha}^\dagger a_{q\alpha} + a_{p\beta}^\dagger a_{q\beta}\,.
+\end{equation}
+See \cite{helgaker00_molec} for the details.
 
 \subsection{Jacobian and Hessian}
 
@@ -221,6 +233,54 @@ For the derivation of the expressions, see that hand notes.
 \end{equation}
 In these equations, $C_q^a$ and $C_{qs}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
 The canonical order of the orbitals is assumed to be ``first all $\alpha$, then all $\beta$''.
+
+\subsubsection{Spin restricted, closed-shell reference and symmetry adapted}
+
+The above equations for the Hessian and the Jacobian are for a general wave function.
+Here we will show the corresponding equations for the case of a reference wave function, $\ket{\Phi_0}$ that is closed shell, restricted, and symmetry adapted.
+The external wave function $\ket{\Psi_\text{FCI}}$ will also be assumed to be restricted and symmetry adapted.
+In this conditions, the Jacobin and the Hessian are:
+
+\begin{equation}
+  \frac{\partial f(\hat{K} = 0)}{\partial K_q^{a,\irp}} = -2(-1)^{q + n_\irp} C_q^{a,\irp}
+\end{equation}
+
+\begin{equation}
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^{a,\irp} \partial K_s^{b\irpP}} =
+  \left\{
+    \begin{array}{lcr}
+      -2 C_0 & \quad\quad & \irp = \irpP, a=a', q=q'\\
+      2 \Dss_{q'q}^{a'a, \irp} (-1)^{q + q'} & \quad\quad &
+      \left\{\begin{array}{c}
+              \irp = \irpP;\\
+              a=a'\text{ and }q\ne q'\text{ or }\\
+              a \ne a'\text{ and }q = q'
+            \end{array}
+      \right.\\
+      2  (-1)^{q + q'} \left(\Dss_{q'q}^{a'a, \irp} +
+      C_{q'q}^{a'a, \irp} (-1)^{(q'<q) + (a'>a)}\right) & \quad\quad &
+      \irp = \irpP, a \ne a'\text{ and }q\ne q'\\
+      2 (-1)^{q+n_\irp}(-1)^{q'+n_\irpP}
+      \left( \Dmixaa_{q'q}^{a'a, \irp\irpP} + \Dmixab_{q'q}^{a'a, \irp\irpP} \right) & \quad\quad &
+      \irp \ne \irpP
+    \end{array}
+  \right.
+\end{equation}
+
+For the notation, see Section~\ref{sec:struct_cisd_wf}.
+The Hessian can be more compactly expressed as:
+
+\begin{equation}
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^{a,\irp} \partial K_s^{b\irpP}} =
+  \left\{
+    \begin{array}{l}
+      -2 C_0 \quad\quad\quad \text{ if }\irp = \irpP, a=a', q=q'\\
+      2 (-1)^{q+n_\irp}(-1)^{q'+n_\irpP} \left( \Dmix_{q'q}^{a'a, \irp\irpP} +
+      \delta_{\irp\irpP}(1 - \delta_{a'a})(1 - \delta_{q'q})C_{q'q}^{a'a, \irp} (-1)^{(q'<q) + (a'>a)}\right)
+             \quad \text{otherwise}
+    \end{array}
+  \right.
+\end{equation}
 
 \subsection{Transformation of the wave function}
 In the optimisation process, $\ket{\Phi}$ varies and we would need the Jacobian and the Hessian at $\hat{K} \ne 0$.
@@ -535,6 +595,7 @@ It can be made much more efficient if the equations are adapted to a specific ki
 In this section we will describe the equations for $\ket{\Psi_\text{ext}}$ being of the type single reference, closed shell, restricted configuration interaction with single and double excitations: a CISD wave function.
 
 \subsubsection{The structure of a CISD wave function}
+\label{sec:struct_cisd_wf}
 
 Let $\ket{\Phi_0}$ be the reference determinant of closed shell and restricted type:
 It has even number of electrons, with the same occupied $\alpha$ and $\beta$ orbitals:
