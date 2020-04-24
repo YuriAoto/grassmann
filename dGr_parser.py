@@ -88,6 +88,10 @@ def parse_cmd_line():
     parser.add_argument('--WF_templ',
                         help='a Molpro output with a Full CI wave function,'
                         + ' to be used as template')
+    parser.add_argument('--algorithm',
+                        help='the algorithm to be used in the optimisation.'
+                        + ' Possible values are: "orb_rotations", "general_Absil",'
+                        + ' and "CISD_Absil". Default is "CISD_Absil".')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
@@ -100,9 +104,8 @@ def parse_cmd_line():
                         +' wave function',
                         action='store_true')
     parser.add_argument('--check_algorithms',
-                        help='check if matrices C and X calculated'
-                        +' with the CISD-opt and general algorithms are'
-                        +' equivalent',
+                        help='Perform comparisons to see if different'
+                        +' implementations are equivalent. For testing.',
                         action='store_true')
     cmd_args = parser.parse_args()
     file_name = cmd_args.molpro_output
@@ -118,6 +121,12 @@ def parse_cmd_line():
                                           else
                                           '')
     __assert_molpro_output(cmd_args.molpro_output)
+    if cmd_args.algorithm is None:
+        cmd_args.algorithm = 'Absil'
+    elif cmd_args.algorithm not in ['orb_rotations',
+                                    'general_Absil',
+                                    'CISD_Absil']:
+        raise dGrParseError('Unknown algorithm: ' + cmd_args.algorithm)
     if cmd_args.ini_orb is not None:
         try:
             __assert_molpro_output(cmd_args.ini_orb, can_be_xml=True)
@@ -134,10 +143,6 @@ def parse_cmd_line():
         raise dGrParseError('Options --check_algorithms and --use_general_algorithm'
                             + ' are incompatible: with --check_algorithms both'
                             + ' algorithms will be use in one iteration.')
-    if cmd_args.check_algorithms and cmd_args.WF_templ is not None:
-        raise dGrParseError('Options --check_algorithms and --WF_templ'
-                            + ' are incompatible: --check_algorithms'
-                            + ' is only for Absil algorithm.')
     if cmd_args.WF_orb is None:
         cmd_args.WF_orb = cmd_args.molpro_output
     else:

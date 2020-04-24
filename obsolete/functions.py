@@ -459,3 +459,119 @@ def _get_orbitals_from_Molpro_output(output_name):
         return coef_a, coef_b
 
 
+
+
+
+def str_Jac_Hess(J, H, wf):
+    """Return str of Jacobian (J) and the Hessian (H) of wave function wf."""
+    JHstr = []
+    JHstr.append('Jacobian:')
+    for i, x in enumerate(J):
+        exc_from, exc_to = get_i_a_from_pos_in_jac(i, wf.n_alpha, wf.beta_shift)
+        JHstr.append(('[{0:3d}] = {1:.6f}; spin = {2:s}; K_{3:d}^{4:d}'.\
+                      format(i, x,
+                             'a' if i<wf.beta_shift else 'b',
+                             exc_from, exc_to)))
+    JHstr.append('-'*50)
+    JHstr.append('Hessian:')
+    for i,II in enumerate(H):
+        exc_from_i, exc_to_i = get_i_a_from_pos_in_jac(i, wf.n_alpha, wf.beta_shift)
+        for j,x in enumerate(II): 
+            exc_from_j, exc_to_j = get_i_a_from_pos_in_jac(j, wf.n_alpha, wf.beta_shift)
+            JHstr.append(' [{0:3d},{1:3d}] = {2:.6f}; K_{3:d}^{4:d} [{5:s}]; K_{6:d}^{7:d} [{8:s}]'.\
+                         format(i, j,  x,
+                                exc_from_i, exc_to_i, 'a' if i<wf.beta_shift else 'b',
+                                exc_from_j, exc_to_j, 'a' if j<wf.beta_shift else 'b'))
+    return('\n'.join(JHstr))
+
+
+
+
+def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms):
+    """only for Ms=0!!"""
+    lspl = l.split()
+    final_occ = []
+    try:
+        coeff = float(lspl[0])
+        occ = list(map(lambda x: int(x)-1, lspl[1:]))
+    except Exception as e:
+        raise dGrMolproInputError("Error when reading FCI configuration. Exception was:\n"
+                                  + str(e),
+                                  line = l, line_number = line_number)
+    n_cur_spirrep = 0
+    cur_spirrep = 0
+    n = 0
+    sum_prev_orb_dim = 0
+    print('orb_dim: ', orb_dim._occupation)
+    print('my occ: ', occ)
+    for i, orb in enumerate(occ):
+        print('ini iter -->','i=',i,'orb=',orb)
+        if orb >= orb_dim[cur_spirrep] or i == (len(occ) + int(2*Ms))//2:
+            print('inside if:','i=', i,'orb=', orb, 'orbdim', orb_dim[cur_spirrep], 'n=',n)
+            final_occ.append(np.array(list(map(lambda x:x-sum_prev_orb_dim, occ[i-n:i])), dtype=int))
+            sum_prev_orb_dim += orb_dim[cur_spirrep]
+            cur_spirrep += 1
+            if i == (len(occ) + int(2*Ms))//2:
+                sum_prev_orb_dim = 0
+                while cur_spirrep < n_irrep:
+                    final_occ.append(np.array([], dtype=int))
+                    cur_spirrep += 1
+            else:
+                while orb > sum_prev_orb_dim:
+                    print('adding empty:',
+                          'orb=',orb,
+                          'sum_prev_orb_dim=',sum_prev_orb_dim,
+                          'cur_spirrep=',cur_spirrep)
+                    final_occ.append(np.array([], dtype=int))
+                    sum_prev_orb_dim += orb_dim[cur_spirrep]
+                    cur_spirrep += 1
+            n = 1
+        else:
+            n += 1
+        print('end iter -->', final_occ)
+    i += 1
+    print(i,n,sum_prev_orb_dim)
+    final_occ.append(np.array(list(map(lambda x:x-sum_prev_orb_dim, occ[i-n:i])), dtype=int))
+    sum_prev_orb_dim += orb_dim[cur_spirrep]
+    cur_spirrep += 1
+    while cur_spirrep < 2 * n_irrep:
+        final_occ.append(np.array(occ[0:0], dtype=int))
+        cur_spirrep += 1
+    return Slater_Det(c = float(lspl[0]),
+                      occupation = final_occ)
+
+
+
+    def compare_Jac_Hess(self, fout=sys.stdout, U=None):
+        """Make Jacobian and Hessian analytically and numerically and compare.
+        
+        TODO: implement U, the basis
+        """
+        with logtime('Making Jacobian and Hessian') as T_Jac_Hess:
+            Jac, Hess = self.make_Jac_Hess_overlap()
+        with logtime('Making Jacobian and Hessian numerically') as T_Jac_Hess:
+            num_Jac, num_Hess = self.construct_Jac_Hess(analytic=False)
+        allclose_J = np.allclose(Jac, num_Jac)
+        allclose_H = np.allclose(Hess, num_Hess)
+        sep='\n' + '='*30 + '\n'
+        sep2='\n' + '-'*30 + '\n'
+        logger.info(sep
+                    + 'Jacobian allclose: %s' + sep2
+                    + 'Analytic Jacobian:\n%r\n' + sep2
+                    + 'Numeric Jacobian:\n%r\n' + sep2
+                    + 'Anal Jac == Num Jac:\n%r\n' + sep2
+                    + 'Anal Jac - Num Jac:\n%r\n' + sep2,
+                    allclose_J,
+                    Jac, num_Jac, Jac == num_Jac, Jac - num_Jac)
+        logger.info(sep
+                    + 'Jacobian allclose: %s' + sep2
+                    + 'Analytic Hessian:\n%r\n' + sep2
+                    + 'Numeric Hessian:\n%r\n' + sep2
+                    + 'Anal Hess == Num Hess:\n%r\n' + sep2
+                    + 'Anal Hess - Num Hess:\n%r\n' + sep2,
+                    allclose_J,
+                    Hess, num_Hess, Hess == num_Hess, Hess - num_Hess)
+        if allclose_H and allclose_H:
+            fout.write('Success! Analytic and numeric Jac. and Hess. are the same!!\n')
+        else:
+            fout.write('\nWARNING! Comparisons of Jac. and Hess have failed!!\n')

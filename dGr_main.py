@@ -17,7 +17,7 @@ from scipy import linalg
 from dGr_util import dist_from_ovlp, ovlp_Slater_dets, logtime
 from dGr_exceptions import *
 import dGr_orbitals as orb
-import dGr_FCI_Molpro as FCI
+import dGr_FCI_WF as FCI
 import dGr_WF_int_norm as IntN
 import dGr_CISD_WF as CISDwf
 import dGr_optimiser
@@ -39,7 +39,6 @@ def dGr_main(args, f_out):
     """
     git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)))
     git_sha = git_repo.head.object.hexsha
-    use_FCIopt = False
     def toout(x=''):
         f_out.write(x + '\n')
     def print_ovlp_D(pt1, pt2, ovlp):
@@ -60,7 +59,6 @@ def dGr_main(args, f_out):
     toout('External wave function, |extWF>: ' + args.molpro_output)
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
-        use_FCIopt = True
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
     toout('Hartree-Fock orbitals, |min E>: ' + args.HF_orb)
     if args.ini_orb is not None:
@@ -69,27 +67,42 @@ def dGr_main(args, f_out):
             toout('Zipped numpy file ' + args.ini_orb)
         else:
             toout('Molpro output ' + args.ini_orb)
-    if use_FCIopt:
-        toout('Using the optimiser to whole FCI (because --WF_templ was given)')
+    if args.algorithm == 'orb_rotations':
+        orbRot_opt = True
+        toout('Using the optimiser based on orbital rotations.')
     else:
+        orbRot_opt = False
         toout('Using the optimiser based on the geometry of the Grassmannian. See:')
         toout('   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.')
+        if args.algorithm == 'CISD_Absil':
+            toout('   Algorithm specific for CISD wave function.')
+        else:
+            toout('   Using algorithm for general wave function.')
     toout('State: ' + args.state)
     toout('Log level: ' + logging.getLevelName(args.loglevel))
     toout('qpy job ID: {:s}'.\
-                format(os.environ['QPY_JOB_ID']
-                       if 'QPY_JOB_ID' in os.environ
-                       else 'not in qpy'))
+          format(os.environ['QPY_JOB_ID']
+                 if 'QPY_JOB_ID' in os.environ else
+                 'not in qpy'))
     toout()
     start_time = time.time()
     toout('Starting at {}'.format(
         time.strftime("%d %b %Y - %H:%M",time.localtime(start_time))))
     toout()
     # ----- loading wave function
-    if use_FCIopt:
-        ext_wf = FCI.Molpro_FCI_Wave_Function(args.molpro_output,
-                                              args.state if args.state else '1.1',
-                                              FCI_file_name = args.WF_templ)
+    if orbRot_opt:
+        with logtime('Reading FCI wave function'):
+            ext_wf = FCI.Wave_Function_Norm_CI.from_Molpro_FCI(
+                args.molpro_output
+                if args.WF_templ is None else
+                args.WF_templ,
+                args.state if args.state else '1.1',
+                zero_coefficients=args.WF_templ is not None)
+        if args.WF_templ is not None:
+            with logtime('Reading wave function coefficients'):
+                ext_wf.get_coeff_from_molpro(args.molpro_output,
+                                             args.state if args.state else '1.1',
+                                             use_structure=True)
     else:
         with logtime('Reading int. norm. from Molpro output'):
             ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
@@ -99,12 +112,9 @@ def dGr_main(args, f_out):
             toout('Checking the two algorithms. No optimization will be performed.')
             logger.debug('CISD wave function:\n%r',ext_wf_CISD)
         else:
-            if not args.use_general_algorithm:
+            if args.algorithm == 'CISD_Absil':
                 with logtime('Transforming int. norm. WF into CISD wf'):
                     ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
-                toout('Using algorithm specific for CISD wave function.')
-            else:
-                toout('Using algorithm for general wave function.')
     logger.debug('External wave function:\n %r', ext_wf)
     if loglevel <= logging.DEBUG and (args.use_general_algorithm
                                       or args.check_algorithms):
@@ -148,15 +158,15 @@ def dGr_main(args, f_out):
             U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.Molecular_Orbitals.from_file(args.WF_orb))
     else:
-        U = []
+        U = [] ### SETO TO NONE
         for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(ext_wf.orb_dim[spirrep]))
         toout('Using the reference determinant (identity) as initial guess for U.')
-    if not use_FCIopt:
+    if not orbRot_opt:
         for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
             U[spirrep] = U[spirrep][:,:ext_wf.ref_occ[spirrep]]
 #    toout('Number of determinants in the external wave function: {0:d}'.\
-#          format(len(ext_wf.determinants)))
+#          format(len(ext_wf)))
     toout('Dimension of orbital space: {0:}'.\
           format(ext_wf.orb_dim))
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.\
@@ -164,7 +174,10 @@ def dGr_main(args, f_out):
     toout('Occupation of reference wave function: {0:}'.\
           format(ext_wf.ref_occ))
     if args.check_algorithms:
-        Absil.compare_algorithms(ext_wf, ext_wf_CISD, U, f_out)
+        if orbRot_opt:
+            ext_wf.compare_Jac_Hess(f_out)
+        else:
+            Absil.compare_algorithms(ext_wf, ext_wf_CISD, U, f_out)
         toout('Detailed information of comparison is written to the log file.')
         toout()
         end_time = time.time()
@@ -178,13 +191,9 @@ def dGr_main(args, f_out):
     toout('-'*30)
     f_out.flush()
     logger.info('Starting optimisation')
-    if use_FCIopt:
+    if orbRot_opt:
         res = dGr_optimiser.optimise_distance_to_FCI(
             ext_wf,
-            FCI.construct_Jac_Hess,
-            FCI.str_Jac_Hess,
-            FCI.calc_wf_from_z,
-            FCI.transform_wf,
             f_out = f_out,
             ini_U = U)
     else:
@@ -204,7 +213,7 @@ def dGr_main(args, f_out):
         toout('Iterations converged!')
     else:
         toout('WARNING: Iterations did not converge!!!')
-        if use_FCIopt:
+        if orbRot_opt:
             toout('Norm of final z vector: {0:8.4e}'.format(res.norm[0]))
             toout('Norm of final Jacobian: {0:8.4e}'.format(res.norm[1]))
         else:

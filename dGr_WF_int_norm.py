@@ -10,7 +10,6 @@ import math
 import logging
 import copy
 from collections.abc import Mapping
-import re
 
 import numpy as np
 from numpy import linalg
@@ -18,22 +17,11 @@ from numpy import linalg
 from dGr_util import (number_of_irreducible_repr, zero, irrep_product, logtime, triangular,
                       get_ij_from_triang, get_n_from_triang)
 import dGr_general_WF as genWF
+import dGr_Molpro_util as Molpro
 from dGr_exceptions import *
 
 logger = logging.getLogger(__name__)
 
-
-molpro_CISD_header = ' PROGRAM * CISD (Closed-shell CI(SD))     '\
-                     + 'Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n'
-molpro_UCISD_header = ' PROGRAM * CISD (Unrestricted open-shell CI(SD))     '\
-                      + 'Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n'
-molpro_RCISD_header = ' PROGRAM * CISD (Restricted open-shell CI(SD))     '\
-                      + 'Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n'
-molpro_CCSD_header = ' PROGRAM * CCSD (Closed-shell coupled cluster)     '\
-                     + 'Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n'
-
-CC_sgl_str = 'I         SYM. A    A   T(IA)'
-CC_dbl_str = 'I         J         SYM. A    SYM. B    A         B      T(IJ, AB)'
 
 class String_Index_for_SD(genWF.String_Index):
     """The string index for wave function with single and doubles
@@ -1353,7 +1341,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
     def change_orb_basis(self):
         raise NotImplementedError('Not implemented yet: change_orb_basis')
 
-    def make_Jac_Hess(self):
+    def make_Jac_Hess_overlap(self):
         raise NotImplementedError('Not implemented yet: make_Jac_Hess')
 
     @classmethod
@@ -1364,23 +1352,6 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         new_wf.source = 'From file ' + molpro_output
         sgl_found = False
         dbl_found = False
-        orbinfo_regexp = re.compile('.*\s([\d]+)\s*\(([\s\d]*)\)')
-        def get_molpro_orb_info(l, occ_type):
-            """load orbital info, per irrep, from Molpro's output"""
-            a = orbinfo_regexp.match(l)
-            if a is None:
-                raise dGrMolproInputError('Problems reading orbital information',
-                                          line = l, line_number = line_number)
-            try:
-                all_orb = int(a.group(1))
-                a = a.group(2).split()
-                a = list(map(int, a)) + [0] * (new_wf.n_irrep - len(a))
-                if occ_type == 'F':
-                    a += a
-                return genWF.Orbitals_Sets(a, occ_type=occ_type)
-            except:
-                raise dGrMolproInputError('Problems reading orbital information.',
-                                          line = i, line_number = line_number)
         with open (molpro_output, 'r') as f:
             for line_number, l in enumerate(f, start=1):
                 if 'Point group' in l:
@@ -1391,37 +1362,41 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                         raise dGrMolproInputError('Unknown point group!',
                                                   line = l, line_number = line_number)
                 if new_wf.WF_type is None:
-                    if l == molpro_CISD_header:
+                    if l == Molpro.CISD_header:
                         new_wf.WF_type = 'CISD'
                         new_wf.restricted = True
                         CIcalc_found = True
                         new_wf.initialize_data()
-                    elif l == molpro_UCISD_header or l == molpro_RCISD_header:
+                    elif l == Molpro.UCISD_header or l == Molpro.RCISD_header:
                         new_wf.WF_type = 'CISD'
                         new_wf.restricted = False
                         CIcalc_found = False # There are MP2 amplitudes first!
                         new_wf.initialize_data()
-                    elif l == molpro_CCSD_header:
+                    elif l == Molpro.CCSD_header:
                         new_wf.WF_type = 'CCSD'
                         new_wf.initialize_data()
                 else:
                     if new_wf.WF_type == 'CCSD' or new_wf.WF_type == 'CISD':
                         if ('Number of closed-shell orbitals' in l
                             or 'Number of core orbitals' in l):
-                            new_orbitals = get_molpro_orb_info(l, 'R')
+                            new_orbitals = Molpro.get_orb_info(l, line_number,
+                                                               new_wf.n_irrep, 'R')
                             new_wf.ref_occ += new_orbitals
                             if 'Number of core orbitals' in l:
                                 new_wf.n_core += new_orbitals
                         if 'Number of active  orbitals' in l:
-                            new_wf.n_act = get_molpro_orb_info(l, 'A')
+                            new_wf.n_act = Molpro.get_orb_info(l, line_number,
+                                                               new_wf.n_irrep, 'A')
                             new_wf.ref_occ += new_wf.n_act
                         if 'Number of external orbitals' in l:
-                            new_wf.orb_dim = (new_wf.ref_occ + get_molpro_orb_info(l, 'R'))
+                            new_wf.orb_dim = (new_wf.ref_occ
+                                              + Molpro.get_orb_info(l, line_number,
+                                                                    new_wf.n_irrep, 'R'))
                             new_wf.orb_dim.restrict_it()
                         if ('Starting RCISD calculation' in l
                             or 'Starting UCISD calculation' in l):
                             CIcalc_found = True
-                        if CC_sgl_str in l and CIcalc_found:
+                        if Molpro.CC_sgl_str in l and CIcalc_found:
                             if new_wf.singles is None:
                                 new_wf.initialize_SD_lists()
                             sgl_found = True
@@ -1441,7 +1416,7 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                                     raise dGrMolproInputError (
                                         'Wrong spin information for unrestricted wave function!',
                                         line = l, line_number = line_number)
-                        elif CC_dbl_str in l and CIcalc_found:
+                        elif Molpro.CC_dbl_str in l and CIcalc_found:
                             if new_wf.singles is None:
                                 new_wf.initialize_SD_lists()
                             dbl_found = True

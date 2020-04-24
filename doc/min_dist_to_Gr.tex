@@ -117,7 +117,7 @@ TODO: (??) Change position of spin and irrep in the notation? ($n_\sigma^\irp \t
 
 Let
 \begin{equation}\label{eq:ext_wf}
-  \ket{\Psi_\text{ext}} = \sum_I c_I \ket{\Phi_I}
+  \ket{\Psi_\text{ext}} = \sum_I C_I \ket{\Phi_I}
 \end{equation}
 be a $n$-electron normalised CI like wave function represented in the orbital basis
 \begin{equation}
@@ -164,7 +164,7 @@ To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely,
     \mathclap{\substack{I\\
         I \ne \{1,2,\dots,n\}}}
       }
-    c_I \ket{\Phi_I}\,,
+    C_I \ket{\Phi_I}\,,
 \end{equation}
 and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\bracket{\Psi_\text{FCI}}{\Phi_\text{minD}}|$.
 
@@ -175,8 +175,8 @@ We parametrise $Gr$ by the orbital rotations as\cite{}
 \end{equation}
 where
 \begin{eqnarray}
-  \hat{K} &=& \sum_{q,a} K_q^a(a_a^\dagger a_q - a_q^\dagger a_a)\\
-          &=& \sum_{q,a} K_q^a(a_q^a - a_a^q)\,
+  \hat{K} &=& \sum_{i,a} K_a^i(a_a^\dagger a_i - a_i^\dagger a_a)\\
+          &=& \sum_{a,a} K_a^i(a_i^a - a_a^i)\,
 \end{eqnarray}
 This parametrisation comes from the most general 
 \begin{equation}
@@ -200,11 +200,11 @@ If $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the opti
 
 If the orbital rotations will preserve spin and symmetry, the operator $\hat{K}$ can be written as:
 \begin{equation}
-  \hat{K} = \sum_\irp \sum_{(q,a) \in \irp} K_q^{a,\irp}(E_{aq}^\irp - E_{qa}^\irp),
+  \hat{K} = \sum_\irp \sum_{(q,a) \in \irp} K_a^{i,\irp}(E_{ai}^\irp - E_{ia}^\irp),
 \end{equation}
 where the singlet excitation operator is defined as:
 \begin{equation}
-  E_{pq} = a_{p\alpha}^\dagger a_{q\alpha} + a_{p\beta}^\dagger a_{q\beta}\,.
+  E_{pr} = a_{p\alpha}^\dagger a_{r\alpha} + a_{p\beta}^\dagger a_{r\beta}\,.
 \end{equation}
 See \cite{helgaker00_molec} for the details.
 
@@ -215,23 +215,23 @@ The expressions at $\hat{K} = 0$ are given below.
 For the derivation of the expressions, see that hand notes.
 
 \begin{equation}
-  \frac{\partial f(\hat{K} = 0)}{\partial K_q^a} = (-1)^{n_{\sigma(q)} - q + 1} C_q^a
+  \frac{\partial f(\hat{K} = 0)}{\partial K_a^i} = (-1)^{n_{\sigma(i)} - i + 1} C_i^a
 \end{equation}
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^a \partial K_s^b} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^i \partial K_b^j} =
   \left\{
     \begin{array}{lcr}
-      -C_0 & \quad\quad & (q = s, a = b)\\
-      0   &  \quad\quad & (q \ne s, a = b)\\
-      0   &  \quad\quad & (q = s, a \ne b)\\
-      (-1)^{n_{\sigma(q)}+n_{\sigma(s)}-q-s}C_{qs}^{ab} & \quad\quad & (\sigma(q) \ne \sigma(s))\\
-      (-1)^{q+s+1}C_{qs}^{ab} & \quad\quad & (\sigma(q) = \sigma(s), q<s, a<b)\\
-      (-1)^{q+s}C_{qs}^{ab} & \quad\quad & (\sigma(q) = \sigma(s), q<s, a>b)\\
+      -C_0 & \quad\quad & (i = j, a = b)\\
+      0   &  \quad\quad & (i \ne j, a = b)\\
+      0   &  \quad\quad & (i = j, a \ne b)\\
+      (-1)^{n_{\sigma(i)}+n_{\sigma(j)}-i-j}C_{ij}^{ab} & \quad\quad & (\sigma(i) \ne \sigma(j))\\
+      (-1)^{i+j+1}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a<b)\\
+      (-1)^{i+j}C_{ij}^{ab} & \quad\quad & (\sigma(i) = \sigma(j), i<j, a>b)\\
     \end{array}
   \right.
 \end{equation}
-In these equations, $C_q^a$ and $C_{qs}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
+In these equations, $C_i^a$ and $C_{ij}^{ab}$ are the CI coefficients of the single and double excited determinants in the (normalised) wave function $\ket{\Psi_\text{FCI}}$.
 The canonical order of the orbitals is assumed to be ``first all $\alpha$, then all $\beta$''.
 
 \subsubsection{Spin restricted, closed-shell reference and symmetry adapted}
@@ -242,26 +242,26 @@ The external wave function $\ket{\Psi_\text{FCI}}$ will also be assumed to be re
 In this conditions, the Jacobin and the Hessian are:
 
 \begin{equation}
-  \frac{\partial f(\hat{K} = 0)}{\partial K_q^{a,\irp}} = -2(-1)^{q + n_\irp} C_q^{a,\irp}
+  \frac{\partial f(\hat{K} = 0)}{\partial K_a^{i,\irp}} = -2(-1)^{i + n_\irp} C_i^{a,\irp}
 \end{equation}
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^{a,\irp} \partial K_s^{b\irpP}} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^{i,\irp} \partial K_{a'}^{i'\irpP}} =
   \left\{
     \begin{array}{lcr}
-      -2 C_0 & \quad\quad & \irp = \irpP, a=a', q=q'\\
-      2 \Dss_{q'q}^{a'a, \irp} (-1)^{q + q'} & \quad\quad &
+      -2 C_0 & \quad\quad & \irp = \irpP, a=a', i=i'\\
+      2 \Dss_{i'i}^{a'a, \irp} (-1)^{i + i'} & \quad\quad &
       \left\{\begin{array}{c}
               \irp = \irpP;\\
-              a=a'\text{ and }q\ne q'\text{ or }\\
-              a \ne a'\text{ and }q = q'
+              a=a'\text{ and }i\ne i'\text{ or }\\
+              a \ne a'\text{ and }i = i'
             \end{array}
       \right.\\
-      2  (-1)^{q + q'} \left(\Dss_{q'q}^{a'a, \irp} +
-      C_{q'q}^{a'a, \irp} (-1)^{(q'<q) + (a'>a)}\right) & \quad\quad &
-      \irp = \irpP, a \ne a'\text{ and }q\ne q'\\
-      2 (-1)^{q+n_\irp}(-1)^{q'+n_\irpP}
-      \left( \Dmixaa_{q'q}^{a'a, \irp\irpP} + \Dmixab_{q'q}^{a'a, \irp\irpP} \right) & \quad\quad &
+      2  (-1)^{i + i'} \left(\Dss_{i'i}^{a'a, \irp} +
+      C_{i'i}^{a'a, \irp} (-1)^{(i'<i) + (a'>a)}\right) & \quad\quad &
+      \irp = \irpP, a \ne a'\text{ and }i\ne i'\\
+      2 (-1)^{i+n_\irp}(-1)^{i'+n_\irpP}
+      \left( \Dmixaa_{i'i}^{a'a, \irp\irpP} + \Dmixab_{i'i}^{a'a, \irp\irpP} \right) & \quad\quad &
       \irp \ne \irpP
     \end{array}
   \right.
@@ -271,12 +271,12 @@ For the notation, see Section~\ref{sec:struct_cisd_wf}.
 The Hessian can be more compactly expressed as:
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_q^{a,\irp} \partial K_s^{b\irpP}} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^{i,\irp} \partial K_{a'}^{i'\irpP}} =
   \left\{
     \begin{array}{l}
-      -2 C_0 \quad\quad\quad \text{ if }\irp = \irpP, a=a', q=q'\\
-      2 (-1)^{q+n_\irp}(-1)^{q'+n_\irpP} \left( \Dmix_{q'q}^{a'a, \irp\irpP} +
-      \delta_{\irp\irpP}(1 - \delta_{a'a})(1 - \delta_{q'q})C_{q'q}^{a'a, \irp} (-1)^{(q'<q) + (a'>a)}\right)
+      -2 C_0 \quad\quad\quad \text{ if }\irp = \irpP, a=a', i=i'\\
+      2 (-1)^{i+n_\irp}(-1)^{i'+n_\irpP} \left( \Dmix_{i'i}^{a'a, \irp\irpP} +
+      \delta_{\irp\irpP}(1 - \delta_{a'a})(1 - \delta_{i'i})C_{i'i}^{a'a, \irp} (-1)^{(i'<i) + (a'>a)}\right)
              \quad \text{otherwise}
     \end{array}
   \right.
@@ -291,7 +291,7 @@ Let $U = e^{-\hat{K}}$ be the matrix that transform the orbital basis:
 \end{equation}
 Given the coefficients $C_I$ of the expansion in the first basis, we want to know the coefficients $C'_I$ such that
 \begin{equation}
-  \ket{\Psi_\text{FCI}} = \sum_I c_I \ket{\Phi_I} = \sum_I c'_I \ket{\Phi'_I}\,.
+  \ket{\Psi_\text{FCI}} = \sum_I C_I \ket{\Phi_I} = \sum_I C'_I \ket{\Phi'_I}\,.
 \end{equation}
 These are given by:
 \begin{equation}\label{eq:trans_fci_orbital_basis}
@@ -301,6 +301,22 @@ where $U_{IJ}$ is the minor of the matrix $U$ with the entries in the rows and c
 
 Such transformation is the most time consuming step.
 
+\subsubsection{Spin and symmetry adapted}
+
+In the case that the transformation matrix $U$ is spin and symmetry blocks, the determinant can be calculated as the product of smaller determinants, simplifying Equation~\eqref{eq:trans_fci_orbital_basis}.
+That is, suppose that the matrix $U$ is given as the direct sum of smaller square matrices (that are the transformation matrix in each spirrep block):
+\begin{equation}
+  \begin{split}
+    U =& U^{1\alpha} \oplus U^{2\alpha} \oplus \dots \oplus U^{g\beta}\\
+    =& \bigoplus_{\irp \sigma} U^{\irp\sigma}\,,
+  \end{split}
+\end{equation}
+Then 
+\begin{equation}\label{eq:trans_fci_orbital_basis_sym}
+  C'_I = \sum_{\substack{J\\\text{occ}(J) = \text{occ}(I)}}
+  C_J\, \prod_{\irp\sigma} \text{det}(U_{I^{\irp\sigma}J^{\irp\sigma}})\,,
+\end{equation}
+where the sum is only over the multiindices that have the same occupation pattern per spirrep block of $I$ (otherwise $det(U_{IJ}) = 0$, and some of $U_{I^{\irp\sigma}J^{\irp\sigma}}$ are non square).
 
 \subsection{Newton-Raphson step}
 Starting from an orbital basis $\{\phi_p\}$ such that the first determinant (that is, with the first $n_\alpha$ $\alpha$ orbitals and first $n_\beta$ $\beta$ occupied) is $\ket{\Phi_0}$, we calculate the Jacobian $\mathbf{J}$ and the Hessian $\mathbf{H}$ as shown above.
@@ -394,12 +410,12 @@ Under these conditions, the $f_\lozenge$ is calculated as follows:
   \label{eq:gen_f}
   f_\lozenge(Y)
   &=& \frac{1}{\sqrt{\text{det} \left( Y^T Y \right)}}
-      \sum_{I} c_I \, \text{det} \left( Y\big|_I \right)\\
+      \sum_{I} C_I \, \text{det} \left( Y\big|_I \right)\\
   &=& \frac{1}{\sqrt{
       \text{det} \Big( (Y_\alpha)^T Y_\alpha \Big)
       \text{det} \Big( (Y_\beta)^T Y_\beta \Big)
       }}
-      \sum_{I} c_I \,
+      \sum_{I} C_I \,
       \text{det} \left( Y_\alpha\big|_{I_\alpha} \right)
       \text{det} \left( Y_\beta\big|_{I_\beta} \right)\\\label{eq:f_diam_spin_irrep}
   &=& \frac{1}{\sqrt{
@@ -407,7 +423,7 @@ Under these conditions, the $f_\lozenge$ is calculated as follows:
       \text{det} \Big( (Y_\alpha^\irp)^T Y_\alpha^\irp \Big)
       \text{det} \Big( (Y_\beta^\irp)^T Y_\beta^\irp \Big)
       }}
-      \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I \,
+      \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I \,
   \prod_\irp
   \text{det} \Big( Y_\alpha^\irp\big|_{I_\alpha^\irp} \Big)
   \text{det} \Big( Y_\beta^\irp\big|_{I_\beta^\irp} \Big)
@@ -508,25 +524,25 @@ with
 
 \begin{eqnarray}
   \big( \mathbf{C}_{\sigma \irp} \big)^p_q &=&
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
   \left( G_{I_\sigma^\irp} - F_{I_\sigma^\irp} Y_\sigma^\irp  \right)^p_q\\
   &=&
   \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
   \left( G_{I_\sigma^\irp} \right)^{\bar{p}}_q
 \end{eqnarray}
 
 \begin{eqnarray}
   \big( \mathbf{X}_{\sigma \irp}^{\sigma \irp} \big)^{pr}_{qs} &=&
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
   \left\{ \left( G_{I_\sigma^\irp} - F_{I_\sigma^\irp} Y_\sigma^\irp  \right)^p_q \big( Y_\sigma^\irp \big)^r_s
   - \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}} \big( \tilde{H}_{I_\sigma^\irp} \big)^{\bar{p}r}_{qs} \right\}\\
   &=&
   \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left( \prod_{\{\sigma', \irpP\} \ne \{\sigma, \irp\}} F_{I_{\sigma'}^\irpP} \right)
   \left\{ \big( G_{I_\sigma^\irp} \big)^{\bar{p}}_q \big( Y_\sigma^\irp \big)^r_s
   - \big( \tilde{H}_{I_\sigma^\irp} \big)^{{\bar{p}}r}_{qs} \right\}
@@ -535,7 +551,7 @@ with
 \begin{eqnarray}
   \big( \mathbf{X}_{\sigma \irp}^{\sigma' \irpP} \big)^{pr}_{qs} &=&
   -%%\left( 1 - \delta_{\{\sigma,\irp\} \, \{\sigma',\irpP\}} \right)
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left(
     \prod_{\substack{
         \{\sigma'', \irpPP\} \ne \{\sigma', \irpP\} \\
@@ -547,7 +563,7 @@ with
   -%%\left( 1 - \delta_{\{\sigma,\irp\} \, \{\sigma',\irpP\}} \right)
   \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
   \big( \Pi_{Y_{\sigma'}^\irpP \perp} \big)^{\bar{r}}_u
-  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} c_I
+  \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left(
     \prod_{\substack{
         \{\sigma'', \irpPP\} \ne \{\sigma', \irpP\} \\
@@ -735,7 +751,7 @@ The restricted closed shell CISD wave function is given as:
     \w \ketbig{\overline{\Phi}_0}_g
     \Big)\\
     & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
-    c_I \ketbig{\Phi_I}\\
+    C_I \ketbig{\Phi_I}\\
     = & C_0 \ketbig{\Phi_0}\\
     & + \sum_\irp\sum_{(i,a) \in \irp} C_{i}^{a, \irp}
     \Big(
@@ -770,7 +786,7 @@ The restricted closed shell CISD wave function is given as:
     \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
     \Big)\\
     & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
-    c_I \ketbig{\Phi_I}\,.
+    C_I \ketbig{\Phi_I}\,.
   \end{split}
 \end{equation}
 

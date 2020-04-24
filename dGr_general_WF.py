@@ -379,31 +379,31 @@ class Orbitals_Sets(Sequence):
         return Orbitals_Sets(new_occupation,
                              new_occ_type)
 
-        def __iadd__(self, other):
-            if not isinstance(other, Orbitals_Sets):
-                raise dGrValueError('Orbitals_Sets adds only with another Orbitals_Sets.')
-            if self._n_irrep != other._n_irrep:
-                raise dGrValueError('Both instances of Orbitals_Sets must have same len.')
-            if self._type == other._type:
-                self_occupation += other._occupation
-            else:
-                self_occ = self._occupation
-                self._occupation = np.zeros(self._n_irrep * 2,
-                                            dtype=np.int8)
-                if self._type != 'B':
-                    self._occupation[:self._n_irrep] += self_occ[:self._n_irrep]
-                if self._type != 'A':
-                    self._occupation[self._n_irrep:] += (self_occ[self._n_irrep:]
-                                                         if self._type == 'F' else
-                                                         self_occupation)
-                self._type = 'F'
-                if other._type != 'B':
-                    self._occupation[:self._n_irrep] += other._occupation[:other._n_irrep]
-                if other._type != 'A':
-                    self._occupation[other._n_irrep:] += (other._occupation[other._n_irrep:]
-                                                          if other._type == 'F' else
-                                                          other._occupation)
-            return self
+    def __iadd__(self, other):
+        if not isinstance(other, Orbitals_Sets):
+            raise dGrValueError('Orbitals_Sets adds only with another Orbitals_Sets.')
+        if self._n_irrep != other._n_irrep:
+            raise dGrValueError('Both instances of Orbitals_Sets must have same len.')
+        if self._type == other._type:
+            self_occupation += other._occupation
+        else:
+            self_occ = self._occupation
+            self._occupation = np.zeros(self._n_irrep * 2,
+                                        dtype=np.int8)
+            if self._type != 'B':
+                self._occupation[:self._n_irrep] += self_occ[:self._n_irrep]
+            if self._type != 'A':
+                self._occupation[self._n_irrep:] += (self_occ[self._n_irrep:]
+                                                     if self._type == 'F' else
+                                                     self_occupation)
+            self._type = 'F'
+            if other._type != 'B':
+                self._occupation[:self._n_irrep] += other._occupation[:other._n_irrep]
+            if other._type != 'A':
+                self._occupation[other._n_irrep:] += (other._occupation[other._n_irrep:]
+                                                      if other._type == 'F' else
+                                                      other._occupation)
+        return self
 
     def __sub__(self, other):
         if not isinstance(other, Orbitals_Sets):
@@ -443,7 +443,10 @@ class Orbitals_Sets(Sequence):
             self._type = 'R'
             return
         raise dGrValueError('Cannot restrict ' + str(self) + '.')
-
+    
+    @property
+    def occ_type(self):
+        return self._type
 
 class Spirrep_Index(namedtuple('Spirrep_Index',
                                ['spirrep',
@@ -515,6 +518,7 @@ class Wave_Function(ABC, Sequence):
     def __init__(self):
         self.restricted = None
         self.point_group = None
+        self.Ms = None
         self.n_core = None
         self.n_act = None
         self.orb_dim = None
@@ -532,6 +536,7 @@ class Wave_Function(ABC, Sequence):
         x.append('n core: {}'.format(self.n_core))
         x.append('n act: {}'.format(self.n_act))
         x.append('ref occ: {}'.format(self.ref_occ))
+        x.append('Ms: {}'.format(self.Ms))
         x.append('n electrons: {}'.format(self.n_elec))
         x.append('n alpha: {}'.format(self.n_alpha))
         x.append('n beta: {}'.format(self.n_beta))
@@ -590,8 +595,10 @@ class Wave_Function(ABC, Sequence):
     def n_alpha(self):
         if self.ref_occ is None:
             return None
-        if self.restricted:
+        if self.restricted and self.ref_occ.occ_type == 'R':
             return len(self.ref_occ) // 2
+        if self.ref_occ.occ_type == 'F':
+            return sum([self.ref_occ[i] for i in range(self.n_irrep)])
         len_n_act = len(self.n_act)
         return len_n_act + (len(self.ref_occ) - len_n_act) // 2
     
@@ -599,8 +606,10 @@ class Wave_Function(ABC, Sequence):
     def n_beta(self):
         if self.ref_occ is None:
             return None
-        if self.restricted:
+        if self.restricted and self.ref_occ.occ_type == 'R':
             return len(self.ref_occ) // 2
+        if self.ref_occ.occ_type == 'F':
+            return sum([self.ref_occ[i] for i in range(self.n_irrep, 2 * self.n_irrep)])
         return (len(self.ref_occ) - len(self.n_act)) // 2
     
     @property
@@ -695,7 +704,7 @@ class Wave_Function(ABC, Sequence):
         pass
     
     @abstractmethod
-    def make_Jac_Hess(self, analytic = True):
+    def make_Jac_Hess_overlap(self, analytic = True):
         """Construct the Jacobian and the Hessian of the function overlap.
         
         Behaviour:
@@ -733,12 +742,10 @@ class Wave_Function(ABC, Sequence):
         Paramters:
         ----------
         
-        z        the update in the orbital basis (given in the space of the
-             K_i^a parameters) from the position z=0 (that is, the orbital
-             basis used to construct the current representation of the
-             wave function
-        cur_wf   current representation of the wave function
-             (as Molpro_FCI_Wave_Function)
+        z   the update in the orbital basis (given in the space of the
+            K_i^a parameters) from the position z=0 (that is, the orbital
+            basis used to construct the current representation of the
+            wave function
         just_C0  Calculates only the first coefficient (see transform_wf)
         
         Return:

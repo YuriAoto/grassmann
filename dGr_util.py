@@ -182,5 +182,20 @@ def get_n_from_triang(i, j, with_diag=True):
         return j + triangular(i)
     else:
         return j + triangular(i - 1)
+
+def get_pos_from_rectangular(i, a, n):
+    """Returns i*n + a (position in row-major, C order)
     
+    i,a                           pos
     
+    0,0   0,1   ...   0,n-1       0    1  ...   n-1
+    1,0   1,1   ...   1,n-1       n  n+1  ...   2n-1
+    2,0   2,1   ...   2,n-1      2n 2n+1  ...   3n-1
+    ....        i,a                     i*n + a
+    """
+    return i * n + a
+
+def get_ia_from_rectangular(pos, n):
+    """Returns (i,a). Inverse of get_pos_from_rectangular"""
+    return pos // n, pos % n
+

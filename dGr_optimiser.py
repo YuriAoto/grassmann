@@ -61,10 +61,11 @@ class Results(namedtuple('Results',
 def optimise_distance_to_FCI(fci_wf,
                              max_iter = 20,
                              f_out = sys.stdout,
+                             restricted = True,
                              ini_U = None,
+                             occupation = None,
                              thrsh_Z = 1.0E-8,
-                             thrsh_J = 1.0E-8,
-                             check_jac_and_hess = False):
+                             thrsh_J = 1.0E-8):
     """Find a single Slater determinant that minimise the distance to fci_wf
     
     Behaviour:
@@ -76,11 +77,9 @@ def optimise_distance_to_FCI(fci_wf,
     the FCI wave function is on the same orbital basis of the slater determinant
     of the optimisation step, a full transformation of wave function fci_wf is
     done in every step.
-    Thus, the initial wave function fci_wf has to have all determinants of the
+    Such transformation uses the structure of fci_wf, and thus
+    the initial wave function fci_wf has to have all determinants of the
     full CI wave function, even if the coefficients are zero.
-    
-    See Molpro_FCI_Wave_Function for an example of the classes and
-    functions used.
     
     The argument fci_wf is not changed.
     
@@ -96,23 +95,39 @@ def optimise_distance_to_FCI(fci_wf,
     f_out (file object, default = sys.stdout)
         The output
     
-    ini_U (2-tuple of np.ndarray, default = None)
-        If not None, it should be a two elements tuple with the
-        initial transformation for alpha and beta orbitals.
-        If None, a column-truncated Identity is used as initial transformation.
+    restricted (bool, default = False)
+        Optimises the spatial part of both alpha and beta equally.
+        It is not explicitly used! The code decides when use restricted calculation
+    
+    ini_U (list of np.ndarray, default=None)
+        if not None, it should have the initial transformation
+        of orbitals from the basis of the ci_wf to the basis of the initial
+        Slater determinant.
+        The list is like:
+        [U_a^1, ..., U_a^g, U_b^1, ..., U_b^g]
+        where U_sigma^i is the U for spin sigma (alpha=a or beta=b) and irrep i.
+        If it is a restricted calculation, only one part should be given:
+        [U^1, ..., U^g]
+        If None, the Identity for each irrep is used as
+        initial transformation, that is, the occupied orbitals are the first ones
+        in the MO basis of ci_wf.
+    
+    occupation (tuple of int, default=None)
+        The occupation of each spirrep block to be used in the optimization:
+        (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
+        This should be consistent to the spin and symmetry of the external
+        wave function.
+        If None is given, uses ci_wf.ref_occ.
+        If ini_U is given, this occupation is not considered, and the
+        implicit occupation given by the number of columns of U is used.
+        Currently: not implemented!
     
     thrsh_Z (float, optional, default = 1.0E-8)
         Convergence threshold for the Z vector
     
     thrsh_J (float, optional, default = 1.0E-8)
         Convergence threshold for the Jacobian
-    
-    check_jac_and_hess (bool, default = False)
-        If True, construct the Jacobian and the Hessian numerically,
-        and check it it matches the analytic, putting the information
-        in the log.
-        For testing purposes.
-    
+        
     Returns:
     --------
     
@@ -126,14 +141,14 @@ def optimise_distance_to_FCI(fci_wf,
     TODO:
     -----
     
-    Implement calculation with symmetry
+    Implement unrestricted calculation
     """
     def get_i_max_coef(wf):
         max_coef = 0.0
         i_max_coef = -1
-        for i,c in enumerate(wf.determinants):
-            if abs(c[0]) > max_coef:
-                max_coef = abs(c[0])
+        for i, det in enumerate(wf):
+            if abs(det.c) > max_coef:
+                max_coef = abs(det.c)
                 i_max_coef = i
         return i_max_coef
     converged = False
@@ -141,13 +156,15 @@ def optimise_distance_to_FCI(fci_wf,
     i_pos_eigVal = -1
     i_iteration = 0
     if ini_U is None:
-        Ua = np.identity(fci_wf.orb_dim)
-        Ub = np.identity(fci_wf.orb_dim)
+        U = []
+        ini_occ = occupation if occupation is not None else ci_wf.ref_occ
+        for i in ci_wf.spirrep_blocks(restricted=restricted):
+            U.append(np.identity(ci_wf.orb_dim[i % ci_wf.n_irrep]))
         cur_wf = copy.copy(fci_wf)
     else:
-        Ua = ini_U[0]
-        Ub = ini_U[1]
-        cur_wf = fci_wf.change_orb_basis(Ua, Ub)
+        U = list(ini_U)
+        cur_wf = fci_wf.change_orb_basis(U)
+    fmt_full = '{0:<5d}  {1:<10.8f} {2:<12s}  {3:<11.8f}  {4:<11.8f}  {5:<s}\n'
     f_out.write('{0:<5s}  {1:<23s}  {2:<11s}  {3:<11s}  {4:<11s}\n'.\
                 format('it.', 'f', '|z|', '|Jac|', '[det. largest coef.]'))
     for i_iteration in range(max_iter):
@@ -155,23 +172,10 @@ def optimise_distance_to_FCI(fci_wf,
                     i_iteration)
         if loglevel <= logging.DEBUG:
             logger.debug('Wave function:\n%s', cur_wf)
-        Jac, Hess = cur_wf.construct_Jac_Hess()
-        logger.info('Hessian and Jacobian are built\n')
+        with logtime('Making Jacobian and Hessian') as T_Jac_Hess:
+            Jac, Hess = cur_wf.make_Jac_Hess_overlap()
         logger.log(1, '%s', Jac)
         logger.log(1, '%s', Hess)
-        if check_jac_and_hess:
-            num_Jac, num_Hess = cur_wf.construct_Jac_Hess(analytic=False)
-            diff = 0.0
-            for i,x in enumerate(num_Jac):
-                diff += abs(x-Jac[i])
-            logger.debug('Sum abs(diff(Jac, numJac)) = %s', diff)
-            diff = 0.0
-            for i1, x1 in enumerate(num_Hess):
-                for i2, x2 in enumerate(x1):
-                    diff += abs(x2-Hess[i1][i2])
-            logger.debug('Sum abs(diff(Hess, numHess)) = %s', diff)
-            logger.debug('Analytic:\n%s\n\n%s', Jac, Hess)
-            logger.debug('Numeric:\n%s\n\n%s', num_Jac, num_Hess)
         eig_val, eig_vec = linalg.eigh(Hess)
         Hess_has_pos_eig = False
         Hess_dir_with_posEvec = None
@@ -183,16 +187,15 @@ def optimise_distance_to_FCI(fci_wf,
                 Hess_dir_with_posEvec = np.array(eig_vec[:,i])
         if Hess_has_pos_eig:
             logger.warning('Hessian has positive eigenvalue.')
-        normJ = 0.0
-        for i in Jac:
-            normJ += i**2
-        normJ = math.sqrt(normJ)
+        normJ = linalg.norm(Jac)
         if not try_uphill:
             # Newton step
-            Hess_inv = linalg.inv(Hess)
-            logger.info('Hessian is inverted.')
-            z = -np.matmul(Hess_inv, Jac)
-            logger.info('z vector has been calculated by Newton step.')
+            with logtime('Solving lin system for vector z.'):
+                if True:
+                    z = -linalg.solve(Hess, Jac)
+                else:
+                    Hess_inv = linalg.inv(Hess)
+                    z = -Hess_inv @ Jac
         else:
             # Look maximum in the direction of eigenvector of Hess with pos
             #
@@ -205,38 +208,35 @@ def optimise_distance_to_FCI(fci_wf,
             gamma = 0.5
             logger.info('Calculating z vector by Gradient descent;\n gamma = %s',
                         gamma)
-            max_c0 = cur_wf.determinants[0][0]
+            max_c0 = cur_wf.C0
             max_i0 = 0
             logger.log(15, 'Current C0: %.4f', max_c0)
             for i in range(6):
-                tmp_wf, tmp_Ua, tmp_Ub = cur_wf.calc_wf_from_z(i*gamma*Hess_dir_with_posEvec,
-                                                               just_C0=True)
-                this_c0 = tmp_wf.determinants[0][0]
+                tmp_wf, tmp_U = cur_wf.calc_wf_from_z(i * gamma
+                                                      * Hess_dir_with_posEvec,
+                                                      just_C0=True)
+                this_c0 = tmp_wf.C0
                 logger.debug('Attempting for i=%d: C0 = %.4f', i, this_c0)
                 if abs(max_c0) < abs(this_c0):
                     max_c0 = this_c0
                     max_i0 = i
-            z = max_i0*gamma*Hess_dir_with_posEvec
+            z = max_i0 * gamma * Hess_dir_with_posEvec
             logger.info('z vector obtained: %d * gamma * Hess_dir_with_posEvec',
                         max_i0)
             try_uphill = False
-        normZ = 0.0
-        for i in z:
-            normZ += i**2
-        normZ = math.sqrt(normZ)
+        normZ = linalg.norm(z)
         i_max_coef = get_i_max_coef(cur_wf)
         if i_max_coef > 0:
-            f_maxC = '({1:<9.7f})'.format(cur_wf.determinants[i_max_coef][0])
-            det_maxC = str(cur_wf.determinants[i_max_coef])
+            f_maxC = '({1:<9.7f})'.format(cur_wf[i_max_coef].c)
+            det_maxC = str(cur_wf[i_max_coef])
         else:
             f_maxC = det_maxC = ''
-        f_out.write('{0:<5d}  {1:<10.8f} {2:<12s}  {3:<11.8f}  {4:<11.8f}  {5:<s}\n'.\
-                    format(i_iteration,
-                           cur_wf.determinants[0][0],
-                           f_maxC,
-                           math.sqrt(normZ),
-                           math.sqrt(normJ),
-                           det_maxC))
+        f_out.write(fmt_full.format(i_iteration,
+                                    cur_wf.C0,
+                                    f_maxC,
+                                    normZ,
+                                    normJ,
+                                    det_maxC))
         f_out.flush()
         logger.info('Norm of z vector: %8.5e', normZ)
         logger.info('Norm of J vector: %8.5e', normJ)
@@ -248,17 +248,16 @@ def optimise_distance_to_FCI(fci_wf,
                 break
             else:
                 try_uphill = True
-        logger.info('Calculating new basis and transforming wave function.')
-        cur_wf, cur_Ua, cur_Ub = cur_wf.calc_wf_from_z(z)
-        logger.info('New basis and wave function have been calculated!')
-        Ua = np.matmul(Ua, cur_Ua)
-        Ub = np.matmul(Ub, cur_Ub)
+        with logtime('Calculating new basis and transforming wave function.'):
+            cur_wf, cur_U = cur_wf.calc_wf_from_z(z)
+        for i in range(len(U)):
+            U[i] = U[i] @ cur_U[i]
     if i_max_coef > 0:
-        f_final = (cur_wf.determinants[0][0], cur_wf.determinants[i_max_coef])
+        f_final = (cur_wf[0].c, cur_wf[i_max_coef])
     else:
-        f_final = cur_wf.determinants[0][0]
+        f_final = cur_wf[0].c
     return Results(f = f_final,
-                   U = (Ua, Ub),
+                   U = U,
                    norm = (normZ, normJ),
                    last_iteration = i_iteration,
                    converged = converged,
@@ -353,6 +352,7 @@ def optimise_distance_to_CI(ci_wf,
         If None is given, uses ci_wf.ref_occ.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
+        Currently: not implemented!
     
     thrsh_eta (float, optional, default = 1.0E-5)
         Convergence threshold for the eta vector
