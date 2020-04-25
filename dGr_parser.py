@@ -11,9 +11,8 @@ import re
 import argparse
 import textwrap
 import logging
-from collections import namedtuple
 
-from dGr_exceptions import *
+from dGr_exceptions import dGrParseError
 
 loglevels = {'critical': logging.CRITICAL,
              'error': logging.ERROR,
@@ -22,13 +21,16 @@ loglevels = {'critical': logging.CRITICAL,
              'debug': logging.DEBUG,
              'notset': logging.NOTSET}
 
+
 def __is_molpro_xml_file(file):
     """Return True if file is a Molpro xml file."""
     with open(file, 'r') as f:
-        for l in f:
-            if '<molpro xmlns="http://www.molpro.net/schema/molpro-output"' in l:
+        for line in f:
+            if ('<molpro xmlns="http://www.molpro.net/schema/molpro-output"'
+                    in line):
                 return True
     return False
+
 
 def __is_molpro_output(file):
     """Return True if file is a Molpro output."""
@@ -38,6 +40,7 @@ def __is_molpro_output(file):
                 return True
     return False
 
+
 def __assert_molpro_output(file,
                            can_be_xml=False):
     """Raise dGrParseError if file does not exist or is not Molpro file."""
@@ -46,9 +49,11 @@ def __assert_molpro_output(file,
     if not __is_molpro_output(file):
         if can_be_xml:
             if not __is_molpro_xml_file(file):
-                raise dGrParseError('File ' + file + ' is not a Molpro output!')
+                raise dGrParseError('File ' + file
+                                    + ' is not a Molpro output!')
         else:
             raise dGrParseError('File ' + file + ' is not a Molpro output!')
+
 
 def parse_cmd_line():
     """Parse the command line for dGr, checking if it is all OK.
@@ -62,7 +67,8 @@ def parse_cmd_line():
     command       the execution command
     """
     parser = argparse.ArgumentParser(
-        description='Optimise the distance to the Grassmannian, obtaining |min D>.',
+        description=('Optimise the distance to'
+                     + ' the Grassmannian, obtaining |min D>.'),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(textwrap.dedent('''\
         dGr read orbitals from Molpro\'s "put" xml files, that can be
@@ -76,50 +82,44 @@ def parse_cmd_line():
     parser.add_argument('molpro_output',
                         help='Molpro output with the correlated wave function')
     parser.add_argument('--ini_orb',
-                        help='initial guess for orbitals or transformation matrices, '
-                        + 'as Molpro\'s "put" xml file or basename of npz file '
+                        help='initial guess for orbitals'
+                        + ' or transformation matrices,'
+                        + ' as Molpro\'s "put" xml file or'
+                        + ' basename of npz file '
                         + '(<INI_ORB>_U.npz)')
     parser.add_argument('--HF_orb',
-                        help='Hartree-Fock orbitals (as Molpro\'s "put" xml file)')
+                        help='Hartree-Fock orbitals'
+                        + ' (as Molpro\'s "put" xml file)')
     parser.add_argument('--WF_orb',
-                        help='orbital basis of the wave function (as Molpro\'s'
-                        + ' "put" xml file) If not given, assume to be the same as'
+                        help='orbital basis of the wave function'
+                        + ' (as Molpro\'s "put" xml file).'
+                        + ' If not given, assume  to be the same as'
                         + ' molpro_output')
     parser.add_argument('--WF_templ',
                         help='a Molpro output with a Full CI wave function,'
                         + ' to be used as template')
     parser.add_argument('--algorithm',
                         help='the algorithm to be used in the optimisation.'
-                        + ' Possible values are: "orb_rotations", "general_Absil",'
-                        + ' and "CISD_Absil". Default is "CISD_Absil".')
+                        + ' Possible values are: "orb_rotations",'
+                        + ' "general_Absil",  and "CISD_Absil".'
+                        + ' Default is "CISD_Absil".')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
                         help='set log level (integer)')
     parser.add_argument('--logfilter',
                         help='regular expression to filter function names'
-                        +' for logging (for debug)')
-    parser.add_argument('--use_general_algorithm',
-                        help='use the general Absil algorithm for a general'
-                        +' wave function',
-                        action='store_true')
-    parser.add_argument('--check_algorithms',
-                        help='Perform comparisons to see if different'
-                        +' implementations are equivalent. For testing.',
-                        action='store_true')
+                        + ' for logging (for debug)')
     cmd_args = parser.parse_args()
-    file_name = cmd_args.molpro_output
-    cmd_args.basename = re.sub('\.out$', '', cmd_args.molpro_output)
+    cmd_args.basename = re.sub(r'\.out$', '', cmd_args.molpro_output)
     cmd_args.wdir = os.getcwd()
     cmd_args.command = ''
     for i, arg in enumerate(sys.argv):
-        cmd_args.command +=  arg + ' ' + ('\\\n'
-                                          if (i != len(sys.argv) - 1
-                                              and (arg[0] != '-'
-                                                   or arg == '--check_algorithms'
-                                                   or arg == '--use_general_algorithm'))
-                                          else
-                                          '')
+        cmd_args.command += arg + ' ' + ('\\\n'
+                                         if (i != len(sys.argv) - 1
+                                             and (arg[0] != '-'))
+                                         else
+                                         '')
     __assert_molpro_output(cmd_args.molpro_output)
     if cmd_args.algorithm is None:
         cmd_args.algorithm = 'Absil'
@@ -139,10 +139,6 @@ def parse_cmd_line():
                 cmd_args.ini_orb = cmd_args.ini_orb + '_U.npz'
             else:
                 raise e
-    if cmd_args.check_algorithms and cmd_args.use_general_algorithm:
-        raise dGrParseError('Options --check_algorithms and --use_general_algorithm'
-                            + ' are incompatible: with --check_algorithms both'
-                            + ' algorithms will be use in one iteration.')
     if cmd_args.WF_orb is None:
         cmd_args.WF_orb = cmd_args.molpro_output
     else:
@@ -163,7 +159,8 @@ def parse_cmd_line():
             try:
                 cmd_args.loglevel = loglevels[cmd_args.loglevel.lower()]
             except KeyError:
-                raise dGrParseError('This is not a valid log level: '+ cmd_args.loglevel)
+                raise dGrParseError('This is not a valid log level: '
+                                    + cmd_args.loglevel)
     else:
         cmd_args.loglevel = logging.WARNING
     return cmd_args

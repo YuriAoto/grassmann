@@ -26,32 +26,32 @@ import logging
 import numpy as np
 from scipy import linalg
 
-from dGr_exceptions import *
+from dGr_exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
 
 zero = 1.0E-10
 sqrt2 = math.sqrt(2.0)
 
-irrep_product = np.asarray([[0,1,2,3,4,5,6,7],
-                            [1,0,3,2,5,4,7,6],
-                            [2,3,0,1,6,7,4,5],
-                            [3,2,1,0,7,6,5,4],
-                            [4,5,6,7,0,1,2,3],
-                            [5,4,7,6,1,0,3,2],
-                            [6,7,4,5,2,3,0,1],
-                            [7,6,5,4,3,2,1,0]],
+irrep_product = np.asarray([[0, 1, 2, 3, 4, 5, 6, 7],
+                            [1, 0, 3, 2, 5, 4, 7, 6],
+                            [2, 3, 0, 1, 6, 7, 4, 5],
+                            [3, 2, 1, 0, 7, 6, 5, 4],
+                            [4, 5, 6, 7, 0, 1, 2, 3],
+                            [5, 4, 7, 6, 1, 0, 3, 2],
+                            [6, 7, 4, 5, 2, 3, 0, 1],
+                            [7, 6, 5, 4, 3, 2, 1, 0]],
                            dtype=np.uint8)
 
 number_of_irreducible_repr = {
-    'C1':1,
-    'Cs':2,
-    'C2':2,
-    'Ci':2,
-    'C2v':4,
-    'C2h':4,
-    'D2':4,
-    'D2h':8}
+    'C1': 1,
+    'Cs': 2,
+    'C2': 2,
+    'Ci': 2,
+    'C2v': 4,
+    'C2h': 4,
+    'D2': 4,
+    'D2h': 8}
 
 
 class logtime():
@@ -108,13 +108,15 @@ class logtime():
     
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.end_time = time.time()
-        self.elapsed_time = str(datetime.timedelta(seconds=(self.end_time - self.ini_time)))
+        self.elapsed_time = str(datetime.timedelta(seconds=(self.end_time
+                                                            - self.ini_time)))
         logger.info('Total time for %s: %s',
                     self.action_type,
                     self.elapsed_time)
         if self.out_stream is not None:
             self.out_stream.write(self.out_fmt.format(self.elapsed_time))
 
+            
 def dist_from_ovlp(x):
     """Convert from overlap to distance.
     
@@ -125,6 +127,7 @@ def dist_from_ovlp(x):
     except ValueError:
         return 0.0
 
+    
 def ovlp_Slater_dets(U, n):
     """Calculate the overlap between two Slater determinants
     
@@ -154,8 +157,9 @@ def ovlp_Slater_dets(U, n):
     S = 1.0
     for spirrep, Ui in enumerate(U):
         if n[spirrep] > 0:
-            S *= linalg.det(Ui[:n[spirrep],:n[spirrep]])
+            S *= linalg.det(Ui[:n[spirrep], :n[spirrep]])
     return S
+
 
 def get_I(n, i=None, a=None):
     """Return range(n).remove(i) + [a]"""
@@ -168,20 +172,24 @@ def get_I(n, i=None, a=None):
     else:
         return [x for x in range(n) if x not in i] + a
 
+
 def triangular(n):
-    """The n-th trianglar number = \sum_i^n i"""
+    r"""The n-th trianglar number = \sum_i^n i"""
     return ((n + 1) * n) // 2
 
+
 def get_ij_from_triang(n):
-    i = math.floor((math.sqrt(1 + 8*n) - 1)/2)
+    i = math.floor((math.sqrt(1 + 8 * n) - 1) / 2)
     j = n - i * (i + 1) // 2
-    return i,j
+    return i, j
+
 
 def get_n_from_triang(i, j, with_diag=True):
     if with_diag:
         return j + triangular(i)
     else:
         return j + triangular(i - 1)
+
 
 def get_pos_from_rectangular(i, a, n):
     """Returns i*n + a (position in row-major, C order)
@@ -195,7 +203,7 @@ def get_pos_from_rectangular(i, a, n):
     """
     return i * n + a
 
+
 def get_ia_from_rectangular(pos, n):
     """Returns (i,a). Inverse of get_pos_from_rectangular"""
     return pos // n, pos % n
-

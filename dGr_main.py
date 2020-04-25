@@ -7,7 +7,6 @@ dGr_main
 import os
 import datetime
 import time
-import math
 import logging
 
 import git
@@ -15,16 +14,16 @@ import numpy as np
 from scipy import linalg
 
 from dGr_util import dist_from_ovlp, ovlp_Slater_dets, logtime
-from dGr_exceptions import *
+from dGr_exceptions import dGrValueError
 import dGr_orbitals as orb
 import dGr_FCI_WF as FCI
 import dGr_WF_int_norm as IntN
 import dGr_CISD_WF as CISDwf
 import dGr_optimiser
-import dGr_Absil as Absil
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
+
 
 def dGr_main(args, f_out):
     """The main function to calculate the distance to the Grassmannian.
@@ -39,13 +38,16 @@ def dGr_main(args, f_out):
     """
     git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)))
     git_sha = git_repo.head.object.hexsha
+    
     def toout(x=''):
         f_out.write(x + '\n')
+    
     def print_ovlp_D(pt1, pt2, ovlp):
-        toout('|<{0:s}|{1:s}>| = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.\
+        toout('|<{0:s}|{1:s}>| = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.
               format(pt1, pt2,
                      abs(ovlp),
                      dist_from_ovlp(ovlp)))
+    
     toout('dGr - optimise the distance in the Grassmannian')
     toout('Yuri Aoto - 2018, 2019, 2020')
     toout()
@@ -72,22 +74,23 @@ def dGr_main(args, f_out):
         toout('Using the optimiser based on orbital rotations.')
     else:
         orbRot_opt = False
-        toout('Using the optimiser based on the geometry of the Grassmannian. See:')
-        toout('   P-A Absil et. al, Acta Applicandae Mathematicae 80, 199-220, 2004.')
+        toout('Using the optimiser based on the geometry of the Grassmannian.')
+        toout(' See: P-A Absil et. al,')
+        toout('      Acta Applicandae Mathematicae 80, 199-220, 2004.')
         if args.algorithm == 'CISD_Absil':
             toout('   Algorithm specific for CISD wave function.')
         else:
             toout('   Using algorithm for general wave function.')
     toout('State: ' + args.state)
     toout('Log level: ' + logging.getLevelName(args.loglevel))
-    toout('qpy job ID: {:s}'.\
+    toout('qpy job ID: {:s}'.
           format(os.environ['QPY_JOB_ID']
                  if 'QPY_JOB_ID' in os.environ else
                  'not in qpy'))
     toout()
     start_time = time.time()
     toout('Starting at {}'.format(
-        time.strftime("%d %b %Y - %H:%M",time.localtime(start_time))))
+        time.strftime("%d %b %Y - %H:%M", time.localtime(start_time))))
     toout()
     # ----- loading wave function
     if orbRot_opt:
@@ -101,24 +104,21 @@ def dGr_main(args, f_out):
         if args.WF_templ is not None:
             with logtime('Reading wave function coefficients'):
                 ext_wf.get_coeff_from_molpro(args.molpro_output,
-                                             args.state if args.state else '1.1',
+                                             args.state
+                                             if args.state else
+                                             '1.1',
                                              use_structure=True)
     else:
         with logtime('Reading int. norm. from Molpro output'):
-            ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(args.molpro_output)
+            ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(
+                args.molpro_output)
             ext_wf.calc_norm()
-        if args.check_algorithms:
-            ext_wf_CISD = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
-            toout('Checking the two algorithms. No optimization will be performed.')
-            logger.debug('CISD wave function:\n%r',ext_wf_CISD)
-        else:
             if args.algorithm == 'CISD_Absil':
                 with logtime('Transforming int. norm. WF into CISD wf'):
                     ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
     logger.debug('External wave function:\n %r', ext_wf)
-    if loglevel <= logging.DEBUG and (args.use_general_algorithm
-                                      or args.check_algorithms):
-        x=[]
+    if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
+        x = []
         for I in ext_wf.string_indices():
             x.append(str(I) + ': ' + str(ext_wf[I]))
         logger.debug('The determinants:\n' + '\n'.join(x))
@@ -147,7 +147,12 @@ def dGr_main(args, f_out):
     else:
         toout('Using |WFref> (the reference of |extWF>) as |min E>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
-    restricted = not args.use_general_algorithm
+    if args.algorithm == 'CISD_Absil':
+        restricted = True
+    elif args.algorithm == 'general_Absil':
+        restricted = False
+    elif args.algorithm == 'orb_rotations':
+        restricted = ext_wf.restricted
     if args.ini_orb is not None:
         if args.ini_orb[-4:] == '.npz':
             U = []
@@ -158,52 +163,40 @@ def dGr_main(args, f_out):
             U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.Molecular_Orbitals.from_file(args.WF_orb))
     else:
-        U = [] ### SETO TO NONE
+        U = []  # SETO TO NONE
         for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(ext_wf.orb_dim[spirrep]))
-        toout('Using the reference determinant (identity) as initial guess for U.')
+        toout('Using the reference determinant (identity)'
+              + ' as initial guess for U.')
     if not orbRot_opt:
         for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
-            U[spirrep] = U[spirrep][:,:ext_wf.ref_occ[spirrep]]
-#    toout('Number of determinants in the external wave function: {0:d}'.\
+            U[spirrep] = U[spirrep][:, :ext_wf.ref_occ[spirrep]]
+#    toout('Number of determinants in the external wave function: {0:d}'.
 #          format(len(ext_wf)))
-    toout('Dimension of orbital space: {0:}'.\
+    toout('Dimension of orbital space: {0:}'.
           format(ext_wf.orb_dim))
-    toout('Number of alpha and beta electrons: {0:d} {1:d}'.\
+    toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
-    toout('Occupation of reference wave function: {0:}'.\
+    toout('Occupation of reference wave function: {0:}'.
           format(ext_wf.ref_occ))
-    if args.check_algorithms:
-        if orbRot_opt:
-            ext_wf.compare_Jac_Hess(f_out)
-        else:
-            Absil.compare_algorithms(ext_wf, ext_wf_CISD, U, f_out)
-        toout('Detailed information of comparison is written to the log file.')
-        toout()
-        end_time = time.time()
-        elapsed_time = str(datetime.timedelta(seconds = (end_time-start_time)))
-        toout('Ending at {}'.format(
-            time.strftime("%d %b %Y - %H:%M",time.localtime(end_time))))
-        toout('Total time: {}'.format(elapsed_time))
-        return
     toout()
     toout('Starting optimisation')
-    toout('-'*30)
+    toout('-' * 30)
     f_out.flush()
     logger.info('Starting optimisation')
     if orbRot_opt:
         res = dGr_optimiser.optimise_distance_to_FCI(
             ext_wf,
-            f_out = f_out,
-            ini_U = U)
+            f_out=f_out,
+            ini_U=U)
     else:
         res = dGr_optimiser.optimise_distance_to_CI(
             ext_wf,
-            f_out = f_out,
-            ini_U = U,
-            restricted = False,
+            f_out=f_out,
+            ini_U=U,
+            restricted=False,
             max_iter=20)
-    toout('-'*30)
+    toout('-' * 30)
     logger.info('Optimisation completed')
     if isinstance(res.converged, bool):
         converged = res.converged
@@ -224,23 +217,26 @@ def dGr_main(args, f_out):
         toout('WARNING: Unknown number of positive eigenvalue(s) of Hessian.')
     else:
         if res.n_pos_H_eigVal > 0:
-            toout('WARNING: Found {0:d} positive eigenvalue(s) of Hessian.'.\
+            toout('WARNING: Found {0:d} positive eigenvalue(s) of Hessian.'.
                   format(res.n_pos_H_eigVal))
             logger.warning('Found %s positive eigenvalue(s) of Hessian.',
                            res.n_pos_H_eigVal)
         else:
-            logger.info('All eigenvalues of Hessian are negative: OK, we are at a maximum!')
+            logger.info('All eigenvalues of Hessian are negative:'
+                        + ' OK, we are at a maximum!')
     if isinstance(res.f, tuple):
-        toout('WARNING: First determinant is not the one with largest coefficient!')
+        toout('WARNING:'
+              + ' First determinant is not the one with largest coefficient!')
         toout('  Coefficient of first determinant: {:.7f}'.format(res.f[0]))
         toout('  Determinant with largest coefficient: {:s}'.format(res.f[1]))
         final_f = res.f[0]
     else:
         final_f = res.f
     print_ovlp_D('min D', 'extWF', final_f)
-    logger.info('Saving U matrices in a .npz file: These make the transformation\n'
-                'from the basis used to expand the external wave function\n'
-                '(|extWF>) to the one that makes |min D> the first determinant.')
+    logger.info("""Saving U matrices in a .npz file:
+ These make the transformation from the basis used to expand the
+ external wave function (|extWF>) to the one that makes |min D>
+ the first determinant.""")
     np.savez(args.basename + '.min_dist_U', *res.U)
     if args.HF_orb != args.WF_orb:
         print_ovlp_D('refWF', 'min D',
@@ -258,7 +254,7 @@ def dGr_main(args, f_out):
                                   ext_wf.ref_occ))
     toout()
     end_time = time.time()
-    elapsed_time = str(datetime.timedelta(seconds = (end_time-start_time)))
+    elapsed_time = str(datetime.timedelta(seconds=(end_time - start_time)))
     toout('Ending at {}'.format(
-        time.strftime("%d %b %Y - %H:%M",time.localtime(end_time))))
+        time.strftime("%d %b %Y - %H:%M", time.localtime(end_time))))
     toout('Total time: {}'.format(elapsed_time))

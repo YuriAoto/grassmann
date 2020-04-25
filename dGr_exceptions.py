@@ -4,6 +4,7 @@ Necessary? Put them in the other modules?
 
 """
 
+
 class dGrError(Exception):
     """Main Exception of dGr.
     
@@ -15,8 +16,10 @@ class dGrError(Exception):
     def __str__(self):
         return str(self.message)
 
+
 class dGrInputError(dGrError):
     pass
+
 
 class dGrMolproInputError(dGrInputError):
     def __init__(self, msg, line=None, line_number=None):
@@ -29,11 +32,14 @@ class dGrMolproInputError(dGrInputError):
                 + 'at line ' + str(self.line_number) + ': '
                 + str(self.line))
 
+
 class dGrParseError(dGrError):
     pass
 
+
 class dGrValueError(dGrError, ValueError):
     pass
+
 
 class dGrUnknownError(dGrError):
     def __init__(self, msg, exc_info):

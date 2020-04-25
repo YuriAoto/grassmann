@@ -9,15 +9,15 @@ Orbitals_Sets
 Spirrep_Index
 Wave_Function
 """
-import logging
 from collections import namedtuple
 from collections.abc import Sequence, Mapping, Sized, Iterable, Container
 from abc import ABC, abstractmethod
 
 import numpy as np
 
-from dGr_exceptions import *
+from dGr_exceptions import dGrValueError
 from dGr_util import number_of_irreducible_repr
+
 
 class Spirrep_String_Index(Sized, Iterable, Container):
     """An string index for a single spirrep
@@ -113,7 +113,8 @@ class Spirrep_String_Index(Sized, Iterable, Container):
         if self.is_std_pos_clear():
             if self.wf is None or self.spirrep is None:
                 raise dGrValueError(
-                    'Can not calculate std_pos without wave function and spirrep.')
+                    'Can not calculate std_pos without'
+                    + ' wave function and spirrep.')
             self._std_pos = self.wf.get_std_pos(occupation=self._occ_orb,
                                                 spirrep=self.spirrep)
         return int(self._std_pos)
@@ -160,7 +161,7 @@ class Spirrep_String_Index(Sized, Iterable, Container):
     @classmethod
     def make_hole(cls, n_elec, holes):
         """Create a Spirrep_String_Index with hole(s) at holes"""
-        if isinstance(holes, (np.integer, int)): 
+        if isinstance(holes, (np.integer, int)):
             holes = (holes,)
         holes = sorted(holes, reverse=True)
         new_I = cls(n_elec)
@@ -168,11 +169,12 @@ class Spirrep_String_Index(Sized, Iterable, Container):
         for i in holes:
             if i >= n_elec:
                 continue
-            new_I._occ_orb[i:] = np.roll(new_I._occ_orb[i:],-1)
+            new_I._occ_orb[i:] = np.roll(new_I._occ_orb[i:], -1)
             if len(new_I._occ_orb) > 0:
                 new_I._occ_orb[-1] = i_virt
             i_virt += 1
         return new_I
+
 
 class String_Index(Mapping):
     """The string index for all spirreps
@@ -289,13 +291,15 @@ class Orbitals_Sets(Sequence):
             self._occupation = np.array(occ_or_n_irrep,
                                         dtype=np.uint8)
             self._n_irrep = (len(self._occupation) // 2
-                            if self._type == 'F' else
-                            len(self._occupation))
+                             if self._type == 'F' else
+                             len(self._occupation))
 
     def __getitem__(self, key):
         if isinstance(key, (int, np.integer)):
             if key < 0 or key >= 2 * self._n_irrep:
-                return IndexError('Orbital ' + str(key) + ' is out of range for ' + str(self) + '.')
+                return IndexError('Orbital ' + str(key)
+                                  + ' is out of range for '
+                                  + str(self) + '.')
             if self._type == 'F':
                 return self._occupation[key]
             if self._type == 'R':
@@ -309,11 +313,17 @@ class Orbitals_Sets(Sequence):
     def __setitem__(self, key, value):
         if isinstance(key, (int, np.integer)):
             if 0 > key < 2 * self._n_irrep:
-                return IndexError('Key ' + str(key) + ' is out of range for ' + str(self) + '.')
+                return IndexError('Key ' + str(key)
+                                  + ' is out of range for '
+                                  + str(self) + '.')
             if self._type == 'A' and key >= self._n_irrep:
-                raise dGrValueError('Cannot set occupation for beta orbital for ' + str(self) + '.')
+                raise dGrValueError(
+                    'Cannot set occupation for beta orbital for '
+                    + str(self) + '.')
             if self._type == 'B' and key < self._n_irrep:
-                raise dGrValueError('Cannot set occupation for alpha orbital for ' + str(self) + '.')
+                raise dGrValueError(
+                    'Cannot set occupation for alpha orbital for '
+                    + str(self) + '.')
             if self._type == 'R':
                 key = key % self._n_irrep
         self._occupation[key] = value
@@ -344,7 +354,8 @@ class Orbitals_Sets(Sequence):
     
     def __eq__(self, other):
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError('Cannot compare Orbitals_Sets for different number of irreps')
+            raise dGrValueError(
+                'Cannot compare Orbitals_Sets for different number of irreps')
         for i in range((1
                         if self._type == 'R' and other._type == 'R' else
                         2) * self._n_irrep):
@@ -354,9 +365,11 @@ class Orbitals_Sets(Sequence):
 
     def __add__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError('Orbitals_Sets adds only with another Orbitals_Sets.')
+            raise dGrValueError(
+                'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError('Both instances of Orbitals_Sets must have same len.')
+            raise dGrValueError(
+                'Both instances of Orbitals_Sets must have same len.')
         if self._type == other._type:
             new_occupation = self._occupation + other._occupation
             new_occ_type = self._type
@@ -365,27 +378,33 @@ class Orbitals_Sets(Sequence):
             new_occupation = np.zeros(self._n_irrep * 2,
                                       dtype=np.int8)
             if self._type != 'B':
-                new_occupation[:self._n_irrep] += self._occupation[:self._n_irrep]
+                new_occupation[:self._n_irrep] += (
+                    self._occupation[:self._n_irrep])
             if self._type != 'A':
-                new_occupation[self._n_irrep:] += (self._occupation[self._n_irrep:]
-                                                  if self._type == 'F' else
-                                                  self._occupation)
+                new_occupation[self._n_irrep:] += (
+                    self._occupation[self._n_irrep:]
+                    if self._type == 'F' else
+                    self._occupation)
             if other._type != 'B':
-                new_occupation[:self._n_irrep] += other._occupation[:other._n_irrep]
+                new_occupation[:self._n_irrep] += (
+                    other._occupation[:other._n_irrep])
             if other._type != 'A':
-                new_occupation[other._n_irrep:] += (other._occupation[other._n_irrep:]
-                                                  if other._type == 'F' else
-                                                  other._occupation)
+                new_occupation[other._n_irrep:] += (
+                    other._occupation[other._n_irrep:]
+                    if other._type == 'F' else
+                    other._occupation)
         return Orbitals_Sets(new_occupation,
                              new_occ_type)
 
     def __iadd__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError('Orbitals_Sets adds only with another Orbitals_Sets.')
+            raise dGrValueError(
+                'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError('Both instances of Orbitals_Sets must have same len.')
+            raise dGrValueError(
+                'Both instances of Orbitals_Sets must have same len.')
         if self._type == other._type:
-            self_occupation += other._occupation
+            self._occupation += other._occupation
         else:
             self_occ = self._occupation
             self._occupation = np.zeros(self._n_irrep * 2,
@@ -395,21 +414,25 @@ class Orbitals_Sets(Sequence):
             if self._type != 'A':
                 self._occupation[self._n_irrep:] += (self_occ[self._n_irrep:]
                                                      if self._type == 'F' else
-                                                     self_occupation)
+                                                     self._occupation)
             self._type = 'F'
             if other._type != 'B':
-                self._occupation[:self._n_irrep] += other._occupation[:other._n_irrep]
+                self._occupation[:self._n_irrep] += (
+                    other._occupation[:other._n_irrep])
             if other._type != 'A':
-                self._occupation[other._n_irrep:] += (other._occupation[other._n_irrep:]
-                                                      if other._type == 'F' else
-                                                      other._occupation)
+                self._occupation[other._n_irrep:] += (
+                    other._occupation[other._n_irrep:]
+                    if other._type == 'F' else
+                    other._occupation)
         return self
 
     def __sub__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError('Orbitals_Sets adds only with another Orbitals_Sets.')
+            raise dGrValueError(
+                'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError('Both instances of Orbitals_Sets must have same n_irrep.')
+            raise dGrValueError(
+                'Both instances of Orbitals_Sets must have same n_irrep.')
         if self._type == other._type:
             new_occupation = self._occupation - other._occupation
             new_occ_type = self._type
@@ -418,17 +441,21 @@ class Orbitals_Sets(Sequence):
             new_occupation = np.zeros(self._n_irrep * 2,
                                       dtype=np.int8)
             if self._type != 'B':
-                new_occupation[:self._n_irrep] += self._occupation[:self._n_irrep]
+                new_occupation[:self._n_irrep] += (
+                    self._occupation[:self._n_irrep])
             if self._type != 'A':
-                new_occupation[self._n_irrep:] += (self._occupation[self._n_irrep:]
-                                                  if self._type == 'F' else
-                                                  self._occupation)
+                new_occupation[self._n_irrep:] += (
+                    self._occupation[self._n_irrep:]
+                    if self._type == 'F' else
+                    self._occupation)
             if other._type != 'B':
-                new_occupation[:self._n_irrep] -= other._occupation[:other._n_irrep]
+                new_occupation[:self._n_irrep] -= (
+                    other._occupation[:other._n_irrep])
             if other._type != 'A':
-                new_occupation[other._n_irrep:] -= (other._occupation[other._n_irrep:]
-                                                  if other._type == 'F' else
-                                                  other._occupation)
+                new_occupation[other._n_irrep:] -= (
+                    other._occupation[other._n_irrep:]
+                    if other._type == 'F' else
+                    other._occupation)
         return Orbitals_Sets(new_occupation,
                              new_occ_type)
     
@@ -437,7 +464,8 @@ class Orbitals_Sets(Sequence):
         if self._type == 'R':
             return
         if self._type == 'F':
-            if (self._occupation[:self._n_irrep] != self._occupation[self._n_irrep:]).any():
+            if (self._occupation[:self._n_irrep]
+                    != self._occupation[self._n_irrep:]).any():
                 raise dGrValueError('Cannot restrict ' + str(self) + '.')
             self._occupation = self._occupation[:self._n_irrep]
             self._type = 'R'
@@ -448,16 +476,17 @@ class Orbitals_Sets(Sequence):
     def occ_type(self):
         return self._type
 
+
 class Spirrep_Index(namedtuple('Spirrep_Index',
                                ['spirrep',
-                                'I'])):
+                                'Index'])):
     """A namedtuple for a pair spirrep/Spirrep_String_Index
     
     Attributes:
     -----------
     spirrep (int)
         The spirrep
-    I (Spirrep_String_Index)
+    Index (Spirrep_String_Index)
         The index
     """
     __slots__ = ()
@@ -471,7 +500,7 @@ class Wave_Function(ABC, Sequence):
     
     restricted (bool)
         Restricted (alpha and beta parameters are the same) or
-        unrestricted (alpha and beta parameters differ) wave function 
+        unrestricted (alpha and beta parameters differ) wave function
     
     point_group (str)
         The point group
@@ -529,7 +558,7 @@ class Wave_Function(ABC, Sequence):
     def __repr__(self):
         """Return string with parameters of the wave function."""
         x = []
-        x.append('-'*50)
+        x.append('-' * 50)
         x.append('point group: {}'.format(self.point_group))
         x.append('n irrep: {}'.format(self.n_irrep))
         x.append('orb dim: {}'.format(self.orb_dim))
@@ -542,7 +571,7 @@ class Wave_Function(ABC, Sequence):
         x.append('n beta: {}'.format(self.n_beta))
         x.append('WF type: {}'.format(self.WF_type))
         x.append('source: {}'.format(self.source))
-        x.append('-'*50)
+        x.append('-' * 50)
         return '\n'.join(x)
     
     def initialize_data(self):
@@ -578,7 +607,7 @@ class Wave_Function(ABC, Sequence):
     @property
     def n_ext(self):
         if (self.orb_dim is None
-            or self.ref_occ is None):
+                or self.ref_occ is None):
             return None
         else:
             return self.orb_dim - self.ref_occ
@@ -586,7 +615,7 @@ class Wave_Function(ABC, Sequence):
     @property
     def n_corr_orb(self):
         if (self.ref_occ is None
-            or self.n_core is None):
+                or self.n_core is None):
             return None
         else:
             return self.ref_occ - self.n_core
@@ -609,7 +638,8 @@ class Wave_Function(ABC, Sequence):
         if self.restricted and self.ref_occ.occ_type == 'R':
             return len(self.ref_occ) // 2
         if self.ref_occ.occ_type == 'F':
-            return sum([self.ref_occ[i] for i in range(self.n_irrep, 2 * self.n_irrep)])
+            return sum([self.ref_occ[i]
+                        for i in range(self.n_irrep, 2 * self.n_irrep)])
         return (len(self.ref_occ) - len(self.n_act)) // 2
     
     @property
@@ -621,14 +651,14 @@ class Wave_Function(ABC, Sequence):
     @property
     def n_corr_alpha(self):
         if (self.n_alpha is None
-            or self.n_corr_orb is None):
+                or self.n_corr_orb is None):
             return None
         return self.n_alpha - len(self.n_core) // 2
     
     @property
     def n_corr_beta(self):
         if (self.n_beta is None
-            or self.n_corr_orb is None):
+                or self.n_corr_orb is None):
             return None
         return self.n_beta - len(self.n_core) // 2
     
@@ -704,7 +734,7 @@ class Wave_Function(ABC, Sequence):
         pass
     
     @abstractmethod
-    def make_Jac_Hess_overlap(self, analytic = True):
+    def make_Jac_Hess_overlap(self, analytic=True):
         """Construct the Jacobian and the Hessian of the function overlap.
         
         Behaviour:
@@ -729,7 +759,7 @@ class Wave_Function(ABC, Sequence):
         pass
 
     @abstractmethod
-    def calc_wf_from_z(self, z, just_C0 = False):
+    def calc_wf_from_z(self, z, just_C0=False):
         """Calculate the wave function in a new orbital basis
         
         Behaviour:
@@ -759,8 +789,8 @@ class Wave_Function(ABC, Sequence):
         pass
     
     @abstractmethod
-    def change_orb_basis(self, Ua, Ub, just_C0 = False):
-        """Transform the wave function as induced by a transformation in the orbital basis
+    def change_orb_basis(self, U, just_C0=False):
+        r"""Transform the wave function after a change in the orbital basis
         
         Behaviour:
         ----------
@@ -773,8 +803,8 @@ class Wave_Function(ABC, Sequence):
         
         |wf> = \sum_I d_I |v_I>
         
-        and Ua and Ub are the matrix transformations of the MO from the basis |v_I>
-        to the basis |u_I>:
+        and Ua and Ub are the matrix transformations of the
+        MO from the basis |v_I> to the basis |u_I>:
     
         |MO of (u)> = |MO of (v)> U
 
@@ -782,10 +812,9 @@ class Wave_Function(ABC, Sequence):
         -----------
         
         wf   the initial wave function as Molpro_FCI_Wave_Function
-        Ua   the orbital transformation for alpha orbitals
-        Ub   the orbital transformation for beta orbitals
-        just_C0   If True, calculates the coefficients of the initial determinant only
-              (default False)
+        U    the orbital transformation
+        just_C0   If True, calculates the coefficients of
+                  the initial determinant only (default False)
         
         Return:
         -------
@@ -793,5 +822,3 @@ class Wave_Function(ABC, Sequence):
         The transformed wave function
         """
         pass
-
-

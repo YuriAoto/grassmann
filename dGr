@@ -53,6 +53,8 @@ logging.basicConfig(filename=logfile_name,
                     filemode='w',
                     level=cmd_line_args.loglevel)
 logger = logging.getLogger(__name__)
+
+
 class myLogFilter():
     """Define a filter for logging, to be attached to all handlers."""
     def filter(self, rec):
@@ -69,6 +71,8 @@ class myLogFilter():
         # print(rec.__dict__)
         # print()
         return True
+
+
 for handler in logging.root.handlers:
     handler.addFilter(myLogFilter())
 f_out = None
@@ -78,9 +82,9 @@ try:
     dGr_main(cmd_line_args, f_out)
 except dGrError as e:
     with_error = True
-    error_msg = ('dGrError: ' + str(e) +
-                 '\nHere is the traceback:\n' + traceback.format_exc())
-except:
+    error_msg = ('dGrError: ' + str(e)
+                 + '\nHere is the traceback:\n' + traceback.format_exc())
+except Exception:
     with_error = True
     error_msg = 'Unknown error:\n' + traceback.format_exc()
 finally:

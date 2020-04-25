@@ -10,23 +10,21 @@ History:
                Add to git
 Yuri
 """
-import sys
 import logging
 import numpy as np
 from numpy import linalg
-from scipy.linalg import expm, lu, orth
+from scipy.linalg import expm, lu
 import copy
 import math
-import re
 from collections import namedtuple
 
-from dGr_util import logtime, number_of_irreducible_repr, get_pos_from_rectangular
+from dGr_util import number_of_irreducible_repr, get_pos_from_rectangular
 import dGr_general_WF as genWF
-import dGr_Absil as Absil
 import dGr_Molpro_util as Molpro
-from dGr_exceptions import *
+from dGr_exceptions import dGrValueError, dGrMolproInputError
 
 logger = logging.getLogger(__name__)
+
 
 class Slater_Det(namedtuple('Slater_Det',
                             ['c',
@@ -35,17 +33,24 @@ class Slater_Det(namedtuple('Slater_Det',
     
     Attributes:
     -----------
-    c                  The coefficient of the Slater determinant in the wave function
-    occupation         A list of np.arrays of int, with the occupied orbitals for each spirrep
+    c (float)
+        The coefficient of the Slater determinant in the wave function
+    
+    occupation (list of np.arrays of int)
+        The occupied orbitals for each spirrep
     """
     __slots__ = ()
+    
     def __str__(self):
         spirreps = []
         for occ in self.occupation:
             spirreps.append(str(occ))
-        return 'Slater_Det: c = {0:15.12f} ; '.format(self.c) + '^'.join(spirreps)
+        return ('Slater_Det: c = {0:15.12f} ; '.
+                format(self.c) + '^'.join(spirreps))
+
 
 Orbital_Info = namedtuple('Orbital_Info', ['orb', 'spirrep'])
+
 
 def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
                                   zero_coefficients=False):
@@ -86,7 +91,7 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
     
     -0.162676901257  1  2  7  1  2  7
     gives
-    c=-0.162676901257; occupation=[(0,1) (1) () () (0,1) (1) () ()]
+    c=-0.162676901257; occupation=[(0,1) (0) () () (0,1) (0) () ()]
     
     -0.049624632911  1  2  4  1  2  6
     gives
@@ -100,12 +105,12 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
     final_occ = [[] for i in range(2 * n_irrep)]
     try:
         coeff = float(lspl[0])
-        occ = list(map(lambda x: int(x)-1, lspl[1:]))
+        occ = list(map(lambda x: int(x) - 1, lspl[1:]))
     except Exception as e:
         raise dGrMolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
             + str(e),
-            line = l, line_number = line_number)
+            line=l, line_number=line_number)
     total_orbs = [0]
     for i in range(n_irrep):
         total_orbs.append(total_orbs[-1] + orb_dim[i])
@@ -120,7 +125,7 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
                 raise dGrMolproInputError(
                     'Configuration is not consistent with orb_dim = '
                     + str(orb_dim),
-                    line = l, line_number = line_number)
+                    line=l, line_number=line_number)
             if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
                 final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep])
                 break
@@ -128,8 +133,8 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
                 irrep += 1
     for i, o in enumerate(final_occ):
         final_occ[i] = np.array(o, dtype=int)
-    return Slater_Det(c = 0.0 if zero_coefficients else float(lspl[0]),
-                      occupation = final_occ)
+    return Slater_Det(c=0.0 if zero_coefficients else coeff,
+                      occupation=final_occ)
 
 
 class Wave_Function_Norm_CI(genWF.Wave_Function):
@@ -141,8 +146,9 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
     Atributes:
     ----------
     has_FCI_structure (bool)
-        If True, it contains all possible Slater determinants (of that Ms and irrep), 
-        even those that have zero coefficient in the wave function.
+        If True, it contains all possible Slater determinants
+        (of that Ms and irrep), even those that have zero coefficient
+        in the wave function.
     
     Data Model:
     -----------
@@ -157,6 +163,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
     
     """
     tol_eq = 1E-8
+    
     def __init__(self):
         """Initialise the wave function"""
         super().__init__()
@@ -177,8 +184,8 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
     def __str__(self):
         """Return a string version of the wave function."""
         return ("Wave function: "
-                + str(self._all_determinants[0].c) +
-                ' + |' + str(self.ref_occ) + '> ...')
+                + str(self._all_determinants[0].c)
+                + ' + |' + str(self.ref_occ) + '> ...')
     
     def __eq__(self, other):
         """Checks if both wave functions are the same within tol
@@ -186,7 +193,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         """
         for i, det in enumerate(self):
             if (det.occupation != other[i].occupation
-                or abs(det.c - other[i].c) > self.tol_eq):
+                    or abs(det.c - other[i].c) > self.tol_eq):
                 return False
         return True
         
@@ -267,7 +274,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         self.source = 'From file ' + molpro_output
         if not use_structure:
             self._all_determinants = []
-        with open (molpro_output, 'r') as f:
+        with open(molpro_output, 'r') as f:
             S = 0.0
             for line_number, l in enumerate(f, start=1):
                 if 'Point group' in l:
@@ -276,7 +283,8 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                         number_of_irreducible_repr[self.point_group]
                     except KeyError:
                         raise dGrMolproInputError('Unknown point group!',
-                                                  line = l, line_number = line_number)
+                                                  line=l,
+                                                  line_number=line_number)
                 if 'FCI STATE  ' + state + ' Energy' in l and 'Energy' in l:
                     FCI_found = True
                     continue
@@ -309,7 +317,8 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                             do_sub = True
                             for occ1, occ2 in zip(det.occupation,
                                                   new_Slater_Det.occupation):
-                                if not np.all(occ1 == occ2):
+                                if (len(occ1) != len(occ2)
+                                        or not np.all(occ1 == occ2)):
                                     do_sub = False
                                     break
                             if do_sub:
@@ -321,11 +330,13 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                 elif FCI_prog_found:
                     if 'Frozen orbitals:' in l:
                         self.n_core = Molpro.get_orb_info(l, line_number,
-                                                            self.n_irrep, 'R')
+                                                          self.n_irrep, 'R')
                     if 'Active orbitals:' in l:
                         self.orb_dim = (self.n_core
-                                          + Molpro.get_orb_info(l, line_number,
-                                                                self.n_irrep, 'R'))
+                                        + Molpro.get_orb_info(l,
+                                                              line_number,
+                                                              self.n_irrep,
+                                                              'R'))
                     if 'Active electrons:' in l:
                         active_el_in_out = int(l.split()[2])
                     if 'Spin quantum number:' in l:
@@ -339,7 +350,8 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         if active_el_in_out + len(self.n_core) != self.n_elec:
             raise dGrValueError('Inconsistency in number of electrons:\n'
                                 + 'n core el = ' + str(self.n_core)
-                                + '; n act el (Molpro output) = ' + str(active_el_in_out)
+                                + '; n act el (Molpro output) = '
+                                + str(active_el_in_out)
                                 + '; n elec = ' + str(self.n_elec))
     
     @property
@@ -380,7 +392,6 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                     if orb not in det.occupation[spirrep]:
                         holes.append(Orbital_Info(orb=orb,
                                                   spirrep=spirrep))
-            test_this_hole = 0
             for orb in det.occupation[spirrep]:
                 if orb >= self.ref_occ[spirrep]:
                     rank += 1
@@ -404,7 +415,9 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
             det.c /= S
 
     def get_trans_max_coef(self):
-        """Return U that transforms ref to the determinant with larges coefficient"""
+        """
+        Return U that the determinant with larges coefficient as the ref
+        """
         det_max_coef = None
         for det in self:
             if det_max_coef is None or abs(det.c) > abs(det_max_coef.c):
@@ -420,16 +433,16 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
             for orb in range(self.ref_occ[spirrep]):
                 if orb not in det_max_coef.occupation[spirrep]:
                     miss_in_det.append(orb)
-            for p,q in zip(extra_in_det, miss_in_det):
-                U[spirrep][p,p] = 0.0
-                U[spirrep][q,q] = 0.0
-                U[spirrep][p,q] = 1.0
-                U[spirrep][q,p] = 1.0
+            for p, q in zip(extra_in_det, miss_in_det):
+                U[spirrep][p, p] = 0.0
+                U[spirrep][q, q] = 0.0
+                U[spirrep][p, q] = 1.0
+                U[spirrep][q, p] = 1.0
         logger.debug('U:\n%r', U)
         return U
 
     def make_Jac_Hess_overlap(self, restricted=None, analytic=True, eps=0.001):
-        """Construct the Jacobian and the Hessian of the function overlap.
+        r"""Construct the Jacobian and the Hessian of the function overlap.
         
         The function overlap is f(x) = <self|0> = C0 where |0> is the
         reference determinant of |self>, assumed to be the first.
@@ -447,8 +460,10 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         
         and for unrestricted calculation:
         
-        K(irrep) = sum_{i,a \in irrep, alpha} K(irrep,alpha)_i^a (a_i^a - a_a^i)
-                   + sum_{i,a \in irrep, beta} K(irrep,beta)_i^a (b_i^a - b_a^i)
+        K(irrep) = sum_{i,a \in irrep, alpha}
+                        K(irrep,alpha)_i^a (a_i^a - a_a^i)
+                   + sum_{i,a \in irrep, beta}
+                         K(irrep,beta)_i^a (b_i^a - b_a^i)
         
         where a_p^q and b_p^q are excitation operators of alpha and beta
         orbitals, respectivelly, and E_{pq} = a_p^q + b_p^q are the singlet
@@ -497,12 +512,13 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
             wave function.
         
         analytic (bool, optional, default=True)
-            if True, calculates the Jacobian and the Hessian by the 
+            if True, calculates the Jacobian and the Hessian by the
             analytic expression;
             if False calculates numerically.
         
         eps (float, optional, default=0.001)
-            The step size for finite differences calculation of the derivatives.
+            The step size for finite differences
+            calculation of the derivatives.
             It has effect for analytic=False only
         Returns:
         --------
@@ -537,8 +553,8 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
             coef_0 = self.C0
             coef_p = np.zeros(n_param)
             coef_m = np.zeros(n_param)
-            coef_pp = np.zeros((n_param,n_param))
-            coef_mm = np.zeros((n_param,n_param))
+            coef_pp = np.zeros((n_param, n_param))
+            coef_mm = np.zeros((n_param, n_param))
             z = np.zeros(n_param)
             for i in range(n_param):
                 z[i] = eps
@@ -555,11 +571,13 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                     z[j] = -eps if j == i else 0.0
                 z[i] = 0.0
             for i in range(n_param):
-                Jac[i] = (coef_p[i] - coef_m[i])/(2*eps)
+                Jac[i] = (coef_p[i] - coef_m[i]) / (2 * eps)
                 for j in range(n_param):
-                    Hess[i,j] = (2*coef_0 \
-                                  + coef_pp[i,j] - coef_p[i] - coef_p[j] \
-                                  + coef_mm[i,j] - coef_m[i] - coef_m[j] )/(2*eps*eps)
+                    Hess[i, j] = (2 * coef_0
+                                  + coef_pp[i, j]
+                                  - coef_p[i] - coef_p[j]
+                                  + coef_mm[i, j]
+                                  - coef_m[i] - coef_m[j]) / (2 * eps * eps)
             return Jac, Hess
         # --- Analytic
         for det in self:
@@ -574,32 +592,32 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                              -det.c)
             elif rank == 1:
                 if (restricted
-                    and holes[0].spirrep >= self.n_irrep): # beta
+                        and holes[0].spirrep >= self.n_irrep):  # beta
                     continue
                 pos = spirrep_start[holes[0].spirrep]
                 pos += get_pos_from_rectangular(
                     holes[0].orb, particles[0].orb,
                     self.n_ext[particles[0].spirrep])
                 Jac[pos] += (det.c
-                            if (holes[0].orb
-                                + self.ref_occ[holes[0].spirrep]) % 2 == 0 else
-                                -det.c)
+                             if (holes[0].orb
+                                 + self.ref_occ[holes[0].spirrep]) % 2 == 0
+                             else -det.c)
                 logger.debug('Adding to Jac[%d] = %f', pos, Jac[pos])
             elif rank == 2:
-                if (holes[0].spirrep != particles[0].spirrep
-                    and holes[1].spirrep != particles[1].spirrep): # occ != ref_occ
+                if (holes[0].spirrep != particles[0].spirrep  # occ != ref_occ
+                        and holes[1].spirrep != particles[1].spirrep):
                     continue
                 if restricted:
-                    if holes[0].spirrep >= self.n_irrep: # beta beta
+                    if holes[0].spirrep >= self.n_irrep:  # beta beta
                         continue
-                    if holes[1].spirrep >= self.n_irrep: # alpha beta
+                    if holes[1].spirrep >= self.n_irrep:  # alpha beta
                         if holes[0].spirrep + self.n_irrep > holes[1].spirrep:
                             continue
                         if holes[0].spirrep + self.n_irrep == holes[1].spirrep:
                             if holes[0].orb > holes[1].orb:
                                 continue
                             if (holes[0].orb == holes[1].orb
-                                and particles[0].orb > particles[1].orb):
+                                    and particles[0].orb > particles[1].orb):
                                 continue
                 pos = spirrep_start[holes[0].spirrep]
                 pos += get_pos_from_rectangular(
@@ -617,9 +635,9 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                                 + holes[1].orb
                                 + self.ref_occ[holes[0].spirrep]
                                 + self.ref_occ[holes[1].spirrep]) % 2 == 1
-                Hess[pos,pos1] += -det.c if negative else det.c
+                Hess[pos, pos1] += -det.c if negative else det.c
                 if pos != pos1:
-                    Hess[pos1,pos] += -det.c if negative else det.c
+                    Hess[pos1, pos] += -det.c if negative else det.c
                 logger.debug('Adding to Hess[%d,%d] = %f',
                              pos, pos1, -det.c if negative else det.c)
                 if holes[0].spirrep == holes[1].spirrep:
@@ -632,11 +650,11 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                         holes[1].orb, particles[0].orb,
                         self.n_ext[particles[0].spirrep])
                     negative = not negative
-                    Hess[pos,pos1] += -det.c if negative else det.c
+                    Hess[pos, pos1] += -det.c if negative else det.c
                     if pos1 != pos:
-                        Hess[pos1,pos] += -det.c if negative else det.c
+                        Hess[pos1, pos] += -det.c if negative else det.c
                     logger.debug('Adding to Hess[%d,%d] = %f',
-                                 pos, pos1, Hess[pos,pos1])
+                                 pos, pos1, Hess[pos, pos1])
         if restricted:
             Jac *= 2
             Hess *= 2
@@ -647,7 +665,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         
         A new (representation of the) wave function self is constructed
         in a orbital basis that has been modified by a step z.
-        The transformation of the orbital basis is obtained using the 
+        The transformation of the orbital basis is obtained using the
         exponential parametrisation.
         
         
@@ -691,23 +709,23 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         U = []
         for spirrep in self.spirrep_blocks(restricted=restricted):
             if self.orb_dim[spirrep] == 0:
-                U.append(np.zeros((0,0)))
+                U.append(np.zeros((0, 0)))
                 logger.info('Adding zero-len array for spirrep %d.',
                             spirrep)
                 continue
-            if spirrep_start[spirrep] == spirrep_start[spirrep+1]:
+            if spirrep_start[spirrep] == spirrep_start[spirrep + 1]:
                 K = np.zeros((self.orb_dim[spirrep],
                               self.orb_dim[spirrep]))
             else:
                 K = np.zeros((self.orb_dim[spirrep],
                               self.orb_dim[spirrep]))
-                K[:self.ref_occ[spirrep], # K[i,a]
+                K[:self.ref_occ[spirrep],  # K[i,a]
                   self.ref_occ[spirrep]:] = (
                       np.reshape(z[spirrep_start[spirrep]:
-                                   spirrep_start[spirrep+1]],
+                                   spirrep_start[spirrep + 1]],
                                  (self.ref_occ[spirrep],
                                   self.n_ext[spirrep])))
-                K[self.ref_occ[spirrep]:, # K[a,i] = -K[i,a]
+                K[self.ref_occ[spirrep]:,  # K[a,i] = -K[i,a]
                   :self.ref_occ[spirrep]] = -(
                       K[:self.ref_occ[spirrep],
                         self.ref_occ[spirrep]:].T)
@@ -722,20 +740,20 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
     
     def change_orb_basis(self, U, just_C0=False,
                          method='traditional'):
-        """Transform the representation of self to a new orbital basis
+        r"""Transform the representation of self to a new orbital basis
         
         Parameters:
         -----------
         U (list of np arrays)
             The orbital transformation, stored per spirrep
-            If len(U) == self.n_irrep, assumes a restricted transformation, 
+            If len(U) == self.n_irrep, assumes a restricted transformation,
             and uses same transformation matrix for both alpha and beta.
             Otherwise len(U) must be 2*self.n_irrep, and alpha and beta
             transformations are independent.
         
         just_C0 (bool, optional, default=False)
             If True, calculates the coefficients of the initial determinant
-           only 
+            only
         
         method (str, optional, default='traditional')
             Selects the method to carry out the transformation.
@@ -785,7 +803,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         new_wf.orb_dim = self.orb_dim
         new_wf.ref_occ = self.ref_occ
         new_wf.WF_type = self.WF_type
-        new_wf.source = (self.source.replace(' (another basis)','')
+        new_wf.source = (self.source.replace(' (another basis)', '')
                          + ' (another basis)')
         n_calcs = 0
         if len(U) == self.n_irrep:
@@ -804,29 +822,29 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
             for spirrep, U_spirrep in enumerate(2 * U
                                                 if restricted else
                                                 U):
-                U_J.append(U_spirrep[:,det_J.occupation[spirrep]])
+                U_J.append(U_spirrep[:, det_J.occupation[spirrep]])
             len_det_J = list(map(len, det_J.occupation))
             for det_I in self:
                 if len_det_J != list(map(len, det_I.occupation)):
                     continue
-                if abs(det_I.c)>1.0E-11:
+                if abs(det_I.c) > 1.0E-11:
                     n_calcs += 1
                     C_times_det_minor_IJ = det_I.c
                     for spirrep in self.spirrep_blocks(restricted=False):
                         C_times_det_minor_IJ *= linalg.det(
-                            U_J[spirrep][det_I.occupation[spirrep],:])
+                            U_J[spirrep][det_I.occupation[spirrep], :])
                     new_c += C_times_det_minor_IJ
                     logger.debug(
                         'New contribution = %f\n det_J:\n%s\n det_I:\n%s',
                         C_times_det_minor_IJ, det_J, det_I)
-            new_wf._all_determinants.append(Slater_Det(c = new_c,
-                                                       occupation = new_occ))
+            new_wf._all_determinants.append(Slater_Det(c=new_c,
+                                                       occupation=new_occ))
             if just_C0:
                 break
-        logger.info('Number of det calculations: %d',  n_calcs)
+        logger.info('Number of det calculations: %d', n_calcs)
         return new_wf
 
-    def _change_orb_basis_Malmqvist(self, U, just_C0 = False):
+    def _change_orb_basis_Malmqvist(self, U, just_C0=False):
         raise NotImplementedError('Not yet done...')
         new_wf = copy.copy(self)
         n_calcs = 0
@@ -892,13 +910,13 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                 coeff_delta.append(c_delta)
             for det_J, c_delta in zip(new_wf, coeff_delta):
                 det_J.c += c_delta
-        logger.info('Number of det calculations: %d',  n_calcs)
+        logger.info('Number of det calculations: %d', n_calcs)
         return new_wf
 
     def string_indices(self,
-                   spirrep=None,
-                   coupled_to=None,
-                   no_occ_orb=False,
-                   only_ref_occ=False,
-                   only_this_occ=None):
+                       spirrep=None,
+                       coupled_to=None,
+                       no_occ_orb=False,
+                       only_ref_occ=False,
+                       only_this_occ=None):
         raise NotImplementedError('undone')

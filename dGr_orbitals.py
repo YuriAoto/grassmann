@@ -16,9 +16,10 @@ import numpy as np
 from scipy.linalg import inv
 
 from dGr_WF_int_norm import number_of_irreducible_repr
-from dGr_exceptions import *
+from dGr_exceptions import dGrValueError, dGrParseError
 
 logger = logging.getLogger(__name__)
+
 
 class Molecular_Orbitals():
     """A set of molecular orbitals
@@ -66,13 +67,13 @@ class Molecular_Orbitals():
         If True, np.ndarray for spirrep i is square, and have the coefficients
         of elements of the basis of that irrep (that is, K == n above).
         If False, np.ndarray for spirrep i has the coefficients of all elements
-        of the basis (because the basis is not symmetry adapted, or perhaps with
-        0 for other irreps). Thus, there are possibly more rows than columns
-        (K >= n).
+        of the basis (because the basis is not symmetry adapted,
+        or perhaps with 0 for other irreps).
+        Thus, there are possibly more rows than columns (K >= n).
     
     Data model:
     -----------
-    [spirrep] 
+    [spirrep]
         Access the coefficients of spirrep
     
     len
@@ -137,11 +138,12 @@ class Molecular_Orbitals():
         raise dGrValueError('We can read orbitals from xml files only.')
 
     @classmethod
-    def identity(cls, orb_dim, n_elec,
+    def identity(cls, orb_dim, n_elec, n_irrep, basis_len,
                  name='',
                  basis='',
                  basis_is_per_irrep=False):
-        raise NotImplemented('Not implemented!! (should we accept few orbitals??)')
+        raise NotImplementedError(
+            'Not implemented!! (should we accept few orbitals??)')
         new_orbitals = cls()
         new_orbitals.name = name
         new_orbitals.basis_is_per_irrep = basis_is_per_irrep
@@ -149,7 +151,7 @@ class Molecular_Orbitals():
         new_orbitals.n_irrep = n_irrep
         new_orbitals._basis_len = basis_len
         for i in range(n_irrep):
-            new_orbitals.append(np.identity(orb_dim[i])[:,:n_elec[i]])
+            new_orbitals.append(np.identity(orb_dim[i])[:, :n_elec[i]])
         return new_orbitals
 
     @classmethod
@@ -175,25 +177,29 @@ class Molecular_Orbitals():
             elif orb_type == 'NATURAL' or orb_type == 'CANONICAL':
                 return 0
             else:
-                raise dGrParseException('Unknown type of orbital: ' + orb_type)
+                raise dGrParseError('Unknown type of orbital: ' + orb_type)
         new_orbitals = cls()
         new_orbitals.name = xml_file[:-4]
         new_orbitals.basis_is_per_irrep = False
         tree = ET.parse(xml_file)
         molpro = tree.getroot()
         ns = {'molpro': 'http://www.molpro.net/schema/molpro-output',
-              'xsd':'http://www.w3.org/1999/XMLSchema',
-              'cml':'http://www.xml-cml.org/schema',
-              'stm':'http://www.xml-cml.org/schema',
-              'xhtml':'http://www.w3.org/1999/xhtm'}
+              'xsd': 'http://www.w3.org/1999/XMLSchema',
+              'cml': 'http://www.xml-cml.org/schema',
+              'stm': 'http://www.xml-cml.org/schema',
+              'xhtml': 'http://www.w3.org/1999/xhtm'}
         molecule = molpro[0]
         new_orbitals.in_the_basis = molecule.attrib['basis']
-        point_group = molecule.find('cml:molecule',ns).find('cml:symmetry',ns).attrib['pointGroup']
+        point_group = molecule.find(
+            'cml:molecule', ns).find(
+                'cml:symmetry', ns).attrib['pointGroup']
         new_orbitals.n_irrep = number_of_irreducible_repr[point_group]
-        new_orbitals._basis_len = int(molecule.find('molpro:basisSet',ns).attrib['length'])
+        new_orbitals._basis_len = int(molecule.find(
+            'molpro:basisSet', ns).attrib['length'])
         if molecule.attrib['method'] == 'UHF':
             new_orbitals.restricted = False
-            n_orb_per_spirrep = np.zeros(2 * new_orbitals.n_irrep, dtype=np.uint)
+            n_orb_per_spirrep = np.zeros(2 * new_orbitals.n_irrep,
+                                         dtype=np.uint)
             cur_orb = np.zeros(2 * new_orbitals.n_irrep, dtype=np.uint)
         else:
             new_orbitals.restricted = True
@@ -211,7 +217,8 @@ class Molecular_Orbitals():
                                   + int(orb.attrib['symmetryID']) - 1] += 1
         new_orbitals._coefficients = []
         for n in n_orb_per_spirrep:
-            new_orbitals._coefficients.append(np.zeros((new_orbitals._basis_len, n)))
+            new_orbitals._coefficients.append(
+                np.zeros((new_orbitals._basis_len, n)))
         for orb_set in molecule.findall('molpro:orbitals', ns):
             try:
                 spin_shift = get_spin_shift(orb_set.attrib['type'],
@@ -222,8 +229,9 @@ class Molecular_Orbitals():
             for orb in orb_set:
                 spirrep = spin_shift + int(orb.attrib['symmetryID']) - 1
                 try:
-                    new_orbitals._coefficients[spirrep][:,cur_orb[spirrep]] = np.array(
-                        list(map(float,orb.text.split())))
+                    new_orbitals._coefficients[
+                        spirrep][:, cur_orb[spirrep]] = np.array(
+                        list(map(float, orb.text.split())))
                 except ValueError as e:
                     if 'could not broadcast input array from shape' in str(e):
                         raise dGrValueError('Lenght error in file '
@@ -290,9 +298,9 @@ class Molecular_Orbitals():
         for spirrep, C_spirrep in enumerate(other):
             for i in range(C_spirrep.shape[1]):
                 if spirrep < other.n_irrep:
-                    C_inv[:,i_C] = C_spirrep[:,i]
+                    C_inv[:, i_C] = C_spirrep[:, i]
                 else:
-                    C_inv_beta[:,i_C % len(other)] = C_spirrep[:,i]
+                    C_inv_beta[:, i_C % len(other)] = C_spirrep[:, i]
                 i_C += 1
         C_inv = inv(C_inv)
         logger.debug('C_inv:\n%s', C_inv)
@@ -304,12 +312,12 @@ class Molecular_Orbitals():
         for n in range(self.n_irrep):
             lim_irrep.append(lim_irrep[-1] + self[n].shape[1])
         for n in range(self.n_irrep):
-            Ua[:,lim_irrep[n]:lim_irrep[n + 1]] = C_inv @ self[n]
-        logger.debug('Ua:\n%s',Ua)
+            Ua[:, lim_irrep[n]:lim_irrep[n + 1]] = C_inv @ self[n]
+        logger.debug('Ua:\n%s', Ua)
         if not U.restricted:
             Ub = np.zeros((len(other), len(other)))
             for n in range(self.n_irrep):
-                Ub[:,lim_irrep[n]:lim_irrep[n + 1]] = (
+                Ub[:, lim_irrep[n]:lim_irrep[n + 1]] = (
                     (C_inv
                      if other.restricted else
                      C_inv_beta)
@@ -320,9 +328,9 @@ class Molecular_Orbitals():
         for n in range(U.n_irrep):
             i_inf, i_sup = lim_irrep[n], lim_irrep[n + 1]
             if not np.allclose(Ua[:i_inf, i_inf:i_sup],
-                               np.zeros((i_inf,i_sup - i_inf))):
+                               np.zeros((i_inf, i_sup - i_inf))):
                 logger.warning('Not all zero!!:\n%s', Ua[:i_inf, i_inf:i_sup])
-            if not np.allclose(Ua[lim_irrep[n+1]:, i_inf:i_sup],
+            if not np.allclose(Ua[lim_irrep[n + 1]:, i_inf:i_sup],
                                np.zeros((len(other) - i_sup, i_sup - i_inf))):
                 logger.warning('Not all zero:\n%s',
                                Ua[i_sup:, i_inf:i_sup])
@@ -331,10 +339,12 @@ class Molecular_Orbitals():
             for n in range(U.n_irrep):
                 i_inf, i_sup = lim_irrep[n], lim_irrep[n + 1]
                 if not np.allclose(Ub[:i_inf, i_inf:i_sup],
-                                   np.zeros((i_inf,i_sup - i_inf))):
-                    logger.warning('Not all zero!!:\n%s', Ub[:i_inf, i_inf:i_sup])
-                if not np.allclose(Ub[lim_irrep[n+1]:, i_inf:i_sup],
-                                   np.zeros((len(other) - i_sup, i_sup - i_inf))):
+                                   np.zeros((i_inf, i_sup - i_inf))):
+                    logger.warning('Not all zero!!:\n%s', Ub[:i_inf,
+                                                             i_inf:i_sup])
+                if not np.allclose(Ub[lim_irrep[n + 1]:, i_inf:i_sup],
+                                   np.zeros((len(other) - i_sup,
+                                             i_sup - i_inf))):
                     logger.warning('Not all zero:\n%s',
                                    Ub[i_sup:, i_inf:i_sup])
                 U._coefficients.append(Ub[i_inf:i_sup,
