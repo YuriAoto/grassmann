@@ -23,8 +23,6 @@ except dGrParseError as e:
 name_extra = cmd_line_args.state
 if name_extra:
     name_extra = '_' + name_extra
-if cmd_line_args.check_algorithms:
-    name_extra += '_chk_alg'
 output_name = cmd_line_args.basename + '.min_dist' + name_extra
 logfile_name = output_name + '.log'
 

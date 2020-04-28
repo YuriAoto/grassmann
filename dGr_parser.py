@@ -85,8 +85,7 @@ def parse_cmd_line():
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'
                         + ' as Molpro\'s "put" xml file or'
-                        + ' basename of npz file '
-                        + '(<INI_ORB>_U.npz)')
+                        + ' npz file')
     parser.add_argument('--HF_orb',
                         help='Hartree-Fock orbitals'
                         + ' (as Molpro\'s "put" xml file)')
@@ -103,6 +102,11 @@ def parse_cmd_line():
                         + ' Possible values are: "orb_rotations",'
                         + ' "general_Absil",  and "CISD_Absil".'
                         + ' Default is "CISD_Absil".')
+    parser.add_argument('--save_full_U',
+                        help='If set, the saved matrix U will contain'
+                        + ' also the virtual orbitals of the optimised'
+                        + ' point.',
+                        action='store_true')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
@@ -117,28 +121,23 @@ def parse_cmd_line():
     for i, arg in enumerate(sys.argv):
         cmd_args.command += arg + ' ' + ('\\\n'
                                          if (i != len(sys.argv) - 1
-                                             and (arg[0] != '-'))
+                                             and (arg[0] != '-'
+                                                  or arg == '--save_full_U'))
                                          else
                                          '')
     __assert_molpro_output(cmd_args.molpro_output)
     if cmd_args.algorithm is None:
-        cmd_args.algorithm = 'Absil'
+        cmd_args.algorithm = 'CISD_Absil'
     elif cmd_args.algorithm not in ['orb_rotations',
                                     'general_Absil',
                                     'CISD_Absil']:
         raise dGrParseError('Unknown algorithm: ' + cmd_args.algorithm)
     if cmd_args.ini_orb is not None:
-        try:
+        if (cmd_args.ini_orb[-4:] == '.npz'
+                and os.path.isfile(cmd_args.ini_orb)):
+            pass
+        else:
             __assert_molpro_output(cmd_args.ini_orb, can_be_xml=True)
-        except dGrParseError as e:
-            if 'File ' + cmd_args.ini_orb + ' not found' in str(e):
-                if not os.path.isfile(cmd_args.ini_orb + '_U.npz'):
-                    raise dGrParseError('Neither ' + cmd_args.ini_orb
-                                        + ' nor ' + cmd_args.ini_orb
-                                        + '_U.npz exist!')
-                cmd_args.ini_orb = cmd_args.ini_orb + '_U.npz'
-            else:
-                raise e
     if cmd_args.WF_orb is None:
         cmd_args.WF_orb = cmd_args.molpro_output
     else:

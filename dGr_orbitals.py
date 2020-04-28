@@ -16,9 +16,89 @@ import numpy as np
 from scipy.linalg import inv
 
 from dGr_WF_int_norm import number_of_irreducible_repr
-from dGr_exceptions import dGrValueError, dGrParseError
+from dGr_exceptions import dGrValueError, dGrParseError, dGrNumericalError
 
 logger = logging.getLogger(__name__)
+
+
+def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
+    """Completes the space spanned by the columns of U
+    
+    If the columns of U span n orbitals, the function
+    will return a "full" U, with columns spanning the
+    full space but with the first n still spanning the
+    same original space:
+    
+    U = [ U[:, 0] ... U[:, n-1] ]
+    
+    returns
+    
+    U' = [ U'[:, 0] ... U'[:, n-1] U'[:, n] ... U'[:, K-1] ]
+    
+    with full_U orthogonal and span(U'[:,:n]) = span(U).
+    This is done per spirrep.
+    
+    Parameters:
+    -----------
+    U (list of 2D np.arrays)
+        The orbitals coefficients, assumed orthonormal.
+        For each entry i, U[i] must have shape (orb_dim[i],n[i]),
+        with  n[i] <= orb_dim[i] (in general strictly lower)
+    
+    orb_dim (Orbitals_Sets)
+        The dimension of the orbital space per irrep
+    
+    keep_direction (bool, optional, default=False)
+        If True, np.dot(U'[:, q], U[:, q]) > 0
+        (that is, keeps the direction of the existing vectors)
+    
+    eps (float, optional, default=0.01)
+        In the process of filling, a new vector (orthogonal to the
+        existing ones) will be considered only if its norm is larger
+        than this value
+    
+    Returns:
+    --------
+    A list of 2D np.arrays, with the orbital coefficients
+    that span the full space, but with the subspace spanned
+    by the first entries of U unaltered
+    
+    """
+    full_U = []
+    for i, Ui in enumerate(U):
+        if Ui.shape[0] != orb_dim[i]:
+            raise dGrValueError(
+                'First dimension of U does not match'
+                + ' dimension of orbitals space. orb_dim = '
+                + str(orb_dim) + ', but U:\n'
+                + str(Ui))
+        full_U.append(np.zeros((orb_dim[i],
+                                orb_dim[i])))
+        for q in range(Ui.shape[1]):
+            full_U[-1][:, q] = Ui[:, q]
+        direction = 0
+        for q in range(Ui.shape[1], orb_dim[i]):
+            while direction < orb_dim[i]:
+                newV = np.zeros(orb_dim[i])
+                newV[(q + direction) % orb_dim[i]] = 1.0
+                newV = newV - np.matmul(np.matmul(full_U[-1][:, :q],
+                                                  full_U[-1][:, :q].T),
+                                        newV)
+                norm_newV = np.sqrt(np.dot(newV, newV))
+                if norm_newV > eps:
+                    break
+                direction += 1
+            if direction == orb_dim[i]:
+                raise dGrNumericalError(
+                    'No new directions to look for external space!')
+            full_U[-1][:, q] = newV / norm_newV
+        # with QR decomposition:
+        # full_U[-1], r = qr(full_U[-1])
+        # if keep_direction:
+        #     for q in range(Ui.shape[1]):
+        #         if np.dot(full_U[-1][:, q], Ui[:, q]) < 0:
+        #             full_U[-1][:, q] *= -1
+    return full_U
 
 
 class Molecular_Orbitals():

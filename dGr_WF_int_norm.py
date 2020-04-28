@@ -33,8 +33,8 @@ class String_Index_for_SD(genWF.String_Index):
     C (float)
         The coefficient
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, spirrep_indices=None):
+        super().__init__(spirrep_indices)
         self.exc_type = None
         self.C = None
     
@@ -184,6 +184,9 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
         TODO: should be something more significant, such as the number
         determinants
         
+    TODO:
+    norm should be a @property decorated function, calculating and
+    storing the norm a _norm.
     """
     def __init__(self):
         super().__init__()
@@ -1091,12 +1094,20 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                                                         + self.n_irrep] = (
                                     Index[i_spirrep + self.n_irrep],
                                     Index[i_spirrep])
+                                Index[i_spirrep].spirrep = i_spirrep
+                                Index[i_spirrep
+                                      + self.n_irrep].spirrep = (
+                                          i_spirrep + self.n_irrep)
                                 if Index.is_coupled_to(coupled_to):
                                     yield Index
                                 Index[i_spirrep], Index[i_spirrep
                                                         + self.n_irrep] = (
                                     Index[i_spirrep + self.n_irrep],
                                     Index[i_spirrep])
+                                Index[i_spirrep].spirrep = i_spirrep
+                                Index[i_spirrep
+                                      + self.n_irrep].spirrep = (
+                                          i_spirrep + self.n_irrep)
                         Index[i_spirrep][self.n_core[i_spirrep] + i_occ] = (
                             self.n_core[i_spirrep] + i_occ)
             Index.exc_type = 'D'
@@ -1435,12 +1446,15 @@ class Wave_Function_Int_Norm(genWF.Wave_Function):
                     if line == Molpro.CISD_header:
                         new_wf.WF_type = 'CISD'
                         new_wf.restricted = True
+                        new_wf.Ms = 0.0
                         CIcalc_found = True
                         new_wf.initialize_data()
                     elif (line == Molpro.UCISD_header
                           or line == Molpro.RCISD_header):
                         new_wf.WF_type = 'CISD'
                         new_wf.restricted = False
+                        raise NotImplementedError('What is the Ms?')
+                        # new_wf.Ms = 0.0
                         CIcalc_found = False  # There are MP2 amplitudes first!
                         new_wf.initialize_data()
                     elif line == Molpro.CCSD_header:

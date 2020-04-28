@@ -70,14 +70,15 @@ class Results(namedtuple('Results',
     __slots__ = ()
 
 
-def optimise_distance_to_FCI(wf,
-                             max_iter=20,
-                             f_out=sys.stdout,
-                             restricted=True,
-                             ini_U=None,
-                             occupation=None,
-                             thrsh_Z=1.0E-8,
-                             thrsh_J=1.0E-8):
+def optimise_overlap_orbRot(wf,
+                            max_iter=20,
+                            f_out=sys.stdout,
+                            restricted=True,
+                            ini_U=None,
+                            occupation=None,
+                            thrsh_Z=1.0E-8,
+                            thrsh_J=1.0E-8,
+                            enable_uphill=True):
     """Find a single Slater determinant that minimise the distance to wf
     
     Behaviour:
@@ -136,11 +137,15 @@ def optimise_distance_to_FCI(wf,
         implicit occupation given by the number of columns of U is used.
         Currently: not implemented!
     
-    thrsh_Z (float, optional, default = 1.0E-8)
+    thrsh_Z (float, optional, default=1.0E-8)
         Convergence threshold for the Z vector
     
-    thrsh_J (float, optional, default = 1.0E-8)
+    thrsh_J (float, optional, default=1.0E-8)
         Convergence threshold for the Jacobian
+    
+    enable_uphill (bool, optional, default=True)
+        If True, try algorithm to go uphill in case of positive eigenvalues
+        of the Hessian
         
     Returns:
     --------
@@ -179,19 +184,33 @@ def optimise_distance_to_FCI(wf,
     else:
         U = list(ini_U)
         cur_wf = wf.change_orb_basis(U)
-    fmt_full = '{0:<5d}  {1:<10.8f} {2:<12s}  {3:<11.8f}  {4:<11.8f}  {5:<s}\n'
-    f_out.write('{0:<5s}  {1:<23s}  {2:<11s}  {3:<11s}  {4:<11s}\n'.
-                format('it.', 'f', '|z|', '|Jac|', '[det. largest coef.]'))
+    fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
+    f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
+                format('it.', 'f', '|z|', '|Jac|',
+                       'time in iteration [det. largest coef.]'))
     for i_iteration in range(max_iter):
-        logger.info('Starting iteration %d',
-                    i_iteration)
-        if loglevel <= logging.DEBUG:
-            logger.debug('Wave function:\n%s', cur_wf)
+        with logtime('Starting iteration {}'.format(i_iteration)) as T_start:
+            pass
+        if i_iteration > 0:
+            if not try_uphill and normJ < thrsh_J and normZ < thrsh_Z:
+                if not Hess_has_pos_eig or not enable_uphill:
+                    converged = True
+                    break
+                else:
+                    try_uphill = True
+            with logtime(
+                    'Calculating new basis and transforming wave function.'):
+                cur_wf, cur_U = cur_wf.calc_wf_from_z(z)
+            for i in range(len(U)):
+                U[i] = U[i] @ cur_U[i]
+            if loglevel <= logging.DEBUG:
+                logger.debug('Wave function:\n%s', cur_wf)
         with logtime('Making Jacobian and Hessian'):
             Jac, Hess = cur_wf.make_Jac_Hess_overlap()
-        logger.log(1, '%s', Jac)
-        logger.log(1, '%s', Hess)
-        eig_val, eig_vec = linalg.eigh(Hess)
+        logger.log(1, 'Jacobian:\n%r', Jac)
+        logger.log(1, 'Hessian:\n%r', Hess)
+        with logtime('Eigenvectors of Hessian'):
+            eig_val, eig_vec = linalg.eigh(Hess)
         Hess_has_pos_eig = False
         Hess_dir_with_posEvec = None
         n_pos_eigV = 0
@@ -206,11 +225,7 @@ def optimise_distance_to_FCI(wf,
         if not try_uphill:
             # Newton step
             with logtime('Solving lin system for vector z.'):
-                if True:
-                    z = -linalg.solve(Hess, Jac)
-                else:
-                    Hess_inv = linalg.inv(Hess)
-                    z = -Hess_inv @ Jac
+                z = -linalg.solve(Hess, Jac)
         else:
             # Look maximum in the direction of eigenvector of Hess with pos
             #
@@ -220,52 +235,43 @@ def optimise_distance_to_FCI(wf,
             # for j in Jac:
             #    gamma += j**2
             # gamma = -gamma/den
-            gamma = 0.5
-            logger.info('Calculating z vector by Gradient descent;'
-                        + '\n gamma = %s', gamma)
-            max_c0 = cur_wf.C0
-            max_i0 = 0
-            logger.log(15, 'Current C0: %.4f', max_c0)
-            for i in range(6):
-                tmp_wf, tmp_U = cur_wf.calc_wf_from_z(i * gamma
-                                                      * Hess_dir_with_posEvec,
-                                                      just_C0=True)
-                this_c0 = tmp_wf.C0
-                logger.debug('Attempting for i=%d: C0 = %.4f', i, this_c0)
-                if abs(max_c0) < abs(this_c0):
-                    max_c0 = this_c0
-                    max_i0 = i
-            z = max_i0 * gamma * Hess_dir_with_posEvec
-            logger.info(
-                'z vector obtained: %d * gamma * Hess_dir_with_posEvec',
-                max_i0)
-            try_uphill = False
-        normZ = linalg.norm(z)
+            with logtime('Trying uphill'):
+                gamma = 0.5
+                logger.info('Calculating z vector by Gradient descent;'
+                            + '\n gamma = %s', gamma)
+                max_c0 = cur_wf.C0
+                max_i0 = 0
+                logger.log(15, 'Current C0: %.4f', max_c0)
+                for i in range(6):
+                    tmp_wf, tmp_U = cur_wf.calc_wf_from_z(
+                        i * gamma * Hess_dir_with_posEvec,
+                        just_C0=True)
+                    this_c0 = tmp_wf.C0
+                    logger.debug('Attempting for i=%d: C0 = %.4f',
+                                 i, this_c0)
+                    if abs(max_c0) < abs(this_c0):
+                        max_c0 = this_c0
+                        max_i0 = i
+                z = max_i0 * gamma * Hess_dir_with_posEvec
+                logger.info(
+                    'z vector obtained: %d * gamma * Hess_dir_with_posEvec',
+                    max_i0)
+                try_uphill = False
+        with logtime('Calculating norm of Z') as T_norm_Z:
+            normZ = linalg.norm(z)
+        elapsed_time = str(timedelta(seconds=(T_norm_Z.end_time
+                                              - T_start.ini_time)))
+        f_out.write(fmt_full.
+                    format(i_iteration,
+                           cur_wf.C0,
+                           normZ,
+                           normJ,
+                           elapsed_time))
         i_max_coef = get_i_max_coef(cur_wf)
         if i_max_coef > 0:
-            f_maxC = '({1:<9.7f})'.format(cur_wf[i_max_coef].c)
-            det_maxC = str(cur_wf[i_max_coef])
-        else:
-            f_maxC = det_maxC = ''
-        f_out.write(fmt_full.format(i_iteration,
-                                    cur_wf.C0,
-                                    f_maxC,
-                                    normZ,
-                                    normJ,
-                                    det_maxC))
+            f_out.write('   ^ Max coefficient: {}\n'.
+                        format(str(cur_wf[i_max_coef])))
         f_out.flush()
-        logger.info('Norm of z vector: %8.5e', normZ)
-        logger.info('Norm of J vector: %8.5e', normJ)
-        if (not try_uphill and normJ < thrsh_J and normZ < thrsh_Z):
-            if not Hess_has_pos_eig:
-                converged = True
-                break
-            else:
-                try_uphill = True
-        with logtime('Calculating new basis and transforming wave function.'):
-            cur_wf, cur_U = cur_wf.calc_wf_from_z(z)
-        for i in range(len(U)):
-            U[i] = U[i] @ cur_U[i]
     if i_max_coef > 0:
         f_final = (cur_wf[0].c, cur_wf[i_max_coef])
     else:
@@ -278,17 +284,17 @@ def optimise_distance_to_FCI(wf,
                    n_pos_H_eigVal=n_pos_eigV)
 
 
-def optimise_distance_to_CI(ci_wf,
-                            max_iter=20,
-                            f_out=sys.stdout,
-                            restricted=True,
-                            ini_U=None,
-                            occupation=None,
-                            thrsh_eta=1.0E-5,
-                            thrsh_C=1.0E-5,
-                            only_C=False,
-                            only_eta=False,
-                            check_equations=False):
+def optimise_overlap_Absil(ci_wf,
+                           max_iter=20,
+                           f_out=sys.stdout,
+                           restricted=True,
+                           ini_U=None,
+                           occupation=None,
+                           thrsh_eta=1.0E-5,
+                           thrsh_C=1.0E-5,
+                           only_C=False,
+                           only_eta=False,
+                           check_equations=False):
     """Find the single Slater determinant that maximises the overlap to ci_wf
     
     Behaviour:
@@ -560,13 +566,14 @@ def optimise_distance_to_CI(ci_wf,
                     i % ci_wf.n_irrep,
                     U[i])
         elapsed_time = str(timedelta(seconds=(T_orth_U.end_time
-                                              - T_gen_lin_system.end_time)))
+                                              - T_gen_lin_system.ini_time)))
         f_out.write(fmt_full.
                     format(i_iteration,
                            f,
                            norm_eta,
                            norm_C,
                            elapsed_time))
+        f_out.flush()
         if converged_C and converged_eta:
             break
     return Results(f=f,

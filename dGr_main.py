@@ -103,11 +103,17 @@ def dGr_main(args, f_out):
                 zero_coefficients=args.WF_templ is not None)
         if args.WF_templ is not None:
             with logtime('Reading wave function coefficients'):
-                ext_wf.get_coeff_from_molpro(args.molpro_output,
-                                             args.state
-                                             if args.state else
-                                             '1.1',
-                                             use_structure=True)
+                int_N_WF = IntN.Wave_Function_Int_Norm.from_Molpro(
+                    args.molpro_output)
+                int_N_WF.calc_norm()
+                ext_wf.get_coeff_from_Int_Norm_WF(int_N_WF,
+                                                  change_structure=False,
+                                                  use_structure=True)
+                # ext_wf.get_coeff_from_molpro(args.molpro_output,
+                #                              args.state
+                #                              if args.state else
+                #                              '1.1',
+                #                              use_structure=True)
     else:
         with logtime('Reading int. norm. from Molpro output'):
             ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(
@@ -185,17 +191,16 @@ def dGr_main(args, f_out):
     f_out.flush()
     logger.info('Starting optimisation')
     if orbRot_opt:
-        res = dGr_optimiser.optimise_distance_to_FCI(
-            ext_wf,
-            f_out=f_out,
-            ini_U=U)
-    else:
-        res = dGr_optimiser.optimise_distance_to_CI(
+        res = dGr_optimiser.optimise_overlap_orbRot(
             ext_wf,
             f_out=f_out,
             ini_U=U,
-            restricted=False,
-            max_iter=20)
+            enable_uphill=False)
+    else:
+        res = dGr_optimiser.optimise_overlap_Absil(
+            ext_wf,
+            f_out=f_out,
+            ini_U=U)
     toout('-' * 30)
     logger.info('Optimisation completed')
     if isinstance(res.converged, bool):
@@ -228,7 +233,7 @@ def dGr_main(args, f_out):
         toout('WARNING:'
               + ' First determinant is not the one with largest coefficient!')
         toout('  Coefficient of first determinant: {:.7f}'.format(res.f[0]))
-        toout('  Determinant with largest coefficient: {:s}'.format(res.f[1]))
+        toout('  Determinant with largest coefficient: {:s}'.format(str(res.f[1])))
         final_f = res.f[0]
     else:
         final_f = res.f
@@ -237,7 +242,10 @@ def dGr_main(args, f_out):
  These make the transformation from the basis used to expand the
  external wave function (|extWF>) to the one that makes |min D>
  the first determinant.""")
-    np.savez(args.basename + '.min_dist_U', *res.U)
+    final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
+               if args.save_full_U else
+               res.U)
+    np.savez(args.basename + '.min_dist_U', *final_U)
     if args.HF_orb != args.WF_orb:
         print_ovlp_D('refWF', 'min D',
                      ovlp_Slater_dets((2 * res.U)

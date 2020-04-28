@@ -41,6 +41,14 @@ class dGrValueError(dGrError, ValueError):
     pass
 
 
+class dGrNumericalError(dGrError):
+    pass
+
+
+class dGrInconsistencyError(dGrError):
+    pass
+
+
 class dGrUnknownError(dGrError):
     def __init__(self, msg, exc_info):
         dGrError.__init__(self, msg)

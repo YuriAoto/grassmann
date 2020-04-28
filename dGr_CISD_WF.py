@@ -144,7 +144,7 @@ class Wave_Function_CISD(genWF.Wave_Function):
         raise NotImplementedError(
             'string_indices not implemented for CISD_WF!')
     
-    def make_Jac_Hess(self, analytic=True):
+    def make_Jac_Hess_overlap(self, analytic=True):
         raise NotImplementedError(
             'make_Jac_Hess not implemented for CISD_WF!')
     

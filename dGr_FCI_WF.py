@@ -52,6 +52,20 @@ class Slater_Det(namedtuple('Slater_Det',
 Orbital_Info = namedtuple('Orbital_Info', ['orb', 'spirrep'])
 
 
+def _get_Slater_Det_from_String_Index(Index, n_irrep,
+                                      zero_coefficients=False):
+    """return the Slater_Det corresponding to String_Index Index"""
+    coeff = Index.C
+    final_occ = [np.array([], dtype=np.int8) for i in range(2 * n_irrep)]
+    for spirrep, spirrep_I in enumerate(Index):
+        if spirrep != spirrep_I.spirrep:
+            raise dGrInconsistencyError(
+                'spirrep of spirrep_I is not consistent with position in list')
+        final_occ[spirrep_I.spirrep] = np.array(spirrep_I.occ_orb)
+    return Slater_Det(c=0.0 if zero_coefficients else coeff,
+                      occupation=final_occ)
+
+
 def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
                                   zero_coefficients=False):
     """Read a FCI configuration from Molpro output and return a Slater Determinant
@@ -235,6 +249,91 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                                      use_structure=use_structure)
         return new_wf
     
+    def index(self, element, check_coeff=False):
+        """Return index of element
+        
+        Parameters:
+        -----------
+        element (Slater_Det)
+            the Slater_Det whose index must be found
+        
+        check_coeff (bool, optional, default=False)
+            If True, return the index only if the coefficient
+            is the same
+        
+        Return:
+        -------
+        the index of element, if in self
+        
+        Raises
+        ------
+        dGrValueErr if element is not in self
+        
+        """
+        for idet, det in enumerate(self):
+            found_det = True
+            for occ1, occ2 in zip(det.occupation,
+                                  element.occupation):
+                if (len(occ1) != len(occ2)
+                        or not np.all(occ1 == occ2)):
+                    found_det = False
+                    break
+            if found_det:
+                if (not check_coeff
+                        or abs(self[idet].c - element.c) < self.tol_eq):
+                    return idet
+                raise dGrValueError(
+                    'Found occupation, but coefficient is different')
+        raise dGrValueError('Occupation not found.')
+    
+    def get_coeff_from_Int_Norm_WF(self, intN_wf,
+                                   change_structure=True,
+                                   use_structure=False):
+        """Get coefficients from a wave function with int. normalisation
+        
+        Parameters:
+        -----------
+        intN_wf (Wave_Function_Int_Norm)
+            wave function in intermediate normalisation
+        
+        change_structure (bool, optional, default=True)
+            If True, new determinants coefficients are allowed to be added
+        
+        use_structure (bool, optional, default=False)
+            If True, uses present structure in self.
+            Otherwise the eventual Slater determinants already in self
+            are discarded.
+        
+        TODO:
+        cross check attributes. The way it is all is overridden,
+        what is DANGEROUS
+        
+        """
+        self.restricted = intN_wf.restricted
+        self.point_group = intN_wf.point_group
+        self.Ms = intN_wf.Ms
+        self.n_core = intN_wf.n_core
+        self.n_act = intN_wf.n_act
+        self.orb_dim = intN_wf.orb_dim
+        self.ref_occ = intN_wf.ref_occ
+        self.WF_type = intN_wf.WF_type
+        self.source = intN_wf.source
+        if not use_structure:
+            self._all_determinants = []
+        for Index in intN_wf.string_indices():
+            new_Slater_Det = _get_Slater_Det_from_String_Index(Index,
+                                                               self.n_irrep)
+            if use_structure:
+                try:
+                    idet = self.index(new_Slater_Det)
+                except dGrValueError:
+                    if change_structure:
+                        self._all_determinants.append(new_Slater_Det)
+                else:
+                    self._all_determinants[idet] = new_Slater_Det
+            elif change_structure:
+                self._all_determinants.append(new_Slater_Det)
+
     def get_coeff_from_molpro(self, molpro_output,
                               state='1.1',
                               zero_coefficients=False,
@@ -310,22 +409,15 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                             new_Slater_Det = Slater_Det(
                                 c=-new_Slater_Det.c,
                                 occupation=Slater_Det.occupation)
-                    found_templ = False
                     if use_structure:
-                        found_templ = False
-                        for idet, det in enumerate(self):
-                            do_sub = True
-                            for occ1, occ2 in zip(det.occupation,
-                                                  new_Slater_Det.occupation):
-                                if (len(occ1) != len(occ2)
-                                        or not np.all(occ1 == occ2)):
-                                    do_sub = False
-                                    break
-                            if do_sub:
-                                self._all_determinants[idet] = new_Slater_Det
-                                found_templ = True
-                                break
-                    if change_structure and not found_templ:
+                        try:
+                            idet = self.index(new_Slater_Det)
+                        except dGrValueError:
+                            if change_structure:
+                                self._all_determinants.append(new_Slater_Det)
+                        else:
+                            self._all_determinants[idet] = new_Slater_Det
+                    elif change_structure:
                         self._all_determinants.append(new_Slater_Det)
                 elif FCI_prog_found:
                     if 'Frozen orbitals:' in l:
