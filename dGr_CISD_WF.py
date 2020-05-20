@@ -184,10 +184,16 @@ class Wave_Function_CISD(genWF.Wave_Function):
         for N, doubles in enumerate(intN_wf.doubles):
             i, j, i_irrep, j_irrep, exc_type = intN_wf.ij_from_N(N)
             if i_irrep != j_irrep:
-                for a in range(new_wf.n_ext[i_irrep]):
-                    for b in range(new_wf.n_ext[j_irrep]):
-                        new_wf.Csd[i_irrep][j_irrep][i, a, j, b] = \
-                            doubles[j_irrep][b, a]
+                # This is how it was before!!
+                # Note that this way it is wrong, but it gives the same result
+                # as in algorithm 1. Thus: string_indices in int_N_WF is wrong
+                # (with analogous mistake) INVESTIGATE!!!
+                # for a in range(new_wf.n_ext[i_irrep]):
+                #     for b in range(new_wf.n_ext[j_irrep]):
+                #         new_wf.Csd[i_irrep][j_irrep][i, a, j, b] = \
+                #             doubles[j_irrep][b, a]
+                new_wf.Csd[i_irrep][j_irrep][i, :, j, :] = \
+                    2 * doubles[i_irrep][:, :] - doubles[j_irrep][:, :].T
                 if (i + new_wf.ref_occ[i_irrep]
                       + j + new_wf.ref_occ[j_irrep]) % 2 == 1:
                     new_wf.Csd[i_irrep][j_irrep][i, :, j, :] *= -1
