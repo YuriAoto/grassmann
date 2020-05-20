@@ -30,6 +30,7 @@ from dGr_util import logtime
 from dGr_general_WF import Wave_Function
 from dGr_CISD_WF import Wave_Function_CISD
 import dGr_Absil as Absil
+import dGr_orbitals as orb
 from dGr_exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
@@ -182,7 +183,7 @@ def optimise_overlap_orbRot(wf,
             U.append(np.identity(wf.orb_dim[i % wf.n_irrep]))
         cur_wf = copy.copy(wf)
     else:
-        U = list(ini_U)
+        U = orb.complete_orb_space(ini_U, wf.orb_dim)
         cur_wf = wf.change_orb_basis(U)
     fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
     f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
@@ -257,6 +258,7 @@ def optimise_overlap_orbRot(wf,
                     'z vector obtained: %d * gamma * Hess_dir_with_posEvec',
                     max_i0)
                 try_uphill = False
+        logger.debug('z vector:\n%r', z)
         with logtime('Calculating norm of Z') as T_norm_Z:
             normZ = linalg.norm(z)
         elapsed_time = str(timedelta(seconds=(T_norm_Z.end_time
@@ -273,9 +275,9 @@ def optimise_overlap_orbRot(wf,
                         format(str(cur_wf[i_max_coef])))
         f_out.flush()
     if i_max_coef > 0:
-        f_final = (cur_wf[0].c, cur_wf[i_max_coef])
+        f_final = (cur_wf.C0, cur_wf[i_max_coef])
     else:
-        f_final = cur_wf[0].c
+        f_final = cur_wf.C0
     return Results(f=f_final,
                    U=U,
                    norm=(normZ, normJ),
@@ -469,16 +471,7 @@ def optimise_overlap_Absil(ci_wf,
             if restricted:
                 break
         U = ini_U
-    slice_XC = []
-    for i in ci_wf.spirrep_blocks(restricted=restricted):
-        if U[i].shape[1] > 0:
-            logger.debug('U[%d]; shape = %s:\n%s', i, U[i].shape, U[i])
-        else:
-            logger.debug('No electrons in irrep = %d', i)
-        ini = 0 if i == 0 else slice_XC[-1].stop
-        slice_XC.append(slice(ini,
-                              ini + U[i].shape[0] * U[i].shape[1]))
-    logger.debug('slice_XC:\n%r', slice_XC)
+    slice_XC = Absil.make_slice_XC(U)
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
     fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'

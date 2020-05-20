@@ -217,6 +217,62 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     
     The float <wf|U>
     """
+    if isinstance(wf, Wave_Function_CISD):
+        return _overlap_to_det_from_restricted_CISD(
+            wf, U, assume_orth=assume_orth)
+    elif isinstance(wf, genWF.Wave_Function):
+        return _overlap_to_det_from_genWF(
+            wf, U, F=F, assume_orth=assume_orth)
+    else:
+        raise dGrValueError('Unknown type of wave function')
+
+
+def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
+    F0 = []
+    Fs = []
+    for irrep in wf.spirrep_blocks(restricted=True):
+        Fs.append(np.zeros((wf.n_corr_orb[irrep], wf.n_ext[irrep])))
+        Index = np.arange(U[irrep].shape[1])
+        F0.append(_calc_fI(U[irrep], Index))
+        for i, a, Index in _all_singles(U[irrep].shape[1],
+                                        wf.n_corr_orb[irrep],
+                                        wf.n_ext[irrep]):
+            Fs[irrep][i, a] = _calc_fI(U[irrep], Index)
+    f = wf.C0 * _calc_Fprod(F0, (), wf.n_irrep)**2
+    for irrep in wf.spirrep_blocks(restricted=True):
+        contr_irrep = np.einsum('ia,ia',
+                                Fs[irrep], wf.Cs[irrep])
+        for i, j, a, b, Index in _all_doubles(U[irrep].shape[1],
+                                              wf.n_corr_orb[irrep],
+                                              wf.n_ext[irrep]):
+            contr_irrep += (_calc_fI(U[irrep], Index)
+                            * wf.Cd[irrep][get_n_from_triang(
+                                i, j, with_diag=False),
+                                           get_n_from_triang(
+                                               a, b, with_diag=False)])
+        contr_irrep *= 2 * F0[irrep]
+        contr_irrep += np.einsum('ijkl,ij,kl',
+                                 wf.Csd[irrep][irrep], Fs[irrep], Fs[irrep])
+        f += (_calc_Fprod(F0,
+                          (irrep,),
+                          wf.n_irrep)**2
+              * contr_irrep)
+        for irrep2 in range(irrep):
+            f += (_calc_Fprod(F0,
+                              (irrep, irrep2),
+                              wf.n_irrep)**2
+                  * 2 * F0[irrep] * F0[irrep2]
+                  * np.einsum('iajb,ia,jb',
+                              wf.Csd[irrep][irrep2],
+                              Fs[irrep], Fs[irrep2]))
+    if not assume_orth:
+        for U_spirrep in U:
+            if U_spirrep.shape[0] * U_spirrep.shape[1] != 0:
+                f /= linalg.det(np.matmul(U_spirrep.T, U_spirrep))
+    return f
+
+
+def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
     if F is None:
         F = calc_all_F(wf, U)
     f = 0.0
@@ -233,8 +289,36 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
         f += wf[I] * f_contr
     if not assume_orth:
         for U_spirrep in U:
-            f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
+            if U_spirrep.shape[0] * U_spirrep.shape[1] != 0:
+                f /= math.sqrt(linalg.det(np.matmul(U_spirrep.T, U_spirrep)))
     return f
+
+
+def make_slice_XC(U):
+    """Generate the slices for the X,C matrix from generate_lin_system
+    
+    Parameters:
+    -----------
+    U (lsit of np.ndarrays)
+        The orbital coefficients, as in generate_lin_system
+    
+    Return:
+    -------
+    A list of slices, for each spirrep block
+    """
+    new_slice = []
+    for i, Ui in enumerate(U):
+        if Ui.shape[1] > 0:
+            logger.debug('U[%d]; shape = %s:\n%s',
+                         i, Ui.shape, Ui)
+        else:
+            logger.debug('No electrons in irrep = %d', i)
+        ini = 0 if i == 0 else new_slice[-1].stop
+        new_slice.append(
+            slice(ini, ini + Ui.shape[0] * Ui.shape[1]))
+    logger.debug('new slice for XC matrices:\n%r',
+                 new_slice)
+    return new_slice
 
 
 def generate_lin_system(
@@ -252,7 +336,8 @@ def generate_lin_system(
     Limitations:
     ------------
     
-    Only for unrestricted calculations
+    Only for restricted calculations if wf is instance of
+    Wave_Function_CISD, and only for unrestricted otherwise.
     
     Parameters:
     -----------
@@ -396,7 +481,7 @@ def _generate_lin_system_from_restricted_CISD(
         f *= F0[irrep]
         G0.append(np.zeros((K[irrep], n[irrep])))
         Fs.append(np.zeros((wf.n_corr_orb[irrep], wf.n_ext[irrep])))
-        Index = np.arange(n[irrep])
+        # -> not needed, right        Index = np.arange(n[irrep])
         for p in range(K[irrep]):
             for q in range(n[irrep]):
                 G0[irrep][p, q] = _calc_G(U[irrep], Index,
@@ -486,7 +571,6 @@ def _generate_lin_system_from_restricted_CISD(
         L[-1] += 2 * F0[irrep] * (D + tmp)
         tmp = F0[irrep] * wf.C0 + D
         C[slice_XC[irrep]] = np.ravel(G0[irrep]) * tmp
-        
         logger.debug('C at 1 [%d]:\n%r', irrep, C[slice_XC[irrep]])
         C[slice_XC[irrep]] += np.ravel(
             np.einsum('ijkl,ij,klmn->mn',

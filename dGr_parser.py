@@ -131,7 +131,9 @@ def parse_cmd_line():
     elif cmd_args.algorithm not in ['orb_rotations',
                                     'general_Absil',
                                     'CISD_Absil']:
-        raise dGrParseError('Unknown algorithm: ' + cmd_args.algorithm)
+        raise dGrParseError('Unknown algorithm: ' + cmd_args.algorithm
+                            + '. Possible values:\n'
+                            + 'orb_rotations (default), general_Absil, and CISD_Absil')
     if cmd_args.ini_orb is not None:
         if (cmd_args.ini_orb[-4:] == '.npz'
                 and os.path.isfile(cmd_args.ini_orb)):

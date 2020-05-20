@@ -183,6 +183,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         super().__init__()
         self._all_determinants = []
         self.has_FCI_structure = False
+        self.i_ref = None
     
     def __len__(self):
         return len(self._all_determinants)
@@ -318,6 +319,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
         self.ref_occ = intN_wf.ref_occ
         self.WF_type = intN_wf.WF_type
         self.source = intN_wf.source
+        self.i_ref = None
         if not use_structure:
             self._all_determinants = []
         for Index in intN_wf.string_indices():
@@ -437,6 +439,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                         # if self.Ms != 0.0:
                         #     raise Exception('Only singlet wave functions!')
         self.ref_occ = genWF.Orbitals_Sets(list(map(len, self[0].occupation)))
+        self.i_ref = None
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self.n_act = genWF.Orbitals_Sets(np.zeros(self.n_irrep), occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
@@ -448,7 +451,14 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
     
     @property
     def C0(self):
-        return self[0].c
+        if self.i_ref is None:
+            for i, det in enumerate(self):
+                if self.get_exc_info(det, only_rank=True) == 0:
+                    self.i_ref = i
+                    break
+            if self.i_ref is None:
+                raise dGrError('Did not find reference for wave function!')
+        return self[self.i_ref].c
     
     def get_exc_info(self, det, only_rank=False):
         """Return some info about the excitation that lead from ref to det

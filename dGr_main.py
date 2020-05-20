@@ -232,7 +232,7 @@ def dGr_main(args, f_out):
     if isinstance(res.f, tuple):
         toout('WARNING:'
               + ' First determinant is not the one with largest coefficient!')
-        toout('  Coefficient of first determinant: {:.7f}'.format(res.f[0]))
+        toout('  Coefficient of reference: {:.7f}'.format(res.f[0]))
         toout('  Determinant with largest coefficient: {:s}'.format(str(res.f[1])))
         final_f = res.f[0]
     else:

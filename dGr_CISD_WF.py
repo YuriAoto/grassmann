@@ -58,7 +58,7 @@ class Wave_Function_CISD(genWF.Wave_Function):
         C(_i^a)(_j^b) = Cd[irrep][irrep2][i,a,j,b]
         
         These are the coefficients of double excitations that are products
-        of a single excitation in each spin.
+        of a single excitation in each spirrep.
         Each entry is a 4D np.ndarray with shape
         
         (self.n_corr_orb[irrep], self.n_ext[irrep],
@@ -102,15 +102,18 @@ class Wave_Function_CISD(genWF.Wave_Function):
     def __repr__(self):
         x = ['C0 = {}'.format(self.C0)]
         for irrep in self.spirrep_blocks(restricted=True):
-            x.append('Cs[{}]:\n {}'.
-                     format(irrep, repr(self.Cs[irrep])))
+            if 0 not in self.Cs[irrep].shape:
+                x.append('Cs[{}]:\n {}'.
+                         format(irrep, repr(self.Cs[irrep])))
         for irrep in self.spirrep_blocks(restricted=True):
-            x.append('Cd[{}]:\n {}'.
-                     format(irrep, repr(self.Cd[irrep])))
+            if 0 not in self.Cd[irrep].shape:
+                x.append('Cd[{}]:\n {}'.
+                         format(irrep, repr(self.Cd[irrep])))
         for irrep in self.spirrep_blocks(restricted=True):
             for irrep2 in range(irrep + 1):
-                x.append('Csd[{}][{}]:\n {}'.
-                         format(irrep, irrep2, repr(self.Csd[irrep][irrep2])))
+                if 0 not in self.Csd[irrep][irrep2].shape:
+                    x.append('Csd[{}][{}]:\n {}'.
+                             format(irrep, irrep2, repr(self.Csd[irrep][irrep2])))
         return ('<(Partial) CISD Wave Function>\n'
                 + super().__repr__() + '\n'
                 + '\n'.join(x))
