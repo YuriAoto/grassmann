@@ -5,40 +5,8 @@
 
 \input{general_preambl}
 
-\newcommand{\Dss}{\ensuremath{\mathcal{C}}}
-\newcommand{\Dmixaa}{\ensuremath{\mathcal{A}}}
-\newcommand{\Dmixab}{\ensuremath{\mathcal{B}}}
-\newcommand{\Dmix}{\ensuremath{\mathcal{D}}}
+\input{specific_preambl}
 
-\newcommand{\matG}{\ensuremath{{\mathbf{G}}}}
-\newcommand{\matM}{\ensuremath{{\bm{\mathcal{M}}}}}
-\newcommand{\bigG}{\ensuremath{{\mathscr{G}}}}
-\newcommand{\bigH}{\ensuremath{{\mathscr{H}}}}
-
-% Symbols for irreducible representation, irrep
-\newcommand{\irp}{\ensuremath{\Gamma}}
-\newcommand{\irpP}{{\ensuremath{\Gamma'}}}
-\newcommand{\irpPP}{{\ensuremath{\Gamma''}}}
-\newcommand{\irpPPP}{{\ensuremath{\Gamma'''}}}
-\newcommand{\irpB}{{\ensuremath{\overline{\Gamma}}}}
-\newcommand{\irpBB}{{\ensuremath{\overline{\overline{\Gamma}}}}}
-
-\newcommand{\sumijabrestr}{\ensuremath{
-    \quad\sum_{\mathclap{\left.\substack{(i>j)\\(a>b)}\right\}\in\irp}}\quad}}
-\newcommand{\sumijabfull}{\ensuremath{
-    \quad\sum_{\mathclap{\left.\substack{(i,a)\\(j,b)}\right\}\in\irp}}\quad}}
-\newcommand{\sumijabmix}{\ensuremath{
-    \quad\sum_{\mathclap{\substack{(i,a)\in\irp\\(j,b)\in\irpP}}}\quad}}
-
-\newcommand{\sumB}{\ensuremath{
-    \sum_{\irpB \ne \irp}}}
-\newcommand{\sumBB}{\ensuremath{
-    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp\\\irpBB \ne \irp}}}}}
-
-\newcommand{\sumBp}{\ensuremath{
-    \sum_{\irpB \ne \irp,\irpP}}}
-\newcommand{\sumBBp}{\ensuremath{
-    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp,\irpP\\\irpBB \ne \irp,\irpP}}}}}
 
 
 \begin{document}
@@ -175,8 +143,8 @@ We parametrise $Gr$ by the orbital rotations as\cite{}
 \end{equation}
 where
 \begin{eqnarray}
-  \hat{K} &=& \sum_{i,a} K_a^i(a_a^\dagger a_i - a_i^\dagger a_a)\\
-          &=& \sum_{a,a} K_a^i(a_i^a - a_a^i)\,
+  \hat{K} &=& \sum_{i,a} K_i^a(a_a^\dagger a_i - a_i^\dagger a_a)\\
+          &=& \sum_{i,a} K_i^a(a_i^a - a_a^i)\,
 \end{eqnarray}
 This parametrisation comes from the most general 
 \begin{equation}
@@ -187,9 +155,9 @@ For $\hat{K} = 0$ it is clear that $\ket{\Phi} = \ket{\Phi_0}$.
 
 Let
 \begin{equation}
-  f(K_q^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
+  f(K_i^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
 \end{equation}
-where the argument $K_q^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
+where the argument $K_i^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
 Note that rotations that mix $\alpha$ and $\beta$ orbitals are not considered.
 We will also assume that $\bracket{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remains true for all steps
 of our optimisation.
@@ -200,7 +168,7 @@ If $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the opti
 
 If the orbital rotations will preserve spin and symmetry, the operator $\hat{K}$ can be written as:
 \begin{equation}
-  \hat{K} = \sum_\irp \sum_{(q,a) \in \irp} K_a^{i,\irp}(E_{ai}^\irp - E_{ia}^\irp),
+  \hat{K} = \sum_\irp \sum_{(i,a) \in \irp} K_i^{a,\irp}(E_{ai}^\irp - E_{ia}^\irp),
 \end{equation}
 where the singlet excitation operator is defined as:
 \begin{equation}
@@ -215,11 +183,11 @@ The expressions at $\hat{K} = 0$ are given below.
 For the derivation of the expressions, see that hand notes.
 
 \begin{equation}
-  \frac{\partial f(\hat{K} = 0)}{\partial K_a^i} = (-1)^{n_{\sigma(i)} - i + 1} C_i^a
+  \frac{\partial f(\hat{K} = 0)}{\partial K_i^a} = (-1)^{n_{\sigma(i)} - i + 1} C_i^a
 \end{equation}
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^i \partial K_b^j} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_i^a \partial K_j^b} =
   \left\{
     \begin{array}{lcr}
       -C_0 & \quad\quad & (i = j, a = b)\\
@@ -242,14 +210,14 @@ The external wave function $\ket{\Psi_\text{FCI}}$ will also be assumed to be re
 In this conditions, the Jacobin and the Hessian are:
 
 \begin{equation}
-  \frac{\partial f(\hat{K} = 0)}{\partial K_a^{i,\irp}} = -2(-1)^{i + n_\irp} C_i^{a,\irp}
+  \frac{\partial f(\hat{K} = 0)}{\partial K_i^{a,\irp}} = -2(-1)^{i + n_\irp} C_i^{a,\irp}
 \end{equation}
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^{i,\irp} \partial K_{a'}^{i'\irpP}} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_i^{a,\irp} \partial K_{i'}^{a'\irpP}} =
   \left\{
     \begin{array}{lcr}
-      -2 C_0 & \quad\quad & \irp = \irpP, a=a', i=i'\\
+      -2 C_0 + 2 \Dss_{ii}^{aa, \irp} & \quad\quad & \irp = \irpP, a=a', i=i'\\
       2 \Dss_{i'i}^{a'a, \irp} (-1)^{i + i'} & \quad\quad &
       \left\{\begin{array}{c}
               \irp = \irpP;\\
@@ -271,7 +239,7 @@ For the notation, see Section~\ref{sec:struct_cisd_wf}.
 The Hessian can be more compactly expressed as:
 
 \begin{equation}
-  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_a^{i,\irp} \partial K_{a'}^{i'\irpP}} =
+  \frac{\partial^2 f(\hat{K} = 0)}{\partial K_i^{a,\irp} \partial K_{i'}^{a'\irpP}} =
   \left\{
     \begin{array}{l}
       -2 C_0 \quad\quad\quad \text{ if }\irp = \irpP, a=a', i=i'\\
@@ -320,7 +288,7 @@ where the sum is only over the multiindices that have the same occupation patter
 
 \subsection{Newton-Raphson step}
 Starting from an orbital basis $\{\phi_p\}$ such that the first determinant (that is, with the first $n_\alpha$ $\alpha$ orbitals and first $n_\beta$ $\beta$ occupied) is $\ket{\Phi_0}$, we calculate the Jacobian $\mathbf{J}$ and the Hessian $\mathbf{H}$ as shown above.
-The Newton step (in the space of the $K_q^a$ parameters) is
+The Newton step (in the space of the $K_i^a$ parameters) is
 \begin{equation}
   \mathbf{z} = -\mathbf{H}^{-1} \mathbf{J}\,.
 \end{equation}
@@ -562,7 +530,7 @@ with
   &=&
   -%%\left( 1 - \delta_{\{\sigma,\irp\} \, \{\sigma',\irpP\}} \right)
   \big( \Pi_{Y_\sigma^\irp \perp} \big)^p_{\bar{p}}
-  \big( \Pi_{Y_{\sigma'}^\irpP \perp} \big)^{\bar{r}}_u
+  \big( \Pi_{Y_{\sigma'}^\irpP \perp} \big)^r_{\bar{r}}
   \sum_{\substack{I\\\text{occ}(I) = \text{occ}(Y)}} C_I
   \left(
     \prod_{\substack{
