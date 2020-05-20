@@ -531,7 +531,9 @@ def optimise_overlap_Absil(ci_wf,
                                               full_matrices=False))
         if check_equations:
             with logtime('Cheking equations'):
-                Absil.check_Newton_Absil_eq(ci_wf, U, eta, eps=0.0001)
+                chk_eq = Absil.check_Newton_eq(ci_wf, U, eta,
+                                               restricted, eps=0.001)
+                f_out.write('Cheking equations: ' + 'OK' if chk_eq else 'FAIL')
         if loglevel <= logging.DEBUG:
             for i in ci_wf.spirrep_blocks(restricted=restricted):
                 logger.debug('SVD results, Usvd_a:\n%s', svd_res[i][0])
