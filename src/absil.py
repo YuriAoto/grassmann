@@ -31,7 +31,6 @@ from scipy import linalg
 from wave_functions import general as gen_wf
 from wave_functions.cisd import Wave_Function_CISD
 from util import logtime, get_n_from_triang
-from exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +225,7 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
         return _overlap_to_det_from_genWF(
             wf, U, F=F, assume_orth=assume_orth)
     else:
-        raise dGrValueError('Unknown type of wave function')
+        raise ValueError('Unknown type of wave function')
 
 
 def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
@@ -373,7 +372,7 @@ def generate_lin_system(
         return _generate_lin_system_from_genWF(
             wf, U, slice_XC, F=F, with_full_H=with_full_H)
     else:
-        raise dGrValueError('Unknown type of wave function')
+        raise ValueError('Unknown type of wave function')
 
 
 def _calc_Fprod(F0, indices, max_ind):

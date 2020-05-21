@@ -15,7 +15,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from exceptions import dGrValueError
 from util import number_of_irreducible_repr
 
 
@@ -112,7 +111,7 @@ class Spirrep_String_Index(Sized, Iterable, Container):
     def __int__(self):
         if self.is_std_pos_clear():
             if self.wf is None or self.spirrep is None:
-                raise dGrValueError(
+                raise ValueError(
                     'Can not calculate std_pos without'
                     + ' wave function and spirrep.')
             self._std_pos = self.wf.get_std_pos(occupation=self._occ_orb,
@@ -121,9 +120,9 @@ class Spirrep_String_Index(Sized, Iterable, Container):
     
     def __iadd__(self, n):
         if not isinstance(n, int):
-            raise dGrValueError('We need an integer.')
+            raise ValueError('We need an integer.')
         if self.is_std_pos_clear():
-            raise dGrValueError('Current index has not been started.')
+            raise ValueError('Current index has not been started.')
         self._std_pos += n
         return self
     
@@ -317,11 +316,11 @@ class Orbitals_Sets(Sequence):
                                   + ' is out of range for '
                                   + str(self) + '.')
             if self._type == 'A' and key >= self._n_irrep:
-                raise dGrValueError(
+                raise ValueError(
                     'Cannot set occupation for beta orbital for '
                     + str(self) + '.')
             if self._type == 'B' and key < self._n_irrep:
-                raise dGrValueError(
+                raise ValueError(
                     'Cannot set occupation for alpha orbital for '
                     + str(self) + '.')
             if self._type == 'R':
@@ -354,7 +353,7 @@ class Orbitals_Sets(Sequence):
     
     def __eq__(self, other):
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError(
+            raise ValueError(
                 'Cannot compare Orbitals_Sets for different number of irreps')
         for i in range((1
                         if self._type == 'R' and other._type == 'R' else
@@ -365,10 +364,10 @@ class Orbitals_Sets(Sequence):
 
     def __add__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError(
+            raise ValueError(
                 'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError(
+            raise ValueError(
                 'Both instances of Orbitals_Sets must have same len.')
         if self._type == other._type:
             new_occupation = self._occupation + other._occupation
@@ -398,10 +397,10 @@ class Orbitals_Sets(Sequence):
 
     def __iadd__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError(
+            raise ValueError(
                 'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError(
+            raise ValueError(
                 'Both instances of Orbitals_Sets must have same len.')
         if self._type == other._type:
             self._occupation += other._occupation
@@ -428,10 +427,10 @@ class Orbitals_Sets(Sequence):
 
     def __sub__(self, other):
         if not isinstance(other, Orbitals_Sets):
-            raise dGrValueError(
+            raise ValueError(
                 'Orbitals_Sets adds only with another Orbitals_Sets.')
         if self._n_irrep != other._n_irrep:
-            raise dGrValueError(
+            raise ValueError(
                 'Both instances of Orbitals_Sets must have same n_irrep.')
         if self._type == other._type:
             new_occupation = self._occupation - other._occupation
@@ -460,17 +459,17 @@ class Orbitals_Sets(Sequence):
                              new_occ_type)
     
     def restrict_it(self):
-        """Transform occ_type to 'R' if possible, or raise dGrValueError."""
+        """Transform occ_type to 'R' if possible, or raise ValueError."""
         if self._type == 'R':
             return
         if self._type == 'F':
             if (self._occupation[:self._n_irrep]
                     != self._occupation[self._n_irrep:]).any():
-                raise dGrValueError('Cannot restrict ' + str(self) + '.')
+                raise ValueError('Cannot restrict ' + str(self) + '.')
             self._occupation = self._occupation[:self._n_irrep]
             self._type = 'R'
             return
-        raise dGrValueError('Cannot restrict ' + str(self) + '.')
+        raise ValueError('Cannot restrict ' + str(self) + '.')
     
     @property
     def occ_type(self):
@@ -576,10 +575,10 @@ class Wave_Function(ABC, Sequence):
     
     def initialize_data(self):
         if self.point_group is None:
-            raise dGrValueError('I still do not know the point group!')
+            raise ValueError('I still do not know the point group!')
         if self.restricted is None:
-            raise dGrValueError('I still do not know if it is a restricted'
-                                + ' or unrestricted wave function!')
+            raise ValueError('I still do not know if it is a restricted'
+                             + ' or unrestricted wave function!')
         self.orb_dim = Orbitals_Sets(self.n_irrep,
                                      occ_type='R')
         self.ref_occ = Orbitals_Sets(self.n_irrep,

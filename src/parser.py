@@ -12,14 +12,16 @@ import argparse
 import textwrap
 import logging
 
-from exceptions import dGrParseError
-
 loglevels = {'critical': logging.CRITICAL,
              'error': logging.ERROR,
              'warning': logging.WARNING,
              'info': logging.INFO,
              'debug': logging.DEBUG,
              'notset': logging.NOTSET}
+
+
+class ParseError(Exception):
+    pass
 
 
 def __is_molpro_xml_file(file):
@@ -43,16 +45,16 @@ def __is_molpro_output(file):
 
 def __assert_molpro_output(file,
                            can_be_xml=False):
-    """Raise dGrParseError if file does not exist or is not Molpro file."""
+    """Raise ParseError if file does not exist or is not Molpro file."""
     if not os.path.isfile(file):
-        raise dGrParseError('File ' + file + ' not found!')
+        raise ParseError('File ' + file + ' not found!')
     if not __is_molpro_output(file):
         if can_be_xml:
             if not __is_molpro_xml_file(file):
-                raise dGrParseError('File ' + file
-                                    + ' is not a Molpro output!')
+                raise ParseError('File ' + file
+                                 + ' is not a Molpro output!')
         else:
-            raise dGrParseError('File ' + file + ' is not a Molpro output!')
+            raise ParseError('File ' + file + ' is not a Molpro output!')
 
 
 def parse_cmd_line():
@@ -131,9 +133,9 @@ def parse_cmd_line():
     elif cmd_args.algorithm not in ['orb_rotations',
                                     'general_Absil',
                                     'CISD_Absil']:
-        raise dGrParseError('Unknown algorithm: ' + cmd_args.algorithm
-                            + '. Possible values:\n'
-                            + 'orb_rotations (default), general_Absil, and CISD_Absil')
+        raise ParseError('Unknown algorithm: ' + cmd_args.algorithm
+                         + '. Possible values:\n'
+                         + 'orb_rotations (default), general_Absil, and CISD_Absil')
     if cmd_args.ini_orb is not None:
         if (cmd_args.ini_orb[-4:] == '.npz'
                 and os.path.isfile(cmd_args.ini_orb)):
@@ -160,8 +162,8 @@ def parse_cmd_line():
             try:
                 cmd_args.loglevel = loglevels[cmd_args.loglevel.lower()]
             except KeyError:
-                raise dGrParseError('This is not a valid log level: '
-                                    + cmd_args.loglevel)
+                raise ParseError('This is not a valid log level: '
+                                 + cmd_args.loglevel)
     else:
         cmd_args.loglevel = logging.WARNING
     return cmd_args

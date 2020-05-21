@@ -26,8 +26,6 @@ import logging
 import numpy as np
 from scipy import linalg
 
-from exceptions import dGrValueError
-
 logger = logging.getLogger(__name__)
 
 zero = 1.0E-10
@@ -164,7 +162,7 @@ def ovlp_Slater_dets(U, n):
 def get_I(n, i=None, a=None):
     """Return range(n).remove(i) + [a]"""
     if type(i) != type(a):
-        raise dGrValueError('Both i and a must be of same type!')
+        raise ValueError('Both i and a must be of same type!')
     if i is None:
         return list(range(n))
     if isinstance(i, int):

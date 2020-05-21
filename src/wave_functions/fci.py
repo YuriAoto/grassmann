@@ -21,7 +21,6 @@ from collections import namedtuple
 from util import number_of_irreducible_repr, get_pos_from_rectangular
 from wave_functions import general
 import molpro_util
-from exceptions import dGrValueError, dGrMolproInputError
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +58,15 @@ def _get_Slater_Det_from_String_Index(Index, n_irrep,
     final_occ = [np.array([], dtype=np.int8) for i in range(2 * n_irrep)]
     for spirrep, spirrep_I in enumerate(Index):
         if spirrep != spirrep_I.spirrep:
-            raise dGrInconsistencyError(
+            raise Exception(
                 'spirrep of spirrep_I is not consistent with position in list')
         final_occ[spirrep_I.spirrep] = np.array(spirrep_I.occ_orb)
     return Slater_Det(c=0.0 if zero_coefficients else coeff,
                       occupation=final_occ)
 
 
-def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
+def _get_Slater_Det_from_FCI_line(molpro_output, l, line_number,
+                                  orb_dim, n_irrep, Ms,
                                   zero_coefficients=False):
     """Read a FCI configuration from Molpro output and return a Slater Determinant
     
@@ -96,7 +96,7 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
     A Slater_Det
     
     Raises:
-    dGrMolproInputError
+    molpro_util.MolproInputError
     
     Examples:
     ---------
@@ -121,10 +121,12 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
         coeff = float(lspl[0])
         occ = list(map(lambda x: int(x) - 1, lspl[1:]))
     except Exception as e:
-        raise dGrMolproInputError(
+        raise molpro_util.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
             + str(e),
-            line=l, line_number=line_number)
+            line=l,
+            line_number=line_number,
+            file_name=molpro_output)
     total_orbs = [0]
     for i in range(n_irrep):
         total_orbs.append(total_orbs[-1] + orb_dim[i])
@@ -136,10 +138,12 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
             irrep = 0
         while True:
             if irrep == n_irrep:
-                raise dGrMolproInputError(
+                raise molpro_util.MolproInputError(
                     'Configuration is not consistent with orb_dim = '
                     + str(orb_dim),
-                    line=l, line_number=line_number)
+                    line=l,
+                    line_number=line_number,
+                    file_name=molpro_output)
             if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
                 final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep])
                 break
@@ -268,7 +272,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Raises
         ------
-        dGrValueErr if element is not in self
+        ValueError if element is not in self
         
         """
         for idet, det in enumerate(self):
@@ -283,9 +287,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                 if (not check_coeff
                         or abs(self[idet].c - element.c) < self.tol_eq):
                     return idet
-                raise dGrValueError(
+                raise ValueError(
                     'Found occupation, but coefficient is different')
-        raise dGrValueError('Occupation not found.')
+        raise ValueError('Occupation not found.')
     
     def get_coeff_from_Int_Norm_WF(self, intN_wf,
                                    change_structure=True,
@@ -328,7 +332,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
             if use_structure:
                 try:
                     idet = self.index(new_Slater_Det)
-                except dGrValueError:
+                except ValueError:
                     if change_structure:
                         self._all_determinants.append(new_Slater_Det)
                 else:
@@ -383,9 +387,11 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     try:
                         number_of_irreducible_repr[self.point_group]
                     except KeyError:
-                        raise dGrMolproInputError('Unknown point group!',
-                                                  line=l,
-                                                  line_number=line_number)
+                        raise molpro_util.MolproInputError(
+                            'Unknown point group!',
+                            line=l,
+                            line_number=line_number,
+                            file_name=molpro_output)
                 if 'FCI STATE  ' + state + ' Energy' in l and 'Energy' in l:
                     FCI_found = True
                     continue
@@ -414,7 +420,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     if use_structure:
                         try:
                             idet = self.index(new_Slater_Det)
-                        except dGrValueError:
+                        except ValueError:
                             if change_structure:
                                 self._all_determinants.append(new_Slater_Det)
                         else:
@@ -444,11 +450,11 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep), occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
-            raise dGrValueError('Inconsistency in number of electrons:\n'
-                                + 'n core el = ' + str(self.n_core)
-                                + '; n act el (Molpro output) = '
-                                + str(active_el_in_out)
-                                + '; n elec = ' + str(self.n_elec))
+            raise ValueError('Inconsistency in number of electrons:\n'
+                             + 'n core el = ' + str(self.n_core)
+                             + '; n act el (Molpro output) = '
+                             + str(active_el_in_out)
+                             + '; n elec = ' + str(self.n_elec))
     
     @property
     def C0(self):
@@ -458,7 +464,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     self.i_ref = i
                     break
             if self.i_ref is None:
-                raise dGrError('Did not find reference for wave function!')
+                raise Exception('Did not find reference for wave function!')
         return self[self.i_ref].c
     
     def get_exc_info(self, det, only_rank=False):
@@ -636,7 +642,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         if restricted is None:
             restricted = self.restricted
         if restricted and not self.restricted:
-            raise dGrValueError(
+            raise ValueError(
                 'Restricted calculation needs a restricted wave function')
         logger.info('Building Jacobian and Hessian: %s procedure',
                     'Analytic' if analytic else 'Numeric')
@@ -804,7 +810,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
             spirrep_start.append(spirrep_start[-1] + nK)
             n_param += nK
         if n_param != len(z):
-            raise dGrValueError(
+            raise ValueError(
                 'Lenght of z is inconsitent with orbital spaces:\n'
                 + 'len(z) = ' + str(len(z))
                 + '; ref_occ = ' + str(self.ref_occ)
@@ -893,8 +899,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         elif method == 'Malmqvist':
             return self._change_orb_basis_Malmqvist(U, just_C0=just_C0)
         else:
-            raise dGrValueError('Unknown method for change_orb_basis: '
-                                + method)
+            raise ValueError('Unknown method for change_orb_basis: '
+                             + method)
     
     def _change_orb_basis_traditional(self, U, just_C0=False):
         new_wf = Wave_Function_Norm_CI()
@@ -914,9 +920,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         elif len(U) == 2 * self.n_irrep:
             restricted = False
         else:
-            raise dGrValueError('len(U) = ' + str(len(U))
-                                + ' is not compatible to n_irrep = '
-                                + str(self.n_irrep))
+            raise ValueError('len(U) = ' + str(len(U))
+                             + ' is not compatible to n_irrep = '
+                             + str(self.n_irrep))
         for det_J in self:
             new_occ = det_J.occupation
             new_c = 0.0

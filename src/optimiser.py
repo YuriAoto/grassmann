@@ -31,7 +31,6 @@ from wave_functions.general import Wave_Function
 from wave_functions.cisd import Wave_Function_CISD
 import absil
 import orbitals as orb
-from exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -415,7 +414,7 @@ def optimise_overlap_Absil(ci_wf,
     calculate n_pos_H_eigVal
     """
     if not isinstance(ci_wf, Wave_Function):
-        raise dGrValueError(
+        raise ValueError(
             'ci_wf should be an instance of dGr_general_WF.Wave_Function.')
     n_pos_eigV = None
     converged_eta = False
@@ -423,7 +422,7 @@ def optimise_overlap_Absil(ci_wf,
     zero_skip_linalg = 1.0E-8
     f = None
     if only_C and only_eta:
-        raise dGrValueError('Do not set both only_C and only_eta to True!')
+        raise ValueError('Do not set both only_C and only_eta to True!')
     restricted = isinstance(ci_wf, Wave_Function_CISD)
     if ini_U is None:
         U = []
@@ -433,22 +432,22 @@ def optimise_overlap_Absil(ci_wf,
                 ci_wf.orb_dim[i % ci_wf.n_irrep])[:, :(ini_occ[i])])
     else:
         if not isinstance(ini_U, list):
-            raise dGrValueError('ini_U must be a list of numpy.array.')
+            raise ValueError('ini_U must be a list of numpy.array.')
         if restricted:
             if len(ini_U) != ci_wf.n_irrep:
-                raise dGrValueError('ini_U must be a list,'
-                                    + ' of lenght ci_wf.n_irrep of numpy.array'
-                                    + ' (for restricted calculations).')
+                raise ValueError('ini_U must be a list,'
+                                 + ' of lenght ci_wf.n_irrep of numpy.array'
+                                 + ' (for restricted calculations).')
         else:
             if len(ini_U) != 2 * ci_wf.n_irrep:
-                raise dGrValueError('ini_U must be a list,'
-                                    + ' of lenght ci_wf.n_irrep of numpy.array'
-                                    + ' (for unrestricted calculations).')
+                raise ValueError('ini_U must be a list,'
+                                 + ' of lenght ci_wf.n_irrep of numpy.array'
+                                 + ' (for unrestricted calculations).')
         sum_n_a = sum_n_b = 0
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             i_irrep = i % ci_wf.n_irrep
             if ini_U[i].shape[0] != ci_wf.orb_dim[i_irrep]:
-                raise dGrValueError(
+                raise ValueError(
                     ('Shape error in ini_U {0:} for irrep {1:}:'
                      + ' U.shape[0] = {2:} != {3:} = ci_wf.orb_dim').
                     format('alpha' if i < ci_wf.n_irrep else 'beta',
@@ -464,10 +463,10 @@ def optimise_overlap_Absil(ci_wf,
                                                          ' alpha')),
                                (sum_n_b, ci_wf.n_beta, ' beta')]:
             if sum_n != n:
-                raise dGrValueError(('Shape error in ini_U{0:}:'
-                                     + ' sum U.shape[1] = '
-                                     + ' {1:} != {2:} = ci_wf.n_{0:}').
-                                    format(spin, sum_n, n))
+                raise ValueError(('Shape error in ini_U{0:}:'
+                                  + ' sum U.shape[1] = '
+                                  + ' {1:} != {2:} = ci_wf.n_{0:}').
+                                 format(spin, sum_n, n))
             if restricted:
                 break
         U = ini_U

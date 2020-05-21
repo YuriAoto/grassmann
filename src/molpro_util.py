@@ -5,7 +5,6 @@
 import re
 
 import wave_functions.general as gen_wf
-from exceptions import dGrMolproInputError
 
 CISD_header = (
     ' PROGRAM * CISD (Closed-shell CI(SD))     '
@@ -43,12 +42,27 @@ CC_sgl_str_2 = ' Singles amplitudes (print threshold =  0.000E+00):\n'
 CC_dbl_str_2 = ' Doubles amplitudes (print threshold =  0.000E+00):\n'
 
 
+class MolproInputError(Exception):
+    def __init__(self, msg, line=None, line_number=None, file_name=None):
+        super().__init__(msg)
+        self.msg = msg
+        self.line = line
+        self.line_number = line_number
+        self.file_name = file_name
+
+    def __str__(self):
+        return (super().__str__() + '\n'
+                + 'at line ' + str(self.line_number)
+                + ' of file ' + str(self.file_name) + ':\n'
+                + str(self.line))
+
+
 def get_orb_info(l, line_number, n_irrep, occ_type):
     """Load orbital info, per irrep, from Molpro's output"""
     re_orb = re.compile(r'.*\s([\d]+)\s*\(([\s\d]*)\)').match(l)
     if re_orb is None:
-        raise dGrMolproInputError('Problems reading orbital information',
-                                  line=l, line_number=line_number)
+        raise MolproInputError('Problems reading orbital information',
+                               line=l, line_number=line_number)
     try:
         re_orb = list(map(int, re_orb.group(2).split()))
         if len(re_orb) < n_irrep:
@@ -59,5 +73,5 @@ def get_orb_info(l, line_number, n_irrep, occ_type):
             re_orb += re_orb
         return gen_wf.Orbitals_Sets(re_orb, occ_type=occ_type)
     except Exception:
-        raise dGrMolproInputError('Problems reading orbital information.',
-                                  line=l, line_number=line_number)
+        raise MolproInputError('Problems reading orbital information.',
+                               line=l, line_number=line_number)

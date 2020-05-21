@@ -12,12 +12,12 @@ import traceback
 
 import parser
 from main import dGr_main
-from exceptions import dGrParseError, dGrError
+from molpro_util import MolproInputError
 
 assert sys.version_info >= (3, 5)
 try:
     cmd_line_args = parser.parse_cmd_line()
-except dGrParseError as e:
+except parser.ParseError as e:
     sys.exit(str(e))
 
 name_extra = cmd_line_args.state
@@ -78,13 +78,15 @@ with_error = False
 try:
     f_out = open(output_name, 'w')
     dGr_main(cmd_line_args, f_out)
-except dGrError as e:
+except MolproInputError as e:
     with_error = True
-    error_msg = ('dGrError: ' + str(e)
+    error_msg = ('Error in Molpro file ' + str(e.file_name)
+                 + ', line number ' + str(e.line_number) + ':\n'
+                 + e.line + '\n' + e.msg)
+except Exception as e:
+    with_error = True
+    error_msg = ('Error: ' + str(e)
                  + '\nHere is the traceback:\n' + traceback.format_exc())
-except Exception:
-    with_error = True
-    error_msg = 'Unknown error:\n' + traceback.format_exc()
 finally:
     if with_error and f_out is not None:
         f_out.write('\n' + error_msg)

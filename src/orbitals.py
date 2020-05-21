@@ -16,7 +16,6 @@ import numpy as np
 from scipy.linalg import inv
 
 from wave_functions.int_norm import number_of_irreducible_repr
-from exceptions import dGrValueError, dGrParseError, dGrNumericalError
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,7 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
     full_U = []
     for i, Ui in enumerate(U):
         if Ui.shape[0] != orb_dim[i]:
-            raise dGrValueError(
+            raise ValueError(
                 'First dimension of U does not match'
                 + ' dimension of orbitals space. orb_dim = '
                 + str(orb_dim) + ', but U:\n'
@@ -89,7 +88,7 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
                     break
                 direction += 1
             if direction == orb_dim[i]:
-                raise dGrNumericalError(
+                raise Exception(
                     'No new directions to look for external space!')
             full_U[-1][:, q] = newV / norm_newV
         # with QR decomposition:
@@ -215,7 +214,7 @@ class Molecular_Orbitals():
         """
         if file_name[-4:] == '.xml':
             return cls._get_orbitals_from_Molpro_xml(file_name)
-        raise dGrValueError('We can read orbitals from xml files only.')
+        raise ValueError('We can read orbitals from xml files only.')
 
     @classmethod
     def identity(cls, orb_dim, n_elec, n_irrep, basis_len,
@@ -253,11 +252,11 @@ class Molecular_Orbitals():
             elif orb_type == 'ALPHA':
                 return 0
             elif orb_type == 'NATURAL' and method == 'UHF':
-                raise dGrValueError('We do not use these orbitals.')
+                raise ValueError('We do not use these orbitals.')
             elif orb_type == 'NATURAL' or orb_type == 'CANONICAL':
                 return 0
             else:
-                raise dGrParseError('Unknown type of orbital: ' + orb_type)
+                raise ValueError('Unknown type of orbital: ' + orb_type)
         new_orbitals = cls()
         new_orbitals.name = xml_file[:-4]
         new_orbitals.basis_is_per_irrep = False
@@ -290,7 +289,7 @@ class Molecular_Orbitals():
                 spin_shift = get_spin_shift(orb_set.attrib['type'],
                                             orb_set.attrib['method'],
                                             new_orbitals.n_irrep)
-            except dGrValueError:
+            except ValueError:
                 continue
             for orb in orb_set:
                 n_orb_per_spirrep[spin_shift
@@ -304,7 +303,7 @@ class Molecular_Orbitals():
                 spin_shift = get_spin_shift(orb_set.attrib['type'],
                                             orb_set.attrib['method'],
                                             new_orbitals.n_irrep)
-            except dGrValueError:
+            except ValueError:
                 continue
             for orb in orb_set:
                 spirrep = spin_shift + int(orb.attrib['symmetryID']) - 1
@@ -314,10 +313,10 @@ class Molecular_Orbitals():
                         list(map(float, orb.text.split())))
                 except ValueError as e:
                     if 'could not broadcast input array from shape' in str(e):
-                        raise dGrValueError('Lenght error in file '
-                                            + xml_file
-                                            + ': did you use "keepspherical"'
-                                            + ' in Molpro\'s "put" command?')
+                        raise ValueError('Lenght error in file '
+                                         + xml_file
+                                         + ': did you use "keepspherical"'
+                                         + ' in Molpro\'s "put" command?')
                     else:
                         raise e
                 except Exception as e:
@@ -360,7 +359,7 @@ class Molecular_Orbitals():
         logger.debug("MO (other):\n%s", other)
         logger.debug("MO (self):\n%s", self)
         if len(self) != len(other):
-            raise dGrValueError('Orbitals do not have the same basis length!')
+            raise ValueError('Orbitals do not have the same basis length!')
         U = Molecular_Orbitals()
         U.name = self.name
         U._basis_len = len(self)

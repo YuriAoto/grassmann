@@ -14,7 +14,6 @@ import numpy as np
 from scipy import linalg
 
 from util import dist_from_ovlp, ovlp_Slater_dets, logtime
-from exceptions import dGrValueError
 import orbitals as orb
 from wave_functions import fci, int_norm, cisd
 import optimiser
@@ -29,7 +28,7 @@ def dGr_main(args, f_out):
     Parameters:
     ---------
     args (argparse.Namespace)
-        The parsed information. See dGrParseError.parse_cmd_line
+        The parsed information. See parse.parse_cmd_line
     
     f_out (file)
         where the output goes
@@ -133,7 +132,7 @@ def dGr_main(args, f_out):
             HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
                 args.HF_orb).in_the_basis_of(
                     orb.Molecular_Orbitals.from_file(args.WF_orb))
-        except dGrValueError as e:
+        except ValueError as e:
             if 'keepspherical' in str(e):
                 logger.error(str(e))
                 toout('ERROR:\n   '

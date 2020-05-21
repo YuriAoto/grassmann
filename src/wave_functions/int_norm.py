@@ -15,7 +15,6 @@ from util import (number_of_irreducible_repr, zero, irrep_product,
                   triangular, get_ij_from_triang, get_n_from_triang)
 from wave_functions import general as gen_wf
 import molpro_util
-from exceptions import dGrValueError, dGrMolproInputError
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +196,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     def __getitem__(self, I):
         """Return the CI coefficient from a String_Index_for_SD"""
         if self.norm is None:
-            raise dGrValueError('Norm has not been calculated yet!')
+            raise ValueError('Norm has not been calculated yet!')
         return I.C
     
     def __len__(self, I):
@@ -448,7 +447,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         
         """
         if 'spirrep' not in kargs:
-            raise dGrValueError('Give the spirrep if occupation was passed.')
+            raise ValueError('Give the spirrep if occupation was passed.')
         spirrep = kargs['spirrep']
         i = []
         a = []
@@ -465,10 +464,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     a.append(aa - self.ref_occ[spirrep])
         else:
             if 'occ_case' not in kargs:
-                raise dGrValueError(
+                raise ValueError(
                     'Give occ_case if occupation was not passed.')
             if 'occ_case' not in kargs:
-                raise dGrValueError(
+                raise ValueError(
                     'Give occ_case if occupation is not given.')
             occ_case = kargs['occ_case']
             if 'i' in kargs:
@@ -1040,11 +1039,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 + ' only_this_occ must be an instance of gen_wf.Orbitals_Sets.')
         if coupled_to is not None:
             if not isinstance(coupled_to, tuple):
-                raise dGrValueError('Parameter coupled_to must be a tuple.')
+                raise ValueError('Parameter coupled_to must be a tuple.')
             if not isinstance(coupled_to, gen_wf.Spirrep_Index):
                 for cpl in coupled_to:
                     if not isinstance(cpl, gen_wf.Spirrep_Index):
-                        raise dGrValueError(
+                        raise ValueError(
                             'Parameter coupled_to must be a tuple'
                             + ' of gen_wf.Spirrep_Index.')
             else:
@@ -1438,10 +1437,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     try:
                         number_of_irreducible_repr[new_wf.point_group]
                     except KeyError:
-                        raise dGrMolproInputError(
+                        raise molpro_util.MolproInputError(
                             'Unknown point group!',
                             line=line,
-                            line_number=line_number)
+                            line_number=line_number,
+                            file_name=molpro_output)
                 if new_wf.WF_type is None:
                     if line == molpro_util.CISD_header:
                         new_wf.WF_type = 'CISD'
@@ -1491,10 +1491,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             if new_wf.restricted:
                                 if ('Alpha-Alpha' in line
                                         or 'Beta-Beta' in line):
-                                    raise dGrMolproInputError(
+                                    raise molpro_util.MolproInputError(
                                         'Found spin information for '
                                         + 'restricted wave function!',
-                                        line=line, line_number=line_number)
+                                        line=line,
+                                        line_number=line_number,
+                                        file_name=molpro_output)
                                 exc_type = 'a'
                             else:
                                 if 'Alpha-Alpha' in line:
@@ -1502,10 +1504,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                 elif 'Beta-Beta' in line:
                                     exc_type = 'b'
                                 else:
-                                    raise dGrMolproInputError(
+                                    raise molpro_util.MolproInputError(
                                         'Wrong spin information '
                                         + 'for unrestricted wave function!',
-                                        line=line, line_number=line_number)
+                                        line=line,
+                                        line_number=line_number,
+                                        file_name=molpro_output)
                         elif molpro_util.CC_dbl_str in line and CIcalc_found:
                             if new_wf.singles is None:
                                 new_wf.initialize_SD_lists()
@@ -1516,10 +1520,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                 if ('Alpha-Alpha' in line
                                     or 'Beta-Beta' in line
                                         or 'Alpha-Beta' in line):
-                                    raise dGrMolproInputError(
+                                    raise molpro_util.MolproInputError(
                                         'Found spin information for '
                                         + 'restricted wave function!',
-                                        line=line, line_number=line_number)
+                                        line=line,
+                                        line_number=line_number,
+                                        file_name=molpro_output)
                                 exc_type = 'aa'
                             else:
                                 if 'Alpha-Alpha' in line:
@@ -1529,10 +1535,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                 elif 'Alpha-Beta' in line:
                                     exc_type = 'ab'
                                 else:
-                                    raise dGrMolproInputError(
+                                    raise molpro_util.MolproInputError(
                                         'Wrong spin information for'
                                         + ' unrestricted wave function!',
-                                        line=line, line_number=line_number)
+                                        line=line,
+                                        line_number=line_number,
+                                        file_name=molpro_output)
                         elif dbl_found:
                             lspl = line.split()
                             if len(lspl) == 7:
@@ -1547,10 +1555,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                     b -= new_wf.n_act[irrep_b]
                                 if a < 0 or b < 0:
                                     if abs(C) > zero:
-                                        raise dGrMolproInputError(
+                                        raise molpro_util.MolproInputError(
                                             'This coefficient of'
                                             + ' singles should be zero!',
-                                            line=line, line_numbe=line_number)
+                                            line=line,
+                                            line_numbe=line_number,
+                                            file_name=molpro_output)
                                     continue
                                 if (Molpros_i, Molpros_j) != (prev_Molpros_i,
                                                               prev_Molpros_j):
@@ -1609,18 +1619,19 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                     or i >= (new_wf.ref_occ[spirrep]
                                              - new_wf.n_core[irrep])):
                                     if abs(C) > zero:
-                                        raise dGrMolproInputError(
+                                        raise molpro_util.MolproInputError(
                                             'This coefficient of singles'
                                             + ' should be zero!',
                                             line=line,
-                                            line_number=line_number)
+                                            line_number=line_number,
+                                            file_name=molpro_output)
                                     continue
                                 new_wf.singles[spirrep][i, a] = C
                         if (CIcalc_found
                             and ('RESULTS' in line
                                  or 'Spin contamination' in line)):
                             if not dbl_found:
-                                raise dGrMolproInputError(
+                                raise molpro_util.MolproInputError(
                                     'Double excitations not found!')
                             break
         return new_wf
