@@ -13,13 +13,11 @@ import git
 import numpy as np
 from scipy import linalg
 
-from dGr_util import dist_from_ovlp, ovlp_Slater_dets, logtime
-from dGr_exceptions import dGrValueError
-import dGr_orbitals as orb
-import dGr_FCI_WF as FCI
-import dGr_WF_int_norm as IntN
-import dGr_CISD_WF as CISDwf
-import dGr_optimiser
+from util import dist_from_ovlp, ovlp_Slater_dets, logtime
+from exceptions import dGrValueError
+import orbitals as orb
+from wave_functions import fci, int_norm, cisd
+import optimiser
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -36,7 +34,7 @@ def dGr_main(args, f_out):
     f_out (file)
         where the output goes
     """
-    git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)))
+    git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)) + '/../')
     git_sha = git_repo.head.object.hexsha
     
     def toout(x=''):
@@ -95,7 +93,7 @@ def dGr_main(args, f_out):
     # ----- loading wave function
     if orbRot_opt:
         with logtime('Reading FCI wave function'):
-            ext_wf = FCI.Wave_Function_Norm_CI.from_Molpro_FCI(
+            ext_wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
                 args.molpro_output
                 if args.WF_templ is None else
                 args.WF_templ,
@@ -103,7 +101,7 @@ def dGr_main(args, f_out):
                 zero_coefficients=args.WF_templ is not None)
         if args.WF_templ is not None:
             with logtime('Reading wave function coefficients'):
-                int_N_WF = IntN.Wave_Function_Int_Norm.from_Molpro(
+                int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
                     args.molpro_output)
                 int_N_WF.calc_norm()
                 ext_wf.get_coeff_from_Int_Norm_WF(int_N_WF,
@@ -116,12 +114,12 @@ def dGr_main(args, f_out):
                 #                              use_structure=True)
     else:
         with logtime('Reading int. norm. from Molpro output'):
-            ext_wf = IntN.Wave_Function_Int_Norm.from_Molpro(
+            ext_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 args.molpro_output)
             ext_wf.calc_norm()
             if args.algorithm == 'CISD_Absil':
                 with logtime('Transforming int. norm. WF into CISD wf'):
-                    ext_wf = CISDwf.Wave_Function_CISD.from_intNorm(ext_wf)
+                    ext_wf = cisd.Wave_Function_CISD.from_intNorm(ext_wf)
     logger.debug('External wave function:\n %r', ext_wf)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
         x = []
@@ -191,13 +189,13 @@ def dGr_main(args, f_out):
     f_out.flush()
     logger.info('Starting optimisation')
     if orbRot_opt:
-        res = dGr_optimiser.optimise_overlap_orbRot(
+        res = optimiser.optimise_overlap_orbRot(
             ext_wf,
             f_out=f_out,
             ini_U=U,
             enable_uphill=False)
     else:
-        res = dGr_optimiser.optimise_overlap_Absil(
+        res = optimiser.optimise_overlap_Absil(
             ext_wf,
             f_out=f_out,
             ini_U=U)

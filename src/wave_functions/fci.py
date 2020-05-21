@@ -18,10 +18,10 @@ import copy
 import math
 from collections import namedtuple
 
-from dGr_util import number_of_irreducible_repr, get_pos_from_rectangular
-import dGr_general_WF as genWF
-import dGr_Molpro_util as Molpro
-from dGr_exceptions import dGrValueError, dGrMolproInputError
+from util import number_of_irreducible_repr, get_pos_from_rectangular
+from wave_functions import general
+import molpro_util
+from exceptions import dGrValueError, dGrMolproInputError
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ def _get_Slater_Det_from_FCI_line(l, line_number, orb_dim, n_irrep, Ms,
                       occupation=final_occ)
 
 
-class Wave_Function_Norm_CI(genWF.Wave_Function):
+class Wave_Function_Norm_CI(general.Wave_Function):
     """A normalised CI-like wave function, with explicit determinants
     
     The wave function is stored explicitly, with all Slater determinants
@@ -389,7 +389,7 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                 if 'FCI STATE  ' + state + ' Energy' in l and 'Energy' in l:
                     FCI_found = True
                     continue
-                if Molpro.FCI_header == l:
+                if molpro_util.FCI_header == l:
                     FCI_prog_found = True
                     continue
                 if FCI_found:
@@ -423,14 +423,15 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                         self._all_determinants.append(new_Slater_Det)
                 elif FCI_prog_found:
                     if 'Frozen orbitals:' in l:
-                        self.n_core = Molpro.get_orb_info(l, line_number,
-                                                          self.n_irrep, 'R')
+                        self.n_core = molpro_util.get_orb_info(l, line_number,
+                                                               self.n_irrep,
+                                                               'R')
                     if 'Active orbitals:' in l:
                         self.orb_dim = (self.n_core
-                                        + Molpro.get_orb_info(l,
-                                                              line_number,
-                                                              self.n_irrep,
-                                                              'R'))
+                                        + molpro_util.get_orb_info(l,
+                                                                   line_number,
+                                                                   self.n_irrep,
+                                                                   'R'))
                     if 'Active electrons:' in l:
                         active_el_in_out = int(l.split()[2])
                     if 'Spin quantum number:' in l:
@@ -438,10 +439,10 @@ class Wave_Function_Norm_CI(genWF.Wave_Function):
                         self.restricted = self.Ms == 0.0
                         # if self.Ms != 0.0:
                         #     raise Exception('Only singlet wave functions!')
-        self.ref_occ = genWF.Orbitals_Sets(list(map(len, self[0].occupation)))
+        self.ref_occ = general.Orbitals_Sets(list(map(len, self[0].occupation)))
         self.i_ref = None
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.n_act = genWF.Orbitals_Sets(np.zeros(self.n_irrep), occ_type='A')
+        self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep), occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
             raise dGrValueError('Inconsistency in number of electrons:\n'
                                 + 'n core el = ' + str(self.n_core)

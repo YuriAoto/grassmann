@@ -15,8 +15,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from dGr_exceptions import dGrValueError
-from dGr_util import number_of_irreducible_repr
+from exceptions import dGrValueError
+from util import number_of_irreducible_repr
 
 
 class Spirrep_String_Index(Sized, Iterable, Container):

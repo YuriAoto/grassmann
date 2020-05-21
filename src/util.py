@@ -26,7 +26,7 @@ import logging
 import numpy as np
 from scipy import linalg
 
-from dGr_exceptions import dGrValueError
+from exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
 

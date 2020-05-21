@@ -26,12 +26,12 @@ from collections import namedtuple
 import numpy as np
 from scipy import linalg
 
-from dGr_util import logtime
-from dGr_general_WF import Wave_Function
-from dGr_CISD_WF import Wave_Function_CISD
-import dGr_Absil as Absil
-import dGr_orbitals as orb
-from dGr_exceptions import dGrValueError
+from util import logtime
+from wave_functions.general import Wave_Function
+from wave_functions.cisd import Wave_Function_CISD
+import absil
+import orbitals as orb
+from exceptions import dGrValueError
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -471,7 +471,7 @@ def optimise_overlap_Absil(ci_wf,
             if restricted:
                 break
         U = ini_U
-    slice_XC = Absil.make_slice_XC(U)
+    slice_XC = absil.make_slice_XC(U)
     norm_C = norm_eta = elapsed_time = '---'
     converged_eta = converged_C = False
     fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -479,7 +479,7 @@ def optimise_overlap_Absil(ci_wf,
                 format('it.', 'f', '|eta|', '|C|', 'time in iteration'))
     for i_iteration in range(max_iter):
         with logtime('Generating linear system') as T_gen_lin_system:
-            f, X, C = Absil.generate_lin_system(ci_wf, U, slice_XC)
+            f, X, C = absil.generate_lin_system(ci_wf, U, slice_XC)
         if loglevel <= logging.DEBUG:
             np.save('X_matrix-{}.npy'.format(i_iteration), X)
             np.save('C_matrix-{}.npy'.format(i_iteration), C)
@@ -531,7 +531,7 @@ def optimise_overlap_Absil(ci_wf,
                                               full_matrices=False))
         if check_equations:
             with logtime('Cheking equations'):
-                chk_eq = Absil.check_Newton_eq(ci_wf, U, eta,
+                chk_eq = absil.check_Newton_eq(ci_wf, U, eta,
                                                restricted, eps=0.001)
                 f_out.write('Cheking equations: ' + 'OK' if chk_eq else 'FAIL')
         if loglevel <= logging.DEBUG:

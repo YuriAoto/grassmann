@@ -15,8 +15,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from scipy.linalg import inv
 
-from dGr_WF_int_norm import number_of_irreducible_repr
-from dGr_exceptions import dGrValueError, dGrParseError, dGrNumericalError
+from wave_functions.int_norm import number_of_irreducible_repr
+from exceptions import dGrValueError, dGrParseError, dGrNumericalError
 
 logger = logging.getLogger(__name__)
 

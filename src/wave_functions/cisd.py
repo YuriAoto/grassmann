@@ -8,11 +8,11 @@ Wave_Function_CISD
 
 import numpy as np
 
-from dGr_util import triangular, get_n_from_triang
-import dGr_general_WF as genWF
+from util import triangular, get_n_from_triang
+from wave_functions import general
 
 
-class Wave_Function_CISD(genWF.Wave_Function):
+class Wave_Function_CISD(general.Wave_Function):
     """The CISD wave function
     
     For the moment, only restricted and including only

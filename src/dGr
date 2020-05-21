@@ -10,13 +10,13 @@ import sys
 import logging
 import traceback
 
-import dGr_parser
-from dGr_main import dGr_main
-from dGr_exceptions import dGrParseError, dGrError
+import parser
+from main import dGr_main
+from exceptions import dGrParseError, dGrError
 
 assert sys.version_info >= (3, 5)
 try:
-    cmd_line_args = dGr_parser.parse_cmd_line()
+    cmd_line_args = parser.parse_cmd_line()
 except dGrParseError as e:
     sys.exit(str(e))
 

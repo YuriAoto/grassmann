@@ -12,7 +12,7 @@ import argparse
 import textwrap
 import logging
 
-from dGr_exceptions import dGrParseError
+from exceptions import dGrParseError
 
 loglevels = {'critical': logging.CRITICAL,
              'error': logging.ERROR,

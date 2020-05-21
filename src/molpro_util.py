@@ -4,8 +4,8 @@
 """
 import re
 
-import dGr_general_WF as genWF
-from dGr_exceptions import dGrMolproInputError
+import wave_functions.general as gen_wf
+from exceptions import dGrMolproInputError
 
 CISD_header = (
     ' PROGRAM * CISD (Closed-shell CI(SD))     '
@@ -57,7 +57,7 @@ def get_orb_info(l, line_number, n_irrep, occ_type):
             re_orb = re_orb[:n_irrep]
         if occ_type == 'F':
             re_orb += re_orb
-        return genWF.Orbitals_Sets(re_orb, occ_type=occ_type)
+        return gen_wf.Orbitals_Sets(re_orb, occ_type=occ_type)
     except Exception:
         raise dGrMolproInputError('Problems reading orbital information.',
                                   line=l, line_number=line_number)
