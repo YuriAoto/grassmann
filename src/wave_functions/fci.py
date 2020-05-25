@@ -404,6 +404,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     if 'EOF' in l:
                         break
                     new_Slater_Det = _get_Slater_Det_from_FCI_line(
+                        molpro_output,
                         l, line_number,
                         self.orb_dim,
                         self.n_irrep,
@@ -445,10 +446,12 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                         self.restricted = self.Ms == 0.0
                         # if self.Ms != 0.0:
                         #     raise Exception('Only singlet wave functions!')
-        self.ref_occ = general.Orbitals_Sets(list(map(len, self[0].occupation)))
+        self.ref_occ = general.Orbitals_Sets(list(map(len,
+                                                      self[0].occupation)))
         self.i_ref = None
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep), occ_type='A')
+        self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),
+                                           occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
                              + 'n core el = ' + str(self.n_core)

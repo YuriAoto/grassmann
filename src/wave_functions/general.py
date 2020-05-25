@@ -226,9 +226,35 @@ class String_Index(Mapping):
     def __str__(self):
         return ' ^ '.join(map(str, self.spirrep_indices))
     
+    @classmethod
+    def make_reference(cls, ref_occ, n_irrep, wf=None):
+        ref_indices = []
+        for spirrep in range(2 * n_irrep):
+            ref_indices.append(Spirrep_String_Index(ref_occ[spirrep]))
+            ref_indices[-1].spirrep = spirrep
+            ref_indices[-1].wf = wf
+        return cls(ref_indices)
+    
+    def set_wave_function(self, wf):
+        for Index in self.spirrep_indices:
+            Index.wf = wf
+    
     def append(self, value):
         """Append value to the spirrep indices."""
+        if not isinstance(value, Spirrep_String_Index):
+            raise ValueError(
+                'Only Spirrep_String_Index can be appended to a String_Index')
         self.spirrep_indices.append(value)
+        self.spirrep_indices[-1].spirrep = len(self) - 1
+
+    def swap_spirreps(self, i, j):
+        """Swap the strings associated to spirreps i and j
+        
+        After this, the attribute spirrep of both Spirrep_String_Index
+        is still consistent with the order of self."""
+        self[i], self[j] = self[j], self[i]
+        self[i].spirrep = i
+        self[j].spirrep = j
 
 
 class Orbitals_Sets(Sequence):

@@ -8,6 +8,7 @@ Wave_Function_Int_Norm
 """
 import math
 import logging
+from collections import namedtuple
 
 import numpy as np
 
@@ -56,6 +57,10 @@ class String_Index_for_SD(gen_wf.String_Index):
                     or int(cpl.I) != int(self[cpl.spirrep])):
                 return False
         return True
+
+
+DoublesTypes = namedtuple('DoublesTypes',
+                          'baba abab abba baab aaaa bbbb')
 
 
 class Wave_Function_Int_Norm(gen_wf.Wave_Function):
@@ -516,375 +521,6 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                        2)):
             yield i
 
-    def _is_spirrep_coupled_to(self, this_nel_case, spirrep,
-                               coupled_to,
-                               spirrep_cpl_to_other_spin,
-                               nel_case_cpl_to):
-        """Helper to check which strings are coupled to a given one
-        
-        This is made for nel cases 1 and 2. It also has some assumptions
-        regarding how coupled_to is, based on what is actually used
-        by string_indices()
-        """
-        if coupled_to is None:
-            return True
-        # Assuming len(coupled_to) == 1
-        # and spirrep != coupled_to[0].spirrep
-        # See the NotImplementedError that are raised by
-        # string_indices
-        cpl_to = coupled_to[0]
-        if abs(this_nel_case) == 2:
-            if abs(nel_case_cpl_to) == 2:
-                return (nel_case_cpl_to == -this_nel_case
-                        and (spirrep // self.n_irrep
-                             == cpl_to.spirrep // self.n_irrep))
-            return nel_case_cpl_to == 0 and int(cpl_to.I) == 0
-        # Perhaps we can/have to consider n_irrep and see the possible
-        # cases (irrep_i == irep_j, irrep_i == i_rrep_a, etc.)
-        if abs(this_nel_case) == 1:
-            if abs(nel_case_cpl_to) == 2:
-                return False
-            if abs(nel_case_cpl_to) == 0:
-                return int(cpl_to.I) == 0
-            return True
-        return True
-
-    def _make_occ_indices_for_doubles(self,
-                                      i, j,
-                                      irrep_i, irrep_j,
-                                      irrep_a, irrep_b):
-        r"""Helper function to create indices of double excitations
-        
-        Behaviour:
-        ----------
-        
-        Return indices for the following excitations:
-        
-        If (i, irrep_i) == (j, irrep_j):
-        
-        ---\-
-        -/---
-        -0-0-
-        
-        If (i, irrep_i) != (j, irrep_j), a tuple with the
-        following indices:
-        
-          j      i        b     a
-        
-                        ---\- -/---      [0] = baba_indices
-        ---0- -0----
-        
-                        -/--- ---\-      [1] = abab_indices
-        -0--- ----0-
-        
-                        ---\- -/---      [2] = abba_indices
-        -0--- ----0-
-        
-                        -/--- ---\-      [3] = baab_indices
-        ---0- -0----
-        
-                        -/--- -/---      [4] = aaaa_indices
-        -0--- -0----
-        
-                        ---\- ---\-      [5] = bbbb_indices
-        ---0- ----0-
-        
-        Where:
-        -0---   hole in alpha orbital
-        ---0-   hole in beta orbital
-        -/---   electron alpha orbital
-        ---\-   electron in beta orbital
-        
-        Limitations:
-        ------------
-        Currently only for restricted wave functions
-        
-        Parameters:
-        -----------
-        i,j (int)
-            The indices of the occupied orbitals that will
-            be excited
-        
-        irrep_i, irrep_j (int)
-            The irreps of i and j
-        
-        irrep_a, irrep_b (int)
-            The irreps of the virtual orbitals, where the
-            electrons will be excited to
-        
-        Return:
-        -------
-        List or lists of gen_wf.Spirrep_String_Index
-        
-        if (i, irrep_i) == (j, irrep_j), that is,
-        the initial orbital is the same for both electrons,
-        return a single list, for a configuration with holes
-        i == j, for both alpha and beta.
-        
-        if (i, irrep_i) != (j, irrep_j), that is,
-        return six lists, for configurations with holes in:
-        alpha for i, beta for j, alpha in irrep_a, beta in irrep_b
-        beta for i, alpha for j, beta in irrep_a, alpha in irrep_b
-        beta for i, alpha for j, alpha in irrep_a, beta in irrep_b
-        alpha for i, beta for j, beta in irrep_a, alpha in irrep_b
-        alpha for i and j, alpha for irrep_a and irrep_b
-        beta for i and j, beta for irrep_a and irrep_b
-        """
-        # ---------------------
-        # The easy case
-        if (irrep_i, i) == (irrep_j, j):
-            indices = []
-            for spin in ['alpha', 'beta']:
-                for irrep in self.spirrep_blocks():
-                    n_electrons = self.ref_occ[irrep]
-                    if irrep_a != irrep_i:
-                        if irrep == irrep_a:
-                            n_electrons += 1
-                        if irrep == irrep_i:
-                            n_electrons -= 1
-                    indices.append(
-                        gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-                        if irrep == irrep_i else
-                        gen_wf.Spirrep_String_Index(n_electrons))
-                    indices[-1].wf = self
-                    indices[-1].spirrep = irrep + (0
-                                                   if spin == 'alpha' else
-                                                   self.n_irrep)
-            return indices
-        # ---------------------
-        # Now the complex case:
-        #
-        # Using order "jiba" to name variables: j<i b<a;
-        # Example:
-        # baba:
-        # hole in j beta
-        # hole in i alpha
-        # virtual in irrep_b beta
-        # virtual in irrep_a alpha
-        baba_indices = []
-        abab_indices = []
-        abba_indices = []
-        baab_indices = []
-        aaaa_indices = []
-        bbbb_indices = []
-        # ---------------------
-        # First, alpha electrons:
-        for irrep in self.spirrep_blocks():
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_i:
-                n_electrons -= 1
-            if irrep == irrep_a:
-                n_electrons += 1
-            baba_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-                if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            baba_indices[-1].wf = self
-            baba_indices[-1].spirrep = irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_j:
-                n_electrons -= 1
-            if irrep == irrep_b:
-                n_electrons += 1
-            abab_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-                if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            abab_indices[-1].wf = self
-            abab_indices[-1].spirrep = irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_j:
-                n_electrons -= 1
-            if irrep == irrep_a:
-                n_electrons += 1
-            abba_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-                if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            abba_indices[-1].wf = self
-            abba_indices[-1].spirrep = irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_i:
-                n_electrons -= 1
-            if irrep == irrep_b:
-                n_electrons += 1
-            baab_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-                if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            baab_indices[-1].wf = self
-            baab_indices[-1].spirrep = irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep_a != irrep_i and irrep_a != irrep_j:
-                if irrep == irrep_a or irrep == irrep_b:
-                    n_electrons += 2 if irrep_i == irrep_j else 1
-                if irrep == irrep_i or irrep == irrep_j:
-                    n_electrons -= 2 if irrep_i == irrep_j else 1
-            if irrep == irrep_i and irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
-                                                             (j, i))
-            elif irrep == irrep_i:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-            elif irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-            else:
-                index = gen_wf.Spirrep_String_Index(n_electrons)
-            aaaa_indices.append(index)
-            aaaa_indices[-1].wf = self
-            aaaa_indices[-1].spirrep = irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            bbbb_indices.append(gen_wf.Spirrep_String_Index(n_electrons))
-            bbbb_indices[-1].wf = self
-            bbbb_indices[-1].spirrep = irrep
-        # ---------------------
-        # Second, the beta electrons
-        for irrep in self.spirrep_blocks():
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_j:
-                n_electrons -= 1
-            if irrep == irrep_b:
-                n_electrons += 1
-            baba_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-                if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            baba_indices[-1].wf = self
-            baba_indices[-1].spirrep = irrep + self.n_irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_i:
-                n_electrons -= 1
-            if irrep == irrep_a:
-                n_electrons += 1
-            abab_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-                if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            abab_indices[-1].wf = self
-            abab_indices[-1].spirrep = irrep + self.n_irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_i:
-                n_electrons -= 1
-            if irrep == irrep_b:
-                n_electrons += 1
-            abba_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-                if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            abba_indices[-1].wf = self
-            abba_indices[-1].spirrep = irrep + self.n_irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep == irrep_j:
-                n_electrons -= 1
-            if irrep == irrep_a:
-                n_electrons += 1
-            baab_indices.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-                if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
-            baab_indices[-1].wf = self
-            baab_indices[-1].spirrep = irrep + self.n_irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            aaaa_indices.append(gen_wf.Spirrep_String_Index(n_electrons))
-            aaaa_indices[-1].wf = self
-            aaaa_indices[-1].spirrep = irrep + self.n_irrep
-            # ===============
-            n_electrons = self.ref_occ[irrep]
-            if irrep_b != irrep_i and irrep_b != irrep_j:
-                if irrep == irrep_a or irrep == irrep_b:
-                    n_electrons += 2 if irrep_i == irrep_j else 1
-                if irrep == irrep_i or irrep == irrep_j:
-                    n_electrons -= 2 if irrep_i == irrep_j else 1
-            if irrep == irrep_i and irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
-                                                             (j, i))
-            elif irrep == irrep_i:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
-            elif irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
-            else:
-                index = gen_wf.Spirrep_String_Index(n_electrons)
-            bbbb_indices.append(index)
-            bbbb_indices[-1].wf = self
-            bbbb_indices[-1].spirrep = irrep + self.n_irrep
-        # ---------------------
-        return (baba_indices,
-                abab_indices,
-                abba_indices,
-                baab_indices,
-                aaaa_indices,
-                bbbb_indices)
-
-    def _string_indices_case_minus_2(self, spirrep):
-        n_electrons = self.ref_occ[spirrep] - 2
-        Index = gen_wf.Spirrep_String_Index.make_hole(
-            n_electrons,
-            (self.n_core[spirrep],
-             self.n_core[spirrep] + 1))
-        Index.start()
-        for i in np.arange(self.n_core[spirrep] + 1,
-                           n_electrons + 2,
-                           dtype=np.int8):
-            for j in np.arange(self.n_core[spirrep], i,
-                               dtype=np.int8):
-                yield Index
-                Index += 1
-                if j == n_electrons:
-                    break
-                if j == i - 1:
-                    Index[:i] = np.arange(1, i + 1)
-                else:
-                    Index[j] = j
-
-    def _string_indices_case_plus_2(self, spirrep):
-        n_electrons = self.ref_occ[spirrep] + 2
-        Index = gen_wf.Spirrep_String_Index(n_electrons)
-        Index.do_not_clear_std_pos()
-        Index.start()
-        for a in np.arange(self.ref_occ[spirrep],
-                           self.orb_dim[spirrep],
-                           dtype=np.int8):
-            Index[-1] = a
-            for b in np.arange(self.ref_occ[spirrep],
-                               a,
-                               dtype=np.int8):
-                Index[-2] = b
-                yield Index
-                Index += 1
-
-    def _string_indices_case_minus_1(self, spirrep):
-        n_electrons = self.ref_occ[spirrep] - 1
-        Index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
-                                                     (self.n_core[spirrep],))
-        Index.do_not_clear_std_pos()
-        Index.start()
-        for j in np.arange(self.n_core[spirrep], n_electrons + 1,
-                           dtype=np.int8):
-            yield Index
-            Index += 1
-            if j < n_electrons:
-                Index[j] = j
-
-    def _string_indices_case_plus_1(self, spirrep):
-        n_electrons = self.ref_occ[spirrep] + 1
-        Index = gen_wf.Spirrep_String_Index(n_electrons)
-        Index.do_not_clear_std_pos()
-        Index.start()
-        for a in np.arange(self.ref_occ[spirrep] + 1,
-                           self.orb_dim[spirrep] + 1,
-                           dtype=np.int8):
-            yield Index
-            Index[-1] = a
-            Index += 1
-
     def string_indices(self,
                        spirrep=None,
                        coupled_to=None,
@@ -1014,8 +650,6 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         with too many inedentation levels
         """
         print_info_to_log = print_info_to_log and logger.level <= logging.DEBUG
-        if print_info_to_log:
-            to_log = []
         if self.WF_type != 'CISD':
             raise NotImplementedError('Currently works only for CISD')
         if only_ref_occ and only_this_occ is not None:
@@ -1035,8 +669,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             and not isinstance(only_this_occ,
                                gen_wf.Orbitals_Sets)):
             raise ValueError(
-                'If spirrep is not given,'
-                + ' only_this_occ must be an instance of gen_wf.Orbitals_Sets.')
+                'If spirrep is not given, only_this_occ must be'
+                + ' an instance of gen_wf.Orbitals_Sets.')
         if coupled_to is not None:
             if not isinstance(coupled_to, tuple):
                 raise ValueError('Parameter coupled_to must be a tuple.')
@@ -1049,340 +683,755 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             else:
                 coupled_to = (coupled_to,)
         if spirrep is None:
-            Index = String_Index_for_SD()
-            if (only_this_occ is None
-                    or only_this_occ == self.ref_occ):
-                Index.exc_type = 'R'
-                Index.C = 1.0 / self.norm
-                for i_spirrep in self.spirrep_blocks():
-                    Index.append(gen_wf.Spirrep_String_Index(
-                        self.ref_occ[i_spirrep]))
-                    Index[-1].wf = self
-                    Index[-1].spirrep = i_spirrep
-                if self.restricted:
-                    for i_spirrep in self.spirrep_blocks():
-                        Index.append(gen_wf.Spirrep_String_Index(
-                            self.ref_occ[i_spirrep]))
-                        Index[-1].wf = self
-                        Index[-1].spirrep = i_spirrep + self.n_irrep
+            yield from self._string_indices_full_indices(
+                coupled_to,
+                no_occ_orb,
+                only_ref_occ,
+                only_this_occ,
+                print_info_to_log)
+        else:
+            yield from self._string_indices_spirrep(
+                spirrep,
+                coupled_to,
+                no_occ_orb,
+                only_ref_occ,
+                only_this_occ,
+                print_info_to_log)
+
+    def _string_indices_full_indices(self,
+                                     coupled_to=None,
+                                     no_occ_orb=False,
+                                     only_ref_occ=False,
+                                     only_this_occ=None,
+                                     print_info_to_log=False):
+        if (only_this_occ is None
+                or only_this_occ == self.ref_occ):
+            Index = String_Index_for_SD.make_reference(
+                self.ref_occ, self.n_irrep)
+            Index.exc_type = 'R'
+            Index.C = 1.0 / self.norm
+            if Index.is_coupled_to(coupled_to):
+                yield Index
+            for i_spirrep in self.spirrep_blocks():
+                yield from self._string_indices_sing_exc(
+                    i_spirrep,
+                    coupled_to,
+                    only_this_occ)
+        if self.restricted:
+            for N, Dij in enumerate(self.doubles):
+                i, j, irrep_i, irrep_j, exc_type = self.ij_from_N(N)
+                if print_info_to_log:
+                    logger.debug(
+                        '\nN=%d; i, irrep_i = %d, %d; j, irrep_j = %d, %d;'
+                        + ' exc_type = %s',
+                        N, i, irrep_i, j, irrep_j, exc_type)
+                for irrep_a, D in enumerate(Dij):
+                    irrep_b = irrep_product[irrep_a,
+                                            irrep_product[irrep_i,
+                                                          irrep_j]]
+                    if print_info_to_log:
+                        logger.debug('irrep_a, irrep_b = %d, %d',
+                                     irrep_a, irrep_b)
+                    if irrep_b > irrep_a:
+                        continue
+                    if self.n_ext[irrep_a] == 0 or self.n_ext[irrep_b] == 0:
+                        continue
+                    if (irrep_i, i) == (irrep_j, j):
+                        yield from self._string_indices_D_ii(
+                            i, irrep_i, irrep_a,
+                            D,
+                            coupled_to,
+                            only_this_occ,
+                            print_info_to_log)
+                    else:
+                        yield from self._string_indices_D_ij(
+                            i, j,
+                            irrep_i, irrep_j, irrep_a, irrep_b,
+                            D, Dij[irrep_b],
+                            coupled_to,
+                            only_this_occ,
+                            print_info_to_log)
+        else:
+            raise NotImplementedError(
+                'Currently only for restricted wave functions')
+
+    def _string_indices_sing_exc(self, irp,
+                                 coupled_to=None,
+                                 only_this_occ=None,
+                                 print_info_to_log=False):
+        if print_info_to_log:
+            to_log = []
+        Index = String_Index_for_SD.make_reference(self.ref_occ, self.n_irrep)
+        Index.exc_type = 'S'
+        sign = (1 if
+                self.n_corr_orb[irp] % 2 == 0
+                else -1)
+        for i_occ in range(self.n_corr_orb[irp]):
+            sign = -sign
+            if i_occ == 0:
+                Index[irp][self.n_core[irp]:-1] = np.arange(
+                    self.n_core[irp] + 1,
+                    self.ref_occ[irp],
+                    dtype=np.uint8)
+            for a_virt in range(self.n_ext[irp]):
+                Index.C = (sign * self.singles[irp][i_occ, a_virt]
+                           / self.norm)
+                Index[irp][-1] = (self.ref_occ[irp] + a_virt)
                 if Index.is_coupled_to(coupled_to):
                     yield Index
-                Index.exc_type = 'S'
-                for i_spirrep in self.spirrep_blocks():
-                    sign = (1 if
-                            self.n_corr_orb[i_spirrep] % 2 == 0
-                            else -1)
-                    for i_occ in range(self.n_corr_orb[i_spirrep]):
-                        sign = -sign
-                        if i_occ == 0:
-                            Index[i_spirrep][self.n_core[i_spirrep]:-1] = \
-                                np.arange(
-                                    self.n_core[i_spirrep] + 1,
-                                    self.ref_occ[i_spirrep],
-                                    dtype=np.uint8)
-                        for a_virt in range(self.n_ext[i_spirrep]):
-                            Index.C = (sign
-                                       * self.singles[i_spirrep][i_occ, a_virt]
-                                       / self.norm)
-                            Index[i_spirrep][-1] = (self.ref_occ[i_spirrep]
-                                                    + a_virt)
-                            if Index.is_coupled_to(coupled_to):
-                                yield Index
-                            if self.restricted:
-                                Index[i_spirrep], Index[i_spirrep
-                                                        + self.n_irrep] = (
-                                    Index[i_spirrep + self.n_irrep],
-                                    Index[i_spirrep])
-                                Index[i_spirrep].spirrep = i_spirrep
-                                Index[i_spirrep
-                                      + self.n_irrep].spirrep = (
-                                          i_spirrep + self.n_irrep)
-                                if Index.is_coupled_to(coupled_to):
-                                    yield Index
-                                Index[i_spirrep], Index[i_spirrep
-                                                        + self.n_irrep] = (
-                                    Index[i_spirrep + self.n_irrep],
-                                    Index[i_spirrep])
-                                Index[i_spirrep].spirrep = i_spirrep
-                                Index[i_spirrep
-                                      + self.n_irrep].spirrep = (
-                                          i_spirrep + self.n_irrep)
-                        Index[i_spirrep][self.n_core[i_spirrep] + i_occ] = (
-                            self.n_core[i_spirrep] + i_occ)
-            Index.exc_type = 'D'
-            if self.restricted:
-                for N, Dij in enumerate(self.doubles):
-                    (i, j,
-                     irrep_i, irrep_j,
-                     exc_type) = self.ij_from_N(N)
-#                    ij_sign = 1 if (sum(self.ref_occ[:irrep_i])
-#                                    + sum(self.ref_occ[:irrep_j])
-#                                    + i + j) % 2 == 0 else -1
-#  CHECK sign!!! The sign defined below give equal value if compared to
-#     convention used in CISD_WF. But might work for the determinants with
-#     same occupation of reference (as used in CISD_WF).
-                    ij_sign = (1
-                               if (i + self.ref_occ[irrep_i]
-                                   + j + self.ref_occ[irrep_j]) % 2 == 0 else
-                               -1)
-                    if print_info_to_log:
-                        to_log.append(('\nN={}; i,irrep_i = {} {}; j,irrep_j = {} {};'
-                                       + ' exc_type = {}; ij_sign = {}').\
-                                      format(N,
-                                             i,irrep_i,
-                                             j,irrep_j,
-                                             exc_type,ij_sign))
-                    for irrep_a, D in enumerate(Dij):
-                        irrep_b = irrep_product[irrep_a,
-                                                irrep_product[irrep_i, irrep_j]]
-                        if print_info_to_log:
-                            to_log.append('irrep_a, irrep_b = {} {}'.format(irrep_a, irrep_b))
-                        base_indices = self._make_occ_indices_for_doubles(
-                            i + self.n_core[irrep_i], j + self.n_core[irrep_j],
-                            irrep_i, irrep_j,
-                            irrep_a, irrep_b)
-                        if only_this_occ is not None:
-                            if (irrep_i, i) == (irrep_j, j):
-                                base_indices_occ = (gen_wf.Orbitals_Sets(
-                                    list(map(len, base_indices))),)
-                            else:
-                                base_indices_occ = []
-                                for index in base_indices:
-                                    base_indices_occ.append(gen_wf.Orbitals_Sets(
-                                        list(map(len, index))))
-                            found_compatible_occ = False
-                            for possible_occ in base_indices_occ:
-                                if possible_occ == only_this_occ:
-                                    found_compatible_occ = True
-                                    break
-                            if not found_compatible_occ:
-                                continue
-                        if (irrep_i, i) == (irrep_j, j):
-                            # Here: irrep_a == irrep_b, by symmetry
-                            # and D[a,b] = D[b,a]
-                            Index.spirrep_indices = base_indices
-                            Index[irrep_a][-1] = self.ref_occ[irrep_a]
-                            Index[self.n_irrep + irrep_b][-1] = self.ref_occ[irrep_b]
-                            for a in range(self.n_ext[irrep_a]):
-                                for b in range(a + 1):
-                                    if print_info_to_log:
-                                        to_log.append('a b = {} {}'.format(a, b))
-                                    Index.C = D[a,b] / self.norm
-                                    if Index.is_coupled_to(coupled_to):
-                                        yield Index
-                                    if a != b:
-                                        Index[irrep_a][-1], Index[self.n_irrep + irrep_b][-1] = (
-                                            Index[self.n_irrep + irrep_b][-1], Index[irrep_a][-1])
-                                        if Index.is_coupled_to(coupled_to):
-                                            yield Index
-                                        Index[irrep_a][-1], Index[self.n_irrep + irrep_b][-1] = (
-                                            Index[self.n_irrep + irrep_b][-1], Index[irrep_a][-1])
-                                    Index[self.n_irrep + irrep_a][-1] += 1
-                                Index[self.n_irrep + irrep_a][-1] = self.ref_occ[irrep_a]
-                                Index[irrep_a][-1] += 1
-                        else:
-                            if irrep_b > irrep_a:
-                                continue
-                            if self.n_ext[irrep_a] == 0 or self.n_ext[irrep_b] == 0:
-                                continue
-                            for a in range(self.n_ext[irrep_a]):
-                                for b in range(self.n_ext[irrep_b]):
-                                    if irrep_a == irrep_b and b > a:
-                                        continue
-                                    if print_info_to_log:
-                                        to_log.append('a b = {} {}'.format(a, b))
-                                    a_virt = a + self.ref_occ[irrep_a]
-                                    b_virt = b + self.ref_occ[irrep_b]
-                                    D_other = Dij[irrep_b]
-                                    Index.C =  ij_sign * D[a,b] / self.norm
-                                    if (only_this_occ is None
-                                        or base_indices_occ[0] == only_this_occ):
-                                        Index.spirrep_indices = base_indices[0]
-                                        Index[irrep_a][-1] = a_virt
-                                        Index[self.n_irrep + irrep_b][-1] = b_virt
-                                        if Index.is_coupled_to(coupled_to):
-                                            yield Index
-                                    if (only_this_occ is None
-                                        or base_indices_occ[1] == only_this_occ):
-                                        Index.spirrep_indices = base_indices[1]
-                                        Index[irrep_b][-1] = b_virt
-                                        Index[self.n_irrep + irrep_a][-1] = a_virt
-                                        if Index.is_coupled_to(coupled_to):
-                                            yield Index
-                                    if irrep_a != irrep_b or a != b:
-                                        Index.C =  ij_sign * D_other[b,a] / self.norm
-                                        if (only_this_occ is None
-                                            or base_indices_occ[2] == only_this_occ):
-                                            Index.spirrep_indices = base_indices[2]
-                                            Index[irrep_a][-1] = a_virt
-                                            Index[self.n_irrep + irrep_b][-1] = b_virt
-                                            if Index.is_coupled_to(coupled_to):
-                                                yield Index
-                                        if (only_this_occ is None
-                                            or base_indices_occ[3] == only_this_occ):
-                                            Index.spirrep_indices = base_indices[3]
-                                            Index[irrep_b][-1] = b_virt
-                                            Index[self.n_irrep + irrep_a][-1] = a_virt
-                                            if Index.is_coupled_to(coupled_to):
-                                                yield Index
-                                        Index.C = ij_sign * (D_other[b,a] - D[a,b]) / self.norm
-                                        if (only_this_occ is None
-                                            or base_indices_occ[4] == only_this_occ):
-                                            Index.spirrep_indices = base_indices[4]
-                                            Index[irrep_a][-1] = a_virt
-                                            if irrep_a != irrep_b:
-                                                Index[irrep_b][-1] = b_virt
-                                            else:
-                                                Index[irrep_b][-2] = b_virt
-                                            if Index.is_coupled_to(coupled_to):
-                                                yield Index
-                                        if (only_this_occ is None
-                                            or base_indices_occ[5] == only_this_occ):
-                                            Index.spirrep_indices = base_indices[5]
-                                            Index[self.n_irrep + irrep_a][-1] = a_virt
-                                            if irrep_a != irrep_b:
-                                                Index[self.n_irrep + irrep_b][-1] = b_virt
-                                            else:
-                                                Index[self.n_irrep + irrep_b][-2] = b_virt
-                                            if Index.is_coupled_to(coupled_to):
-                                                yield Index
-            else:
-                raise NotImplementedError(
-                    'Currently only for restricted wave functions')
-        else:
-            does_yield = True
-            if only_this_occ is None:
-                only_this_occ = self.ref_occ
-            if not isinstance(only_this_occ, (int, np.integer)):
-                only_this_occ = only_this_occ[spirrep]
-            nel_case = only_this_occ - self.ref_occ[spirrep]
-            if only_this_occ <= 0:
-                does_yield = False
-            if -2 > nel_case > 2:
-                does_yield = False
-            if coupled_to is not None:
-                if len(coupled_to) != 1:
-                    raise NotImplementedError(
-                        'If both coupled_to and spirrep are given,'
-                        + ' len(coupled_to) must be 1.'
-                        + ' An extension is annoying to implement and will'
-                        + ' not be used.')
-                cpl_to = coupled_to[0]
-                if spirrep == cpl_to.spirrep:
-                    raise NotImplementedError(
-                        'If both coupled_to and spirrep are given,'
-                        + ' the spirrep and the spirrep of the'
-                        + ' coupled_to should not be the same.'
-                        + ' This is annoying to implement and will'
-                        + ' not be used.')
-                spirrep_cpl_to_other_spin = (
-                    cpl_to.spirrep + self.n_irrep
-                    if cpl_to.spirrep < self.n_irrep else
-                    cpl_to.spirrep - self.n_irrep)
-                nel_case_cpl_to = (len(coupled_to[0].I)
-                                   - self.ref_occ[cpl_to.spirrep])
-                if -2 > nel_case_cpl_to < 2:
-                    does_yield = False
-            if does_yield:
-                if nel_case == -2:
-                    if self._is_spirrep_coupled_to(
-                            -2, spirrep,
-                            coupled_to,
-                            spirrep_cpl_to_other_spin,
-                            nel_case_cpl_to):
-                        for Index in self._string_indices_case_minus_2(
-                                spirrep):
-                            yield Index
-                elif nel_case == -1:
-                    if (self.n_irrep >= 2
-                        and self._is_spirrep_coupled_to(
-                            -1, spirrep,
-                            coupled_to,
-                            spirrep_cpl_to_other_spin,
-                            nel_case_cpl_to)):
-                        for Index in self._string_indices_case_minus_1(
-                                spirrep):
-                            yield Index
-                elif nel_case == 0:
-                    n_electrons = self.ref_occ[spirrep]
-                    Index = gen_wf.Spirrep_String_Index(n_electrons)
-                    Index.start()
-                    yield Index
-                    if (coupled_to is None
-                        or (nel_case_cpl_to == 0
-                            and int(cpl_to.I) < (
-                                self.n_corr_orb[cpl_to.spirrep]
-                                * self.n_ext[cpl_to.spirrep]
-                                + 1))):
-                        Index = gen_wf.Spirrep_String_Index.make_hole(
-                            n_electrons, (self.n_core[spirrep],))
-                        Index.do_not_clear_std_pos()
-                        Index.start()
-                        Index += 1
-                        for j in np.arange(self.n_core[spirrep],
-                                           n_electrons,
-                                           dtype=np.int8):
-                            for a in np.arange(self.ref_occ[spirrep],
-                                               self.orb_dim[spirrep],
-                                               dtype=np.int8):
-                                Index[-1] = a
-                                yield Index
-                                Index += 1
-                            if j < n_electrons - 1:
-                                Index[j] = j
-                        if (coupled_to is None
-                            or (nel_case_cpl_to == 0
-                                and int(cpl_to.I) == 0)):
-                            last_standard_position = int(Index)
-                            Index = gen_wf.Spirrep_String_Index.make_hole(
-                                n_electrons,
-                                (self.n_core[spirrep],
-                                 self.n_core[spirrep] + 1))
-                            Index.do_not_clear_std_pos()
-                            Index.set_std_pos(last_standard_position)
-                            for i in np.arange(self.n_core[spirrep] + 1,
-                                               n_electrons,
-                                               dtype=np.int8):
-                                for j in np.arange(self.n_core[spirrep],
-                                                   i,
-                                                   dtype=np.int8):
-                                    for a in np.arange(self.ref_occ[spirrep],
-                                                       self.orb_dim[spirrep],
-                                                       dtype=np.int8):
-                                        Index[-1] = a
-                                        for b in np.arange(
-                                                self.ref_occ[spirrep],
-                                                a,
-                                                dtype=np.int8):
-                                            Index[-2] = b
-                                            yield Index
-                                            Index += 1
-                                    if j == n_electrons - 2:
-                                        break
-                                    if j == i - 1:
-                                        Index[self.n_core[spirrep]:i] = \
-                                            np.arange(self.n_core[spirrep] + 1,
-                                                      i + 1)
-                                    else:
-                                        Index[j] = j
-                elif nel_case == 1:
-                    if (self.n_irrep > 2
-                        and self._is_spirrep_coupled_to(
-                            1, spirrep,
-                            coupled_to,
-                            spirrep_cpl_to_other_spin,
-                            nel_case_cpl_to)):
-                        for Index in self._string_indices_case_plus_1(spirrep):
-                            yield Index
-                elif nel_case == 2:
-                    if self._is_spirrep_coupled_to(-2, spirrep,
-                                                   coupled_to,
-                                                   spirrep_cpl_to_other_spin,
-                                                   nel_case_cpl_to):
-                        for Index in self._string_indices_case_plus_2(spirrep):
-                            yield Index
+                if self.restricted:
+                    Index.swap_spirreps(irp, irp + self.n_irrep)
+                    if Index.is_coupled_to(coupled_to):
+                        yield Index
+                    Index.swap_spirreps(irp, irp + self.n_irrep)
+            Index[irp][self.n_core[irp]
+                       + i_occ] = self.n_core[irp] + i_occ
         if print_info_to_log:
             logger.debug('\n'.join(to_log))
+
+    def _string_indices_D_ii(self, i, irp_i, irp_a, D,
+                             coupled_to=None,
+                             only_this_occ=None,
+                             print_info_to_log=False):
+        """
+         Here: irrep_a == irrep_b, by symmetry
+             and D[a,b] = D[b,a]
+
+        """
+        if print_info_to_log:
+            to_log = []
+        Index = self._make_occ_indices_for_doubles(
+            i + self.n_core[irp_i], i + self.n_core[irp_i],
+            irp_i, irp_i,
+            irp_a, irp_a)
+        # Maybe this can be made directly:
+        if (only_this_occ is not None
+            and only_this_occ != gen_wf.Orbitals_Sets(
+                list(map(len, Index)))):
+            return
+        Index[irp_a][-1] = self.ref_occ[irp_a]
+        Index[self.n_irrep + irp_a][-1] = self.ref_occ[irp_a]
+        for a in range(self.n_ext[irp_a]):
+            for b in range(a + 1):
+                if print_info_to_log:
+                    to_log.append('a b = {} {}'.format(a, b))
+                Index.C = D[a, b] / self.norm
+                if Index.is_coupled_to(coupled_to):
+                    yield Index
+                if a != b:
+                    Index.swap_spirreps(irp_a, self.n_irrep + irp_a)
+                    if Index.is_coupled_to(coupled_to):
+                        yield Index
+                    Index.swap_spirreps(irp_a, self.n_irrep + irp_a)
+                Index[self.n_irrep + irp_a][-1] += 1
+            Index[self.n_irrep + irp_a][-1] = self.ref_occ[irp_a]
+            Index[irp_a][-1] += 1
+        if print_info_to_log:
+            logger.debug('\n'.join(to_log))
+
+    def _string_indices_D_ij(self,
+                             i, j,
+                             irrep_i, irrep_j, irrep_a, irrep_b,
+                             D, D_other,
+                             coupled_to=None,
+                             only_this_occ=None,
+                             print_info_to_log=False):
+        """
+         irrep_a > irrep_b only
+        """
+        if print_info_to_log:
+            to_log = []
+        # ----- sign determination:
+        ij_nab_sign = (1
+                       if (i + j
+                           + self.ref_occ[irrep_a]
+                           + self.ref_occ[irrep_b]) % 2 == 0 else
+                       -1)
+        if irrep_i == irrep_j:
+            abab_baba_sign = abba_baab_sign = ij_nab_sign
+            aaaa_bbbb_sign = -ij_nab_sign
+        elif irrep_i == irrep_a:
+            abab_baba_sign = aaaa_bbbb_sign = ij_nab_sign
+            abba_baab_sign = -ij_nab_sign
+        else:
+            parity = 1 if irrep_j < irrep_b else -1
+            if irrep_j < irrep_i:
+                parity = -parity
+            if irrep_b < irrep_i:
+                parity = -parity
+            if irrep_i < irrep_a:
+                parity = -parity
+            if irrep_j < irrep_a:
+                parity = -parity
+            if irrep_b < irrep_a:
+                parity = -parity
+            n_between = sum([self.ref_occ[irp]
+                             for irp in range(self.n_irrep)
+                             if (min(irrep_j,
+                                     irrep_b) < irp < max(irrep_j,
+                                                          irrep_b)
+                                 or min(irrep_i,
+                                        irrep_a) < irp < max(irrep_i,
+                                                             irrep_a))])
+            sum_n_sign = 1 if n_between % 2 == 0 else -1
+            aaaa_bbbb_sign = -ij_nab_sign * sum_n_sign * parity
+            abab_baba_sign = ij_nab_sign * sum_n_sign
+            n_between = sum([self.ref_occ[irp]
+                             for irp in range(self.n_irrep)
+                             if (min(irrep_i,
+                                     irrep_b) < irp < max(irrep_i,
+                                                          irrep_b)
+                                 or min(irrep_j,
+                                        irrep_a) < irp < max(irrep_j,
+                                                             irrep_a))])
+            sum_n_sign = 1 if n_between % 2 == 0 else -1
+            abba_baab_sign = ij_nab_sign * sum_n_sign
+        # ----- END sign determination
+        indices = self._make_occ_indices_for_doubles(
+            i + self.n_core[irrep_i], j + self.n_core[irrep_j],
+            irrep_i, irrep_j,
+            irrep_a, irrep_b)
+        if only_this_occ is not None:
+            indices_occ = DoublesTypes(
+                *[gen_wf.Orbitals_Sets(occ) for occ in map(len, indices)])
+            if not only_this_occ not in indices_occ:
+                return
+        for a in range(self.n_ext[irrep_a]):
+            for b in range(self.n_ext[irrep_b]):
+                if irrep_a == irrep_b and b > a:
+                    continue
+                if print_info_to_log:
+                    to_log.append('a b = {} {}'.format(a, b))
+                a_virt = a + self.ref_occ[irrep_a]
+                b_virt = b + self.ref_occ[irrep_b]
+                indices.abab.C = indices.baba.C = (
+                    abab_baba_sign * D[a, b] / self.norm)
+                if (only_this_occ is None
+                        or indices_occ.baba == only_this_occ):
+                    indices.baba[irrep_a][-1] = a_virt
+                    indices.baba[self.n_irrep + irrep_b][-1] = b_virt
+                    if indices.baba.is_coupled_to(coupled_to):
+                        yield indices.baba
+                if (only_this_occ is None
+                        or indices_occ.abab == only_this_occ):
+                    indices.abab[irrep_b][-1] = b_virt
+                    indices.abab[self.n_irrep + irrep_a][-1] = a_virt
+                    if indices.abab.is_coupled_to(coupled_to):
+                        yield indices.abab
+                if irrep_a != irrep_b or a != b:
+                    indices.abba.C = indices.baab.C = (
+                        abba_baab_sign * D_other[b, a] / self.norm)
+                    if (only_this_occ is None
+                            or indices_occ.abba == only_this_occ):
+                        indices.abba[irrep_a][-1] = a_virt
+                        indices.abba[self.n_irrep + irrep_b][-1] = b_virt
+                        if indices.abba.is_coupled_to(coupled_to):
+                            yield indices.abba
+                    if (only_this_occ is None
+                            or indices_occ.baab == only_this_occ):
+                        indices.baab[irrep_b][-1] = b_virt
+                        indices.baab[self.n_irrep + irrep_a][-1] = a_virt
+                        if indices.baab.is_coupled_to(coupled_to):
+                            yield indices.baab
+                    indices.aaaa.C = indices.bbbb.C = (
+                        aaaa_bbbb_sign * (D[a, b] - D_other[b, a]) / self.norm)
+                    if (only_this_occ is None
+                            or indices_occ.aaaa == only_this_occ):
+                        indices.aaaa[irrep_a][-1] = a_virt
+                        if irrep_a != irrep_b:
+                            indices.aaaa[irrep_b][-1] = b_virt
+                        else:
+                            indices.aaaa[irrep_b][-2] = b_virt
+                        if indices.aaaa.is_coupled_to(coupled_to):
+                            yield indices.aaaa
+                    if (only_this_occ is None
+                            or indices.bbbb == only_this_occ):
+                        indices.bbbb[self.n_irrep + irrep_a][-1] = a_virt
+                        if irrep_a != irrep_b:
+                            indices.bbbb[self.n_irrep + irrep_b][-1] = b_virt
+                        else:
+                            indices.bbbb[self.n_irrep + irrep_b][-2] = b_virt
+                        if indices.bbbb.is_coupled_to(coupled_to):
+                            yield indices.bbbb
+        if print_info_to_log:
+            logger.debug('\n'.join(to_log))
+
+    def _make_occ_indices_for_doubles(self,
+                                      i, j,
+                                      irrep_i, irrep_j,
+                                      irrep_a, irrep_b):
+        r"""Helper function to create indices of double excitations
+        
+        Behaviour:
+        ----------
+        
+        Return indices for the following excitations:
+        
+        If i, irrep_i == j, irrep_j,
+            (and thus it is assumed that irrep_a == irrep_b):
+         j i    b a
+               ---\-
+               -/---
+        -0-0-
+        
+        If (i, irrep_i) != (j, irrep_j), a namedtuple with the
+        following indices:
+        
+          j      i        b     a
+        
+                        ---\- -/---      [0] = baba
+        ---0-  -0----
+        
+                        -/--- ---\-      [1] = abab
+        -0---  ----0-
+        
+                        ---\- -/---      [2] = abba
+        -0---  ----0-
+        
+                        -/--- ---\-      [3] = baab
+        ---0-  -0----
+        
+                        -/--- -/---      [4] = aaaa
+        -0---  -0----
+        
+                        ---\- ---\-      [5] = bbbb
+        ---0-  ----0-
+        
+        Where:
+        -0---   hole in alpha orbital
+        ---0-   hole in beta orbital
+        -/---   electron alpha orbital
+        ---\-   electron in beta orbital
+        
+        Limitations:
+        ------------
+        Currently only for restricted wave functions
+        
+        Parameters:
+        -----------
+        i,j (int)
+            The indices of the occupied orbitals that will
+            be excited
+        
+        irrep_i, irrep_j (int)
+            The irreps of i and j
+        
+        irrep_a, irrep_b (int)
+            The irreps of the virtual orbitals, where the
+            electrons will be excited to
+        
+        Return:
+        -------
+        An instance of, or a namedtuple of, String_Index_for_SD
+        
+        if (i, irrep_i) == (j, irrep_j), that is,
+        the initial orbital is the same for both electrons,
+        return a single String_Index_for_SD, for a configuration with holes
+        i == j, for both alpha and beta.
+        
+        if (i, irrep_i) != (j, irrep_j), that is,
+        return the namedtuple DoublesTypes for configurations with holes in:
+        alpha for i, beta for j, alpha in irrep_a, beta in irrep_b (baba)
+        beta for i, alpha for j, beta in irrep_a, alpha in irrep_b (abab)
+        beta for i, alpha for j, alpha in irrep_a, beta in irrep_b (abba)
+        alpha for i, beta for j, beta in irrep_a, alpha in irrep_b (baab)
+        alpha for i and j, alpha for irrep_a and irrep_b (aaaa)
+        beta for i and j, beta for irrep_a and irrep_b (bbbb)
+        """
+        # ---------------------
+        # The easy case
+        if (irrep_i, i) == (irrep_j, j):
+            Index = String_Index_for_SD()
+            Index.exc_type = 'D'
+            for spin in ['alpha', 'beta']:
+                for irrep in self.spirrep_blocks():
+                    n_electrons = self.ref_occ[irrep]
+                    if irrep_a != irrep_i:
+                        if irrep == irrep_a:
+                            n_electrons += 1
+                        if irrep == irrep_i:
+                            n_electrons -= 1
+                    Index.append(
+                        gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                        if irrep == irrep_i else
+                        gen_wf.Spirrep_String_Index(n_electrons))
+            Index.set_wave_function(self)
+            return Index
+        # ---------------------
+        # Now the complex case:
+        #
+        # Using order "jiba" to name variables: j<i b<a;
+        # Example:
+        # baba:
+        # hole in j beta
+        # hole in i alpha
+        # virtual in irrep_b beta
+        # virtual in irrep_a alpha
+        Index = DoublesTypes(String_Index_for_SD(),
+                             String_Index_for_SD(),
+                             String_Index_for_SD(),
+                             String_Index_for_SD(),
+                             String_Index_for_SD(),
+                             String_Index_for_SD())
+        for Ind in Index:
+            Ind.exc_type = 'D'
+        # ---------------------
+        # First, alpha electrons:
+        for irrep in self.spirrep_blocks():
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_i:
+                n_electrons -= 1
+            if irrep == irrep_a:
+                n_electrons += 1
+            Index.baba.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                if irrep == irrep_i else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_j:
+                n_electrons -= 1
+            if irrep == irrep_b:
+                n_electrons += 1
+            Index.abab.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                if irrep == irrep_j else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_j:
+                n_electrons -= 1
+            if irrep == irrep_a:
+                n_electrons += 1
+            Index.abba.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                if irrep == irrep_j else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_i:
+                n_electrons -= 1
+            if irrep == irrep_b:
+                n_electrons += 1
+            Index.baab.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                if irrep == irrep_i else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep_a != irrep_i and irrep_a != irrep_j:
+                if irrep == irrep_a or irrep == irrep_b:
+                    n_electrons += 2 if irrep_i == irrep_j else 1
+                if irrep == irrep_i or irrep == irrep_j:
+                    n_electrons -= 2 if irrep_i == irrep_j else 1
+            if irrep == irrep_i and irrep == irrep_j:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
+                                                              (j, i))
+            elif irrep == irrep_i:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+            elif irrep == irrep_j:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+            else:
+                index = gen_wf.Spirrep_String_Index(n_electrons)
+            Index.aaaa.append(index)
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            Index.bbbb.append(gen_wf.Spirrep_String_Index(n_electrons))
+        # ---------------------
+        # Second, the beta electrons
+        for irrep in self.spirrep_blocks():
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_j:
+                n_electrons -= 1
+            if irrep == irrep_b:
+                n_electrons += 1
+            Index.baba.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                if irrep == irrep_j else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_i:
+                n_electrons -= 1
+            if irrep == irrep_a:
+                n_electrons += 1
+            Index.abab.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                if irrep == irrep_i else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_i:
+                n_electrons -= 1
+            if irrep == irrep_b:
+                n_electrons += 1
+            Index.abba.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                if irrep == irrep_i else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep == irrep_j:
+                n_electrons -= 1
+            if irrep == irrep_a:
+                n_electrons += 1
+            Index.baab.append(
+                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                if irrep == irrep_j else
+                gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            Index.aaaa.append(gen_wf.Spirrep_String_Index(n_electrons))
+            # ===============
+            n_electrons = self.ref_occ[irrep]
+            if irrep_b != irrep_i and irrep_b != irrep_j:
+                if irrep == irrep_a or irrep == irrep_b:
+                    n_electrons += 2 if irrep_i == irrep_j else 1
+                if irrep == irrep_i or irrep == irrep_j:
+                    n_electrons -= 2 if irrep_i == irrep_j else 1
+            if irrep == irrep_i and irrep == irrep_j:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
+                                                              (j, i))
+            elif irrep == irrep_i:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+            elif irrep == irrep_j:
+                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+            else:
+                index = gen_wf.Spirrep_String_Index(n_electrons)
+            Index.bbbb.append(index)
+        # ---------------------
+        for Ind in Index:
+            Ind.set_wave_function(self)
+        return Index
+
+    def _string_indices_spirrep(self, spirrep,
+                                coupled_to=None,
+                                no_occ_orb=False,
+                                only_ref_occ=False,
+                                only_this_occ=None):
+        does_yield = True
+        if only_this_occ is None:
+            only_this_occ = self.ref_occ
+        if not isinstance(only_this_occ, (int, np.integer)):
+            only_this_occ = only_this_occ[spirrep]
+        nel_case = only_this_occ - self.ref_occ[spirrep]
+        if only_this_occ <= 0:
+            does_yield = False
+        if -2 > nel_case > 2:
+            does_yield = False
+        if coupled_to is not None:
+            if len(coupled_to) != 1:
+                raise NotImplementedError(
+                    'If both coupled_to and spirrep are given,'
+                    + ' len(coupled_to) must be 1.'
+                    + ' An extension is annoying to implement and will'
+                    + ' not be used.')
+            cpl_to = coupled_to[0]
+            if spirrep == cpl_to.spirrep:
+                raise NotImplementedError(
+                    'If both coupled_to and spirrep are given,'
+                    + ' the spirrep and the spirrep of the'
+                    + ' coupled_to should not be the same.'
+                    + ' This is annoying to implement and will'
+                    + ' not be used.')
+            spirrep_cpl_to_other_spin = (
+                cpl_to.spirrep + self.n_irrep
+                if cpl_to.spirrep < self.n_irrep else
+                cpl_to.spirrep - self.n_irrep)
+            nel_case_cpl_to = (len(coupled_to[0].I)
+                               - self.ref_occ[cpl_to.spirrep])
+            if -2 > nel_case_cpl_to < 2:
+                does_yield = False
+        else:
+            spirrep_cpl_to_other_spin = None
+            nel_case_cpl_to = None
+        if does_yield:
+            if nel_case == -2:
+                if self._is_spirrep_coupled_to(
+                        -2, spirrep,
+                        coupled_to,
+                        spirrep_cpl_to_other_spin,
+                        nel_case_cpl_to):
+                    yield from self._string_indices_case_minus_2(spirrep)
+            elif nel_case == -1:
+                if (self.n_irrep >= 2
+                    and self._is_spirrep_coupled_to(
+                        -1, spirrep,
+                        coupled_to,
+                        spirrep_cpl_to_other_spin,
+                        nel_case_cpl_to)):
+                    yield from self._string_indices_case_minus_1(spirrep)
+            elif nel_case == 0:
+                n_electrons = self.ref_occ[spirrep]
+                Index = gen_wf.Spirrep_String_Index(n_electrons)
+                Index.start()
+                yield Index
+                if (coupled_to is None
+                    or (nel_case_cpl_to == 0
+                        and int(cpl_to.I) < (
+                            self.n_corr_orb[cpl_to.spirrep]
+                            * self.n_ext[cpl_to.spirrep]
+                            + 1))):
+                    Index = gen_wf.Spirrep_String_Index.make_hole(
+                        n_electrons, (self.n_core[spirrep],))
+                    Index.do_not_clear_std_pos()
+                    Index.start()
+                    Index += 1
+                    for j in np.arange(self.n_core[spirrep],
+                                       n_electrons,
+                                       dtype=np.int8):
+                        for a in np.arange(self.ref_occ[spirrep],
+                                           self.orb_dim[spirrep],
+                                           dtype=np.int8):
+                            Index[-1] = a
+                            yield Index
+                            Index += 1
+                        if j < n_electrons - 1:
+                            Index[j] = j
+                    if (coupled_to is None
+                        or (nel_case_cpl_to == 0
+                            and int(cpl_to.I) == 0)):
+                        last_standard_position = int(Index)
+                        Index = gen_wf.Spirrep_String_Index.make_hole(
+                            n_electrons,
+                            (self.n_core[spirrep],
+                             self.n_core[spirrep] + 1))
+                        Index.do_not_clear_std_pos()
+                        Index.set_std_pos(last_standard_position)
+                        for i in np.arange(self.n_core[spirrep] + 1,
+                                           n_electrons,
+                                           dtype=np.int8):
+                            for j in np.arange(self.n_core[spirrep],
+                                               i,
+                                               dtype=np.int8):
+                                for a in np.arange(self.ref_occ[spirrep],
+                                                   self.orb_dim[spirrep],
+                                                   dtype=np.int8):
+                                    Index[-1] = a
+                                    for b in np.arange(
+                                            self.ref_occ[spirrep],
+                                            a,
+                                            dtype=np.int8):
+                                        Index[-2] = b
+                                        yield Index
+                                        Index += 1
+                                if j == n_electrons - 2:
+                                    break
+                                if j == i - 1:
+                                    Index[self.n_core[spirrep]:i] = \
+                                        np.arange(self.n_core[spirrep] + 1,
+                                                  i + 1)
+                                else:
+                                    Index[j] = j
+            elif nel_case == 1:
+                if (self.n_irrep > 2
+                    and self._is_spirrep_coupled_to(
+                        1, spirrep,
+                        coupled_to,
+                        spirrep_cpl_to_other_spin,
+                        nel_case_cpl_to)):
+                    yield from self._string_indices_case_plus_1(spirrep)
+            elif nel_case == 2:
+                if self._is_spirrep_coupled_to(-2, spirrep,
+                                               coupled_to,
+                                               spirrep_cpl_to_other_spin,
+                                               nel_case_cpl_to):
+                    yield from self._string_indices_case_plus_2(spirrep)
+
+    def _string_indices_case_minus_2(self, spirrep):
+        n_electrons = self.ref_occ[spirrep] - 2
+        Index = gen_wf.Spirrep_String_Index.make_hole(
+            n_electrons,
+            (self.n_core[spirrep],
+             self.n_core[spirrep] + 1))
+        Index.start()
+        for i in np.arange(self.n_core[spirrep] + 1,
+                           n_electrons + 2,
+                           dtype=np.int8):
+            for j in np.arange(self.n_core[spirrep], i,
+                               dtype=np.int8):
+                yield Index
+                Index += 1
+                if j == n_electrons:
+                    break
+                if j == i - 1:
+                    Index[:i] = np.arange(1, i + 1)
+                else:
+                    Index[j] = j
+
+    def _string_indices_case_plus_2(self, spirrep):
+        n_electrons = self.ref_occ[spirrep] + 2
+        Index = gen_wf.Spirrep_String_Index(n_electrons)
+        Index.do_not_clear_std_pos()
+        Index.start()
+        for a in np.arange(self.ref_occ[spirrep],
+                           self.orb_dim[spirrep],
+                           dtype=np.int8):
+            Index[-1] = a
+            for b in np.arange(self.ref_occ[spirrep],
+                               a,
+                               dtype=np.int8):
+                Index[-2] = b
+                yield Index
+                Index += 1
+
+    def _string_indices_case_minus_1(self, spirrep):
+        n_electrons = self.ref_occ[spirrep] - 1
+        Index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
+                                                      (self.n_core[spirrep],))
+        Index.do_not_clear_std_pos()
+        Index.start()
+        for j in np.arange(self.n_core[spirrep], n_electrons + 1,
+                           dtype=np.int8):
+            yield Index
+            Index += 1
+            if j < n_electrons:
+                Index[j] = j
+
+    def _string_indices_case_plus_1(self, spirrep):
+        n_electrons = self.ref_occ[spirrep] + 1
+        Index = gen_wf.Spirrep_String_Index(n_electrons)
+        Index.do_not_clear_std_pos()
+        Index.start()
+        for a in np.arange(self.ref_occ[spirrep] + 1,
+                           self.orb_dim[spirrep] + 1,
+                           dtype=np.int8):
+            yield Index
+            Index[-1] = a
+            Index += 1
+
+    def _is_spirrep_coupled_to(self, this_nel_case, spirrep,
+                               coupled_to,
+                               spirrep_cpl_to_other_spin,
+                               nel_case_cpl_to):
+        """Helper to check which strings are coupled to a given one
+        
+        This is made for nel cases 1 and 2. It also has some assumptions
+        regarding how coupled_to is, based on what is actually used
+        by string_indices()
+        """
+        if coupled_to is None:
+            return True
+        # Assuming len(coupled_to) == 1
+        # and spirrep != coupled_to[0].spirrep
+        # See the NotImplementedError that are raised by
+        # string_indices
+        cpl_to = coupled_to[0]
+        if abs(this_nel_case) == 2:
+            if abs(nel_case_cpl_to) == 2:
+                return (nel_case_cpl_to == -this_nel_case
+                        and (spirrep // self.n_irrep
+                             == cpl_to.spirrep // self.n_irrep))
+            return nel_case_cpl_to == 0 and int(cpl_to.I) == 0
+        # Perhaps we can/have to consider n_irrep and see the possible
+        # cases (irrep_i == irep_j, irrep_i == i_rrep_a, etc.)
+        if abs(this_nel_case) == 1:
+            if abs(nel_case_cpl_to) == 2:
+                return False
+            if abs(nel_case_cpl_to) == 0:
+                return int(cpl_to.I) == 0
+            return True
+        return True
 
     def n_strings(self, spirrep, occupation):
         """The number of strings that string_indices(spirrep=spirrep) yield
