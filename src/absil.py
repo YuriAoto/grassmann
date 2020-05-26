@@ -239,6 +239,8 @@ def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
                                         wf.n_corr_orb[irrep],
                                         wf.n_ext[irrep]):
             Fs[irrep][i, a] = _calc_fI(U[irrep], Index)
+        logger.debug('F0[irrep = %d] = %f', irrep, F0[irrep])
+        logger.debug('Fs[irrep = %d]:\n%r', irrep, Fs[irrep])
     f = wf.C0 * _calc_Fprod(F0, (), wf.n_irrep)**2
     for irrep in wf.spirrep_blocks(restricted=True):
         contr_irrep = np.einsum('ia,ia',
@@ -285,6 +287,8 @@ def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
             if len(I_spirrep) == 0:
                 continue
             f_contr *= F[spirrep][int(I_spirrep)]
+        logger.debug('wf[%s] = %f; f_contr = %f',
+                     Index, wf[Index], f_contr)
         f += wf[Index] * f_contr
     if not assume_orth:
         for U_spirrep in U:
@@ -905,10 +909,10 @@ def _generate_lin_system_from_genWF(
     X = np.zeros((sum_Kn + sum_nn, sum_Kn))
     C = np.zeros(sum_Kn + sum_nn)
     for spirrep_1 in wf.spirrep_blocks(restricted=False):
-        logger.info('Starting spirrep_1 = %d', spirrep_1)
-        logger.info('n_irrep = %d', wf.n_irrep)
+        logger.info('Starting spirrep_1 = %d (of %d irreps)',
+                    spirrep_1, wf.n_irrep)
         Pi = np.identity(K[spirrep_1]) - U[spirrep_1] @ U[spirrep_1].T
-        logger.debug('Pi = %s', Pi)
+        logger.debug('Pi:\n%r', Pi)
         for I_1 in wf.string_indices(spirrep=spirrep_1):
             with logtime('Calc H, G'):
                 logger.debug('At I_1 = %s', I_1)
@@ -931,10 +935,10 @@ def _generate_lin_system_from_genWF(
                         G_1[i, j] = _calc_G(U[spirrep_1],
                                             I_1.occ_orb,
                                             i, j)
-                logger.debug('current H:\n%s', H)
-                logger.debug('current G:\n%s', G_1)
+                logger.debug('current H:\n%r', H)
+                logger.debug('current G_1:\n%r', G_1)
                 H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
-                logger.debug('Pi (U G - H):\n%s', H)
+                logger.debug('Pi (U G - H):\n%r', H)
             with logtime('Calc S'):
                 S = 0.0
                 logger.info('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
@@ -949,7 +953,7 @@ def _generate_lin_system_from_genWF(
                         if spirrep_other != spirrep_1 and len(I_other) > 0:
                             F_contr *= F[spirrep_other][int(I_other)]
                     S += wf[I_full] * F_contr
-                logger.debug('S = %s; H:\n%s', S, H)
+                logger.debug('S = %s; H:\n%r', S, H)
             with logtime('Calc Xdiag, C'):
                 X[slice_XC[spirrep_1],
                   slice_XC[spirrep_1]] += S * np.reshape(
@@ -958,7 +962,7 @@ def _generate_lin_system_from_genWF(
                        K[spirrep_1] * n[spirrep_1]),
                       order='F').T
                 G_1 -= F[spirrep_1][int(I_1)] * U[spirrep_1]
-                logger.debug('spirrep=%d: S = %s; G_1:\n %s',
+                logger.debug('spirrep=%d: S = %s; G_1:\n%r',
                              spirrep_1, S, G_1)
                 C[slice_XC[spirrep_1]] += S * np.reshape(
                     G_1,
@@ -1002,8 +1006,8 @@ def _generate_lin_system_from_genWF(
                                         and spirrep_other != spirrep_2):
                                     F_contr *= F[spirrep_other][int(I_other)]
                             S += wf[I_full] * F_contr
-                        logger.debug('G_1:\n%s', G_1)
-                        logger.debug('G_2:\n%s', G_2)
+                        logger.debug('G_1:\n%r', G_1)
+                        logger.debug('G_2:\n%r', G_2)
                         logger.debug('S = %s', S)
                         X[slice_XC[spirrep_1],
                           slice_XC[spirrep_2]] -= S * np.reshape(
@@ -1021,8 +1025,8 @@ def _generate_lin_system_from_genWF(
     prev_kl = 0
     for spirrep, U_spirrep in enumerate(U):
         for i in range(n[spirrep]):
-            logger.debug('Adding U^T:\n%s', U_spirrep.T)
-            logger.debug('Position of U^T = [%s: %s + %s, %s: %s + %s',
+            logger.debug('Adding U^T:\n%r', U_spirrep.T)
+            logger.debug('Position of U^T = [%s: %s + %s, %s: %s + %s]',
                          prev_ij, prev_ij, n[spirrep],
                          prev_kl, prev_kl, K[spirrep])
             X[prev_ij: prev_ij + n[spirrep],

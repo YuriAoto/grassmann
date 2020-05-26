@@ -530,6 +530,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                        print_info_to_log=False):
         """Yield String_Index or String_Index_for_SD
         
+        Parameters:
+        -----------
+        no_occ_orb (bool, optional, default)
+            does not add orbital occupation in the returned Index
+               (not implemented!!)
+        
         Behaviour:
         ----------
         This function defines the "std_pos" of the strings.
@@ -682,11 +688,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             + ' of gen_wf.Spirrep_Index.')
             else:
                 coupled_to = (coupled_to,)
+        logger.debug('only_this_occ:\n%s', only_this_occ)
         if spirrep is None:
             yield from self._string_indices_full_indices(
                 coupled_to,
                 no_occ_orb,
-                only_ref_occ,
                 only_this_occ,
                 print_info_to_log)
         else:
@@ -694,14 +700,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 spirrep,
                 coupled_to,
                 no_occ_orb,
-                only_ref_occ,
                 only_this_occ,
                 print_info_to_log)
 
     def _string_indices_full_indices(self,
                                      coupled_to=None,
                                      no_occ_orb=False,
-                                     only_ref_occ=False,
                                      only_this_occ=None,
                                      print_info_to_log=False):
         if (only_this_occ is None
@@ -1210,8 +1214,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     def _string_indices_spirrep(self, spirrep,
                                 coupled_to=None,
                                 no_occ_orb=False,
-                                only_ref_occ=False,
-                                only_this_occ=None):
+                                only_this_occ=None,
+                                print_info_to_log=False):
+        if print_info_to_log:
+            to_log = []
         does_yield = True
         if only_this_occ is None:
             only_this_occ = self.ref_occ
@@ -1340,6 +1346,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                                spirrep_cpl_to_other_spin,
                                                nel_case_cpl_to):
                     yield from self._string_indices_case_plus_2(spirrep)
+        if print_info_to_log:
+            logger.debug('\n'.join(to_log))
+
 
     def _string_indices_case_minus_2(self, spirrep):
         n_electrons = self.ref_occ[spirrep] - 2
