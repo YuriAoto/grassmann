@@ -734,7 +734,7 @@ class Wave_Function(ABC, Sequence):
         coupled_to (tuple, default=None)
             If passed, it should be a tuple of Spirrep_Index,
             and the function should yield all String_Index that have the
-            .I for .spirrep, or all Spirrep_String_Index of the
+            .Index for .spirrep, or all Spirrep_String_Index of the
             given spirrep that are coupled to spirrep for that wave function
         
         no_occ_orb (bool, default=False)

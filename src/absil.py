@@ -277,17 +277,15 @@ def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
     if F is None:
         F = calc_all_F(wf, U)
     f = 0.0
-    for I in wf.string_indices(no_occ_orb=True,
-                               only_this_occ=gen_wf.Orbitals_Sets(
-                                   list(map(lambda U_i: U_i.shape[1], U)))):
+    for Index in wf.string_indices(no_occ_orb=True,
+                                   only_this_occ=gen_wf.Orbitals_Sets(
+                                       list(map(lambda Ui: Ui.shape[1], U)))):
         f_contr = 1.0
-        for spirrep, I_spirrep in enumerate(I):
+        for spirrep, I_spirrep in enumerate(Index):
             if len(I_spirrep) == 0:
                 continue
-            I_spirrep.wf = wf
-            I_spirrep.spirrep = spirrep
             f_contr *= F[spirrep][int(I_spirrep)]
-        f += wf[I] * f_contr
+        f += wf[Index] * f_contr
     if not assume_orth:
         for U_spirrep in U:
             if U_spirrep.shape[0] * U_spirrep.shape[1] != 0:

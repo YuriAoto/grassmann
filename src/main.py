@@ -162,6 +162,9 @@ def dGr_main(args, f_out):
             with np.load(args.ini_orb) as ini_orb:
                 for k in range(len(ini_orb)):
                     U.append(ini_orb['arr_' + str(k)])
+            if not restricted and len(U) == ext_wf.n_irrep:
+                for k in range(len(U)):
+                    U.append(np.array(U[k]))
         else:
             U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.Molecular_Orbitals.from_file(args.WF_orb))

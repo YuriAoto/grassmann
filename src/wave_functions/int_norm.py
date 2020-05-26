@@ -53,8 +53,8 @@ class String_Index_for_SD(gen_wf.String_Index):
         if coupled_to is None:
             return True
         for cpl in coupled_to:
-            if (len(cpl.I) != len(self[cpl.spirrep])
-                    or int(cpl.I) != int(self[cpl.spirrep])):
+            if (len(cpl.Index) != len(self[cpl.spirrep])
+                    or int(cpl.Index) != int(self[cpl.spirrep])):
                 return False
         return True
 
@@ -710,6 +710,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 self.ref_occ, self.n_irrep)
             Index.exc_type = 'R'
             Index.C = 1.0 / self.norm
+            Index.set_wave_function(self)
             if Index.is_coupled_to(coupled_to):
                 yield Index
             for i_spirrep in self.spirrep_blocks():
@@ -763,6 +764,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             to_log = []
         Index = String_Index_for_SD.make_reference(self.ref_occ, self.n_irrep)
         Index.exc_type = 'S'
+        Index.set_wave_function(self)
         sign = (1 if
                 self.n_corr_orb[irp] % 2 == 0
                 else -1)
@@ -893,8 +895,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             irrep_a, irrep_b)
         if only_this_occ is not None:
             indices_occ = DoublesTypes(
-                *[gen_wf.Orbitals_Sets(occ) for occ in map(len, indices)])
-            if not only_this_occ not in indices_occ:
+                *[gen_wf.Orbitals_Sets(occ, occ_type='F')
+                  for occ in map(lambda x: list(map(len, x)), indices)])
+            if only_this_occ not in indices_occ:
                 return
         for a in range(self.n_ext[irrep_a]):
             for b in range(self.n_ext[irrep_b]):
@@ -945,7 +948,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         if indices.aaaa.is_coupled_to(coupled_to):
                             yield indices.aaaa
                     if (only_this_occ is None
-                            or indices.bbbb == only_this_occ):
+                            or indices_occ.bbbb == only_this_occ):
                         indices.bbbb[self.n_irrep + irrep_a][-1] = a_virt
                         if irrep_a != irrep_b:
                             indices.bbbb[self.n_irrep + irrep_b][-1] = b_virt
@@ -1238,7 +1241,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 cpl_to.spirrep + self.n_irrep
                 if cpl_to.spirrep < self.n_irrep else
                 cpl_to.spirrep - self.n_irrep)
-            nel_case_cpl_to = (len(coupled_to[0].I)
+            nel_case_cpl_to = (len(coupled_to[0].Index)
                                - self.ref_occ[cpl_to.spirrep])
             if -2 > nel_case_cpl_to < 2:
                 does_yield = False
@@ -1268,7 +1271,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 yield Index
                 if (coupled_to is None
                     or (nel_case_cpl_to == 0
-                        and int(cpl_to.I) < (
+                        and int(cpl_to.Index) < (
                             self.n_corr_orb[cpl_to.spirrep]
                             * self.n_ext[cpl_to.spirrep]
                             + 1))):
@@ -1290,7 +1293,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             Index[j] = j
                     if (coupled_to is None
                         or (nel_case_cpl_to == 0
-                            and int(cpl_to.I) == 0)):
+                            and int(cpl_to.Index) == 0)):
                         last_standard_position = int(Index)
                         Index = gen_wf.Spirrep_String_Index.make_hole(
                             n_electrons,
@@ -1422,14 +1425,14 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 return (nel_case_cpl_to == -this_nel_case
                         and (spirrep // self.n_irrep
                              == cpl_to.spirrep // self.n_irrep))
-            return nel_case_cpl_to == 0 and int(cpl_to.I) == 0
+            return nel_case_cpl_to == 0 and int(cpl_to.Index) == 0
         # Perhaps we can/have to consider n_irrep and see the possible
         # cases (irrep_i == irep_j, irrep_i == i_rrep_a, etc.)
         if abs(this_nel_case) == 1:
             if abs(nel_case_cpl_to) == 2:
                 return False
             if abs(nel_case_cpl_to) == 0:
-                return int(cpl_to.I) == 0
+                return int(cpl_to.Index) == 0
             return True
         return True
 
