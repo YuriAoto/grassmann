@@ -163,20 +163,17 @@ def dGr_main(args, f_out):
                 for k in range(len(ini_orb)):
                     U.append(ini_orb['arr_' + str(k)])
             if not restricted and len(U) == ext_wf.n_irrep:
-                for k in range(len(U)):
-                    U.append(np.array(U[k]))
+                orb.extend_to_unrestricted(U)
         else:
             U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.Molecular_Orbitals.from_file(args.WF_orb))
     else:
-        U = []  # SETO TO NONE
-        for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
-            U.append(np.identity(ext_wf.orb_dim[spirrep]))
-        toout('Using the reference determinant (identity)'
-              + ' as initial guess for U.')
-    if not orbRot_opt:
-        for spirrep in ext_wf.spirrep_blocks(restricted=restricted):
-            U[spirrep] = U[spirrep][:, :ext_wf.ref_occ[spirrep]]
+        U = orb.construct_Id_orbitals(ext_wf.ref_occ,
+                                      ext_wf.orb_dim,
+                                      (1
+                                       if restricted else
+                                       2) * ext_wf.n_irrep,
+                                      full=orbRot_opt)
 #    toout('Number of determinants in the external wave function: {0:d}'.
 #          format(len(ext_wf)))
     toout('Dimension of orbital space: {0:}'.
@@ -233,7 +230,8 @@ def dGr_main(args, f_out):
         toout('WARNING:'
               + ' First determinant is not the one with largest coefficient!')
         toout('  Coefficient of reference: {:.7f}'.format(res.f[0]))
-        toout('  Determinant with largest coefficient: {:s}'.format(str(res.f[1])))
+        toout('  Determinant with largest coefficient: {:s}'.
+              format(str(res.f[1])))
         final_f = res.f[0]
     else:
         final_f = res.f

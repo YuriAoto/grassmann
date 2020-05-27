@@ -1,44 +1,26 @@
 """Tests for wave_functions.int_norm
 
 """
-import logging
 import unittest
 
 import numpy as np
 
 from wave_functions import int_norm
-from test.testing_utils import assert_arrays
 from wave_functions.general import Orbitals_Sets
-
-dir_Li2 = 'Li2__R_5__631g__D2h'
-
-dirFix = '/home/yuriaoto/Documents/Codes/tests_will_become_obsolete/fixture/'
-H2_CISD_output_file = dirFix + 'H2__R_5__sto3g__D2h/CISD.out'
-He2_CISD_output_file = dirFix + 'He2__1.5__D2h/CISD.out'
-Li2_CISD_output_file = dirFix + dir_Li2 + '/CISD.out'
-
-log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
-              + '\n%(message)s\n')
-logging.basicConfig(filename='testing_logfile.log',
-                    format=log_format,
-                    filemode='a',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-init_random_state = 1234
+import test
 
 
 class StringIndices(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         # H2:
         self.H2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            H2_CISD_output_file)
+            test.CISD_file('H2_sto3g_D2h'))
         self.H2_wf.calc_norm()
         # He2:
         self.He2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            He2_CISD_output_file)
+            test.CISD_file('He2_631g_D2h'))
         self.He2_wf.calc_norm()
 
     def test_string_indices_singles(self):
@@ -211,9 +193,9 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n%s',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n%s',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(len(Index[0]), 1)
         self.assertEqual(Index[4], zero_arr_1)
         self.assertEqual(len(Index[8]), 1)
@@ -225,9 +207,9 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n%s',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n%s',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(len(Index[0]), 0)
         self.assertEqual(Index[4][:1], zero_arr_1)
         self.assertEqual(len(Index[8]), 0)
@@ -239,9 +221,9 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n%s',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n%s',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(Index[0][:1], zero_arr_1)
         self.assertEqual(len(Index[4]), 0)
         self.assertEqual(Index[8][:1], zero_arr_1)
@@ -253,9 +235,9 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n%s',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n%s',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(Index[0], zero_arr_1)
         self.assertEqual(len(Index[4]), 1)
         self.assertEqual(Index[8], zero_arr_1)
@@ -270,15 +252,15 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.DoublesTypes))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n'
-                    + 'baba: %s\nabab: %s\n'
-                    + 'abba: %s\nbaab: %s\n'
-                    + 'aaaa: %s\nbbbb: %s\n',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b,
-                    Index.baba, Index.abab,
-                    Index.abba, Index.baab,
-                    Index.aaaa, Index.bbbb)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n'
+                         + 'baba: %s\nabab: %s\n'
+                         + 'abba: %s\nbaab: %s\n'
+                         + 'aaaa: %s\nbbbb: %s\n',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b,
+                         Index.baba, Index.abab,
+                         Index.abba, Index.baab,
+                         Index.aaaa, Index.bbbb)
         # ----
         self.assertEqual(Index.baba[irrep_b + n_irrep], one_arr_1)
         self.assertEqual(Index.baba[irrep_a], one_arr_1)
@@ -311,15 +293,15 @@ class StringIndices(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.DoublesTypes))
-        logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                    + ' irrep_a = %d; irrep_b = %d:\n'
-                    + 'baba: %s\nabab: %s\n'
-                    + 'abba: %s\nbaab: %s\n'
-                    + 'aaaa: %s\nbbbb: %s\n',
-                    i, irrep_i, j, irrep_j, irrep_a, irrep_b,
-                    Index.baba, Index.abab,
-                    Index.abba, Index.baab,
-                    Index.aaaa, Index.bbbb)
+        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                         + ' irrep_a = %d; irrep_b = %d:\n'
+                         + 'baba: %s\nabab: %s\n'
+                         + 'abba: %s\nbaab: %s\n'
+                         + 'aaaa: %s\nbbbb: %s\n',
+                         i, irrep_i, j, irrep_j, irrep_a, irrep_b,
+                         Index.baba, Index.abab,
+                         Index.abba, Index.baab,
+                         Index.aaaa, Index.bbbb)
         # ----
         self.assertEqual(len(Index.baba[irrep_j + n_irrep]), 0)
         self.assertEqual(len(Index.baba[irrep_i]), 0)
@@ -365,7 +347,8 @@ class StringIndices(unittest.TestCase):
 
     def test_all_determinants(self):
         for Index in self.H2_wf.string_indices():
-            logger.info('%s', Index)
-        logger.info('%s', self.He2_wf.source)
+            test.logger.info('%s', Index)
+        test.logger.info('%s', self.He2_wf.source)
         for Index in self.He2_wf.string_indices():
-            logger.info('%f\n%s', self.He2_wf[Index]/self.He2_wf.C0, Index)
+            test.logger.info('%f\n%s',
+                             self.He2_wf[Index] / self.He2_wf.C0, Index)

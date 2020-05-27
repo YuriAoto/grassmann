@@ -2,4 +2,5 @@
 doc/min_dist_to_Gr.aux
 doc/min_dist_to_Gr.log
 doc/min_dist_to_Gr.out
-grassmann/testing_logfile.log
+grassmann/testing.log
+grassmann/test/inputs_outputs/*/*min_dist*

@@ -23,50 +23,15 @@ def assert_arrays(array1, array2, msg=None):
 
 def assert_occupations(occ1, occ2, msg=None):
     """Assert occupations. To be used with addTypeEqualityFunc"""
-    pass
-
-
-def extend_to_unrestricted(U):
-    """Extend U to include all irreps (but with same orbitals)"""
-    for i in range(len(U)):
-        U.append(np.array(U[i]))
-
-
-def construct_Id_orbitals(n, K, n_irrep,
-                          full=False):
-    """Return the identity for each irrep
-    
-    Parameters:
-    -----------
-    n (Iterable of int)
-        number of electrons in each irrep
-    
-    K (Iterable of int)
-        number of orbitals in each irrep
-    
-    n_irrep (int)
-        number of irreducible representations
-    
-    full (bool, optional, default=False)
-        If True, returns the full set of orbitals,
-        even for virtuals
-    
-    Returns:
-    --------
-        A list of np.ndarrays, with the orbitals of each (sp)irrep
-    
-    """
-    U = []
-    for irrep in range(n_irrep):
-        U.append(np.identity(K[irrep]))
-        if not full:
-            U[-1] = U[-1][:, :n[irrep]]
-    return U
+    raise NotImplementedError('To be done...')
 
 
 def construct_random_orbitals(n, K, n_irrep, random_state,
                               full=False, orthogonalise=True):
     """Return random coefficients for each irrep
+    
+    Similar to orbitals.construct_Id_orbitals, but generates
+    random coefficients.
     
     Parameters:
     -----------
@@ -81,7 +46,6 @@ def construct_random_orbitals(n, K, n_irrep, random_state,
     Returns:
     --------
         A list of np.ndarrays, with the orbitals of each (sp)irrep
-    
     """
     U = []
     for irrep in range(n_irrep):

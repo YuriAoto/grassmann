@@ -20,6 +20,43 @@ from wave_functions.int_norm import number_of_irreducible_repr
 logger = logging.getLogger(__name__)
 
 
+def construct_Id_orbitals(n, K, n_irrep,
+                          full=False):
+    """Return the identity for each irrep
+    
+    Parameters:
+    -----------
+    n (Iterable of int)
+        number of electrons in each irrep
+    
+    K (Iterable of int)
+        number of orbitals in each irrep
+    
+    n_irrep (int)
+        number of irreducible representations
+    
+    full (bool, optional, default=False)
+        If True, returns the full set of orbitals,
+        even for virtuals
+    
+    Returns:
+    --------
+        A list of np.ndarrays, with the orbitals of each (sp)irrep    
+    """
+    U = []
+    for irrep in range(n_irrep):
+        U.append(np.identity(K[irrep]))
+        if not full:
+            U[-1] = U[-1][:, :n[irrep]]
+    return U
+
+
+def extend_to_unrestricted(U):
+    """Double the entries of U, with same orbitals"""
+    for i in range(len(U)):
+        U.append(np.array(U[i]))
+
+
 def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
     """Completes the space spanned by the columns of U
     
