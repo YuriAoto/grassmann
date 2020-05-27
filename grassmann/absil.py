@@ -18,7 +18,7 @@ Functions:
 calc_all_F
 overlap_to_det
 generate_lin_system
-check_Newton_Absil_eq
+check_Newton_eq
 
 """
 import math
@@ -1157,10 +1157,14 @@ def check_Newton_eq(wf, U, eta, restricted, eps=0.001):
         logger.info('U.T @ U; spirrep = %d:\n%s',
                      spirp, np.matmul(U_irp.T, U_irp))
         logger.info('U[%d]:\n%s', spirp, U_irp)
+        logger.info('Uplus[%d]:\n%s', spirp, Uplus[spirp])
+        logger.info('Uminus[%d]:\n%s', spirp, Uminus[spirp])
         logger.info('eta[%d]:\n%s', spirp, eta_irp)
         logger.info('U.T @ eta [%d] (eta should be orth to U):\n%s',
                     spirp, U_T_eta)
         logger.info('Proj[%d]:\n%s', spirp, Proj)
+        logger.info('Proj_plus[%d]:\n%s', spirp, Proj_plus)
+        logger.info('Proj_minus[%d]:\n%s', spirp, Proj_minus)
         logger.info('grad[%d]:\n%s', spirp, grad)
         logger.info('Dgrad_plus[%d]:\n%s', spirp, Dgrad_plus)
         logger.info('Proj_plus @ Dgrad_plus[%d]:\n%s',
