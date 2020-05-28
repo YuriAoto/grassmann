@@ -16,11 +16,11 @@ class StringIndices(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         # H2:
         self.H2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('H2_sto3g_D2h'))
+            test.CISD_file('H2__R_5__sto3g__D2h'))
         self.H2_wf.calc_norm()
         # He2:
         self.He2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('He2_631g_D2h'))
+            test.CISD_file('He2__R_1.5__631g__D2h'))
         self.He2_wf.calc_norm()
 
     def test_string_indices_singles(self):

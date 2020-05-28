@@ -135,7 +135,9 @@ def parse_cmd_line():
                                     'CISD_Absil']:
         raise ParseError('Unknown algorithm: ' + cmd_args.algorithm
                          + '. Possible values:\n'
-                         + 'orb_rotations (default), general_Absil, and CISD_Absil')
+                         + 'orb_rotations (default), '
+                         + 'general_Absil, '
+                         + 'and CISD_Absil')
     if cmd_args.ini_orb is not None:
         if (cmd_args.ini_orb[-4:] == '.npz'
                 and os.path.isfile(cmd_args.ini_orb)):

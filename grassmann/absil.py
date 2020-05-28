@@ -1155,7 +1155,7 @@ def check_Newton_eq(wf, U, eta, restricted, eps=0.001):
                                    grad)
         # ---
         logger.info('U.T @ U; spirrep = %d:\n%s',
-                     spirp, np.matmul(U_irp.T, U_irp))
+                    spirp, np.matmul(U_irp.T, U_irp))
         logger.info('U[%d]:\n%s', spirp, U_irp)
         logger.info('Uplus[%d]:\n%s', spirp, Uplus[spirp])
         logger.info('Uminus[%d]:\n%s', spirp, Uminus[spirp])

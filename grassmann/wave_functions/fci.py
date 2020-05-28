@@ -65,8 +65,8 @@ def _get_Slater_Det_from_String_Index(Index, n_irrep,
                       occupation=final_occ)
 
 
-def _get_Slater_Det_from_FCI_line(molpro_output, l, line_number,
-                                  orb_dim, n_irrep, Ms,
+def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
+                                  molpro_output='', line_number=-1,
                                   zero_coefficients=False):
     """Read a FCI configuration from Molpro output and return a Slater Determinant
     
@@ -76,9 +76,6 @@ def _get_Slater_Det_from_FCI_line(molpro_output, l, line_number,
         The line with a configuration, from the FCI program in Molpro
         to be converted to a Slater Determinant.
     
-    line_number (int)
-        Line number of Molpro output
-    
     orb_dim (Orbitals_Sets)
         Dimension of orbital space
     
@@ -87,6 +84,12 @@ def _get_Slater_Det_from_FCI_line(molpro_output, l, line_number,
     
     Ms (float)
         Ms of total wave function (n_alpha - n_beta)/2
+    
+    molpro_output (str, optional, default='')
+        The output file name (only for error message)
+    
+    line_number (int, optional, default=-1)
+        The line number in Molpro output
     
     zero_coefficients (bool, optional, default=False)
         If True, the coefficient is set to zero and the value in l is discarded
@@ -404,11 +407,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     if 'EOF' in l:
                         break
                     new_Slater_Det = _get_Slater_Det_from_FCI_line(
-                        molpro_output,
-                        l, line_number,
-                        self.orb_dim,
-                        self.n_irrep,
-                        self.Ms,
+                        l, self.orb_dim, self.n_irrep, self.Ms,
+                        molpro_output=molpro_output,
+                        line_number=line_number,
                         zero_coefficients=zero_coefficients)
                     S += new_Slater_Det.c**2
                     if not zero_coefficients:

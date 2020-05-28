@@ -41,7 +41,7 @@ def construct_Id_orbitals(n, K, n_irrep,
     
     Returns:
     --------
-        A list of np.ndarrays, with the orbitals of each (sp)irrep    
+        A list of np.ndarrays, with the orbitals of each (sp)irrep
     """
     U = []
     for irrep in range(n_irrep):
