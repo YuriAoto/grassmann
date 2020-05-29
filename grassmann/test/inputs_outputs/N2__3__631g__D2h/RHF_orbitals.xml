@@ -1,0 +1,163 @@
+<?xml version="1.0"?>
+<molpro xmlns="http://www.molpro.net/schema/molpro-output"
+  xmlns:xsd="http://www.w3.org/1999/XMLSchema"
+  xmlns:cml="http://www.xml-cml.org/schema"
+  xmlns:stm="http://www.xml-cml.org/schema"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+ <molecule id="M1F64CF7" method="RHF" basis="6-31G" energy="-108.560379433159">
+  <cml:molecule id="M1F64CF7" spinMultiplicity="1" formalCharge="0">
+   <cml:symmetry pointGroup="D2h" irreducibleRepresentation="1"/>
+   <cml:atomArray>
+    <cml:atom id="a1" elementType="N" x3="0.0" y3="0.0" z3="-0.79376581638"/>
+    <cml:atom id="a2" elementType="N" x3="0.0" y3="0.0" z3="0.79376581638"/>
+   </cml:atomArray>
+   <cml:bondArray>
+    <cml:bond atomRefs2="a1 a2"/>
+   </cml:bondArray>
+  </cml:molecule>
+  <basisSet id="ORBITAL" length="18" angular="spherical" type="gaussian" groups="10"
+    cartesianLength="18" primitives="44">
+   <basisGroup id="1" minL="0" maxL="0" primitives="6" angular="spherical" contractions="1">
+    <basisExponents>
+      4173.5115 627.45791 142.90209 40.234329 12.820213 4.390437
+    </basisExponents>
+    <basisContraction id="1">
+      0.183477219861235E-02 0.139946269894158E-01 0.685865519481275E-01 0.232240869824355 0.469069949645239 0.360455199727385
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="2" minL="0" maxL="0" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      11.626362 2.7162798 0.7722184
+    </basisExponents>
+    <basisContraction id="1">
+      -0.114961185401854 -0.169117487946578 1.14585195384187
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="3" minL="0" maxL="0" primitives="1" angular="spherical" contractions="1">
+    <basisExponents>
+      0.2120315
+    </basisExponents>
+    <basisContraction id="1">
+      1.0
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="4" minL="1" maxL="1" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      11.626362 2.7162798 0.7722184
+    </basisExponents>
+    <basisContraction id="1">
+      0.675797437152265E-01 0.323907298635091 0.74089513687795
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="5" minL="1" maxL="1" primitives="1" angular="spherical" contractions="1">
+    <basisExponents>
+      0.2120315
+    </basisExponents>
+    <basisContraction id="1">
+      1.0
+    </basisContraction>
+   </basisGroup>
+   <association xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="extended">
+    <bases xlink:type="locator" xlink:label="bases"
+      xlink:href="#xpointer(//molecule[@id='M1F64CF7']//basisGroup[@id='1' or @id='2' or @id='3' or @id='4' or @id='5'])"/>
+    <atoms xlink:label="atoms"
+      xlink:href="#xpointer(//molecule[@id='M1F64CF7']//atom[@id='a1' or @id='a2'])"/>
+    <associate xlink:type="arc" xlink:from="atoms" xlink:to="bases"/>
+   </association>
+  </basisSet>
+  <orbitals basis="ORBITAL" angular="cartesian" spin="closed" method="RHF" type="CANONICAL"
+    stateID="1" state_symmetry="1" state_nelec="14" state_ms2="0">
+   <orbital occupation="2.0" energy="-15.817718" symmetryID="1">
+     0.704557238771129 0.136437620085008E-01 -0.27311274685449E-02 0.0 0.0 0.131119474205369E-02 0.0 0.0 -0.606279330534402E-03 0.704557238771129
+     0.136437620085008E-01 -0.27311274685449E-02 0.0 0.0 -0.131119474205369E-02 0.0 0.0 0.606279330534402E-03
+   </orbital>
+   <orbital occupation="2.0" energy="-1.22409" symmetryID="1">
+     -0.1509339975057 0.349305141508405 0.301017973438156 0.0 0.0 0.114134983238015 0.0 0.0 0.443875263772759E-01 -0.1509339975057
+     0.349305141508405 0.301017973438156 0.0 0.0 -0.114134983238015 0.0 0.0 -0.443875263772759E-01
+   </orbital>
+   <orbital occupation="2.0" energy="-0.554769" symmetryID="1">
+     0.442723878476605E-01 -0.108930369164016 -0.195552355923111 0.0 0.0 0.454697449758155 0.0 0.0 0.266441286626763 0.442723878476605E-01
+     -0.108930369164016 -0.195552355923111 0.0 0.0 -0.454697449758155 0.0 0.0 -0.266441286626763
+   </orbital>
+   <orbital occupation="0.0" energy="0.903566" symmetryID="1">
+     0.542580318215801E-01 -0.82733118872204 0.846722986023626 0.0 0.0 0.405746333699788 0.0 0.0 -0.485400547987934 0.542580318215801E-01
+     -0.82733118872204 0.846722986023626 0.0 0.0 -0.405746333699788 0.0 0.0 0.485400547987934
+   </orbital>
+   <orbital occupation="0.0" energy="1.081639" symmetryID="1">
+     0.344020684769165E-01 -0.724522332948934 0.437519734660275 0.0 0.0 -0.596325338526512 0.0 0.0 0.631021713301015 0.344020684769165E-01
+     -0.724522332948934 0.437519734660275 0.0 0.0 0.596325338526512 0.0 0.0 -0.631021713301015
+   </orbital>
+   <orbital occupation="2.0" energy="-0.47734" symmetryID="2">
+     0.0 0.0 0.0 0.416840415534607 0.0 0.0 0.328850994541791 0.0 0.0 0.0
+     0.0 0.0 0.416840415534607 0.0 0.0 0.328850994541791 0.0 0.0
+   </orbital>
+   <orbital occupation="0.0" energy="0.868813" symmetryID="2">
+     0.0 0.0 0.0 0.714945911097943 0.0 0.0 -0.628810881188501 0.0 0.0 0.0
+     0.0 0.0 0.714945911097943 0.0 0.0 -0.628810881188501 0.0 0.0
+   </orbital>
+   <orbital occupation="2.0" energy="-0.47734" symmetryID="3">
+     0.0 0.0 0.0 0.0 0.416840415534607 0.0 0.0 0.328850994541791 0.0 0.0
+     0.0 0.0 0.0 0.416840415534607 0.0 0.0 0.328850994541791 0.0
+   </orbital>
+   <orbital occupation="0.0" energy="0.868813" symmetryID="3">
+     0.0 0.0 0.0 0.0 0.714945911097943 0.0 0.0 -0.628810881188501 0.0 0.0
+     0.0 0.0 0.0 0.714945911097943 0.0 0.0 -0.628810881188501 0.0
+   </orbital>
+   <orbital occupation="2.0" energy="-15.817134" symmetryID="5">
+     0.70463706209315 0.141851788448324E-01 -0.657788269155579E-02 0.0 0.0 0.112514080872372E-02 0.0 0.0 -0.280319629521855E-02 -0.70463706209315
+     -0.141851788448324E-01 0.657788269155579E-02 0.0 0.0 0.112514080872372E-02 0.0 0.0 -0.280319629521855E-02
+   </orbital>
+   <orbital occupation="2.0" energy="-0.912087" symmetryID="5">
+     -0.161353526656848 0.388002912842758 0.445091900752675 0.0 0.0 -0.105312779173687 0.0 0.0 -0.238421475795185E-01 0.161353526656848
+     -0.388002912842758 -0.445091900752675 0.0 0.0 -0.105312779173687 0.0 0.0 -0.238421475795185E-01
+   </orbital>
+   <orbital occupation="0.0" energy="0.204035" symmetryID="5">
+     -0.742540521862759E-01 0.177652205085771 0.627842577583219 0.0 0.0 0.482688973822324 0.0 0.0 0.805218023411225 0.742540521862759E-01
+     -0.177652205085771 -0.627842577583219 0.0 0.0 0.482688973822324 0.0 0.0 0.805218023411225
+   </orbital>
+   <orbital occupation="0.0" energy="0.849313" symmetryID="5">
+     -0.336352304763994E-01 0.237457961614139 0.460241382728726 0.0 0.0 -0.656059592674243 0.0 0.0 1.22180722482348 0.336352304763994E-01
+     -0.237457961614139 -0.460241382728726 0.0 0.0 -0.656059592674243 0.0 0.0 1.22180722482348
+   </orbital>
+   <orbital occupation="0.0" energy="1.302419" symmetryID="5">
+     0.47242095136545E-02 -1.24756103685181 2.60639466520116 0.0 0.0 -0.147273732757777 0.0 0.0 1.40595551376197 -0.47242095136545E-02
+     1.24756103685181 -2.60639466520116 0.0 0.0 -0.147273732757777 0.0 0.0 1.40595551376197
+   </orbital>
+   <orbital occupation="0.0" energy="-0.027209" symmetryID="6">
+     0.0 0.0 0.0 0.461341232420269 0.0 0.0 0.447555058975022 0.0 0.0 0.0
+     0.0 0.0 -0.461341232420269 0.0 0.0 -0.447555058975022 0.0 0.0
+   </orbital>
+   <orbital occupation="0.0" energy="0.957466" symmetryID="6">
+     0.0 0.0 0.0 -0.699067981003951 0.0 0.0 0.959012518286772 0.0 0.0 0.0
+     0.0 0.0 0.699067981003951 0.0 0.0 -0.959012518286772 0.0 0.0
+   </orbital>
+   <orbital occupation="0.0" energy="-0.027209" symmetryID="7">
+     0.0 0.0 0.0 0.0 0.461341232420268 0.0 0.0 0.447555058975023 0.0 0.0
+     0.0 0.0 0.0 -0.461341232420268 0.0 0.0 -0.447555058975023 0.0
+   </orbital>
+   <orbital occupation="0.0" energy="0.957466" symmetryID="7">
+     0.0 0.0 0.0 0.0 -0.699067981003952 0.0 0.0 0.959012518286771 0.0 0.0
+     0.0 0.0 0.0 0.699067981003952 0.0 0.0 -0.959012518286771 0.0
+   </orbital>
+  </orbitals>
+  <stm:metadataList>
+   <stm:metadata name="dc:date" content="2020-03-20T18:50:33-03:00"/>
+   <stm:metadata name="dc:creator" content="yuriaoto"/>
+   <stm:metadata name="cmlm:insilico" content="Molpro"/>
+  </stm:metadataList>
+  <platform>
+   <version major="2019" minor="2" SHA="3a8a58c585c929645742fb5a1b7541a4ad1da699"
+     integer_bits="64" parallelism="serial">
+    2019.2
+    <date year="2020" month="3" day="20" hour="18" minute="50" second="32">
+     2020-03-20T18:50:32
+    </date>
+   </version>
+   <licence id="yuriaoto"/>
+   <parallel processes="1" nodes="1" all_processes="1" openmp="1"/>
+   <machine hostname="" architecture="">
+     64 bit serial version
+   </machine>
+  </platform>
+ </molecule>
+</molpro>

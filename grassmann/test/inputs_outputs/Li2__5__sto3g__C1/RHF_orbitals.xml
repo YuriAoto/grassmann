@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<molpro xmlns="http://www.molpro.net/schema/molpro-output"
+  xmlns:xsd="http://www.w3.org/1999/XMLSchema"
+  xmlns:cml="http://www.xml-cml.org/schema"
+  xmlns:stm="http://www.xml-cml.org/schema"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+ <molecule id="M4B51F57" method="RHF" basis="STO-3G" energy="-14.6386428339828">
+  <cml:molecule id="M4B51F57" spinMultiplicity="1" formalCharge="0">
+   <cml:symmetry pointGroup="C1" irreducibleRepresentation="1"/>
+   <cml:atomArray>
+    <cml:atom id="a1" elementType="Li" x3="0.0" y3="0.0" z3="-1.3229430273"/>
+    <cml:atom id="a2" elementType="Li" x3="0.0" y3="0.0" z3="1.3229430273"/>
+   </cml:atomArray>
+   <cml:bondArray>
+    <cml:bond atomRefs2="a1 a2"/>
+   </cml:bondArray>
+  </cml:molecule>
+  <basisSet id="ORBITAL" length="10" angular="spherical" type="gaussian" groups="6"
+    cartesianLength="10" primitives="30">
+   <basisGroup id="1" minL="0" maxL="0" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      16.119575 2.9362007 0.7946505
+    </basisExponents>
+    <basisContraction id="1">
+      0.154328970347867 0.535328141206663 0.444634541002234
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="2" minL="0" maxL="0" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      0.6362897 0.1478601 0.480887E-01
+    </basisExponents>
+    <basisContraction id="1">
+      -0.999672298047074E-01 0.399512829219525 0.700115468632278
+    </basisContraction>
+   </basisGroup>
+   <basisGroup id="3" minL="1" maxL="1" primitives="3" angular="spherical" contractions="1">
+    <basisExponents>
+      0.6362897 0.1478601 0.480887E-01
+    </basisExponents>
+    <basisContraction id="1">
+      0.155916265037481 0.607683700658579 0.391957377524739
+    </basisContraction>
+   </basisGroup>
+   <association xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="extended">
+    <bases xlink:type="locator" xlink:label="bases"
+      xlink:href="#xpointer(//molecule[@id='M4B51F57']//basisGroup[@id='1' or @id='2' or @id='3'])"/>
+    <atoms xlink:label="atoms"
+      xlink:href="#xpointer(//molecule[@id='M4B51F57']//atom[@id='a1' or @id='a2'])"/>
+    <associate xlink:type="arc" xlink:from="atoms" xlink:to="bases"/>
+   </association>
+  </basisSet>
+  <orbitals basis="ORBITAL" angular="cartesian" spin="closed" method="RHF" type="CANONICAL"
+    stateID="1" state_symmetry="1" state_nelec="6" state_ms2="0">
+   <orbital occupation="2.0" energy="-2.329751" symmetryID="1">
+     0.700876083262583 0.202395237118751E-01 0.142150241820952E-15 -0.201351386635875E-15 -0.143271702321637E-02 0.700876083287277 0.20239523713209E-01 -0.876207982288706E-16 0.158212870483223E-15 0.14327170229213E-02
+   </orbital>
+   <orbital occupation="2.0" energy="-2.329733" symmetryID="1">
+     0.70042498496685 0.37878718098854E-01 0.322343234453394E-15 -0.282214418773825E-18 0.838490907388388E-02 -0.70042498494214 -0.378787180981401E-01 0.385742041126802E-15 -0.257943069648673E-15 0.838490907393472E-02
+   </orbital>
+   <orbital occupation="2.0" energy="-0.150071" symmetryID="1">
+     -0.198883214578861 0.565965307311874 -0.228695823330758E-15 0.498528492880466E-16 0.101259590073727 -0.19888321457886 0.565965307311871 0.552184938552404E-16 -0.619376698380949E-16 -0.101259590073726
+   </orbital>
+   <orbital occupation="0.0" energy="0.083362" symmetryID="1">
+     -0.179035940073226 0.70044492377001 -0.128991845047958E-15 0.831468332345501E-16 -0.308051783221334 0.179035940073225 -0.700444923770011 -0.213386623353213E-15 0.114923566076522E-15 -0.308051783221334
+   </orbital>
+   <orbital occupation="0.0" energy="0.133057" symmetryID="1">
+     -0.435246224004387E-15 -0.393090381815546E-15 0.623221786838741 -0.770585633219769E-02 0.115260223693997E-14 0.449997632374438E-15 -0.616177201115247E-15 0.623221786838747 -0.77058563321984E-02 -0.144930540703782E-14
+   </orbital>
+   <orbital occupation="0.0" energy="0.133057" symmetryID="1">
+     0.213499935282735E-15 -0.298376848073749E-15 0.770585633219806E-02 0.623221786838742 0.943308022620708E-15 -0.924936202895232E-16 -0.374029248184945E-15 0.770585633219742E-02 0.623221786838748 -0.576102874765034E-15
+   </orbital>
+   <orbital occupation="0.0" energy="0.158281" symmetryID="1">
+     0.329761974687188E-01 -0.291071401896827 -0.111338901858776E-14 -0.985440266538531E-15 0.643088848172331 0.329761974687182E-01 -0.291071401896825 -0.159121147777074E-14 -0.463741591093798E-15 -0.643088848172332
+   </orbital>
+   <orbital occupation="0.0" energy="0.241814" symmetryID="1">
+     0.999029286798812E-16 -0.238330421131105E-15 -0.243921734016335 0.801174464737076 0.347927772773287E-15 0.329012289560211E-15 -0.233029941270733E-15 0.243921734016333 -0.801174464737072 -0.408654509979305E-15
+   </orbital>
+   <orbital occupation="0.0" energy="0.241814" symmetryID="1">
+     -0.871348564178458E-16 0.15873245965974E-15 0.801174464737076 0.243921734016334 -0.995502822760251E-16 -0.825650931222013E-16 0.146730851606578E-15 -0.801174464737072 -0.243921734016334 0.195464996842413E-15
+   </orbital>
+   <orbital occupation="0.0" energy="0.474348" symmetryID="1">
+     -0.136792288158305 1.26847202841107 0.898154736892337E-16 -0.341733642832308E-15 1.22170156938476 0.136792288158305 -1.26847202841107 0.14312404338902E-15 -0.352625551725088E-15 1.22170156938476
+   </orbital>
+  </orbitals>
+  <stm:metadataList>
+   <stm:metadata name="dc:date" content="2019-10-21T09:48:43-03:00"/>
+   <stm:metadata name="dc:creator" content="yuriaoto"/>
+   <stm:metadata name="cmlm:insilico" content="Molpro"/>
+  </stm:metadataList>
+  <platform>
+   <version major="2019" minor="2" SHA="3a8a58c585c929645742fb5a1b7541a4ad1da699"
+     integer_bits="64" parallelism="serial">
+    2019.2
+    <date year="2019" month="10" day="21" hour="9" minute="48" second="43">
+     2019-10-21T09:48:43
+    </date>
+   </version>
+   <licence id="yuriaoto"/>
+   <parallel processes="1" nodes="1" all_processes="1" openmp="1"/>
+   <machine hostname="" architecture="">
+     64 bit serial version
+   </machine>
+  </platform>
+ </molecule>
+</molpro>
