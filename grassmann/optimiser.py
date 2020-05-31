@@ -34,6 +34,7 @@ import orbitals as orb
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
+sqrt_2 = np.sqrt(2.0)
 
 np.set_printoptions(linewidth=150)
 
@@ -108,7 +109,7 @@ def optimise_overlap_orbRot(wf,
     f_out (file object, default = sys.stdout)
         The output
     
-    restricted (bool, default = False)
+    restricted (bool, default = True)
         Optimises the spatial part of both alpha and beta equally.
         It is not explicitly used!
         The code decides when use restricted calculation
@@ -222,6 +223,8 @@ def optimise_overlap_orbRot(wf,
         if Hess_has_pos_eig:
             logger.warning('Hessian has positive eigenvalue.')
         normJ = linalg.norm(Jac)
+        if restricted:
+            normJ /= sqrt_2
         if not try_uphill:
             # Newton step
             with logtime('Solving lin system for vector z.'):
@@ -486,6 +489,8 @@ def optimise_overlap_Absil(ci_wf,
         logger.debug('matrix X:\n%s', X)
         logger.debug('matrix C:\n%s', C)
         norm_C = linalg.norm(C)
+        if restricted:
+            norm_C *= sqrt_2
         logger.info('norm of matrix C: %.5e', norm_C)
         if norm_C < thrsh_C:
             converged_C = True
