@@ -78,7 +78,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         The external wave function is stored by its amplitudes.
     
     singles (list of np.ndarrays)
-        t_i^a = doubles[i_irrep][i,a]
+        t_i^a = singles[i_irrep][i,a]
         
         Each element of this list is associated
         to an spirrep. There are n_irrep entries for
@@ -195,6 +195,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     def __init__(self):
         super().__init__()
         self.norm = None
+        self.use_CISD_norm = True
         self.singles = None
         self.doubles = None
     
@@ -264,15 +265,19 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                        D_main.a, D_main.b))
 
     def calc_norm(self):
-        if self.WF_type == 'CISD':
+        if (self.WF_type == 'CISD'
+                or self.WF_type == 'CCSD' and self.use_CISD_norm):
             self.norm = 1.0
             S = 0.0
             for I in self.string_indices():
                 S += self[I]**2
             self.norm = math.sqrt(S)
+            logger.warning(
+                'We are calculating the CCSD norm'
+                + ' considering only SD determinants!!')
         elif self.WF_type == 'CCSD':
-            raise NotImplementedError(
-                'We can not calculate norm for CCSD yet!')
+            self.norm = 1.0
+            logger.warning('CCSD norm set to 1.0!!')
         else:
             raise ValueError(
                 'We do not know how to calculate the norm for '
@@ -298,6 +303,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     
     def ij_from_N(self, N):
         """Transform global index N to ij
+        
+        The returned indices i and j are relative to the correlated
+        orbitals only, that is, start at 0 for the first correlated
+        orbital (and thus core orbitals are excluded)
         
         Parameters:
         -----------
@@ -330,6 +339,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     
     def N_from_ij(self, i, j, i_irrep, j_irrep, exc_type):
         """Transform indices to the global index N
+        
+        The indices i and j are relative to the correlated
+        orbitals only, that is, start at 0 for the first correlated
+        orbital (and thus core orbitals are excluded)
         
         Parameters:
         -----------
@@ -656,8 +669,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         with too many inedentation levels
         """
         print_info_to_log = print_info_to_log and logger.level <= logging.DEBUG
-        if self.WF_type != 'CISD':
-            raise NotImplementedError('Currently works only for CISD')
+        if self.WF_type not in ['CISD', 'CCSD']:
+            raise NotImplementedError('Currently works only for CISD and CCSD')
+        if self.WF_type == 'CCSD':
+            logger.warning(
+                'string_indices yields only singly and doubly'
+                + ' excited determinants for CCSD!!')
         if only_ref_occ and only_this_occ is not None:
             raise ValueError(
                 'Do not give only_this_occ and set only_ref_occ to True.')
@@ -806,6 +823,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         """
         if print_info_to_log:
             to_log = []
+        add_CC_term = self.WF_type == 'CCSD' and irp_a == irp_i
         Index = self._make_occ_indices_for_doubles(
             i + self.n_core[irp_i], i + self.n_core[irp_i],
             irp_i, irp_i,
@@ -821,7 +839,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             for b in range(a + 1):
                 if print_info_to_log:
                     to_log.append('a b = {} {}'.format(a, b))
-                Index.C = D[a, b] / self.norm
+                Index.C = D[a, b]
+                if add_CC_term:
+                    Index.C += (self.singles[irp_i][i, a]
+                                * self.singles[irp_i][i, b])
+                Index.C /= self.norm
                 if Index.is_coupled_to(coupled_to):
                     yield Index
                 if a != b:
@@ -843,10 +865,16 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                              only_this_occ=None,
                              print_info_to_log=False):
         """
+         irrep_i > irrep_j only
          irrep_a > irrep_b only
+
         """
         if print_info_to_log:
             to_log = []
+        add_CC_term_ia = (self.WF_type == 'CCSD'
+                          and irrep_a == irrep_i)
+        add_CC_term_ib = (self.WF_type == 'CCSD'
+                          and irrep_b == irrep_i)
         # ----- sign determination:
         ij_nab_sign = (1
                        if (i + j
@@ -911,8 +939,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     to_log.append('a b = {} {}'.format(a, b))
                 a_virt = a + self.ref_occ[irrep_a]
                 b_virt = b + self.ref_occ[irrep_b]
+                C_ia_jb = D[a, b]
+                if add_CC_term_ia:
+                    C_ia_jb += (self.singles[irrep_i][i, a]
+                                * self.singles[irrep_j][j, b])
                 indices.abab.C = indices.baba.C = (
-                    abab_baba_sign * D[a, b] / self.norm)
+                    abab_baba_sign * C_ia_jb / self.norm)
                 if (only_this_occ is None
                         or indices_occ.baba == only_this_occ):
                     indices.baba[irrep_a][-1] = a_virt
@@ -926,8 +958,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     if indices.abab.is_coupled_to(coupled_to):
                         yield indices.abab
                 if irrep_a != irrep_b or a != b:
+                    C_ib_ja = D_other[b, a]
+                    if add_CC_term_ib:
+                        C_ib_ja += (self.singles[irrep_i][i, b]
+                                    * self.singles[irrep_j][j, a])
                     indices.abba.C = indices.baab.C = (
-                        abba_baab_sign * D_other[b, a] / self.norm)
+                        abba_baab_sign * C_ib_ja / self.norm)
                     if (only_this_occ is None
                             or indices_occ.abba == only_this_occ):
                         indices.abba[irrep_a][-1] = a_virt
@@ -941,7 +977,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         if indices.baab.is_coupled_to(coupled_to):
                             yield indices.baab
                     indices.aaaa.C = indices.bbbb.C = (
-                        aaaa_bbbb_sign * (D[a, b] - D_other[b, a]) / self.norm)
+                        aaaa_bbbb_sign * (C_ia_jb - C_ib_ja) / self.norm)
                     if (only_this_occ is None
                             or indices_occ.aaaa == only_this_occ):
                         indices.aaaa[irrep_a][-1] = a_virt
@@ -1349,7 +1385,6 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         if print_info_to_log:
             logger.debug('\n'.join(to_log))
 
-
     def _string_indices_case_minus_2(self, spirrep):
         n_electrons = self.ref_occ[spirrep] - 2
         Index = gen_wf.Spirrep_String_Index.make_hole(
@@ -1520,6 +1555,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         new_wf.initialize_data()
                     elif line == molpro_util.CCSD_header:
                         new_wf.WF_type = 'CCSD'
+                        new_wf.restricted = True
+                        new_wf.Ms = 0.0
+                        CIcalc_found = True
                         new_wf.initialize_data()
                 else:
                     if new_wf.WF_type == 'CCSD' or new_wf.WF_type == 'CISD':

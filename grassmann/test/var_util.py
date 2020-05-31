@@ -26,6 +26,10 @@ def CISD_file(inp_out_dir):
     return main_files_dir + inp_out_dir + '/CISD.out'
 
 
+def CCSD_file(inp_out_dir):
+    return main_files_dir + inp_out_dir + '/CCSD.out'
+
+
 def FC_CISD_file(inp_out_dir):
     return main_files_dir + inp_out_dir + '/FC_CISD.out'
 

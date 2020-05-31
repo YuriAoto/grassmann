@@ -269,11 +269,11 @@ def optimise_overlap_orbRot(wf,
                            normJ,
                            elapsed_time))
         i_max_coef = get_i_max_coef(cur_wf)
-        if i_max_coef > 0:
+        if i_max_coef != cur_wf.i_ref:
             f_out.write('   ^ Max coefficient: {}\n'.
                         format(str(cur_wf[i_max_coef])))
         f_out.flush()
-    if i_max_coef > 0:
+    if i_max_coef != cur_wf.i_ref:
         f_final = (cur_wf.C0, cur_wf[i_max_coef])
     else:
         f_final = cur_wf.C0

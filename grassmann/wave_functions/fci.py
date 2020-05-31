@@ -190,7 +190,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         super().__init__()
         self._all_determinants = []
         self.has_FCI_structure = False
-        self.i_ref = None
+        self._i_ref = None
     
     def __len__(self):
         return len(self._all_determinants)
@@ -326,7 +326,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         self.ref_occ = intN_wf.ref_occ
         self.WF_type = intN_wf.WF_type
         self.source = intN_wf.source
-        self.i_ref = None
+        self._i_ref = None
         if not use_structure:
             self._all_determinants = []
         for Index in intN_wf.string_indices():
@@ -436,10 +436,11 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                                                                'R')
                     if 'Active orbitals:' in l:
                         self.orb_dim = (self.n_core
-                                        + molpro_util.get_orb_info(l,
-                                                                   line_number,
-                                                                   self.n_irrep,
-                                                                   'R'))
+                                        + molpro_util.get_orb_info(
+                                            l,
+                                            line_number,
+                                            self.n_irrep,
+                                            'R'))
                     if 'Active electrons:' in l:
                         active_el_in_out = int(l.split()[2])
                     if 'Spin quantum number:' in l:
@@ -449,7 +450,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                         #     raise Exception('Only singlet wave functions!')
         self.ref_occ = general.Orbitals_Sets(list(map(len,
                                                       self[0].occupation)))
-        self.i_ref = None
+        self._i_ref = None
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),
                                            occ_type='A')
@@ -459,16 +460,20 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
+        
+    @property
+    def i_ref(self):
+        if self._i_ref is None:
+            for i, det in enumerate(self):
+                if self.get_exc_info(det, only_rank=True) == 0:
+                    self._i_ref = i
+                    break
+            if self._i_ref is None:
+                raise Exception('Did not find reference for wave function!')
+        return self._i_ref
     
     @property
     def C0(self):
-        if self.i_ref is None:
-            for i, det in enumerate(self):
-                if self.get_exc_info(det, only_rank=True) == 0:
-                    self.i_ref = i
-                    break
-            if self.i_ref is None:
-                raise Exception('Did not find reference for wave function!')
         return self[self.i_ref].c
     
     def get_exc_info(self, det, only_rank=False):

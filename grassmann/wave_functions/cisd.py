@@ -5,11 +5,14 @@ Classes:
 
 Wave_Function_CISD
 """
+import logging
 
 import numpy as np
 
 from util import triangular, get_n_from_triang
 from wave_functions import general
+
+logger = logging.getLogger(__name__)
 
 
 class Wave_Function_CISD(general.Wave_Function):
@@ -55,10 +58,14 @@ class Wave_Function_CISD(general.Wave_Function):
         with i>j and a>b.
     
     Csd (list of lists of 4D np.ndarrays)
-        C(_i^a)(_j^b) = Cd[irrep][irrep2][i,a,j,b]
+        C(_i^a)(_j^b) = Csd[irrep][irrep2][i,a,j,b]
         
         These are the coefficients of double excitations that are products
         of a single excitation in each spirrep.
+        If irrep == irrep2, it is the coefficient of an alpha/beta excitation
+        If irrep != irrep2, it is the sum of alpha/alpha plus alpha/beta
+        excitation.
+        
         Each entry is a 4D np.ndarray with shape
         
         (self.n_corr_orb[irrep], self.n_ext[irrep],
@@ -113,7 +120,8 @@ class Wave_Function_CISD(general.Wave_Function):
             for irrep2 in range(irrep + 1):
                 if 0 not in self.Csd[irrep][irrep2].shape:
                     x.append('Csd[{}][{}]:\n {}'.
-                             format(irrep, irrep2, repr(self.Csd[irrep][irrep2])))
+                             format(irrep, irrep2,
+                                    repr(self.Csd[irrep][irrep2])))
         return ('<(Partial) CISD Wave Function>\n'
                 + super().__repr__() + '\n'
                 + '\n'.join(x))
@@ -170,10 +178,18 @@ class Wave_Function_CISD(general.Wave_Function):
         new_wf.n_act = intN_wf.n_act
         new_wf.orb_dim = intN_wf.orb_dim
         new_wf.ref_occ = intN_wf.ref_occ
-        new_wf.WF_type = intN_wf.WF_type
-        if new_wf.WF_type != 'CISD':
+        if intN_wf.WF_type == 'CISD':
+            new_wf.WF_type = intN_wf.WF_type
+        elif intN_wf.WF_type == 'CCSD':
+            new_wf.WF_type = (
+                'CISD (with C_ij^ab = t_ij^ab + t_i^a t_j^b from CCSD)')
+        else:
             raise ValueError(
-                'This is to be used for CISD wave functions only!')
+                'This is to be used for CISD and CCSD wave functions only!')
+        if new_wf.WF_type == 'CCSD':
+            logger.warning(
+                'This is actually a CISD wave function using coefficients'
+                + ' from CCSD!!')
         if not new_wf.restricted:
             raise NotImplementedError(
                 'Currently for restricted wave functions only!')
@@ -187,59 +203,50 @@ class Wave_Function_CISD(general.Wave_Function):
         for N, doubles in enumerate(intN_wf.doubles):
             i, j, i_irrep, j_irrep, exc_type = intN_wf.ij_from_N(N)
             if i_irrep != j_irrep:
-                # This is how it was before!!
-                # Note that this way it is wrong, but it gives the same result
-                # as in algorithm 1. Thus: string_indices in int_N_WF is wrong
-                # (with analogous mistake) INVESTIGATE!!!
-                # for a in range(new_wf.n_ext[i_irrep]):
-                #     for b in range(new_wf.n_ext[j_irrep]):
-                #         new_wf.Csd[i_irrep][j_irrep][i, a, j, b] = \
-                #             doubles[j_irrep][b, a]
                 new_wf.Csd[i_irrep][j_irrep][i, :, j, :] = \
                     2 * doubles[i_irrep][:, :] - doubles[j_irrep][:, :].T
+                if intN_wf.WF_type == 'CCSD':
+                    new_wf.Csd[i_irrep][j_irrep][i, :, j, :] += (
+                        2 * np.outer(intN_wf.singles[i_irrep][i, :],
+                                     intN_wf.singles[j_irrep][j, :]))
                 if (i + new_wf.ref_occ[i_irrep]
                       + j + new_wf.ref_occ[j_irrep]) % 2 == 1:
                     new_wf.Csd[i_irrep][j_irrep][i, :, j, :] *= -1
             else:
+                # i_irrep == j_irrep
+                # and a_irrep == b_irrep, for this have only contrib from
+                # determinants with same occupation as the reference.
+                irp = i_irrep
+                singles = intN_wf.singles[irp]
                 if i != j:
                     ij = get_n_from_triang(i, j, with_diag=False)
-                for a in range(new_wf.n_ext[i_irrep]):
-                    for b in range(new_wf.n_ext[j_irrep]):
-                        if a == b and i == j:
-                            new_wf.Csd[i_irrep][j_irrep][i, a, j, b] +=\
-                                doubles[i_irrep][a, b]
-                        elif a == b:  # i != j
-                            new_wf.Csd[i_irrep][j_irrep][i, a, j, b] +=\
-                                doubles[i_irrep][a, b]
-                            new_wf.Csd[i_irrep][j_irrep][j, a, i, b] +=\
-                                doubles[i_irrep][a, b]
-                        elif i == j:  # a != b
-                            new_wf.Csd[i_irrep][j_irrep][i, a, j, b] +=\
-                                (doubles[i_irrep][a, b]
-                                 + doubles[i_irrep][b, a]) / 2
-                        else:  # a != b and i != j
-                            if a > b:
-                                new_wf.Csd[i_irrep][j_irrep][i, a, j, b] +=\
-                                    doubles[i_irrep][a, b]
-                                new_wf.Csd[i_irrep][j_irrep][j, a, i, b] +=\
-                                    doubles[i_irrep][b, a]
-                            else:  # b > a
-                                new_wf.Csd[i_irrep][j_irrep][j, a, i, b] +=\
-                                    doubles[i_irrep][b, a]
-                                new_wf.Csd[i_irrep][j_irrep][i, a, j, b] +=\
-                                    doubles[i_irrep][a, b]
+                new_wf.Csd[irp][irp][i, :, j, :] += doubles[irp][:, :]
+                new_wf.Csd[irp][irp][j, :, i, :] += doubles[irp][:, :].T
+                if intN_wf.WF_type == 'CCSD':
+                    new_wf.Csd[irp][irp][i, :, j, :] += np.outer(singles[i, :],
+                                                                 singles[j, :])
+                    new_wf.Csd[irp][irp][j, :, i, :] += np.outer(singles[j, :],
+                                                                 singles[i, :])
+                if i == j:
+                    new_wf.Csd[irp][irp][i, :, i, :] /= 2
                 if i != j:
-                    for a in range(new_wf.n_ext[i_irrep]):
+                    for a in range(new_wf.n_ext[irp]):
                         for b in range(a):
                             # Increment ab instead?? Check the order
                             ab = get_n_from_triang(a, b, with_diag=False)
-                            new_wf.Cd[i_irrep][ij, ab] =\
-                                (doubles[i_irrep][b, a]
-                                 - doubles[i_irrep][a, b])
+                            new_wf.Cd[irp][ij, ab] = (
+                                doubles[irp][b, a]
+                                - doubles[irp][a, b])
+                            if intN_wf.WF_type == 'CCSD':
+                                new_wf.Cd[irp][ij, ab] += (
+                                    intN_wf.singles[irp][i, b]
+                                    * intN_wf.singles[irp][j, a]
+                                    - intN_wf.singles[irp][i, a]
+                                    * intN_wf.singles[irp][j, b])
                 if (i + j) % 2 == 1:
-                    new_wf.Csd[i_irrep][j_irrep][i, :, j, :] *= -1
-                    new_wf.Csd[i_irrep][j_irrep][j, :, i, :] *= -1
-                    new_wf.Cd[i_irrep][ij, :] *= -1
+                    new_wf.Csd[irp][irp][i, :, j, :] *= -1
+                    new_wf.Csd[irp][irp][j, :, i, :] *= -1
+                    new_wf.Cd[irp][ij, :] *= -1
         if intN_wf.norm is None:
             intN_wf.calc_norm()
         new_wf.C0 /= intN_wf.norm
