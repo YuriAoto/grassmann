@@ -19,9 +19,9 @@ class Wave_Function_CISD(general.Wave_Function):
     """The CISD wave function
     
     For the moment, only restricted and including only
-    the coefficients that contribute to the distance to the
+    the coefficients as they contribute to the distance to the
     Grassmannian of the reference (that is, have the same occupation
-    of the reference in each spirrep block.
+    of the reference in each spirrep block).
     
     Atributes:
     ----------
@@ -29,8 +29,9 @@ class Wave_Function_CISD(general.Wave_Function):
         The coefficient of the reference determinant
     
     Cs (list of 2D np.ndarrays)
-        C_i^a = Cs[irrep][i,a]
+        C_i^a = Cs[irrep][i, a]
         
+        Coefficients of single excitations.
         Each element of this list is associated to an irrep.
         There are n_irrep entries (only restricted wave functions).
         Each entry is a 2D np.ndarray with shape
@@ -40,10 +41,10 @@ class Wave_Function_CISD(general.Wave_Function):
         storing the coefficients of the excitations from orbital i to a
     
     Cd (list of 2D np.ndarrays)
-        C_ij^ab = Cd[irrep][ij,ab]
+        C_ij^ab = Cd[irrep][ij, ab]
         
-        These are the coefficients of double excitations within
-        irrep that are pure double excitations in for a single spin
+        Coefficients of double excitations within a single spirrep.
+        These are "pure" double excitations a single spin and irrep.
         Each element of this list is associated to an irrep.
         There are n_irrep entries (only restricted wave functions).
         Each entry is a 2D np.ndarray with shape
@@ -84,11 +85,10 @@ class Wave_Function_CISD(general.Wave_Function):
     Data Model:
     -----------
     [(String_Index_for_SD)]
-        Only get the CI coefficient (of the normalised version!)
+        TODO: Only get the CI coefficient (of the normalised version!)
         of that determinant
     
     len
-        len(singles) + len(doubles).
         TODO: should be something more significant, such as the number
         determinants
         
@@ -101,10 +101,12 @@ class Wave_Function_CISD(general.Wave_Function):
         self.Csd = None
     
     def __getitem__(self, I):
-        raise NotImplementedError('[] is not implemented for CISD_WF!')
+        raise NotImplementedError(
+            '[] is not implemented for Wave_Function_CISD!')
 
     def __len__(self):
-        raise NotImplementedError('len() is not implemented for CISD_WF!')
+        raise NotImplementedError(
+            'len() is not implemented for Wave_Function_CISD!')
 
     def __repr__(self):
         x = ['C0 = {}'.format(self.C0)]
@@ -153,19 +155,19 @@ class Wave_Function_CISD(general.Wave_Function):
                        only_ref_occ=False,
                        only_this_occ=None):
         raise NotImplementedError(
-            'string_indices not implemented for CISD_WF!')
+            'string_indices not implemented for Wave_Function_CISD!')
     
     def make_Jac_Hess_overlap(self, analytic=True):
         raise NotImplementedError(
-            'make_Jac_Hess not implemented for CISD_WF!')
+            'make_Jac_Hess not implemented for Wave_Function_CISD!')
     
     def calc_wf_from_z(self, z, just_C0=False):
         raise NotImplementedError(
-            'calc_wf_from_z not implemented for CISD_WF!')
+            'calc_wf_from_z not implemented for Wave_Function_CISD!')
     
     def change_orb_basis(self, U, just_C0=False):
         raise NotImplementedError(
-            'change_orb_basis not implemented for CISD_WF!')
+            'change_orb_basis not implemented for Wave_Function_CISD!')
         
     @classmethod
     def from_intNorm(cls, intN_wf):

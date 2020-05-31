@@ -78,23 +78,21 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         The external wave function is stored by its amplitudes.
     
     singles (list of np.ndarrays)
-        t_i^a = singles[i_irrep][i,a]
+        t_i^a = singles[spirrep][i, a]
         
-        Each element of this list is associated
-        to an spirrep. There are n_irrep entries for
-        a restricted wave function, and 2*n_irrep for
-        an unrestricted wave function.
-        Each entry is an np.ndarray, with the amplitudes
-        of the excitations from orbital i to a:
+        Amplitudes of single excitations.
         
-        t_i^a (for a given spirrep) = singles[spirrep][i,a]
-        
-        The shape of the np.ndarray associated to spirrep is:
+        Each element of this list is associated to an spirrep.
+        There are n_irrep entries for a restricted wave function,
+        and 2*n_irrep for an unrestricted wave function.
+        Each entry is an 2D np.ndarray, with shape:
         
         (self.n_corr_orb[spirrep], self.n_ext[spirrep])
     
     doubles (list of list of np.ndarrays)
-        t_ij^ab = doubles[N][irrep_a][ a,b]
+        t_ij^ab = doubles[N][irrep_a][a, b]
+        
+        Amplitudes of double excitations
         
         Each element of this list is associated
         to a pair i,j (N) of occupied orbitals.

@@ -10,20 +10,18 @@ from wave_functions.general import Orbitals_Sets
 import test
 
 
-class StringIndices(unittest.TestCase):
+class He2StringIndicesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        # H2:
-        self.H2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('H2__R_5__sto3g__D2h'))
-        self.H2_wf.calc_norm()
-        # He2:
         self.He2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('He2__R_1.5__631g__D2h'))
+            test.CISD_file('He2__1.5__631g__D2h'))
         self.He2_wf.calc_norm()
+        self.He2_CCwf = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            test.CCSD_file('He2__1.5__631g__D2h'))
+        self.He2_CCwf.calc_norm()
 
-    def test_string_indices_singles(self):
+    def test_string_indices_singles_cisd_He2(self):
         irrep = 0
         for i, Index in enumerate(self.He2_wf._string_indices_sing_exc(irrep)):
             if i == 0 or i == 1:
@@ -71,7 +69,55 @@ class StringIndices(unittest.TestCase):
             else:
                 self.fail(msg='Too many indices!')
 
-    def test_string_indices_Dii(self):
+    def test_string_indices_singles_ccsd_He2(self):
+        irrep = 0
+        for i, Index in enumerate(self.He2_CCwf._string_indices_sing_exc(irrep)):
+            if i == 0 or i == 1:
+                with self.subTest('He2, C of singles',
+                                  i=i, irrep=irrep):
+                    self.assertAlmostEqual(Index.C,
+                                           0.00344764 / self.He2_CCwf.norm)
+                if i == 0:
+                    with self.subTest('He2, occ of singles',
+                                      i=i, irrep=irrep):
+                        self.assertEqual(Index[0].occ_orb,
+                                         np.array([1], dtype=np.int8))
+                        self.assertEqual(Index[8].occ_orb,
+                                         np.array([0], dtype=np.int8))
+                elif i == 1:
+                    with self.subTest('He2, occ of singles',
+                                      i=i, irrep=irrep):
+                        self.assertEqual(Index[0].occ_orb,
+                                         np.array([0], dtype=np.int8))
+                        self.assertEqual(Index[8].occ_orb,
+                                         np.array([1], dtype=np.int8))
+            else:
+                self.fail(msg='Too many indices!')
+        irrep = 4
+        for i, Index in enumerate(self.He2_CCwf._string_indices_sing_exc(irrep)):
+            if i == 0 or i == 1:
+                with self.subTest('He2, C of singles',
+                                  i=i, irrep=irrep):
+                    self.assertAlmostEqual(Index.C,
+                                           0.00240016 / self.He2_CCwf.norm)
+                if i == 0:
+                    with self.subTest('He2, occ of singles',
+                                      i=i, irrep=irrep):
+                        self.assertEqual(Index[4].occ_orb,
+                                         np.array([1], dtype=np.int8))
+                        self.assertEqual(Index[12].occ_orb,
+                                         np.array([0], dtype=np.int8))
+                elif i == 1:
+                    with self.subTest('He2, occ of singles',
+                                      i=i, irrep=irrep):
+                        self.assertEqual(Index[4].occ_orb,
+                                         np.array([0], dtype=np.int8))
+                        self.assertEqual(Index[12].occ_orb,
+                                         np.array([1], dtype=np.int8))
+            else:
+                self.fail(msg='Too many indices!')
+
+    def test_string_indices_Dii_cisd_He2(self):
         i = 0
         i_irrep = 0
         a_irrep = 0
@@ -140,7 +186,82 @@ class StringIndices(unittest.TestCase):
             else:
                 self.assertTrue(False, msg='Too many indices!')
 
-    def test_string_indices_Dij(self):
+    def test_string_indices_Dii_ccsd_He2(self):
+        i = 0
+        i_irrep = 0
+        a_irrep = 0
+        D = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, i, i_irrep, i_irrep, 'aa')][a_irrep]
+        for i_Ind, Index in enumerate(
+                self.He2_CCwf._string_indices_D_ii(i, i_irrep, a_irrep, D)):
+            if i == 0 or i == 1:
+                self.assertAlmostEqual(Index.C,
+                                       (-0.02692981 + 0.00344764**2)
+                                       / self.He2_CCwf.norm)
+                if i == 0:
+                    self.assertEqual(Index[0].occ_orb,
+                                     np.array([1], dtype=np.int8))
+                    self.assertEqual(Index[8].occ_orb,
+                                     np.array([1], dtype=np.int8))
+            else:
+                self.assertTrue(False, msg='Too many indices!')
+        # ----------
+        i = 0
+        i_irrep = 0
+        a_irrep = 4
+        D = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, i, i_irrep, i_irrep, 'aa')][a_irrep]
+        for i_Ind, Index in enumerate(
+                self.He2_CCwf._string_indices_D_ii(i, i_irrep, a_irrep, D)):
+            if i == 0 or i == 1:
+                self.assertAlmostEqual(Index.C,
+                                       -0.02730136 / self.He2_CCwf.norm)
+                if i == 0:
+                    self.assertEqual(Index[4].occ_orb,
+                                     np.array([0, 1], dtype=np.int8))
+                    self.assertEqual(Index[12].occ_orb,
+                                     np.array([0, 1], dtype=np.int8))
+            else:
+                self.assertTrue(False, msg='Too many indices!')
+        # ----------
+        i = 0
+        i_irrep = 4
+        a_irrep = 0
+        D = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, i, i_irrep, i_irrep, 'aa')][a_irrep]
+        for i_Ind, Index in enumerate(
+                self.He2_CCwf._string_indices_D_ii(i, i_irrep, a_irrep, D)):
+            if i_Ind == 0 or i_Ind == 1:
+                self.assertAlmostEqual(Index.C,
+                                       -0.03210796 / self.He2_CCwf.norm)
+                if i_Ind == 0:
+                    self.assertEqual(Index[0].occ_orb,
+                                     np.array([0, 1], dtype=np.int8))
+                    self.assertEqual(Index[8].occ_orb,
+                                     np.array([0, 1], dtype=np.int8))
+            else:
+                self.assertTrue(False, msg='Too many indices!')
+        # ----------
+        i = 0
+        i_irrep = 4
+        a_irrep = 4
+        D = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, i, i_irrep, i_irrep, 'aa')][a_irrep]
+        for i_Ind, Index in enumerate(
+                self.He2_CCwf._string_indices_D_ii(i, i_irrep, a_irrep, D)):
+            if i_Ind == 0 or i_Ind == 1:
+                self.assertAlmostEqual(Index.C,
+                                       (-0.05029521 + 0.00240016**2)
+                                       / self.He2_CCwf.norm)
+                if i_Ind == 0:
+                    self.assertEqual(Index[4].occ_orb,
+                                     np.array([1], dtype=np.int8))
+                    self.assertEqual(Index[12].occ_orb,
+                                     np.array([1], dtype=np.int8))
+            else:
+                self.assertTrue(False, msg='Too many indices!')
+
+    def test_string_indices_Dij_cisd_He2(self):
         i = j = 0
         i_irrep = 4
         j_irrep = 0
@@ -184,7 +305,53 @@ class StringIndices(unittest.TestCase):
                                        (-0.03492970 - -0.02890619)
                                        / self.He2_wf.norm)
 
-    def test_make_occ_ind_doub(self):
+    def test_string_indices_Dij_ccsd_He2(self):
+        i = j = 0
+        i_irrep = 4
+        j_irrep = 0
+        a_irrep = 4
+        b_irrep = 0
+        D = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, j, i_irrep, j_irrep, 'aa')][a_irrep]
+        D_other = self.He2_CCwf.doubles[self.He2_CCwf.N_from_ij(
+            i, j, i_irrep, j_irrep, 'aa')][b_irrep]
+        for i_Ind, Index in enumerate(
+                self.He2_CCwf._string_indices_D_ij(
+                    i, j, i_irrep, j_irrep, a_irrep, b_irrep, D, D_other)):
+            if i_Ind == 0:
+                # baba
+                self.assertAlmostEqual(Index.C,
+                                       (-0.03508008 + 0.00344764 * 0.00240016)
+                                       / self.He2_CCwf.norm)
+            elif i_Ind == 1:
+                # abab
+                self.assertAlmostEqual(Index.C,
+                                       (-0.03508008 + 0.00344764 * 0.00240016)
+                                       / self.He2_CCwf.norm)
+            elif i_Ind == 2:
+                # abba
+                self.assertAlmostEqual(Index.C,
+                                       -(-0.02903510)
+                                       / self.He2_CCwf.norm)
+            elif i_Ind == 3:
+                # baab
+                self.assertAlmostEqual(Index.C,
+                                       -(-0.02903510)
+                                       / self.He2_CCwf.norm)
+            elif i_Ind == 4:
+                # aaaa
+                self.assertAlmostEqual(Index.C,
+                                       (-0.03508008 + 0.00344764 * 0.00240016
+                                        - -0.02903510)
+                                       / self.He2_CCwf.norm)
+            elif i_Ind == 0:
+                # bbbb
+                self.assertAlmostEqual(Index.C,
+                                       (-0.03508008 + 0.00344764 * 0.00240016
+                                        - -0.02903510)
+                                       / self.He2_CCwf.norm)
+
+    def test_make_occ_ind_doub_He2(self):
         zero_arr_1 = np.array([0], dtype=np.int8)
         one_arr_1 = np.array([1], dtype=np.int8)
         i = j = 0
@@ -326,7 +493,7 @@ class StringIndices(unittest.TestCase):
         self.assertEqual(Index.bbbb[irrep_a + n_irrep], one_arr_1)
         # ----------
 
-    def test_string_indices_spirrep(self):
+    def test_string_indices_spirrep_He2(self):
         for i_Ind, Index in enumerate(self.He2_wf._string_indices_spirrep(0)):
             if i_Ind == 0:
                 self.assertEqual(Index.occ_orb,
@@ -345,10 +512,3 @@ class StringIndices(unittest.TestCase):
             else:
                 self.assertTrue(False, msg='Too many indices!')
 
-    def test_all_determinants(self):
-        for Index in self.H2_wf.string_indices():
-            test.logger.info('%s', Index)
-        test.logger.info('%s', self.He2_wf.source)
-        for Index in self.He2_wf.string_indices():
-            test.logger.info('%f\n%s',
-                             self.He2_wf[Index] / self.He2_wf.C0, Index)
