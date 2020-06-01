@@ -15,13 +15,245 @@ import test
 np.set_printoptions(formatter={'all': lambda x: '{0:>9.6f}'.format(x)})
 
 
+class YieldExcitations523TestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.n_el = 5
+        self.n_corr = 2
+        self.n_ext = 3
+
+    def test_all_singles(self):
+        for i_Ind, ia_Ind in enumerate(
+                absil._all_singles(self.n_el, self.n_corr, self.n_ext)):
+            i, a, Ind = ia_Ind
+            if i_Ind == 0:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5],
+                                                   dtype=int))
+            elif i_Ind == 1:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6],
+                                                   dtype=int))
+            elif i_Ind == 2:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 7],
+                                                   dtype=int))
+            elif i_Ind == 3:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5],
+                                                   dtype=int))
+            elif i_Ind == 4:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6],
+                                                   dtype=int))
+            elif i_Ind == 5:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 7],
+                                                   dtype=int))
+            else:
+                self.fail('Too many indices')
+
+    def test_all_doubles(self):
+        for i_Ind, ijab_Ind in enumerate(
+                absil._all_doubles(self.n_el, self.n_corr, self.n_ext)):
+            i, j, a, b, Ind = ijab_Ind
+            if i_Ind == 0:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6],
+                                                   dtype=int))
+            elif i_Ind == 1:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 7],
+                                                   dtype=int))
+            elif i_Ind == 2:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 6, 7],
+                                                   dtype=int))
+            else:
+                self.fail('Too many indices')
+
+
+class YieldExcitations633TestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.n_el = 6
+        self.n_corr = 3
+        self.n_ext = 3
+
+    def test_all_singles(self):
+        for i_Ind, ia_Ind in enumerate(
+                absil._all_singles(self.n_el, self.n_corr, self.n_ext)):
+            i, a, Ind = ia_Ind
+            if i_Ind == 0:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 6],
+                                                   dtype=int))
+            elif i_Ind == 1:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 7],
+                                                   dtype=int))
+            elif i_Ind == 2:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 8],
+                                                   dtype=int))
+            elif i_Ind == 3:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 6],
+                                                   dtype=int))
+            elif i_Ind == 4:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 7],
+                                                   dtype=int))
+            elif i_Ind == 5:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 8],
+                                                   dtype=int))
+            elif i_Ind == 6:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(a, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 6],
+                                                   dtype=int))
+            elif i_Ind == 7:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 7],
+                                                   dtype=int))
+            elif i_Ind == 8:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 8],
+                                                   dtype=int))
+            else:
+                self.fail('Too many indices')
+
+    def test_all_doubles(self):
+        for i_Ind, ijab_Ind in enumerate(
+                absil._all_doubles(self.n_el, self.n_corr, self.n_ext)):
+            i, j, a, b, Ind = ijab_Ind
+            if i_Ind == 0:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 7],
+                                                   dtype=int))
+            elif i_Ind == 1:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 8],
+                                                   dtype=int))
+            elif i_Ind == 2:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 1)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 7, 8],
+                                                   dtype=int))
+            elif i_Ind == 3:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 7],
+                                                   dtype=int))
+            elif i_Ind == 4:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 8],
+                                                   dtype=int))
+            elif i_Ind == 5:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 0)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 7, 8],
+                                                   dtype=int))
+            elif i_Ind == 6:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 1)
+                    self.assertEqual(a, 1)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 7],
+                                                   dtype=int))
+            elif i_Ind == 7:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 1)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 0)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 8],
+                                                   dtype=int))
+            elif i_Ind == 8:
+                with self.subTest(i_Ind=i_Ind):
+                    self.assertEqual(i, 2)
+                    self.assertEqual(j, 1)
+                    self.assertEqual(a, 2)
+                    self.assertEqual(b, 1)
+                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 7, 8],
+                                                   dtype=int))
+            else:
+                self.fail('Too many indices')
+
+
 class CalcOverlap(unittest.TestCase):
 
     def setUp(self):
         prng = np.random.RandomState(test.init_random_state)
         # H2:
         self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
-                test.CISD_file('H2__R_5__sto3g__D2h'))
+                test.CISD_file('H2__5__sto3g__D2h'))
         self.intN_wf_H2.calc_norm()
         self.wf_H2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_occ,
@@ -29,7 +261,7 @@ class CalcOverlap(unittest.TestCase):
                                                      self.wf_H2.n_irrep)
         # Li2:
         self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('Li2__R_5__631g__C2v'))
+            test.CISD_file('Li2__5__631g__C2v'))
         self.intN_wf_Li2.calc_norm()
         self.wf_Li2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
@@ -119,7 +351,7 @@ class CalcXCmatrices(unittest.TestCase):
         prng = np.random.RandomState(test.init_random_state)
         # H2:
         self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('H2__R_5__sto3g__D2h'))
+            test.CISD_file('H2__5__sto3g__D2h'))
         self.intN_wf_H2.calc_norm()
         self.wf_H2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
@@ -128,7 +360,7 @@ class CalcXCmatrices(unittest.TestCase):
             self.wf_H2.n_irrep)
         # Li2:
         self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('Li2__R_5__631g__C2v'))
+            test.CISD_file('Li2__5__631g__C2v'))
         self.intN_wf_Li2.calc_norm()
         self.wf_Li2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(

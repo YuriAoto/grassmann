@@ -391,8 +391,8 @@ def _all_singles(n_el, n_corr, n_ext):
     """Generator that yield all single excitations, as (i,a,I)"""
     n_core = n_el - n_corr
     Index = np.zeros(n_el, dtype=int)
-    Index[:n_core] = np.arange(n_core)
-    Index[n_core:-1] = np.arange(n_core + 1, n_el)
+    Index[:n_core] = np.arange(n_core, dtype=int)
+    Index[n_core:-1] = np.arange(n_core + 1, n_el, dtype=int)
     for i in range(n_corr):
         for a in range(n_ext):
             Index[-1] = n_el + a
@@ -403,12 +403,9 @@ def _all_singles(n_el, n_corr, n_ext):
 def _all_doubles(n_el, n_corr, n_ext):
     """Generator that yield all double excitations, as (i,j,a,b,I)"""
     n_core = n_el - n_corr
-#    print('--------')
-#    print('n_el = {}, n_corr = {}, n_ext = {}'.format(
-#        n_el, n_corr, n_ext))
     Index = np.zeros(n_el, dtype=int)
-    Index[:n_core] = np.arange(n_core)
-    Index[n_core:-2] = np.arange(n_core + 2, n_el)
+    Index[:n_core] = np.arange(n_core, dtype=int)
+    Index[n_core:-2] = np.arange(n_core + 2, n_el, dtype=int)
     for j in range(n_corr):
         for i in range(j + 1, n_corr):
             for a in range(n_ext):
@@ -417,12 +414,12 @@ def _all_doubles(n_el, n_corr, n_ext):
                     Index[-2] = (n_el
                                  if b == 0 else
                                  (Index[-2] + 1))
-#                    print('i={},j={},a={},b={}\nI={}'.format(i,j,a,b,I))
                     yield i, j, a, b, Index
-            Index[i - 1] = i
+            Index[n_core + i - 1] = n_core + i
         if j < n_corr:
-            Index[j] = j
-            Index[j + 1:-2] = np.arange(j + 3, n_el, dtype=int)
+            Index[n_core + j] = n_core + j
+            Index[n_core + j + 1:-2] = np.arange(n_core + j + 3,
+                                                 n_el, dtype=int)
 
 
 def _generate_lin_system_from_restricted_CISD(

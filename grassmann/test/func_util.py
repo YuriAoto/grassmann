@@ -7,17 +7,21 @@ from scipy import linalg
 def assert_arrays(array1, array2, msg=None):
     """Asserts arrays. To be used with addTypeEqualityFunc"""
     if array1.shape != array2.shape:
-        raise unittest.TestCase.failureException(msg)
+        raise unittest.TestCase.failureException(
+            str(array1) + ' != ' + str(array2))
     if len(array1) == 0:
         return True
     if array1.dtype != array2.dtype:
-        raise unittest.TestCase.failureException(msg)
+        raise unittest.TestCase.failureException(
+            str(array1) + ' != ' + str(array2))
     if (np.issubdtype(array1.dtype, np.integer)
             and not (array1 == array2).all()):
-        raise unittest.TestCase.failureException(msg)
+        raise unittest.TestCase.failureException(
+            str(array1) + ' != ' + str(array2))
     if (np.issubdtype(array1.dtype, np.floating)
             and not np.allclose(array1, array2, rtol=1e-05, atol=1e-08)):
-        raise unittest.TestCase.failureException(msg)
+        raise unittest.TestCase.failureException(
+            str(array1) + ' != ' + str(array2))
     return True
 
 
