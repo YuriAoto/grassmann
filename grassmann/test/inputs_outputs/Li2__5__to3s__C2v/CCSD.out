@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023239/molpro.xN7zwt34el
- Secondary working directories  : /scr/yuriaoto/job.023239/molpro.xN7zwt34el
- Wavefunction directory         : /scr/yuriaoto/job.023239/
- Main file repository           : /scr/yuriaoto/job.023239/molpro.xN7zwt34el/
+ Primary working directories    : /scr/yuriaoto/job.023479/molpro.wA1ivLh1K9
+ Secondary working directories  : /scr/yuriaoto/job.023479/molpro.wA1ivLh1K9
+ Wavefunction directory         : /scr/yuriaoto/job.023479/
+ Main file repository           : /scr/yuriaoto/job.023479/molpro.wA1ivLh1K9/
 
  id        : yuriaoto
 
@@ -23,12 +23,11 @@
  {ccsd,CC_NORM_MAX=10.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,6,1,0;
  }
  
- Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.04 sec
+ Commands  initialized (760), CPU time= 0.00 sec, 617 directives.
+ Default parameters read. Elapsed time= 0.03 sec
 
  Checking input...
  Passed
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 30-May-20          TIME: 20:12:06  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:52:14  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -113,8 +112,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.12      0.01
- REAL TIME  *         0.15 SEC
+ CPU TIMES  *         0.09      0.02
+ REAL TIME  *         0.11 SEC
  DISK USED  *        26.84 MB
  **********************************************************************************************************************************
 
@@ -221,8 +220,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.26      0.15      0.01
- REAL TIME  *         0.43 SEC
+ CPU TIMES  *         0.19      0.10      0.02
+ REAL TIME  *         0.39 SEC
  DISK USED  *        49.42 MB
  **********************************************************************************************************************************
 
@@ -239,16 +238,17 @@
 
  Convergence thresholds:  THRVAR = 1.00D-24  THRDEN = 1.00D-10
 
- Number of closed-shell orbitals:   3 (   3 )
+ Number of core orbitals:           2 (   2 )
+ Number of closed-shell orbitals:   1 (   1 )
  Number of external orbitals:       3 (   3 )
 
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
 
- Number of N-1 electron functions:               3
- Number of N-2 electron functions:               6
- Number of singly external CSFs:                 9
- Number of doubly external CSFs:                45
- Total number of CSFs:                          55
+ Number of N-1 electron functions:               1
+ Number of N-2 electron functions:               1
+ Number of singly external CSFs:                 3
+ Number of doubly external CSFs:                 6
+ Total number of CSFs:                          10
 
  Length of J-op  integral file:               0.00 MB
  Length of K-op  integral file:               0.03 MB
@@ -258,148 +258,80 @@
 
  Reference energy:                    -14.86011275
 
- MP2 singlet pair energy:              -0.00671909
- MP2 triplet pair energy:              -0.00000001
- MP2 correlation energy:               -0.00671910
- MP2 total energy:                    -14.86683185
+ MP2 singlet pair energy:              -0.00666836
+ MP2 triplet pair energy:               0.00000000
+ MP2 correlation energy:               -0.00666836
+ MP2 total energy:                    -14.86678111
 
- SCS-MP2 correlation energy:           -0.00806291   (PS=  1.200000  PT=  0.333333)
- SCS-MP2 total energy:                -14.86817566
+ SCS-MP2 correlation energy:           -0.00800203   (PS=  1.200000  PT=  0.333333)
+ SCS-MP2 total energy:                -14.86811478
 
  ITER.      SQ.NORM     CORR.ENERGY   TOTAL ENERGY   ENERGY CHANGE        DEN1      VAR(S)    VAR(P)  DIIS     TIME  TIME/IT
-   1      1.02675358    -0.01174764   -14.87186039    -0.00502854    -0.00253353  0.42D-05  0.21D-02  1  1     0.02     0.00
-   2      1.06275330    -0.01468343   -14.87479618    -0.00293579    -0.00468046  0.68D-05  0.12D-03  2  2     0.02     0.00
-   3      1.06812524    -0.01459835   -14.87471110     0.00008508    -0.00046271  0.15D-05  0.23D-04  3  3     0.02     0.00
-   4      1.07110902    -0.01459104   -14.87470379     0.00000731    -0.00018810  0.11D-07  0.17D-06  4  4     0.02     0.00
-   5      1.07151210    -0.01462164   -14.87473439    -0.00003060    -0.00003573  0.51D-08  0.26D-07  5  5     0.02     0.00
-   6      1.07152293    -0.01461990   -14.87473265     0.00000175    -0.00000022  0.83D-09  0.84D-10  6  6     0.03     0.00
-   7      1.07149648    -0.01461731   -14.87473005     0.00000259     0.00000255  0.24D-09  0.14D-10  6  1     0.03     0.00
-   8      1.07149788    -0.01461744   -14.87473019    -0.00000014    -0.00000012  0.16D-10  0.55D-11  6  3     0.03     0.00
-   9      1.07149727    -0.01461737   -14.87473012     0.00000007     0.00000006  0.28D-13  0.78D-12  6  4     0.03     0.00
-  10      1.07149748    -0.01461738   -14.87473013    -0.00000001    -0.00000002  0.11D-12  0.52D-13  6  2     0.04     0.00
-  11      1.07149745    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.74D-14  0.26D-14  6  5     0.04     0.00
-  12      1.07149746    -0.01461738   -14.87473013     0.00000000    -0.00000000  0.20D-16  0.27D-16  6  6     0.04     0.00
-  13      1.07149747    -0.01461738   -14.87473013     0.00000000    -0.00000000  0.79D-18  0.66D-17  6  1     0.04     0.00
-  14      1.07149747    -0.01461738   -14.87473013     0.00000000    -0.00000000  0.16D-18  0.11D-17  6  3     0.04     0.00
-  15      1.07149747    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.16D-19  0.59D-19  6  4     0.05     0.00
-  16      1.07149747    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.20D-20  0.97D-20  6  2     0.05     0.00
-  17      1.07149747    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.39D-22  0.11D-20  6  5     0.05     0.00
-  18      1.07149747    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.34D-23  0.11D-21  6  6     0.05     0.00
-  19      1.07149747    -0.01461738   -14.87473013    -0.00000000     0.00000000  0.83D-25  0.13D-22  6  1     0.05     0.00
-  20      1.07149747    -0.01461738   -14.87473013     0.00000000    -0.00000000  0.28D-24  0.14D-24  6  3     0.06     0.00
+   1      1.02676082    -0.01171053   -14.87182328    -0.00504217    -0.00254551  0.43D-05  0.21D-02  1  1     0.01     0.00
+   2      1.06550043    -0.01468246   -14.87479521    -0.00297193    -0.00496980  0.66D-05  0.94D-04  2  2     0.01     0.00
+   3      1.06925432    -0.01437898   -14.87449173     0.00030348    -0.00018563  0.16D-07  0.43D-06  3  3     0.01     0.00
+   4      1.07402280    -0.01481986   -14.87493261    -0.00044088    -0.00044807  0.50D-08  0.23D-07  4  4     0.01     0.00
+   5      1.07145470    -0.01457536   -14.87468811     0.00024450     0.00024187  0.18D-08  0.68D-11  5  5     0.01     0.00
+   6      1.07144211    -0.01457386   -14.87468661     0.00000150     0.00000165  0.26D-28  0.30D-28  6  6     0.01     0.00
+   7      1.07151327    -0.01458100   -14.87469374    -0.00000713    -0.00000713  0.30D-29  0.13D-28  6  3     0.01     0.00
+   8      1.07153582    -0.01458302   -14.87469576    -0.00000202    -0.00000202  0.15D-32  0.14D-29  6  1     0.01     0.00
+   9      1.07154282    -0.01458365   -14.87469640    -0.00000063    -0.00000063  0.12D-30  0.57D-31  6  2     0.01     0.00
+  10      1.07154282    -0.01458365   -14.87469640     0.00000000     0.00000000  0.25D-30  0.33D-30  6  4     0.01     0.00
+  11      1.07154282    -0.01458365   -14.87469640    -0.00000000    -0.00000000  0.35D-30  0.43D-29  6  5     0.01     0.00
 
- Norm of t1 vector:      0.01188999      S-energy:    -0.00000000      T1 diagnostic:  0.00343234
-                                                                       D1 diagnostic:  0.00839941
+ Norm of t1 vector:      0.01199882      S-energy:    -0.00000000      T1 diagnostic:  0.00599941
+                                                                       D1 diagnostic:  0.00848445
 
  Singles amplitudes (print threshold =  0.000E+00):
 
          I         SYM. A    A   T(IA)
 
-         1         1         1     -0.00000000
-         1         1         2     -0.00008395
-         1         1         3      0.00000000
-         2         1         1      0.00031693
-         2         1         2     -0.00000000
-         2         1         3     -0.00018821
-         3         1         1      0.00000000
-         3         1         2     -0.00839899
-         3         1         3     -0.00000000
+         1         1         1      0.00000000
+         1         1         2     -0.00848445
+         1         1         3     -0.00000000
 
  Doubles amplitudes (print threshold =  0.000E+00):
 
          I         J         SYM. A    SYM. B    A         B      T(IJ, AB)
 
-         1         1         1         1         1         1     -0.00037633
+         1         1         1         1         1         1     -0.22283619
          1         1         1         1         1         2      0.00000000
-         1         1         1         1         1         3      0.00058238
+         1         1         1         1         1         3      0.09314178
          1         1         1         1         2         1      0.00000000
-         1         1         1         1         2         2     -0.00032092
+         1         1         1         1         2         2     -0.04730159
          1         1         1         1         2         3     -0.00000000
-         1         1         1         1         3         1      0.00058238
+         1         1         1         1         3         1      0.09314178
          1         1         1         1         3         2     -0.00000000
-         1         1         1         1         3         3     -0.00071555
-         2         1         1         1         1         1      0.00000000
-         2         1         1         1         1         2      0.00047775
-         2         1         1         1         1         3     -0.00000000
-         2         1         1         1         2         1      0.00048048
-         2         1         1         1         2         2     -0.00000000
-         2         1         1         1         2         3     -0.00053368
-         2         1         1         1         3         1     -0.00000000
-         2         1         1         1         3         2     -0.00053105
-         2         1         1         1         3         3      0.00000000
-         2         2         1         1         1         1     -0.00037998
-         2         2         1         1         1         2     -0.00000000
-         2         2         1         1         1         3      0.00058600
-         2         2         1         1         2         1     -0.00000000
-         2         2         1         1         2         2     -0.00031935
-         2         2         1         1         2         3      0.00000000
-         2         2         1         1         3         1      0.00058600
-         2         2         1         1         3         2      0.00000000
-         2         2         1         1         3         3     -0.00071914
-         3         1         1         1         1         1      0.00024128
-         3         1         1         1         1         2      0.00000000
-         3         1         1         1         1         3     -0.00027487
-         3         1         1         1         2         1      0.00000000
-         3         1         1         1         2         2      0.00005629
-         3         1         1         1         2         3     -0.00000000
-         3         1         1         1         3         1     -0.00034484
-         3         1         1         1         3         2     -0.00000000
-         3         1         1         1         3         3      0.00033540
-         3         2         1         1         1         1     -0.00000000
-         3         2         1         1         1         2     -0.00039076
-         3         2         1         1         1         3      0.00000000
-         3         2         1         1         2         1     -0.00048890
-         3         2         1         1         2         2     -0.00000000
-         3         2         1         1         2         3      0.00044731
-         3         2         1         1         3         1      0.00000000
-         3         2         1         1         3         2      0.00037552
-         3         2         1         1         3         3     -0.00000000
-         3         3         1         1         1         1     -0.22277220
-         3         3         1         1         1         2      0.00000000
-         3         3         1         1         1         3      0.09309258
-         3         3         1         1         2         1      0.00000000
-         3         3         1         1         2         2     -0.04729902
-         3         3         1         1         2         3     -0.00000000
-         3         3         1         1         3         1      0.09309258
-         3         3         1         1         3         2     -0.00000000
-         3         3         1         1         3         3     -0.04645929
+         1         1         1         1         3         3     -0.04649149
 
 
  RESULTS
  =======
 
   Reference energy                    -14.860112747722
+  CCSD singlet pair energy             -0.014583648993
+  CCSD triplet pair energy              0.000000000000
+  CCSD correlation energy              -0.014583649047
 
-  Correlated core orbitals:             1.1       2.1
-  Orbital energies:                    -2.4673   -2.4669
-
-  CCSD core-core energy                -0.000033936332
-  CCSD core-valence energy             -0.000005215206
-  CCSD valence correlation energy      -0.014578231258
-
-  CCSD singlet pair energy             -0.014617380246
-  CCSD triplet pair energy             -0.000000002495
-  CCSD correlation energy              -0.014617382795
-
- !CCSD total energy                   -14.874730130517
+ !CCSD total energy                   -14.874696396769
 
  Timing summary (sec):
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.06      0.00      0.06      0.07
+ Transformation          0.01      0.00      0.01      0.01
 
  Program statistics:
 
- Available memory in ccsd:                39999164
- Min. memory needed in ccsd:                   883
- Max. memory used in ccsd:                     883
- Max. memory used in cckext:                 33776 (20 integral passes)
+ Available memory in ccsd:                39999196
+ Min. memory needed in ccsd:                   445
+ Max. memory used in ccsd:                     445
+ Max. memory used in cckext:                 33092 (11 integral passes)
 
 
 
  **********************************************************************************************************************************
  DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      20       29.95       500      700      610      900      950      970     1000      129      960     1100   
+              1      20       29.94       500      700      610      900      950      970     1000      129      960     1100   
                                           VAR     GEOM    BASINP   SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
                                          1400     1410     1200     1210     1080     1600     1650     1300     1700     1380   
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER     JKOP   
@@ -408,8 +340,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CCSD       INT   RESTART
- CPU TIMES  *         0.38      0.12      0.15      0.01
- REAL TIME  *         0.56 SEC
+ CPU TIMES  *         0.23      0.03      0.10      0.02
+ REAL TIME  *         0.43 SEC
  DISK USED  *        49.42 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
@@ -417,9 +349,9 @@
  Orbital energies read from record       2100.3  Type=RHF/CANONICAL (state 1.1)
  Redundancy group numbers read from rec  2100.3  Type=RHF/RHF (state 1.1)
 
- CCSD/USERDEF energy=    -14.874730130517
+ CCSD/USERDEF energy=    -14.874696396769
 
             CCSD
-    -14.87473013
+    -14.87469640
  **********************************************************************************************************************************
  Molpro calculation terminated

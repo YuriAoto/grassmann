@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023282/molpro.mWTWuEaXrM
- Secondary working directories  : /scr/yuriaoto/job.023282/molpro.mWTWuEaXrM
- Wavefunction directory         : /scr/yuriaoto/job.023282/
- Main file repository           : /scr/yuriaoto/job.023282/molpro.mWTWuEaXrM/
+ Primary working directories    : /scr/yuriaoto/job.023376/molpro.GLOwcoAWTj
+ Secondary working directories  : /scr/yuriaoto/job.023376/molpro.GLOwcoAWTj
+ Wavefunction directory         : /scr/yuriaoto/job.023376/
+ Main file repository           : /scr/yuriaoto/job.023376/molpro.GLOwcoAWTj/
 
  id        : yuriaoto
 
@@ -23,12 +23,11 @@
  {ccsd,CC_NORM_MAX=10.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,2,1,0;
  }
  
  Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.04 sec
+ Default parameters read. Elapsed time= 0.05 sec
 
  Checking input...
  Passed
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 30-May-20          TIME: 20:41:33  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:11:42  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -113,8 +112,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.12      0.02
- REAL TIME  *         0.15 SEC
+ CPU TIMES  *         0.14      0.01
+ REAL TIME  *         0.16 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -206,8 +205,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.25      0.13      0.02
- REAL TIME  *         0.42 SEC
+ CPU TIMES  *         0.27      0.14      0.01
+ REAL TIME  *         0.44 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -287,7 +286,7 @@
  Timing summary (sec):
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.04      0.00      0.04      0.04
+ CCSD iterations         0.04      0.01      0.05      0.03
 
  Program statistics:
 
@@ -309,8 +308,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CCSD       INT   RESTART
- CPU TIMES  *         0.36      0.11      0.13      0.02
- REAL TIME  *         0.54 SEC
+ CPU TIMES  *         0.38      0.11      0.14      0.01
+ REAL TIME  *         0.56 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

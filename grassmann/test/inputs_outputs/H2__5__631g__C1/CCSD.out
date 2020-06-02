@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023292/molpro.XSg3efrfmb
- Secondary working directories  : /scr/yuriaoto/job.023292/molpro.XSg3efrfmb
- Wavefunction directory         : /scr/yuriaoto/job.023292/
- Main file repository           : /scr/yuriaoto/job.023292/molpro.XSg3efrfmb/
+ Primary working directories    : /scr/yuriaoto/job.023403/molpro.UzxP54H9SK
+ Secondary working directories  : /scr/yuriaoto/job.023403/molpro.UzxP54H9SK
+ Wavefunction directory         : /scr/yuriaoto/job.023403/
+ Main file repository           : /scr/yuriaoto/job.023403/molpro.UzxP54H9SK/
 
  id        : yuriaoto
 
@@ -23,12 +23,11 @@
  {ccsd,CC_NORM_MAX=10.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,2,1,0;
  }
  
  Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.04 sec
+ Default parameters read. Elapsed time= 0.05 sec
 
  Checking input...
  Passed
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 30-May-20          TIME: 20:44:24  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:20:13  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -113,8 +112,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.15      0.02
- REAL TIME  *         0.18 SEC
+ CPU TIMES  *         0.12      0.02
+ REAL TIME  *         0.14 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -205,8 +204,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.31      0.16      0.02
- REAL TIME  *         0.52 SEC
+ CPU TIMES  *         0.25      0.13      0.02
+ REAL TIME  *         0.42 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -252,16 +251,16 @@
 
  ITER.      SQ.NORM     CORR.ENERGY   TOTAL ENERGY   ENERGY CHANGE        DEN1      VAR(S)    VAR(P)  DIIS     TIME  TIME/IT
    1      1.30387246    -0.14606757    -0.98925316    -0.06608447    -0.03026611  0.24D-02  0.28D-01  1  1     0.01     0.00
-   2      1.68932151    -0.17211178    -1.01529737    -0.02604421    -0.05176124  0.78D-04  0.11D-02  2  2     0.01     0.00
-   3      1.63358736    -0.15525989    -0.99844548     0.01685189     0.00631916  0.75D-05  0.20D-04  3  3     0.01     0.00
-   4      1.63469735    -0.15595786    -0.99914345    -0.00069796    -0.00024039  0.10D-06  0.33D-07  4  4     0.01     0.00
+   2      1.68932151    -0.17211178    -1.01529737    -0.02604421    -0.05176124  0.78D-04  0.11D-02  2  2     0.02     0.00
+   3      1.63358736    -0.15525989    -0.99844548     0.01685189     0.00631916  0.75D-05  0.20D-04  3  3     0.02     0.00
+   4      1.63469735    -0.15595786    -0.99914345    -0.00069796    -0.00024039  0.10D-06  0.33D-07  4  4     0.02     0.00
    5      1.63695416    -0.15618726    -0.99937285    -0.00022940    -0.00025734  0.36D-09  0.16D-09  5  5     0.02     0.00
    6      1.63608437    -0.15609123    -0.99927682     0.00009603     0.00009780  0.13D-32  0.37D-32  6  6     0.02     0.00
-   7      1.63607687    -0.15609036    -0.99927595     0.00000087     0.00000087  0.14D-32  0.47D-32  6  3     0.02     0.00
-   8      1.63620185    -0.15610465    -0.99929023    -0.00001428    -0.00001428  0.15D-29  0.41D-30  6  1     0.02     0.00
-   9      1.63621646    -0.15610632    -0.99929191    -0.00000167    -0.00000167  0.90D-30  0.61D-30  6  2     0.02     0.00
-  10      1.63621645    -0.15610632    -0.99929191     0.00000000     0.00000000  0.17D-31  0.98D-31  6  4     0.02     0.00
-  11      1.63621645    -0.15610632    -0.99929191    -0.00000000    -0.00000000  0.29D-30  0.28D-32  6  5     0.02     0.00
+   7      1.63607687    -0.15609036    -0.99927595     0.00000087     0.00000087  0.14D-32  0.47D-32  6  3     0.03     0.00
+   8      1.63620185    -0.15610465    -0.99929023    -0.00001428    -0.00001428  0.15D-29  0.41D-30  6  1     0.03     0.00
+   9      1.63621646    -0.15610632    -0.99929191    -0.00000167    -0.00000167  0.90D-30  0.61D-30  6  2     0.03     0.00
+  10      1.63621645    -0.15610632    -0.99929191     0.00000000     0.00000000  0.17D-31  0.98D-31  6  4     0.03     0.00
+  11      1.63621645    -0.15610632    -0.99929191    -0.00000000    -0.00000000  0.29D-30  0.28D-32  6  5     0.03     0.00
 
  Norm of t1 vector:      0.11105256      S-energy:     0.00000000      T1 diagnostic:  0.05552628
                                                                        D1 diagnostic:  0.07852602
@@ -302,7 +301,7 @@
  Timing summary (sec):
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.02      0.00      0.02      0.04
+ CCSD iterations         0.03      0.00      0.03      0.04
 
  Program statistics:
 
@@ -324,8 +323,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CCSD       INT   RESTART
- CPU TIMES  *         0.37      0.06      0.16      0.02
- REAL TIME  *         0.60 SEC
+ CPU TIMES  *         0.36      0.10      0.13      0.02
+ REAL TIME  *         0.53 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023111/molpro.pFpnvO5B0M
- Secondary working directories  : /scr/yuriaoto/job.023111/molpro.pFpnvO5B0M
- Wavefunction directory         : /scr/yuriaoto/job.023111/
- Main file repository           : /scr/yuriaoto/job.023111/molpro.pFpnvO5B0M/
+ Primary working directories    : /scr/yuriaoto/job.023378/molpro.ULKD0k0AGs
+ Secondary working directories  : /scr/yuriaoto/job.023378/molpro.ULKD0k0AGs
+ Wavefunction directory         : /scr/yuriaoto/job.023378/
+ Main file repository           : /scr/yuriaoto/job.023378/molpro.ULKD0k0AGs/
 
  id        : yuriaoto
 
@@ -15,17 +15,17 @@
 
  Variables initialized (933), CPU time= 0.00 sec
  ***,
- memory,40,m
+ memory,400,m
  gprint,orbital,basis,civector
  gthresh,thrprint=0,printci=0.0
  file,3,wfu.dat,old
  
  {fci
- wf,2,1,0;
+ wf,2,1,0
  }
  
  Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.05 sec
+ Default parameters read. Elapsed time= 0.04 sec
 
  Checking input...
  Passed
@@ -39,7 +39,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 26-Apr-20          TIME: 01:01:29  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:11:49  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -61,7 +61,7 @@
  THRPRINT=  0.00D+00
 
 
- Variable memory set to   40000000 words,  buffer space 
+ Variable memory set to  400000000 words,  buffer space 
 
 
 
@@ -110,8 +110,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.13      0.03
- REAL TIME  *         0.17 SEC
+ CPU TIMES  *         0.12      0.01
+ REAL TIME  *         0.14 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -185,7 +185,7 @@
  Memory used in sort:       0.56 MW
 
  SORT1 READ           8. AND WROTE           5. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
- SORT2 READ           5. AND WROTE           5. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
+ SORT2 READ           5. AND WROTE           5. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
 
  FILE SIZES:   FILE 1:    30.2 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     34.4 MBYTE
 
@@ -203,8 +203,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.28      0.15      0.03
- REAL TIME  *         0.49 SEC
+ CPU TIMES  *         0.33      0.21      0.01
+ REAL TIME  *         0.81 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -224,10 +224,10 @@
  Determinants:                              2               0               0               0
                                             2               0               0               0
 
- Load integrals                1.1 sec
- Transform integrals           1.1 sec
+ Load integrals                1.4 sec
+ Transform integrals           1.4 sec
  Storage for integrals:             15
- Remaining memory:            39999173
+ Remaining memory:           399999173
 
  Core energy:               0.20000000
  Run Hamiltonian processor DAVIDSON
@@ -242,16 +242,16 @@
  Options:                        0
  Number of roots:             1
 
- Hamiltonian diagonaliser entered at time      1.07
+ Hamiltonian diagonaliser entered at time      1.40
 
  Initial configuration generated:
        1      1.0000000     -0.6864159
 
  It  Tr    CPU  Convergence   Energy       Pop     dE(next)
 
-  1   1    1.1  1.00000000    -0.68641592
+  1   1    1.4  1.00000000    -0.68641592
                                            0.50 -0.97719595 -0.97719595
-  2   1    1.1  0.65358483    -0.93488935
+  2   1    1.4  0.65358483    -0.93488935
 
 
 RESULTS FOR STATE  1.1
@@ -278,8 +278,8 @@ RESULTS FOR STATE  1.1
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       FCI       INT   RESTART
- CPU TIMES  *         0.29      0.00      0.15      0.03
- REAL TIME  *         0.50 SEC
+ CPU TIMES  *         0.33      0.00      0.21      0.01
+ REAL TIME  *         0.82 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

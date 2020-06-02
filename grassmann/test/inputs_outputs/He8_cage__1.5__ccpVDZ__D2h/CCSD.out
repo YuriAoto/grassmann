@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023301/molpro.me4BOYujlk
- Secondary working directories  : /scr/yuriaoto/job.023301/molpro.me4BOYujlk
- Wavefunction directory         : /scr/yuriaoto/job.023301/
- Main file repository           : /scr/yuriaoto/job.023301/molpro.me4BOYujlk/
+ Primary working directories    : /scr/yuriaoto/job.023418/molpro.SkHQuaVxaC
+ Secondary working directories  : /scr/yuriaoto/job.023418/molpro.SkHQuaVxaC
+ Wavefunction directory         : /scr/yuriaoto/job.023418/
+ Main file repository           : /scr/yuriaoto/job.023418/molpro.SkHQuaVxaC/
 
  id        : yuriaoto
 
@@ -23,12 +23,11 @@
  {ccsd,CC_NORM_MAX=10000.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,16,1,0;
  }
  
  Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.06 sec
+ Default parameters read. Elapsed time= 0.04 sec
 
  Checking input...
  Passed
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 30-May-20          TIME: 20:48:27  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:26:46  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -120,8 +119,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.15      0.02
- REAL TIME  *         0.18 SEC
+ CPU TIMES  *         0.12      0.02
+ REAL TIME  *         0.15 SEC
  DISK USED  *        26.99 MB
  **********************************************************************************************************************************
 
@@ -452,8 +451,8 @@
 
  Memory used in sort:       0.60 MW
 
- SORT1 READ      154112. AND WROTE       46110. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
- SORT2 READ       46110. AND WROTE       46110. INTEGRALS IN      3 RECORDS. CPU TIME:     0.05 SEC, REAL TIME:     0.05 SEC
+ SORT1 READ      154112. AND WROTE       46110. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
+ SORT2 READ       46110. AND WROTE       46110. INTEGRALS IN      3 RECORDS. CPU TIME:     0.05 SEC, REAL TIME:     0.06 SEC
 
  FILE SIZES:   FILE 1:    30.9 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     35.1 MBYTE
 
@@ -471,8 +470,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.43      0.28      0.02
- REAL TIME  *         0.59 SEC
+ CPU TIMES  *         0.39      0.27      0.02
+ REAL TIME  *         0.56 SEC
  DISK USED  *        50.37 MB
  **********************************************************************************************************************************
 
@@ -504,7 +503,7 @@
  Length of K-op  integral file:               0.04 MB
  Length of 3-ext integral record:             0.00 MB
 
- Integral transformation finished. Total CPU:   0.00 sec, npass=  1  Memory used:   0.10 MW
+ Integral transformation finished. Total CPU:   0.01 sec, npass=  1  Memory used:   0.10 MW
 
  Reference energy:                    -22.84127344
 
@@ -517,18 +516,18 @@
  SCS-MP2 total energy:                -23.08929215
 
  ITER.      SQ.NORM     CORR.ENERGY   TOTAL ENERGY   ENERGY CHANGE        DEN1      VAR(S)    VAR(P)  DIIS     TIME  TIME/IT
-   1      1.05265880    -0.25721080   -23.09848424    -0.05049986    -0.04057028  0.26D-05  0.15D-02  1  1     0.03     0.02
+   1      1.05265880    -0.25721080   -23.09848424    -0.05049986    -0.04057028  0.26D-05  0.15D-02  1  1     0.03     0.01
    2      1.05832177    -0.25957336   -23.10084680    -0.00236256    -0.01210866  0.50D-06  0.42D-05  2  2     0.04     0.01
-   3      1.05847929    -0.25955534   -23.10082878     0.00001802    -0.00016511  0.48D-08  0.92D-10  3  3     0.05     0.01
-   4      1.05848348    -0.25956297   -23.10083641    -0.00000763    -0.00000806  0.28D-12  0.41D-11  4  4     0.06     0.01
-   5      1.05848279    -0.25956166   -23.10083510     0.00000131     0.00000139  0.14D-13  0.74D-13  5  5     0.07     0.01
-   6      1.05848267    -0.25956141   -23.10083485     0.00000025     0.00000025  0.21D-14  0.43D-15  6  6     0.08     0.01
-   7      1.05848270    -0.25956147   -23.10083491    -0.00000007    -0.00000006  0.13D-18  0.18D-16  6  1     0.09     0.01
-   8      1.05848270    -0.25956147   -23.10083491     0.00000000    -0.00000000  0.13D-18  0.11D-17  6  3     0.10     0.01
-   9      1.05848270    -0.25956147   -23.10083491    -0.00000000     0.00000000  0.33D-20  0.33D-19  6  2     0.11     0.01
+   3      1.05847929    -0.25955534   -23.10082878     0.00001802    -0.00016511  0.48D-08  0.92D-10  3  3     0.06     0.01
+   4      1.05848348    -0.25956297   -23.10083641    -0.00000763    -0.00000806  0.28D-12  0.41D-11  4  4     0.07     0.01
+   5      1.05848279    -0.25956166   -23.10083510     0.00000131     0.00000139  0.14D-13  0.74D-13  5  5     0.08     0.01
+   6      1.05848267    -0.25956141   -23.10083485     0.00000025     0.00000025  0.21D-14  0.43D-15  6  6     0.09     0.01
+   7      1.05848270    -0.25956147   -23.10083491    -0.00000007    -0.00000006  0.13D-18  0.18D-16  6  1     0.10     0.01
+   8      1.05848270    -0.25956147   -23.10083491     0.00000000    -0.00000000  0.13D-18  0.11D-17  6  3     0.11     0.01
+   9      1.05848270    -0.25956147   -23.10083491    -0.00000000     0.00000000  0.33D-20  0.33D-19  6  2     0.12     0.01
   10      1.05848270    -0.25956147   -23.10083491     0.00000000    -0.00000000  0.40D-22  0.59D-21  6  4     0.12     0.01
   11      1.05848270    -0.25956147   -23.10083491     0.00000000     0.00000000  0.26D-23  0.26D-23  6  5     0.13     0.01
-  12      1.05848270    -0.25956147   -23.10083491     0.00000000     0.00000000  0.14D-24  0.55D-25  6  6     0.13     0.01
+  12      1.05848270    -0.25956147   -23.10083491     0.00000000     0.00000000  0.14D-24  0.55D-25  6  6     0.14     0.01
 
  Norm of t1 vector:      0.00314634      S-energy:     0.00000000      T1 diagnostic:  0.00055620
                                                                        D1 diagnostic:  0.00093872
@@ -5197,7 +5196,8 @@
  Timing summary (sec):
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.16      0.03      0.19      0.17
+ Transformation          0.01      0.01      0.02      0.02
+ CCSD iterations         0.15      0.01      0.16      0.17
 
  Program statistics:
 
@@ -5219,8 +5219,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CCSD       INT   RESTART
- CPU TIMES  *         0.66      0.23      0.28      0.02
- REAL TIME  *         0.86 SEC
+ CPU TIMES  *         0.62      0.23      0.27      0.02
+ REAL TIME  *         0.82 SEC
  DISK USED  *        50.37 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

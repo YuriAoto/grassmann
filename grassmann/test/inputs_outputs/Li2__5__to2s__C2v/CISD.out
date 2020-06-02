@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023116/molpro.DQPWyHIz42
- Secondary working directories  : /scr/yuriaoto/job.023116/molpro.DQPWyHIz42
- Wavefunction directory         : /scr/yuriaoto/job.023116/
- Main file repository           : /scr/yuriaoto/job.023116/molpro.DQPWyHIz42/
+ Primary working directories    : /scr/yuriaoto/job.023475/molpro.HYbfM1ehQH
+ Secondary working directories  : /scr/yuriaoto/job.023475/molpro.HYbfM1ehQH
+ Wavefunction directory         : /scr/yuriaoto/job.023475/
+ Main file repository           : /scr/yuriaoto/job.023475/molpro.HYbfM1ehQH/
 
  id        : yuriaoto
 
@@ -13,7 +13,7 @@
  default implementation of scratch files=df  
 
 
- Variables initialized (933), CPU time= 0.00 sec
+ Variables initialized (933), CPU time= 0.01 sec
  ***,
  memory,40,m
  gprint,orbital,basis,civector
@@ -23,7 +23,6 @@
  {cisd,CC_NORM_MAX=10.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,6,1,0;
  }
  
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 27-Apr-20          TIME: 18:42:37  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:50:41  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -97,6 +96,7 @@
  _IPROC_MPPX     =      0.00000000
  _ORBITAL        =   2100.30000000
  _STATUS         =      1.00000000
+ _DATE           =    27-Apr-20
  _LASTORB        =    RHF
  _OUTPUT         =    /scr/yuriaoto/job.023115/RHF.xml
  _PGROUP         =    C2v 
@@ -113,7 +113,7 @@
 
  PROGRAMS   *        TOTAL   RESTART
  CPU TIMES  *         0.12      0.02
- REAL TIME  *         0.15 SEC
+ REAL TIME  *         0.14 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -214,8 +214,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.25      0.12      0.02
- REAL TIME  *         0.46 SEC
+ CPU TIMES  *         0.25      0.13      0.02
+ REAL TIME  *         0.41 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -232,16 +232,17 @@
 
  Convergence thresholds:  THRVAR = 1.00D-24  THRDEN = 1.00D-10
 
- Number of closed-shell orbitals:   3 (   3 )
+ Number of core orbitals:           2 (   2 )
+ Number of closed-shell orbitals:   1 (   1 )
  Number of external orbitals:       1 (   1 )
 
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
 
- Number of N-1 electron functions:               3
- Number of N-2 electron functions:               6
- Number of singly external CSFs:                 3
- Number of doubly external CSFs:                 6
- Total number of CSFs:                          10
+ Number of N-1 electron functions:               1
+ Number of N-2 electron functions:               1
+ Number of singly external CSFs:                 1
+ Number of doubly external CSFs:                 1
+ Total number of CSFs:                           3
 
  Length of J-op  integral file:               0.00 MB
  Length of K-op  integral file:               0.03 MB
@@ -250,83 +251,66 @@
 
  Reference energy:                    -14.62927853
 
- MP2 singlet pair energy:              -0.00806780
+ MP2 singlet pair energy:              -0.00793536
  MP2 triplet pair energy:               0.00000000
- MP2 correlation energy:               -0.00806780
- MP2 total energy:                    -14.63734633
+ MP2 correlation energy:               -0.00793536
+ MP2 total energy:                    -14.63721389
 
- SCS-MP2 correlation energy:           -0.00968136   (PS=  1.200000  PT=  0.333333)
- SCS-MP2 total energy:                -14.63895989
+ SCS-MP2 correlation energy:           -0.00952243   (PS=  1.200000  PT=  0.333333)
+ SCS-MP2 total energy:                -14.63880096
 
  ITER.      SQ.NORM     CORR.ENERGY   TOTAL ENERGY   ENERGY CHANGE        DEN1      VAR(S)    VAR(P)  DIIS     TIME  TIME/IT
-   1      1.03195921    -0.01452262   -14.64380114    -0.00645482    -0.00326810  0.71D-06  0.28D-02  1  1     0.02     0.00
-   2      1.07257901    -0.01577930   -14.64505783    -0.00125669    -0.00569862  0.69D-06  0.76D-04  2  2     0.02     0.00
-   3      1.08508724    -0.01819708   -14.64747561    -0.00241778    -0.00139338  0.13D-07  0.12D-07  3  3     0.02     0.00
-   4      1.08347373    -0.01827647   -14.64755500    -0.00007939     0.00017470  0.87D-11  0.69D-11  4  4     0.02     0.00
-   5      1.08373635    -0.01827759   -14.64755612    -0.00000112    -0.00002852  0.21D-18  0.26D-17  5  5     0.03     0.00
-   6      1.08371759    -0.01827762   -14.64755615    -0.00000003     0.00000204  0.15D-31  0.18D-30  6  6     0.03     0.00
-   7      1.08369718    -0.01827762   -14.64755615    -0.00000000     0.00000221  0.16D-31  0.39D-33  6  2     0.03     0.00
-   8      1.08369854    -0.01827762   -14.64755615    -0.00000000    -0.00000015  0.10D-32  0.75D-36  6  1     0.03     0.00
-   9      1.08369853    -0.01827762   -14.64755615    -0.00000000     0.00000000  0.48D-32  0.74D-37  6  4     0.03     0.00
-  10      1.08369853    -0.01827762   -14.64755615     0.00000000     0.00000000  0.13D-33  0.19D-36  6  3     0.03     0.00
+   1      1.03200046    -0.01443866   -14.64371718    -0.00650330    -0.00331070  0.69D-32  0.28D-02  1  1     0.01     0.00
+   2      1.08226300    -0.01562761   -14.64490614    -0.00118895    -0.00678514  0.18D-31  0.22D-33  2  2     0.02     0.00
+   3      1.08566849    -0.01820398   -14.64748250    -0.00257637    -0.00036944  0.67D-33  0.20D-39  3  3     0.02     0.00
+   4      1.08397658    -0.01820359   -14.64748212     0.00000038     0.00018261  0.22D-33  0.90D-39  4  4     0.02     0.00
+   5      1.08391842    -0.01820551   -14.64748404    -0.00000192     0.00000631  0.19D-33  0.27D-39  5  5     0.02     0.00
+   6      1.08386219    -0.01820552   -14.64748404    -0.00000001     0.00000610  0.45D-32  0.12D-39  6  6     0.02     0.00
+   7      1.08386011    -0.01820552   -14.64748405    -0.00000000     0.00000023  0.13D-35  0.33D-42  6  1     0.03     0.00
+   8      1.08386020    -0.01820552   -14.64748405     0.00000000    -0.00000001  0.87D-34  0.16D-43  6  2     0.03     0.00
+   9      1.08386128    -0.01820552   -14.64748405    -0.00000000    -0.00000012  0.14D-32  0.55D-44  6  3     0.03     0.00
 
 
  ! DIPOLE MOMENTS:                      0.00000000     0.00000000     0.00000000
 
 
 
- Norm of t1 vector:      0.00143657      S-energy:    -0.00000003      T1 diagnostic:  0.00041470
+ Norm of t1 vector:      0.00000000      S-energy:    -0.00000000      T1 diagnostic:  0.00000000
 
  Singles amplitudes (print threshold =  0.000E+00):
 
          I         SYM. A    A   T(IA)
 
-         1         1         1      0.00000000
-         2         1         1      0.00101581
-         3         1         1     -0.00000000
+         1         1         1     -0.00000000
 
  Doubles amplitudes (print threshold =  0.000E+00):
 
          I         J         SYM. A    SYM. B    A         B      T(IJ, AB)
 
-         1         1         1         1         1         1     -0.00213582
-         2         1         1         1         1         1     -0.00000000
-         2         2         1         1         1         1     -0.00214075
-         3         1         1         1         1         1      0.00214844
-         3         2         1         1         1         1      0.00000000
-         3         3         1         1         1         1     -0.28927166
+         1         1         1         1         1         1     -0.28958812
 
 
  RESULTS
  =======
 
   Reference energy                    -14.629278526775
-
-  Correlated core orbitals:             1.1       2.1
-  Orbital energies:                    -2.3509   -2.3505
-
-  CISD core-core energy                -0.000066779502
-  CISD core-valence energy             -0.000018454571
-  CISD valence correlation energy      -0.018192386169
-
-  CISD singlet pair energy             -0.018277585439
+  CISD singlet pair energy             -0.018205520009
   CISD triplet pair energy              0.000000000000
-  CISD correlation energy              -0.018277620242
+  CISD correlation energy              -0.018205520009
 
- !CISD total energy                   -14.647556147017
+ !CISD total energy                   -14.647484046784
 
  Timing summary (sec):
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- Transformation          0.01      0.01      0.02      0.00
- CCSD iterations         0.03      0.00      0.03      0.05
+ CCSD iterations         0.03      0.01      0.04      0.05
 
  Program statistics:
 
- Available memory in ccsd:                39999164
- Min. memory needed in ccsd:                   455
- Max. memory used in ccsd:                     455
- Max. memory used in cckext:                 33360 (10 integral passes)
+ Available memory in ccsd:                39999196
+ Min. memory needed in ccsd:                   204
+ Max. memory used in ccsd:                     204
+ Max. memory used in cckext:                 32948 ( 9 integral passes)
 
 
 
@@ -341,8 +325,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CISD       INT   RESTART
- CPU TIMES  *         0.35      0.10      0.12      0.02
- REAL TIME  *         0.57 SEC
+ CPU TIMES  *         0.35      0.10      0.13      0.02
+ REAL TIME  *         0.52 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
@@ -350,9 +334,9 @@
  Orbital energies read from record       2100.3  Type=RHF/CANONICAL (state 1.1)
  Redundancy group numbers read from rec  2100.3  Type=RHF/RHF (state 1.1)
 
- CISD/USERDEF energy=    -14.647556147017
+ CISD/USERDEF energy=    -14.647484046784
 
             CISD
-    -14.64755615
+    -14.64748405
  **********************************************************************************************************************************
  Molpro calculation terminated

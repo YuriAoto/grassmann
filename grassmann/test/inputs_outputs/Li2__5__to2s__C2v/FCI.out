@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023117/molpro.YdjlNGpH1p
- Secondary working directories  : /scr/yuriaoto/job.023117/molpro.YdjlNGpH1p
- Wavefunction directory         : /scr/yuriaoto/job.023117/
- Main file repository           : /scr/yuriaoto/job.023117/molpro.YdjlNGpH1p/
+ Primary working directories    : /scr/yuriaoto/job.023477/molpro.bdbnaTvviL
+ Secondary working directories  : /scr/yuriaoto/job.023477/molpro.bdbnaTvviL
+ Wavefunction directory         : /scr/yuriaoto/job.023477/
+ Main file repository           : /scr/yuriaoto/job.023477/molpro.bdbnaTvviL/
 
  id        : yuriaoto
 
@@ -22,10 +22,9 @@
  
  {fci
  wf,6,1,0;
- core,0
  }
  Commands  initialized (760), CPU time= 0.02 sec, 617 directives.
- Default parameters read. Elapsed time= 0.07 sec
+ Default parameters read. Elapsed time= 0.06 sec
 
  Checking input...
  Passed
@@ -39,7 +38,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 27-Apr-20          TIME: 18:42:41  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:50:48  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -94,6 +93,7 @@
  _IPROC_MPPX     =      0.00000000
  _ORBITAL        =   2100.30000000
  _STATUS         =      1.00000000
+ _DATE           =    27-Apr-20
  _LASTORB        =    RHF
  _OUTPUT         =    /scr/yuriaoto/job.023115/RHF.xml
  _PGROUP         =    C2v 
@@ -109,8 +109,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.19      0.02
- REAL TIME  *         0.22 SEC
+ CPU TIMES  *         0.16      0.02
+ REAL TIME  *         0.18 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -211,8 +211,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.32      0.13      0.02
- REAL TIME  *         0.49 SEC
+ CPU TIMES  *         0.29      0.13      0.02
+ REAL TIME  *         0.47 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -222,22 +222,22 @@
 
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
 
- Frozen orbitals:              0 (  0  0  0  0  0  0  0  0)
- Active orbitals:              4 (  4  0  0  0  0  0  0  0)
- Active electrons:             6
+ Frozen orbitals:              2 (  2  0  0  0  0  0  0  0)
+ Active orbitals:              2 (  2  0  0  0  0  0  0  0)
+ Active electrons:             2
  Spin quantum number:          0.0
- Orbital pairs:                    10       0       0       0       0       0       0       0
- Strings:                           4       0       0       0       0       0       0       0
-                                    4       0       0       0       0       0       0       0
- Determinants:                             16               0               0               0
+ Orbital pairs:                     3       0       0       0       0       0       0       0
+ Strings:                           2       0       0       0       0       0       0       0
+                                    2       0       0       0       0       0       0       0
+ Determinants:                              4               0               0               0
                                             0               0               0               0
 
- Load integrals                1.1 sec
- Transform integrals           1.1 sec
- Storage for integrals:            136
- Remaining memory:            39999016
+ Load integrals                1.0 sec
+ Transform integrals           1.0 sec
+ Storage for integrals:             19
+ Remaining memory:            39999157
 
- Core energy:               1.80000000
+ Core energy:             -14.07112862
  Run Hamiltonian processor DAVIDSON
  Symmetry:                   1
  Trial vector:                  0.00
@@ -250,48 +250,28 @@
  Options:                        0
  Number of roots:             1
 
- Hamiltonian diagonaliser entered at time      1.07
+ Hamiltonian diagonaliser entered at time      1.02
 
  Initial configuration generated:
        1      1.0000000    -14.6292785
 
  It  Tr    CPU  Convergence   Energy       Pop     dE(next)
 
-  1   1    1.1  1.00000000   -14.62927853
-                                           0.06 -0.02000663 -0.01987201
-  2   1    1.1  0.27815948   -14.64748405
-                                           0.25 -0.00008046 -0.00007840
-  3   1    1.1  0.00396448   -14.64755188
-                                           0.12 -0.00000424 -0.00000415
-  4   1    1.1  0.00137457   -14.64755603
-                                           0.25 -0.00000012 -0.00000012
-  5   1    1.1  0.00021297   -14.64755615
-                                           0.12 -0.00000000 -0.00000000
-  6   1    1.1  0.00000087   -14.64755615
+  1   1    1.0  1.00000000   -14.62927853
+                                           0.25 -0.01987201 -0.01987201
+  2   1    1.0  0.27815948   -14.64748405
 
 
 RESULTS FOR STATE  1.1
 =====================
 
- Correlation energy                    -0.018277620242
- !FCI STATE  1.1 Energy               -14.647556147017
+ Correlation energy                    -0.018205520010
+ !FCI STATE  1.1 Energy               -14.647484046784
  CI Vector (threshold=  0.00    )
-       0.960607023707  1  2  3  1  2  3
+       0.960534904183  1  2  3  1  2  3
        0.000000000000  1  2  3  1  2  4
-      -0.000975791110  1  2  3  1  3  4
-       0.000000000000  1  2  3  2  3  4
        0.000000000000  1  2  4  1  2  3
-      -0.277876384064  1  2  4  1  2  4
-       0.000000000000  1  2  4  1  3  4
-       0.002063804080  1  2  4  2  3  4
-      -0.000975791110  1  3  4  1  2  3
-       0.000000000000  1  3  4  1  2  4
-      -0.002056418698  1  3  4  1  3  4
-       0.000000000000  1  3  4  2  3  4
-       0.000000000000  2  3  4  1  2  3
-       0.002063804080  2  3  4  1  2  4
-       0.000000000000  2  3  4  1  3  4
-      -0.002051685751  2  3  4  2  3  4
+      -0.278159482755  1  2  4  1  2  4
  /EOF
  !FCI STATE  1.1 Dipole moment          0.00000000     0.00000000     0.00000000
  Dipole moment /Debye                   0.00000000     0.00000000     0.00000000
@@ -308,8 +288,8 @@ RESULTS FOR STATE  1.1
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       FCI       INT   RESTART
- CPU TIMES  *         0.33      0.01      0.13      0.02
- REAL TIME  *         0.50 SEC
+ CPU TIMES  *         0.30      0.01      0.13      0.02
+ REAL TIME  *         0.48 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
@@ -317,9 +297,9 @@ RESULTS FOR STATE  1.1
  Orbital energies read from record       2100.3  Type=RHF/CANONICAL (state 1.1)
  Redundancy group numbers read from rec  2100.3  Type=RHF/RHF (state 1.1)
 
- FCI/USERDEF energy=    -14.647556147017
+ FCI/USERDEF energy=    -14.647484046784
 
              FCI
-    -14.64755615
+    -14.64748405
  **********************************************************************************************************************************
  Molpro calculation terminated

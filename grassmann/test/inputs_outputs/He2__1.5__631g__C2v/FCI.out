@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023208/molpro.drFbKHKZ7x
- Secondary working directories  : /scr/yuriaoto/job.023208/molpro.drFbKHKZ7x
- Wavefunction directory         : /scr/yuriaoto/job.023208/
- Main file repository           : /scr/yuriaoto/job.023208/molpro.drFbKHKZ7x/
+ Primary working directories    : /scr/yuriaoto/job.023425/molpro.DT6x4ye52D
+ Secondary working directories  : /scr/yuriaoto/job.023425/molpro.DT6x4ye52D
+ Wavefunction directory         : /scr/yuriaoto/job.023425/
+ Main file repository           : /scr/yuriaoto/job.023425/molpro.DT6x4ye52D/
 
  id        : yuriaoto
 
@@ -13,7 +13,7 @@
  default implementation of scratch files=df  
 
 
- Variables initialized (933), CPU time= 0.00 sec
+ Variables initialized (933), CPU time= 0.01 sec
  ***,
  memory,40,m
  gprint,orbital,basis,civector
@@ -22,10 +22,9 @@
  
  {fci
  wf,4,1,0;
- core,0
  }
- Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.05 sec
+ Commands  initialized (760), CPU time= 0.00 sec, 617 directives.
+ Default parameters read. Elapsed time= 0.04 sec
 
  Checking input...
  Passed
@@ -39,7 +38,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 18-May-20          TIME: 01:52:14  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:28:58  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -94,6 +93,7 @@
  _IPROC_MPPX     =      0.00000000
  _ORBITAL        =   2100.30000000
  _STATUS         =      1.00000000
+ _DATE           =    18-May-20
  _LASTORB        =    RHF
  _OUTPUT         =    /scr/yuriaoto/job.023203/RHF.xml
  _PGROUP         =    C2v 
@@ -109,8 +109,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.13      0.03
- REAL TIME  *         0.15 SEC
+ CPU TIMES  *         0.09      0.02
+ REAL TIME  *         0.12 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -184,8 +184,8 @@
 
  Memory used in sort:       0.56 MW
 
- SORT1 READ         112. AND WROTE          55. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
- SORT2 READ          55. AND WROTE          55. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
+ SORT1 READ         112. AND WROTE          55. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
+ SORT2 READ          55. AND WROTE          55. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
 
  FILE SIZES:   FILE 1:    30.2 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     34.4 MBYTE
 
@@ -203,8 +203,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.25      0.12      0.03
- REAL TIME  *         0.42 SEC
+ CPU TIMES  *         0.20      0.11      0.02
+ REAL TIME  *         0.37 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -224,8 +224,8 @@
  Determinants:                             36               0               0               0
                                             0               0               0               0
 
- Load integrals                1.1 sec
- Transform integrals           1.1 sec
+ Load integrals                0.9 sec
+ Transform integrals           0.9 sec
  Storage for integrals:            136
  Remaining memory:            39999016
 
@@ -242,28 +242,28 @@
  Options:                        0
  Number of roots:             1
 
- Hamiltonian diagonaliser entered at time      1.06
+ Hamiltonian diagonaliser entered at time      0.91
 
  Initial configuration generated:
        1      1.0000000     -5.3514162
 
  It  Tr    CPU  Convergence   Energy       Pop     dE(next)
 
-  1   1    1.1  1.00000000    -5.35141618
+  1   1    0.9  1.00000000    -5.35141618
                                            0.22 -0.03090013 -0.03046198
-  2   1    1.1  0.09495947    -5.38246943
+  2   1    0.9  0.09495947    -5.38246943
                                            0.14 -0.00044164 -0.00040170
-  3   1    1.1  0.01046690    -5.38288134
+  3   1    0.9  0.01046690    -5.38288134
                                            0.31 -0.00004970 -0.00004805
-  4   1    1.1  0.00411870    -5.38292470
+  4   1    0.9  0.00411870    -5.38292470
                                            0.22 -0.00000233 -0.00000218
-  5   1    1.1  0.00084676    -5.38292688
+  5   1    0.9  0.00084676    -5.38292688
                                            0.19 -0.00000015 -0.00000014
-  6   1    1.1  0.00018889    -5.38292701
+  6   1    0.9  0.00018889    -5.38292701
                                            0.08 -0.00000000 -0.00000000
-  7   1    1.1  0.00003966    -5.38292701
+  7   1    0.9  0.00003966    -5.38292701
                                            0.22 -0.00000000 -0.00000000
-  8   1    1.1  0.00000986    -5.38292701
+  8   1    0.9  0.00000986    -5.38292701
 
 
 RESULTS FOR STATE  1.1
@@ -324,8 +324,8 @@ RESULTS FOR STATE  1.1
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       FCI       INT   RESTART
- CPU TIMES  *         0.26      0.01      0.12      0.03
- REAL TIME  *         0.43 SEC
+ CPU TIMES  *         0.20      0.00      0.11      0.02
+ REAL TIME  *         0.38 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

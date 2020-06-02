@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.022847/molpro.s9aSkcNLpo
- Secondary working directories  : /scr/yuriaoto/job.022847/molpro.s9aSkcNLpo
- Wavefunction directory         : /scr/yuriaoto/job.022847/
- Main file repository           : /scr/yuriaoto/job.022847/molpro.s9aSkcNLpo/
+ Primary working directories    : /scr/yuriaoto/job.023419/molpro.5OkAAwQPyL
+ Secondary working directories  : /scr/yuriaoto/job.023419/molpro.5OkAAwQPyL
+ Wavefunction directory         : /scr/yuriaoto/job.023419/
+ Main file repository           : /scr/yuriaoto/job.023419/molpro.5OkAAwQPyL/
 
  id        : yuriaoto
 
@@ -13,7 +13,7 @@
  default implementation of scratch files=df  
 
 
- Variables initialized (933), CPU time= 0.01 sec
+ Variables initialized (933), CPU time= 0.00 sec
  ***,
  memory,40,m
  gprint,orbital,basis,civector
@@ -23,12 +23,11 @@
  {cisd,CC_NORM_MAX=10000.0
  thresh,printci=0.0,ENERGY=1.0E-10,COEFF=1.0E-12
  print,ref=1
- core,0
  wf,16,1,0;
  }
  
- Commands  initialized (760), CPU time= 0.02 sec, 617 directives.
- Default parameters read. Elapsed time= 0.05 sec
+ Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
+ Default parameters read. Elapsed time= 0.04 sec
 
  Checking input...
  Passed
@@ -42,7 +41,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 23-Mar-20          TIME: 15:35:42  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:26:49  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -104,6 +103,7 @@
  _IPROC_MPPX     =      0.00000000
  _ORBITAL        =   2100.30000000
  _STATUS         =      1.00000000
+ _DATE           =    23-Mar-20
  _LASTORB        =    RHF
  _OUTPUT         =    /scr/yuriaoto/job.022846/RHF.xml
  _PGROUP         =    D2h 
@@ -119,8 +119,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.14      0.02
- REAL TIME  *         0.17 SEC
+ CPU TIMES  *         0.12      0.02
+ REAL TIME  *         0.14 SEC
  DISK USED  *        26.99 MB
  **********************************************************************************************************************************
 
@@ -451,7 +451,7 @@
 
  Memory used in sort:       0.60 MW
 
- SORT1 READ      154112. AND WROTE       46110. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
+ SORT1 READ      154112. AND WROTE       46110. INTEGRALS IN      1 RECORDS. CPU TIME:     0.01 SEC, REAL TIME:     0.01 SEC
  SORT2 READ       46110. AND WROTE       46110. INTEGRALS IN      3 RECORDS. CPU TIME:     0.05 SEC, REAL TIME:     0.05 SEC
 
  FILE SIZES:   FILE 1:    30.9 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     35.1 MBYTE
@@ -470,8 +470,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.41      0.27      0.02
- REAL TIME  *         0.58 SEC
+ CPU TIMES  *         0.39      0.27      0.02
+ REAL TIME  *         0.56 SEC
  DISK USED  *        50.37 MB
  **********************************************************************************************************************************
 
@@ -502,7 +502,7 @@
  Length of J-op  integral file:               0.00 MB
  Length of K-op  integral file:               0.04 MB
 
- Integral transformation finished. Total CPU:   0.01 sec, npass=  1  Memory used:   0.07 MW
+ Integral transformation finished. Total CPU:   0.00 sec, npass=  1  Memory used:   0.07 MW
 
  Reference energy:                    -22.84127344
 
@@ -518,11 +518,11 @@
    1      1.04989041    -0.24692760   -23.08820104    -0.04021666    -0.03421829  0.26D-05  0.11D-02  1  1     0.03     0.01
    2      1.05272787    -0.24740905   -23.08868249    -0.00048145    -0.00629616  0.25D-06  0.15D-05  2  2     0.04     0.01
    3      1.05296387    -0.24759265   -23.08886610    -0.00018360    -0.00044905  0.33D-09  0.94D-10  3  3     0.05     0.01
-   4      1.05293044    -0.24759387   -23.08886731    -0.00000122     0.00007462  0.27D-11  0.13D-11  4  4     0.05     0.01
-   5      1.05292772    -0.24759390   -23.08886734    -0.00000003     0.00000608  0.12D-12  0.49D-13  5  5     0.06     0.01
+   4      1.05293044    -0.24759387   -23.08886731    -0.00000122     0.00007462  0.27D-11  0.13D-11  4  4     0.06     0.01
+   5      1.05292772    -0.24759390   -23.08886734    -0.00000003     0.00000608  0.12D-12  0.49D-13  5  5     0.07     0.01
    6      1.05292774    -0.24759390   -23.08886734    -0.00000000    -0.00000005  0.44D-15  0.73D-15  6  6     0.07     0.01
    7      1.05292780    -0.24759390   -23.08886734    -0.00000000    -0.00000012  0.42D-16  0.14D-16  6  1     0.08     0.01
-   8      1.05292780    -0.24759390   -23.08886734    -0.00000000     0.00000000  0.66D-18  0.32D-18  6  2     0.09     0.01
+   8      1.05292780    -0.24759390   -23.08886734    -0.00000000     0.00000000  0.66D-18  0.32D-18  6  2     0.08     0.01
    9      1.05292780    -0.24759390   -23.08886734     0.00000000    -0.00000000  0.15D-19  0.19D-19  6  3     0.09     0.01
   10      1.05292780    -0.24759390   -23.08886734     0.00000000    -0.00000000  0.87D-21  0.46D-21  6  4     0.10     0.01
   11      1.05292780    -0.24759390   -23.08886734     0.00000000    -0.00000000  0.51D-23  0.43D-23  6  5     0.10     0.01
@@ -5200,7 +5200,7 @@
 
  STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
  Transformation          0.01      0.01      0.02      0.01
- CCSD iterations         0.13      0.01      0.14      0.14
+ CCSD iterations         0.12      0.02      0.14      0.15
 
  Program statistics:
 
@@ -5222,8 +5222,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL      CISD       INT   RESTART
- CPU TIMES  *         0.62      0.21      0.27      0.02
- REAL TIME  *         0.81 SEC
+ CPU TIMES  *         0.59      0.20      0.27      0.02
+ REAL TIME  *         0.78 SEC
  DISK USED  *        50.37 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)

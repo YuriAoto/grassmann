@@ -1,8 +1,8 @@
 
- Primary working directories    : /scr/yuriaoto/job.023207/molpro.1nvIk4HNP4
- Secondary working directories  : /scr/yuriaoto/job.023207/molpro.1nvIk4HNP4
- Wavefunction directory         : /scr/yuriaoto/job.023207/
- Main file repository           : /scr/yuriaoto/job.023207/molpro.1nvIk4HNP4/
+ Primary working directories    : /scr/yuriaoto/job.023422/molpro.CFZ1G0iIEB
+ Secondary working directories  : /scr/yuriaoto/job.023422/molpro.CFZ1G0iIEB
+ Wavefunction directory         : /scr/yuriaoto/job.023422/
+ Main file repository           : /scr/yuriaoto/job.023422/molpro.CFZ1G0iIEB/
 
  id        : yuriaoto
 
@@ -22,10 +22,9 @@
  
  {fci
  wf,4,1,0;
- core,0
  }
  Commands  initialized (760), CPU time= 0.01 sec, 617 directives.
- Default parameters read. Elapsed time= 0.04 sec
+ Default parameters read. Elapsed time= 0.05 sec
 
  Checking input...
  Passed
@@ -39,7 +38,7 @@
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 18-May-20          TIME: 01:51:53  
+  64 bit serial version                                                                  DATE: 02-Jun-20          TIME: 00:27:58  
  **********************************************************************************************************************************
 
  SHA1:             3a8a58c585c929645742fb5a1b7541a4ad1da699
@@ -94,6 +93,7 @@
  _IPROC_MPPX     =      0.00000000
  _ORBITAL        =   2100.30000000
  _STATUS         =      1.00000000
+ _DATE           =    18-May-20
  _LASTORB        =    RHF
  _OUTPUT         =    /scr/yuriaoto/job.023202/RHF.xml
  _PGROUP         =    D2h 
@@ -109,8 +109,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL   RESTART
- CPU TIMES  *         0.16      0.02
- REAL TIME  *         0.20 SEC
+ CPU TIMES  *         0.11      0.01
+ REAL TIME  *         0.14 SEC
  DISK USED  *        26.83 MB
  **********************************************************************************************************************************
 
@@ -206,8 +206,8 @@
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       INT   RESTART
- CPU TIMES  *         0.32      0.15      0.02
- REAL TIME  *         0.50 SEC
+ CPU TIMES  *         0.25      0.13      0.01
+ REAL TIME  *         1.21 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
 
@@ -245,7 +245,7 @@
  Options:                        0
  Number of roots:             1
 
- Hamiltonian diagonaliser entered at time      1.09
+ Hamiltonian diagonaliser entered at time      1.05
 
  Initial configuration generated:
        5      1.0000000     -5.3514162
@@ -315,8 +315,8 @@ RESULTS FOR STATE  1.1
                                           VAR    BASINP    GEOM     BASIS     RHF  
 
  PROGRAMS   *        TOTAL       FCI       INT   RESTART
- CPU TIMES  *         0.33      0.00      0.15      0.02
- REAL TIME  *         0.52 SEC
+ CPU TIMES  *         0.26      0.01      0.13      0.01
+ REAL TIME  *         1.23 SEC
  DISK USED  *        49.41 MB
  **********************************************************************************************************************************
  Molecular orbitals read from record     2100.3  Type=RHF/CANONICAL (state 1.1)
