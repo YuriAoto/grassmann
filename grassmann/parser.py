@@ -99,6 +99,12 @@ def parse_cmd_line():
     parser.add_argument('--WF_templ',
                         help='a Molpro output with a Full CI wave function,'
                         + ' to be used as template')
+    parser.add_argument('--maxiter',
+                        help='Maximum number of iterations',
+                        type=int)
+    parser.add_argument('--at_ref',
+                        help='Do only one iteration at reference.',
+                        action='store_true')
     parser.add_argument('--algorithm',
                         help='the algorithm to be used in the optimisation.'
                         + ' Possible values are: "orb_rotations",'
@@ -124,7 +130,8 @@ def parse_cmd_line():
         cmd_args.command += arg + ' ' + ('\\\n'
                                          if (i != len(sys.argv) - 1
                                              and (arg[0] != '-'
-                                                  or arg == '--save_full_U'))
+                                                  or arg == '--save_full_U'
+                                                  or arg == '--at_ref'))
                                          else
                                          '')
     __assert_molpro_output(cmd_args.molpro_output)
@@ -138,7 +145,13 @@ def parse_cmd_line():
                          + 'orb_rotations (default), '
                          + 'general_Absil, '
                          + 'and CISD_Absil')
+    if cmd_args.maxiter is None:
+        cmd_args.maxiter = 20
+    elif cmd_args.at_ref:
+        raise ParseError('--maxiter is not compatible with --at_ref')
     if cmd_args.ini_orb is not None:
+        if cmd_args.at_ref:
+            raise ParseError('--ini_orb is not compatible with --at_ref')
         if (cmd_args.ini_orb[-4:] == '.npz'
                 and os.path.isfile(cmd_args.ini_orb)):
             pass

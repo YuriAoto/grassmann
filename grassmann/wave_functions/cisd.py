@@ -9,7 +9,8 @@ import logging
 
 import numpy as np
 
-from util import triangular, get_n_from_triang
+from util import (triangular, get_n_from_triang, get_ij_from_triang,
+                  get_pos_from_rectangular)
 from wave_functions import general
 
 logger = logging.getLogger(__name__)
@@ -157,9 +158,78 @@ class Wave_Function_CISD(general.Wave_Function):
         raise NotImplementedError(
             'string_indices not implemented for Wave_Function_CISD!')
     
-    def make_Jac_Hess_overlap(self, analytic=True):
-        raise NotImplementedError(
-            'make_Jac_Hess not implemented for Wave_Function_CISD!')
+    def make_Jac_Hess_overlap(self, restricted=None):
+        """Construct the Jacobian and the Hessian of the function overlap.
+        
+        See fci.make_Jac_Hess_overlap for the detailed documentation.
+        In the present case, however, we have only analytic=True
+        
+        And for restricted wave function (restrict=True).
+        """
+        if restricted is None:
+            restricted = self.restricted
+        if restricted and not self.restricted:
+            raise ValueError(
+                'Restricted calculation needs a restricted wave function')
+        if not restricted:
+            raise NotImplementedError('Currently onçy for restricted case!')
+        slices_HJ = []
+        nK = []
+        for irp in self.spirrep_blocks(restricted=restricted):
+            nK.append(self.n_corr_orb[irp] * self.n_ext[irp])
+            slice_start = 0 if irp == 0 else slices_HJ[-1].stop
+            slices_HJ.append(slice(slice_start, slice_start + nK[-1]))
+        Jac = np.zeros(sum(nK))
+        Hess = -self.C0 * np.identity(len(Jac))
+        for irp in self.spirrep_blocks(restricted=restricted):
+            Jac[slices_HJ[irp]] = -np.ravel(self.Cs[irp],
+                                            order='C')
+            for ij in range(self.Cd[irp].shape[0]):
+                i, j = get_ij_from_triang(ij, with_diag=False)
+                for ab in range(self.Cd[irp].shape[1]):
+                    a, b = get_ij_from_triang(ab, with_diag=False)
+                    ia = (slices_HJ[irp].start
+                          + get_pos_from_rectangular(i, a,
+                                                     self.n_ext[irp]))
+                    jb = (slices_HJ[irp].start
+                          + get_pos_from_rectangular(j, b,
+                                                     self.n_ext[irp]))
+                    ib = (slices_HJ[irp].start
+                          + get_pos_from_rectangular(i, b,
+                                                     self.n_ext[irp]))
+                    ja = (slices_HJ[irp].start
+                          + get_pos_from_rectangular(j, a,
+                                                     self.n_ext[irp]))
+                    Hess[ia, jb] -= self.Cd[irp][ij, ab]
+                    Hess[jb, ia] -= self.Cd[irp][ij, ab]
+                    Hess[ib, ja] += self.Cd[irp][ij, ab]
+                    Hess[ja, ib] += self.Cd[irp][ij, ab]
+            for irp2 in range(irp + 1):
+                Hess[slices_HJ[irp],
+                     slices_HJ[irp2]] += np.reshape(self.Csd[irp][irp2],
+                                                    (nK[irp], nK[irp2]))
+                for i in range(self.n_corr_orb[irp]):
+                    slice_i = slice(
+                        slices_HJ[irp].start + i * self.n_ext[irp],
+                        slices_HJ[irp].start + (i + 1) * self.n_ext[irp])
+                    if irp == irp2 and (i + self.n_corr_orb[irp]) % 2 == 0:
+                        Jac[slice_i] *= -1
+                    for j in range(self.n_corr_orb[irp2]):
+                        if (i + self.n_corr_orb[irp]
+                                + j + self.n_corr_orb[irp2]) % 2 == 0:
+                            continue
+                        slice_j = slice(
+                            slices_HJ[irp2].start + j * self.n_ext[irp2],
+                            slices_HJ[irp2].start + (j + 1) * self.n_ext[irp2])
+                        Hess[slice_i, slice_j] *= -1
+                if irp2 < irp:
+                    Hess[slices_HJ[irp2],
+                         slices_HJ[irp]] = Hess[slices_HJ[irp],
+                                                slices_HJ[irp2]].T
+        if restricted:
+            Jac *= 2
+            Hess *= 2
+        return Jac, Hess
     
     def calc_wf_from_z(self, z, just_C0=False):
         raise NotImplementedError(

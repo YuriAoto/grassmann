@@ -176,13 +176,34 @@ def triangular(n):
     return ((n + 1) * n) // 2
 
 
-def get_ij_from_triang(n):
+def get_ij_from_triang(n, with_diag=True):
+    """Returns (i,j). Inverse of get_n_from_triang"""
     i = math.floor((math.sqrt(1 + 8 * n) - 1) / 2)
     j = n - i * (i + 1) // 2
+    if not with_diag:
+        i += 1
     return i, j
 
 
 def get_n_from_triang(i, j, with_diag=True):
+    """Return the position in a triangular arrangement (i>=j):
+    
+    with_diag=True:
+    
+    0,0                      0
+    1,0  1,1                 1  2
+    2,0  2,1  2,2            3  4  5
+    3,0  3,1  3,2   3,3      6  7  8  9
+    ...  i,j
+    
+    with_diag=False:
+    
+    1,0               0
+    2,0  2,1          1  2
+    3,0  3,1  3,2     3  4  5
+    ...  i,j
+    
+    """
     if with_diag:
         return j + triangular(i)
     else:

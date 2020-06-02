@@ -236,8 +236,12 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         wf_intN is an wave function in the intermediate normalisation
         """
-        raise NotImplementedError('from Int_Norm: not implemented.')
-        
+        new_wf = cls()
+        new_wf.get_coeff_from_Int_Norm_WF(wf_intN,
+                                          change_structure=True,
+                                          use_structure=False)
+        return new_wf
+    
     @classmethod
     def from_Molpro_FCI(cls, molpro_output,
                         state='1.1',
@@ -645,6 +649,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         TODO:
         -----
+        Consider only correlated orbitals! (it is possible!)
         Implement the unrestricted version
         
         """

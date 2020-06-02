@@ -765,7 +765,7 @@ class Wave_Function(ABC, Sequence):
         Behaviour:
         ----------
         
-        he function is f(x) = <wf(x), det1(x)>
+        The function is f(x) = <wf(x), det1(x)>
         where x parametrises the orbital rotations and
         det1 is the first determinant in wf.
         

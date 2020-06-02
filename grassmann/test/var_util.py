@@ -7,7 +7,7 @@ log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
 logging.basicConfig(filename='testing.log',
                     format=log_format,
                     filemode='a',
-                    level=logging.INFO)
+                    level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 main_files_dir = ('/home/yuriaoto/Documents/Codes/min_dist_Gr/'

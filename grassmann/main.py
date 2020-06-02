@@ -183,81 +183,96 @@ def dGr_main(args, f_out):
     toout('Occupation of reference wave function: {0:}'.
           format(ext_wf.ref_occ))
     toout()
-    toout('Starting optimisation')
-    toout('-' * 30)
-    f_out.flush()
-    logger.info('Starting optimisation')
-    if orbRot_opt:
-        res = optimiser.optimise_overlap_orbRot(
-            ext_wf,
-            f_out=f_out,
-            ini_U=U,
-            enable_uphill=False)
+    if args.at_ref:
+        toout('Calculation at the reference wave function')
+        logger.info('Calculation at the reference wave function')
+        # TODO: res = at_reference
+        # toout(res...)
     else:
-        res = optimiser.optimise_overlap_Absil(
-            ext_wf,
-            f_out=f_out,
-            ini_U=U)
-    toout('-' * 30)
-    logger.info('Optimisation completed')
-    if isinstance(res.converged, bool):
-        converged = res.converged
-    else:
-        converged = all(res.converged)
-    if converged:
-        toout('Iterations converged!')
-    else:
-        toout('WARNING: Iterations did not converge!!!')
+        toout('Starting optimisation')
+        logger.info('Starting optimisation')
+        toout('-' * 30)
+        f_out.flush()
         if orbRot_opt:
-            toout('Norm of final z vector: {0:8.4e}'.format(res.norm[0]))
-            toout('Norm of final Jacobian: {0:8.4e}'.format(res.norm[1]))
+            res = optimiser.optimise_overlap_orbRot(
+                ext_wf,
+                f_out=f_out,
+                ini_U=U,
+                max_iter=args.maxiter,
+                enable_uphill=False)
         else:
-            toout('Norm of final eta vector: {0:8.4e}'.format(res.norm[0]))
-            toout('Norm of final C vector: {0:8.4e}'.format(res.norm[1]))
-        toout()
-    if res.n_pos_H_eigVal is None:
-        toout('WARNING: Unknown number of positive eigenvalue(s) of Hessian.')
-    else:
-        if res.n_pos_H_eigVal > 0:
-            toout('WARNING: Found {0:d} positive eigenvalue(s) of Hessian.'.
-                  format(res.n_pos_H_eigVal))
-            logger.warning('Found %s positive eigenvalue(s) of Hessian.',
-                           res.n_pos_H_eigVal)
+            res = optimiser.optimise_overlap_Absil(
+                ext_wf,
+                f_out=f_out,
+                max_iter=args.maxiter,
+                ini_U=U)
+        toout('-' * 30)
+        logger.info('Optimisation completed')
+        if isinstance(res.converged, bool):
+            converged = res.converged
         else:
-            logger.info('All eigenvalues of Hessian are negative:'
-                        + ' OK, we are at a maximum!')
-    if isinstance(res.f, tuple):
-        toout('WARNING:'
-              + ' Reference determinant is not the one with largest coefficient!')
-        toout('  Coefficient of reference: {:.7f}'.format(res.f[0]))
-        toout('  Determinant with largest coefficient: {:s}'.
-              format(str(res.f[1])))
-        final_f = res.f[0]
-    else:
-        final_f = res.f
-    print_ovlp_D('min D', 'extWF', final_f)
-    logger.info("""Saving U matrices in a .npz file:
+            converged = all(res.converged)
+        if converged:
+            toout('Iterations converged!')
+        else:
+            toout('WARNING: Iterations did not converge!!!')
+            if orbRot_opt:
+                toout('Norm of final z vector: {0:8.4e}'.format(res.norm[0]))
+                toout('Norm of final Jacobian: {0:8.4e}'.format(res.norm[1]))
+            else:
+                toout('Norm of final eta vector: {0:8.4e}'.format(res.norm[0]))
+                toout('Norm of final C vector: {0:8.4e}'.format(res.norm[1]))
+            toout()
+        if res.n_pos_H_eigVal is None:
+            toout('WARNING:'
+                  + ' Unknown number of positive eigenvalue(s) of Hessian.')
+        else:
+            if res.n_pos_H_eigVal > 0:
+                toout('WARNING: '
+                      + 'Found {0:d} positive eigenvalue(s) of Hessian.'.
+                      format(res.n_pos_H_eigVal))
+                logger.warning('Found %s positive eigenvalue(s) of Hessian.',
+                               res.n_pos_H_eigVal)
+            else:
+                if args.at_ref:
+                    toout('All eigenvalues of Hessian are negative:'
+                          + ' We are closse to a maximum!')
+                logger.info('All eigenvalues of Hessian are negative:'
+                            + ' OK, we are at a maximum!')
+        if isinstance(res.f, tuple):
+            toout('WARNING:'
+                  + ' Reference determinant is not the one'
+                  + ' with largest coefficient!')
+            toout('  Coefficient of reference: {:.7f}'.format(res.f[0]))
+            toout('  Determinant with largest coefficient: {:s}'.
+                  format(str(res.f[1])))
+            final_f = res.f[0]
+        else:
+            final_f = res.f
+        print_ovlp_D('min D', 'extWF', final_f)
+        logger.info("""Saving U matrices in a .npz file:
  These make the transformation from the basis used to expand the
  external wave function (|extWF>) to the one that makes |min D>
  the first determinant.""")
-    final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
-               if args.save_full_U else
-               res.U)
-    np.savez(args.basename + '.min_dist_U', *final_U)
-    if args.HF_orb != args.WF_orb:
-        print_ovlp_D('refWF', 'min D',
+        final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
+                   if args.save_full_U else
+                   res.U)
+        np.savez(args.basename + '.min_dist_U', *final_U)
+        if args.HF_orb != args.WF_orb:
+            print_ovlp_D('refWF', 'min D',
+                         ovlp_Slater_dets((2 * res.U)
+                                          if restricted else
+                                          res.U,
+                                          ext_wf.ref_occ))
+            for spirrep, Ui in enumerate(U):
+                if Ui.shape[1] > 0:
+                    res.U[spirrep] = np.matmul(
+                        linalg.inv(HF_in_basis_of_refWF[spirrep]), Ui)
+        print_ovlp_D('min E', 'min D',
                      ovlp_Slater_dets((2 * res.U)
                                       if restricted else
                                       res.U,
                                       ext_wf.ref_occ))
-        for spirrep, Ui in enumerate(U):
-            if Ui.shape[1] > 0:
-                res.U[spirrep] = linalg.inv(HF_in_basis_of_refWF[spirrep]) @ Ui
-    print_ovlp_D('min E', 'min D',
-                 ovlp_Slater_dets((2 * res.U)
-                                  if restricted else
-                                  res.U,
-                                  ext_wf.ref_occ))
     toout()
     end_time = time.time()
     elapsed_time = str(datetime.timedelta(seconds=(end_time - start_time)))
