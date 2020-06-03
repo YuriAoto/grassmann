@@ -79,7 +79,8 @@ def optimise_overlap_orbRot(wf,
                             occupation=None,
                             thrsh_Z=1.0E-8,
                             thrsh_J=1.0E-8,
-                            enable_uphill=True):
+                            enable_uphill=True,
+                            at_reference=False):
     """Find a single Slater determinant that minimise the distance to wf
     
     Behaviour:
@@ -136,10 +137,10 @@ def optimise_overlap_orbRot(wf,
         If None is given, uses wf.ref_occ.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
-        Currently: not implemented!
+        ATTENTION! Currently not implemented!
     
     thrsh_Z (float, optional, default=1.0E-8)
-        Convergence threshold for the Z vector
+        Convergence threshold for ΔK
     
     thrsh_J (float, optional, default=1.0E-8)
         Convergence threshold for the Jacobian
@@ -147,6 +148,13 @@ def optimise_overlap_orbRot(wf,
     enable_uphill (bool, optional, default=True)
         If True, try algorithm to go uphill in case of positive eigenvalues
         of the Hessian
+    
+    at_reference (bool, optional, default=False)
+        If True, does the calculation at the reference (no optimisation).
+        The wave function is not transformed, and several parameters
+        are not considered:
+        max_iter, occupation, thrsh_Z, thrsh_J, enable_uphill.
+        Returned value has also unused fields (see below).
         
     Returns:
     --------
@@ -157,6 +165,9 @@ def optimise_overlap_orbRot(wf,
     f is a tuple (f, det_maxC), with the first entry as the coefficient of
     the first determinant (that is what we are optimising), and det_maxC is
     the (complete) determinant with the largest coefficient.
+    
+    If at_reference, only the fields f_final, norm and n_pos_H_eigVal
+    are meaningful.
     
     TODO:
     -----
@@ -176,6 +187,8 @@ def optimise_overlap_orbRot(wf,
     converged = False
     try_uphill = False
     i_iteration = 0
+    if at_reference:
+        max_iter = 1
     if ini_U is None:
         U = []
         # ini_occ = occupation if occupation is not None else wf.ref_occ
@@ -185,10 +198,11 @@ def optimise_overlap_orbRot(wf,
     else:
         U = orb.complete_orb_space(ini_U, wf.orb_dim)
         cur_wf = wf.change_orb_basis(U)
-    fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
-    f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
-                format('it.', 'f', '|z|', '|Jac|',
-                       'time in iteration [det. largest coef.]'))
+    if f_out is not None:
+        fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
+        f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
+                    format('it.', 'f', '|ΔK|', '|J|',
+                           'time in iteration [det. largest coef.]'))
     for i_iteration in range(max_iter):
         with logtime('Starting iteration {}'.format(i_iteration)) as T_start:
             pass
@@ -227,6 +241,8 @@ def optimise_overlap_orbRot(wf,
             normJ /= sqrt_2
         if not try_uphill:
             # Newton step
+            # PERHAPS IS NOT NEEDED IF at_reference=True...
+            # Can we get normZ from normJ and Hess, directly???
             with logtime('Solving lin system for vector z.'):
                 z = -linalg.solve(Hess, Jac)
         else:
@@ -240,7 +256,7 @@ def optimise_overlap_orbRot(wf,
             # gamma = -gamma/den
             with logtime('Trying uphill'):
                 gamma = 0.5
-                logger.info('Calculating z vector by Gradient descent;'
+                logger.info('Calculating ΔK by Gradient descent;'
                             + '\n gamma = %s', gamma)
                 max_c0 = cur_wf.C0
                 max_i0 = 0
@@ -257,34 +273,37 @@ def optimise_overlap_orbRot(wf,
                         max_i0 = i
                 z = max_i0 * gamma * Hess_dir_with_posEvec
                 logger.info(
-                    'z vector obtained: %d * gamma * Hess_dir_with_posEvec',
+                    'ΔK obtained: %d * gamma * Hess_dir_with_posEvec',
                     max_i0)
                 try_uphill = False
-        logger.debug('z vector:\n%r', z)
-        with logtime('Calculating norm of Z') as T_norm_Z:
+        logger.debug('ΔK:\n%r', z)
+        with logtime('Calculating norm of ΔK') as T_norm_Z:
             normZ = linalg.norm(z)
         elapsed_time = str(timedelta(seconds=(T_norm_Z.end_time
                                               - T_start.ini_time)))
-        f_out.write(fmt_full.
-                    format(i_iteration,
-                           cur_wf.C0,
-                           normZ,
-                           normJ,
-                           elapsed_time))
-        i_max_coef = get_i_max_coef(cur_wf)
-        if i_max_coef != cur_wf.i_ref:
-            f_out.write('   ^ Max coefficient: {}\n'.
-                        format(str(cur_wf[i_max_coef])))
-        f_out.flush()
-    if i_max_coef != cur_wf.i_ref:
+        if f_out is not None:
+            f_out.write(fmt_full.
+                        format(i_iteration,
+                               cur_wf.C0,
+                               normZ,
+                               normJ,
+                               elapsed_time))
+        if not at_reference:
+            i_max_coef = get_i_max_coef(cur_wf)
+            if i_max_coef != cur_wf.i_ref and f_out is not None:
+                f_out.write('   ^ Max coefficient: {}\n'.
+                            format(str(cur_wf[i_max_coef])))
+        if f_out is not None:
+            f_out.flush()
+    if not at_reference and i_max_coef != cur_wf.i_ref:
         f_final = (cur_wf.C0, cur_wf[i_max_coef])
     else:
         f_final = cur_wf.C0
     return Results(f=f_final,
-                   U=U,
+                   U=None if at_reference else U,
                    norm=(normZ, normJ),
-                   last_iteration=i_iteration,
-                   converged=converged,
+                   last_iteration=None if at_reference else i_iteration,
+                   converged=None if at_reference else converged,
                    n_pos_H_eigVal=n_pos_eigV)
 
 
@@ -381,18 +400,18 @@ def optimise_overlap_Absil(ci_wf,
         Currently: not implemented!
     
     thrsh_eta (float, optional, default = 1.0E-5)
-        Convergence threshold for the eta vector
+        Convergence threshold for η
     
     thrsh_C (float, optional, default = 1.0E-5)
         Convergence threshold for the C vector
     
     only_C (bool, default = False)
         If True, stops the iterations if the C vector passes
-        in the convergence test, irrespective of the norm of eta
+        in the convergence test, irrespective of the norm of η
         (and does not go further in the iteration)
     
     only_eta (bool, default = False)
-        If True, stops the iterations if the eta vector passes
+        If True, stops the iterations if the η vector passes
         in the convergence test, irrespective of the norm of C
         (and does not go further in the iteration)
     
@@ -478,7 +497,7 @@ def optimise_overlap_Absil(ci_wf,
     converged_eta = converged_C = False
     fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
     f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
-                format('it.', 'f', '|eta|', '|C|', 'time in iteration'))
+                format('it.', 'f', '|η|', '|C|', 'time in iteration'))
     for i_iteration in range(max_iter):
         with logtime('Generating linear system') as T_gen_lin_system:
             f, X, C = absil.generate_lin_system(ci_wf, U, slice_XC)
@@ -500,7 +519,7 @@ def optimise_overlap_Absil(ci_wf,
             converged_C = False
         with logtime('Solving linear system'):
             lin_sys_solution = linalg.lstsq(X, C, cond=None)
-        logger.debug('Solution of the linear system, eta:\n%s',
+        logger.debug('Solution of the linear system, η:\n%s',
                      lin_sys_solution[0])
         logger.info('Rank of matrix X: %d', lin_sys_solution[2])
         norm_eta = linalg.norm(lin_sys_solution[0])
@@ -510,10 +529,10 @@ def optimise_overlap_Absil(ci_wf,
                 break
         else:
             converged_eta = False
-        logger.info('Norm of matrix eta: %.5e', norm_eta)
+        logger.info('Norm of matrix η: %.5e', norm_eta)
         eta = []
         svd_res = []
-        with logtime('Singular value decomposition of eta'):
+        with logtime('Singular value decomposition of η'):
             for i in ci_wf.spirrep_blocks(restricted=restricted):
                 eta.append(np.reshape(
                     lin_sys_solution[0][slice_XC[i]],
@@ -528,7 +547,7 @@ def optimise_overlap_Absil(ci_wf,
                                     np.identity(eta[-1].shape[1])))
                     logger.info(
                         'Skipping svd for spirrep block %d.'
-                        + ' Norm of eta[%d] = %.8f',
+                        + ' Norm of η[%d] = %.8f',
                         i, i, norm_eta_i)
                 else:
                     svd_res.append(linalg.svd(eta[-1],

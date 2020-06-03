@@ -36,8 +36,8 @@ def dGr_main(args, f_out):
     git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)) + '/../')
     git_sha = git_repo.head.object.hexsha
     
-    def toout(x=''):
-        f_out.write(x + '\n')
+    def toout(x='', add_new_line=True):
+        f_out.write(x + ('\n' if add_new_line else ''))
     
     def print_ovlp_D(pt1, pt2, ovlp):
         toout('|<{0:s}|{1:s}>| = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.
@@ -66,7 +66,10 @@ def dGr_main(args, f_out):
             toout('Zipped numpy file ' + args.ini_orb)
         else:
             toout('Molpro output ' + args.ini_orb)
-    if args.algorithm == 'orb_rotations':
+    if args.at_ref:
+        orbRot_opt = False
+        toout('Performing analysis at the reference wave function.')
+    elif args.algorithm == 'orb_rotations':
         orbRot_opt = True
         toout('Using the optimiser based on orbital rotations.')
     else:
@@ -90,6 +93,7 @@ def dGr_main(args, f_out):
         time.strftime("%d %b %Y - %H:%M", time.localtime(start_time))))
     toout()
     # ----- loading wave function
+    ## TODO: more versatile. this is not very compatible with at_ref
     if orbRot_opt:
         with logtime('Reading FCI wave function'):
             ext_wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
@@ -184,10 +188,21 @@ def dGr_main(args, f_out):
           format(ext_wf.ref_occ))
     toout()
     if args.at_ref:
-        toout('Calculation at the reference wave function')
-        logger.info('Calculation at the reference wave function')
-        # TODO: res = at_reference
-        # toout(res...)
+        toout('Calculation at the reference wave function',
+              add_new_line=False)
+        f_out.flush()
+        with logtime('Calculation at the reference wave function',
+                     out_stream=f_out,
+                     out_fmt=' (elapsed time: {})\n'):
+            res = optimiser.optimise_overlap_orbRot(
+                ext_wf,
+                f_out=None,
+                at_reference=True)
+        toout('-' * 30)
+        toout('|J|  = |t_i^a|    = {0:.5f}'.format(res.norm[1]))
+        toout('|ΔK| = |H^-1 @ J| = {0:.5f}'.format(res.norm[0]))
+        toout('Hessian (H) has {0:d} positive eigenvalues'.format(res.n_pos_H_eigVal))
+        toout('-' * 30)
     else:
         toout('Starting optimisation')
         logger.info('Starting optimisation')
