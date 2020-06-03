@@ -11,46 +11,6 @@ from wave_functions import int_norm, cisd
 import test
 
 
-systems = [
-    'H2__5__631g__C1',
-    'H2__5__631g__C2v',
-    'H2__5__631g__D2h',
-    'H2__5__ccpVDZ__C1',
-    'H2__5__ccpVDZ__C2v',
-    'H2__5__ccpVDZ__Cs',
-    'H2__5__ccpVDZ__D2h',
-    'H2__5__sto3g__C1',
-    'H2__5__sto3g__D2h',
-    'H2__5__631g__C1',
-    'He2__1.5__631g__C2v',
-    'He2__1.5__631g__D2h',
-    'h2o__1.5__sto3g__C2v',
-    'h2o__Req__631g__C2v',
-    'h2o__Req__sto3g__C2v',
-    'Li2__5__sto3g__C1',
-    'Li2__5__sto3g__C2v',
-    'Li2__5__sto3g__D2h',
-    'Li2__5__to2s__C2v',
-    'Li2__5__to3s__C2v',
-    'Li2__5__631g__C1',
-    'Li2__5__631g__C2v',
-    'Li2__5__631g__D2h',
-    'Li2__5__ccpVDZ__C1',
-    'Li2__5__ccpVDZ__C2v',
-    'Li2__5__ccpVDZ__Cs',
-    'Li2__5__ccpVDZ__D2h',
-    'Li2__5__ccpVTZ__D2h',
-    'Li2__5__ccpVQZ__D2h',
-    'N2__3__sto3g__D2h',
-    'N2__3__631g__D2h',
-    'N2__3__631g__D2h_occ_21101110',
-    'N2__3__cc-pVDZ__D2h',
-    'H8_cage__1.5__631g__D2h',
-    'He8_cage__1.5__631g__D2h',
-    'He8_cage__1.5__ccpVDZ__D2h',
-    'Li8_cage__1.5__631g__D2h']
-
-    
 class GenCisdAlgorithmsTestCase(unittest.TestCase):
     """Compares Absil algorithm for general and CISD wave functions
     """
@@ -60,7 +20,8 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
         self.prng = np.random.RandomState(test.init_random_state)
 
     def test_overlap(self):
-        for cisd_sys in systems:
+        for cisd_sys in test.test_systems(has_method='CISD',
+                                          molecule=None):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(cisd_sys))
             wf_intN.calc_norm()
@@ -80,7 +41,8 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
                 self.assertAlmostEqual(f_CI, fgen)
 
     def test_create_XC_matrices(self):
-        for cisd_sys in systems:
+        for cisd_sys in test.test_systems(has_method='CISD',
+                                          molecule=None):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(cisd_sys))
             wf_intN.calc_norm()

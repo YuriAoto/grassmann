@@ -14,12 +14,12 @@ class WFConstructorsTestCase(unittest.TestCase):
     
     def setUp(self):
         self.int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
-            test.CISD_file('H2__R_5__sto3g__D2h'))
+            test.CISD_file('H2__5__sto3g__D2h'))
         self.int_N_WF.calc_norm()
     
     def test_int_norm_contructor(self):
         wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
-            test.FCI_file('H2__R_5__sto3g__D2h'),
+            test.FCI_file('H2__5__sto3g__D2h'),
             zero_coefficients=True)
         wf.get_coeff_from_Int_Norm_WF(self.int_N_WF,
                                       change_structure=False,
@@ -82,10 +82,11 @@ class SlaterDetTestCase(unittest.TestCase):
     def test_get_from_FCI_line_1(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
         orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = fci._get_Slater_Det_from_FCI_line(
-            line, orb_dim, n_irrep, Ms)
+            line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.162676901257, places=10)
         self.assertEqual(det.occupation[0], np.array([0, 1]))
         self.assertEqual(det.occupation[1], np.array([0]))
@@ -99,10 +100,11 @@ class SlaterDetTestCase(unittest.TestCase):
     def test_get_from_FCI_line_2(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
         orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = fci._get_Slater_Det_from_FCI_line(
-            line, orb_dim, n_irrep, Ms)
+            line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.049624632911, places=10)
         self.assertEqual(det.occupation[0], np.array([0, 1, 3]))
         self.assertEqual(det.occupation[1], np.array([]))
@@ -116,19 +118,21 @@ class SlaterDetTestCase(unittest.TestCase):
     def test_get_from_FCI_line_3(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
         orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = fci._get_Slater_Det_from_FCI_line(
-            line, orb_dim, n_irrep, Ms, zero_coefficients=True)
+            line, orb_dim, n_core, n_irrep, Ms, zero_coefficients=True)
         self.assertAlmostEqual(det.c, 0.0, places=10)
 
     def test_get_from_FCI_line_4(self):
         line = '0.000000000000  1  2  9  1  2 10'
         orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = fci._get_Slater_Det_from_FCI_line(
-            line, orb_dim, n_irrep, Ms)
+            line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.000000000000, places=10)
         self.assertEqual(det.occupation[0], np.array([0, 1]))
         self.assertEqual(det.occupation[1], np.array([]))
@@ -136,6 +140,70 @@ class SlaterDetTestCase(unittest.TestCase):
         self.assertEqual(det.occupation[3], np.array([]))
         self.assertEqual(det.occupation[4], np.array([0, 1]))
         self.assertEqual(det.occupation[5], np.array([]))
+        self.assertEqual(det.occupation[6], np.array([1]))
+        self.assertEqual(det.occupation[7], np.array([]))
+
+    def test_get_from_FCI_line_5(self):
+        line = '    -0.162676901257  1  2  7  1  2  7'
+        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_irrep = 4
+        Ms = 0.0
+        det = fci._get_Slater_Det_from_FCI_line(
+            line, orb_dim, n_core, n_irrep, Ms)
+        self.assertAlmostEqual(det.c, -0.162676901257, places=10)
+        self.assertEqual(det.occupation[0], np.array([0, 5]))
+        self.assertEqual(det.occupation[1], np.array([0]))
+        self.assertEqual(det.occupation[2], np.array([]))
+        self.assertEqual(det.occupation[3], np.array([]))
+        self.assertEqual(det.occupation[4], np.array([0, 5]))
+        self.assertEqual(det.occupation[5], np.array([0]))
+        self.assertEqual(det.occupation[6], np.array([]))
+        self.assertEqual(det.occupation[7], np.array([]))
+
+    def test_get_from_FCI_line_6(self):
+        line = '    -0.049624632911  1  2  4  1  2  6'
+        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_irrep = 4
+        Ms = 0.0
+        det = fci._get_Slater_Det_from_FCI_line(
+            line, orb_dim, n_core, n_irrep, Ms)
+        self.assertAlmostEqual(det.c, -0.049624632911, places=10)
+        self.assertEqual(det.occupation[0], np.array([0, 2]))
+        self.assertEqual(det.occupation[1], np.array([0]))
+        self.assertEqual(det.occupation[2], np.array([]))
+        self.assertEqual(det.occupation[3], np.array([]))
+        self.assertEqual(det.occupation[4], np.array([0, 4]))
+        self.assertEqual(det.occupation[5], np.array([0]))
+        self.assertEqual(det.occupation[6], np.array([]))
+        self.assertEqual(det.occupation[7], np.array([]))
+
+    def test_get_from_FCI_line_7(self):
+        line = '    -0.049624632911  1  2  4  1  2  6'
+        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_irrep = 4
+        Ms = 0.0
+        det = fci._get_Slater_Det_from_FCI_line(
+            line, orb_dim, n_core, n_irrep, Ms, zero_coefficients=True)
+        self.assertAlmostEqual(det.c, 0.0, places=10)
+
+    def test_get_from_FCI_line_8(self):
+        line = '0.000000000000  1  2  9  1  2 10'
+        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
+        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_irrep = 4
+        Ms = 0.0
+        det = fci._get_Slater_Det_from_FCI_line(
+            line, orb_dim, n_core, n_irrep, Ms)
+        self.assertAlmostEqual(det.c, -0.000000000000, places=10)
+        self.assertEqual(det.occupation[0], np.array([0]))
+        self.assertEqual(det.occupation[1], np.array([0]))
+        self.assertEqual(det.occupation[2], np.array([0]))
+        self.assertEqual(det.occupation[3], np.array([]))
+        self.assertEqual(det.occupation[4], np.array([0]))
+        self.assertEqual(det.occupation[5], np.array([0]))
         self.assertEqual(det.occupation[6], np.array([1]))
         self.assertEqual(det.occupation[7], np.array([]))
     
@@ -176,7 +244,7 @@ class JacHess_H2_TestCase(unittest.TestCase):
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.WF = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
-            test.FCI_file('H2__R_5__sto3g__D2h'))
+            test.FCI_file('H2__5__sto3g__D2h'))
         Ures = []
         Uunres = []
         prng = np.random.RandomState(test.init_random_state)
@@ -240,7 +308,7 @@ class WForbChangeTestCase(unittest.TestCase):
     
     def setUp(self):
         self.WF = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
-            test.FCI_file('H2__R_5__sto3g__D2h'))
+            test.FCI_file('H2__5__sto3g__D2h'))
         self.U1 = []
         self.U2 = []
         self.U3 = []

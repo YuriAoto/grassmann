@@ -65,7 +65,7 @@ def _get_Slater_Det_from_String_Index(Index, n_irrep,
                       occupation=final_occ)
 
 
-def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
+def _get_Slater_Det_from_FCI_line(l, orb_dim, n_core, n_irrep, Ms,
                                   molpro_output='', line_number=-1,
                                   zero_coefficients=False):
     """Read a FCI configuration from Molpro output and return a Slater Determinant
@@ -78,6 +78,9 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
     
     orb_dim (Orbitals_Sets)
         Dimension of orbital space
+    
+    n_core (Orbitals_Sets)
+        Dimension of frozen orbitals space
     
     n_irrep (int)
         Number of irreps
@@ -104,7 +107,7 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
     Examples:
     ---------
     
-    if n_irrep = 4, orb_dim = (6,2,2,0), then
+    # if n_irrep = 4, orb_dim = (6,2,2,0), n_core = (0,0,0,0) then
     
     -0.162676901257  1  2  7  1  2  7
     gives
@@ -117,12 +120,24 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
     0.000000000000  1  2  9  1  2 10
     gives
     c=-0.000000000000; occupation=[(0,1) () (0) () (0,1) () (1) ()]
+    
+    # but if n_core = (1,1,0,0) then the above cases give
+         (because frozen electrons are indexed first in Molpro convention)
+    
+    c=-0.162676901257; occupation=[(0,5) (0) () () (0,5) (0) () ()]
+    
+    c=-0.049624632911; occupation=[(0,2) (0) () () (0,4) (0) () ()]
+    
+    c=-0.000000000000; occupation=[(0) (0) (0) () (0) (0) (1) ()]
+
+
     """
     lspl = l.split()
-    final_occ = [[] for i in range(2 * n_irrep)]
+    final_occ = [list(range(n_core[irp])) for irp in range(2 * n_irrep)]
+    n_tot_core = sum(map(len, final_occ)) // 2
     try:
         coeff = float(lspl[0])
-        occ = list(map(lambda x: int(x) - 1, lspl[1:]))
+        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_core]
     except Exception as e:
         raise molpro_util.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
@@ -130,9 +145,17 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
             line=l,
             line_number=line_number,
             file_name=molpro_output)
-    total_orbs = [0]
+    if len(occ) + 2 * n_tot_core + 1 != len(lspl):
+        raise molpro_util.MolproInputError(
+            "Inconsistency in number of core orbitals for FCI. n_core:\n"
+            + str(n_core),
+            line=l,
+            line_number=line_number,
+            file_name=molpro_output)
+    total_orbs = [sum(n_core[irp] for irp in range(n_irrep))]
     for i in range(n_irrep):
-        total_orbs.append(total_orbs[-1] + orb_dim[i])
+        total_orbs.append(total_orbs[-1]
+                          + orb_dim[i] - n_core[i])
     irrep = irrep_shift = 0
     ini_beta = (len(occ) + int(2 * Ms)) // 2
     for i, orb in enumerate(occ):
@@ -148,7 +171,8 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_irrep, Ms,
                     line_number=line_number,
                     file_name=molpro_output)
             if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
-                final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep])
+                final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep]
+                                                      + n_core[irrep])
                 break
             else:
                 irrep += 1
@@ -411,7 +435,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     if 'EOF' in l:
                         break
                     new_Slater_Det = _get_Slater_Det_from_FCI_line(
-                        l, self.orb_dim, self.n_irrep, self.Ms,
+                        l, self.orb_dim, self.n_core, self.n_irrep, self.Ms,
                         molpro_output=molpro_output,
                         line_number=line_number,
                         zero_coefficients=zero_coefficients)
@@ -422,7 +446,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                         if sgn_invert:
                             new_Slater_Det = Slater_Det(
                                 c=-new_Slater_Det.c,
-                                occupation=Slater_Det.occupation)
+                                occupation=new_Slater_Det.occupation)
                     if use_structure:
                         try:
                             idet = self.index(new_Slater_Det)
@@ -452,8 +476,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                         self.restricted = self.Ms == 0.0
                         # if self.Ms != 0.0:
                         #     raise Exception('Only singlet wave functions!')
-        self.ref_occ = general.Orbitals_Sets(list(map(len,
-                                                      self[0].occupation)))
+        self.ref_occ = general.Orbitals_Sets(
+            list(map(len, self[0].occupation)))
         self._i_ref = None
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),

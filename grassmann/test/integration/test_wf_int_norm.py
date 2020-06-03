@@ -5,22 +5,9 @@ import unittest
 
 import numpy as np
 
-import absil
-import orbitals
 from wave_functions import int_norm, cisd
 import test
 
-systems_H2 = [
-    'H2__5__631g__C1',
-    'H2__5__631g__C2v',
-    'H2__5__631g__D2h',
-    'H2__5__ccpVDZ__C1',
-    'H2__5__ccpVDZ__C2v',
-    'H2__5__ccpVDZ__Cs',
-    'H2__5__ccpVDZ__D2h',
-    'H2__5__sto3g__C1',
-    'H2__5__sto3g__D2h',
-    'H2__5__631g__C1']
 
 class CISDvsCCSDTestCase(unittest.TestCase):
     """Compares CISD and CCSD wave functions for H2
@@ -34,7 +21,8 @@ class CISDvsCCSDTestCase(unittest.TestCase):
         self.prng = np.random.RandomState(test.init_random_state)
 
     def test_check_CCvsCI_cisd_for_H2(self):
-        for H2_sys in systems_H2:
+        for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
+                                        molecule='H2'):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(H2_sys))
             wf_intN.calc_norm()
@@ -55,10 +43,11 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                     with self.subTest(system=H2_sys, irrep=irp,
                                       irrep2=irp2, coef='Cs'):
                         self.assertEqual(wf_CCSD.Csd[irp][irp2],
-                                               wf_CISD.Csd[irp][irp2])
+                                         wf_CISD.Csd[irp][irp2])
 
     def test_check_CCvsCI_string_indices_for_H2(self):
-        for H2_sys in systems_H2:
+        for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
+                                        molecule='H2'):
             wf_CI = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(H2_sys))
             wf_CI.calc_norm()
@@ -72,4 +61,3 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                 self.assertAlmostEqual(Ind_CC.C, Ind_CI.C, places=5)
                 for irp in wf_CI.spirrep_blocks(restricted=False):
                     self.assertEqual(Ind_CC[irp].occ_orb, Ind_CI[irp].occ_orb)
-
