@@ -119,6 +119,8 @@ def dGr_main(args, f_out):
         with logtime('Reading int. norm. from Molpro output'):
             ext_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 args.molpro_output)
+            if args.at_ref:
+                ext_wf.use_CISD_norm = False
             ext_wf.calc_norm()
             if args.algorithm == 'CISD_Absil':
                 with logtime('Transforming int. norm. WF into CISD wf'):
@@ -199,9 +201,13 @@ def dGr_main(args, f_out):
                 f_out=None,
                 at_reference=True)
         toout('-' * 30)
-        toout('|J|  = |t_i^a|    = {0:.5f}'.format(res.norm[1]))
-        toout('|ΔK| = |H^-1 @ J| = {0:.5f}'.format(res.norm[0]))
-        toout('Hessian (H) has {0:d} positive eigenvalues'.format(res.n_pos_H_eigVal))
+        toout('|J|  = |t_i^a|    = {0:.7f}'.format(res.norm[1]))
+        if 'CCSD' in ext_wf.WF_type:
+            toout('T1 diagnostic     = {0:.7f}'.format(
+                res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
+        toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
+        toout('Hessian (H) has {0:d} positive eigenvalues'.format(
+            res.n_pos_H_eigVal))
         toout('-' * 30)
     else:
         toout('Starting optimisation')
