@@ -36,6 +36,10 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 sqrt_2 = np.sqrt(2.0)
 
+GETTING_Z_LIN_SYS = 0
+GETTING_Z_EIGEN = 1
+GETTING_Z_PART_EIGEN = 2
+
 np.set_printoptions(linewidth=150)
 
 
@@ -80,7 +84,8 @@ def optimise_overlap_orbRot(wf,
                             thrsh_Z=1.0E-8,
                             thrsh_J=1.0E-8,
                             enable_uphill=True,
-                            at_reference=False):
+                            at_reference=False,
+                            update_meth=None):
     """Find a single Slater determinant that minimise the distance to wf
     
     Behaviour:
@@ -155,7 +160,23 @@ def optimise_overlap_orbRot(wf,
         are not considered:
         max_iter, occupation, thrsh_Z, thrsh_J, enable_uphill.
         Returned value has also unused fields (see below).
+    
+    update_meth (int, optional, default=None)
+        How the update vector, ΔK, is obtained. Possible values are:
         
+        optimiser.GETTING_Z_LIN_SYS: ΔK is obtained solving the linear
+            system, Hess @ ΔK = -Jac (using scipy.linalg)
+        
+        optimiser.GETTING_Z_EIGEN: ΔK is obtained from the eigendecomposition
+            of Hess = Q @ D @ D.T:  ΔK = - Q @ D^-1 @ D.T @ Jac.
+        
+        optimiser.GETTING_Z_PART_EIGEN: Part of the eigendecomposition
+            is used: D^-1 @ D.T @ Jac. This vector has the same Frobenius
+            norm as ΔK, and can be used for at_reference=True
+        
+        If None, set to optimiser.GETTING_Z_PART_EIGEN if at_ref=True,
+        and to optimiser.GETTING_Z_EIGEN otherwise
+    
     Returns:
     --------
     
@@ -187,6 +208,8 @@ def optimise_overlap_orbRot(wf,
     converged = False
     try_uphill = False
     i_iteration = 0
+    if update_meth is None:
+        update_meth = GETTING_Z_PART_EIGEN if at_reference else GETTING_Z_EIGEN
     if at_reference:
         max_iter = 1
     if ini_U is None:
@@ -240,11 +263,16 @@ def optimise_overlap_orbRot(wf,
         if restricted:
             normJ /= sqrt_2
         if not try_uphill:
-            # Newton step
-            # PERHAPS IS NOT NEEDED IF at_reference=True...
-            # Can we get normZ from normJ and Hess, directly???
-            with logtime('Solving lin system for vector z.'):
-                z = -linalg.solve(Hess, Jac)
+            # Newton update
+            if update_meth == GETTING_Z_LIN_SYS:
+                with logtime('Calculating ΔK: Solving linear system.'):
+                    z = -linalg.solve(Hess, Jac)
+            elif update_meth == GETTING_Z_EIGEN:
+                with logtime('Calculating ΔK: from eigendecomposition.'):
+                    z = -np.matmul(np.matmul(eig_vec / eig_val, eig_vec.T), Jac)
+            elif update_meth == GETTING_Z_PART_EIGEN:
+                with logtime('Calculating ΔK (incomplete!!): from eigendecomposition.'):
+                    z = np.matmul((eig_vec / eig_val).T, Jac)
         else:
             # Look maximum in the direction of eigenvector of Hess with pos
             #

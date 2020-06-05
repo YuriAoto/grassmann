@@ -83,6 +83,8 @@ def parse_cmd_line():
         ''')))
     parser.add_argument('molpro_output',
                         help='Molpro output with the correlated wave function')
+    parser.add_argument('--output',
+                        help='Output file name')
     parser.add_argument('--ini_orb',
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'

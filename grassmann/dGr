@@ -20,10 +20,13 @@ try:
 except parser.ParseError as e:
     sys.exit(str(e))
 
-name_extra = cmd_line_args.state
-if name_extra:
-    name_extra = '_' + name_extra
-output_name = cmd_line_args.basename + '.min_dist' + name_extra
+if cmd_line_args.output is None:
+    name_extra = cmd_line_args.state
+    if name_extra:
+        name_extra = '_' + name_extra
+    output_name = cmd_line_args.basename + '.min_dist' + name_extra
+else:
+    output_name = cmd_line_args.output
 logfile_name = output_name + '.log'
 
 if os.path.exists(output_name) or os.path.exists(logfile_name):
