@@ -195,6 +195,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         self.norm = None
         self.use_CISD_norm = True
         self.singles = None
+        self.BCC_orb_gen = None
         self.doubles = None
     
     def __getitem__(self, I):
@@ -218,6 +219,14 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             x.append('Amplitudes of single excitations:')
             x.append('')
             for spirrep, S in enumerate(self.singles):
+                x.append('Spirrep {}:'.format(spirrep))
+                x.append(str(S))
+                x.append('')
+            x.append('=' * 50)
+        if self.BCC_orb_gen is not None:
+            x.append('Orbital rotation parameters for BCC reference:')
+            x.append('')
+            for spirrep, S in enumerate(self.BCC_orb_gen):
                 x.append('Spirrep {}:'.format(spirrep))
                 x.append(str(S))
                 x.append('')
@@ -264,7 +273,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
 
     def calc_norm(self):
         if (self.WF_type == 'CISD'
-                or self.WF_type == 'CCSD' and self.use_CISD_norm):
+                or self.WF_type in ('CCSD', 'BCCD', 'CCD')
+                and self.use_CISD_norm):
             self.norm = 1.0
             S = 0.0
             for I in self.string_indices():
@@ -273,7 +283,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             logger.warning(
                 'We are calculating the CCSD norm'
                 + ' considering only SD determinants!!')
-        elif self.WF_type == 'CCSD':
+        elif self.WF_type in ('CCSD', 'BCCD', 'CCD'):
             self.norm = 1.0
             logger.warning('CCSD norm set to 1.0!!')
         else:
@@ -407,14 +417,23 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                    and exc_type == my_exc_type) else
             ' <<< differ')
     
-    def initialize_SD_lists(self):
+    def initialize_SD_lists(self,
+                            with_singles=True,
+                            with_BCC_orb_gen=True):
         """Initialise the lists for singles and doubles amplitudes."""
         test_ind_func = False
-        self.singles = []
-        for spirrep in self.spirrep_blocks():
-            self.singles.append(np.zeros((self.n_corr_orb[spirrep],
-                                          self.n_ext[spirrep]),
-                                         dtype=np.float64))
+        if with_singles:
+            self.singles = []
+            for spirrep in self.spirrep_blocks():
+                self.singles.append(np.zeros((self.n_corr_orb[spirrep],
+                                              self.n_ext[spirrep]),
+                                             dtype=np.float64))
+        if with_BCC_orb_gen:
+            self.BCC_orb_gen = []
+            for spirrep in self.spirrep_blocks():
+                self.BCC_orb_gen.append(np.zeros((self.n_corr_orb[spirrep],
+                                                  self.n_ext[spirrep]),
+                                                 dtype=np.float64))
         self.doubles = []
         N_iter = 0
         for exc_type in (['aa']
@@ -779,6 +798,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                  coupled_to=None,
                                  only_this_occ=None,
                                  print_info_to_log=False):
+        if self.singles is None:
+            return
         if print_info_to_log:
             to_log = []
         Index = String_Index_for_SD.make_reference(self.ref_occ, self.n_irrep)
@@ -1557,8 +1578,14 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         new_wf.Ms = 0.0
                         CIcalc_found = True
                         new_wf.initialize_data()
+                    elif line == molpro_util.BCCD_header:
+                        new_wf.WF_type = 'BCCD'
+                        new_wf.restricted = True
+                        new_wf.Ms = 0.0
+                        CIcalc_found = True
+                        new_wf.initialize_data()
                 else:
-                    if new_wf.WF_type == 'CCSD' or new_wf.WF_type == 'CISD':
+                    if new_wf.WF_type in ('CCSD', 'CISD', 'BCCD'):
                         if ('Number of closed-shell orbitals' in line
                                 or 'Number of core orbitals' in line):
                             new_orbitals = molpro_util.get_orb_info(
@@ -1583,7 +1610,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             CIcalc_found = True
                         if molpro_util.CC_sgl_str in line and CIcalc_found:
                             if new_wf.singles is None:
-                                new_wf.initialize_SD_lists()
+                                new_wf.initialize_SD_lists(
+                                    with_singles=new_wf.WF_type in ('CISD',
+                                                                    'CCSD'),
+                                    with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
                             sgl_found = True
                             if new_wf.restricted:
                                 if ('Alpha-Alpha' in line
@@ -1609,7 +1639,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                         file_name=molpro_output)
                         elif molpro_util.CC_dbl_str in line and CIcalc_found:
                             if new_wf.singles is None:
-                                new_wf.initialize_SD_lists()
+                                if new_wf.WF_type == 'CCSD':
+                                    new_wf.WF_type = 'CCD'
+                                new_wf.initialize_SD_lists(
+                                    with_singles=False,
+                                    with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
                             dbl_found = True
                             prev_Molpros_i = prev_Molpros_j = -1
                             pos_ij = i = j = -1
@@ -1723,7 +1757,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                             line_number=line_number,
                                             file_name=molpro_output)
                                     continue
-                                new_wf.singles[spirrep][i, a] = C
+                                if new_wf.WF_type == 'BCCD':
+                                    new_wf.BCC_orb_gen[spirrep][i, a] = C
+                                else:
+                                    new_wf.singles[spirrep][i, a] = C
                         if (CIcalc_found
                             and ('RESULTS' in line
                                  or 'Spin contamination' in line)):

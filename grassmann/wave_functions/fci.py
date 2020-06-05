@@ -259,6 +259,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         """Construct the wave function from wf_intN
         
         wf_intN is an wave function in the intermediate normalisation
+        
+        TODO: renaming: this and related function can be used for any
+              wf_intN that have sting_indices properly implemented.
         """
         new_wf = cls()
         new_wf.get_coeff_from_Int_Norm_WF(wf_intN,

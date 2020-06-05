@@ -269,9 +269,11 @@ def optimise_overlap_orbRot(wf,
                     z = -linalg.solve(Hess, Jac)
             elif update_meth == GETTING_Z_EIGEN:
                 with logtime('Calculating ΔK: from eigendecomposition.'):
-                    z = -np.matmul(np.matmul(eig_vec / eig_val, eig_vec.T), Jac)
+                    z = -np.matmul(np.matmul(eig_vec / eig_val, eig_vec.T),
+                                   Jac)
             elif update_meth == GETTING_Z_PART_EIGEN:
-                with logtime('Calculating ΔK (incomplete!!): from eigendecomposition.'):
+                with logtime('Calculating ΔK (incomplete!!):'
+                             + ' from eigendecomposition.'):
                     z = np.matmul((eig_vec / eig_val).T, Jac)
         else:
             # Look maximum in the direction of eigenvector of Hess with pos

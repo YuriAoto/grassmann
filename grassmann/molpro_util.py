@@ -22,6 +22,10 @@ CCSD_header = (
     ' PROGRAM * CCSD (Closed-shell coupled cluster)     '
     + 'Authors: '
     + 'C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n')
+BCCD_header = (
+    ' PROGRAM * BCCD (Closed-shell Brueckner coupled-cluster)     '
+    + 'Authors: '
+    + 'C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n')
 MRCI_header = (
     ' PROGRAM * CI (Multireference internally contracted CI)     '
     + 'Authors: H.-J. Werner, P.J. Knowles, 1987\n')
@@ -38,6 +42,8 @@ CC_sgl_str = 'I         SYM. A    A   T(IA)'
 CC_dbl_str = (
     'I         J         SYM. A    SYM. B    A         B      T(IJ, AB)')
 
+CC_sgl_str_BCC_2 = (
+    ' Orbital rotation generators (print threshold =  0.000E+00):\n')
 CC_sgl_str_2 = ' Singles amplitudes (print threshold =  0.000E+00):\n'
 CC_dbl_str_2 = ' Doubles amplitudes (print threshold =  0.000E+00):\n'
 

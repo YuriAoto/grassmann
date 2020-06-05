@@ -255,23 +255,28 @@ class Wave_Function_CISD(general.Wave_Function):
         elif intN_wf.WF_type == 'CCSD':
             new_wf.WF_type = (
                 'CISD (with C_ij^ab = t_ij^ab + t_i^a t_j^b from CCSD)')
+        elif intN_wf.WF_type in ('CCD', 'BCCD'):
+            new_wf.WF_type = (
+                'CISD (with C_ij^ab = t_ij^ab from ' + intN_wf.WF_type + ')')
         else:
             raise ValueError(
-                'This is to be used for CISD and CCSD wave functions only!')
-        if new_wf.WF_type == 'CCSD':
+                'This is to be used for CISD, CCSD, CCD, and BCCD'
+                + ' wave functions only!')
+        if intN_wf.WF_type in ('CCSD', 'CCD', 'BCCD'):
             logger.warning(
                 'This is actually a CISD wave function using coefficients'
-                + ' from CCSD!!')
+                + ' from coupled-cluster amplitudes!!')
         if not new_wf.restricted:
             raise NotImplementedError(
                 'Currently for restricted wave functions only!')
         new_wf.initialize_SD_lists()
         new_wf.C0 = 1.0
-        for irrep in new_wf.spirrep_blocks(restricted=True):
-            new_wf.Cs[irrep] += intN_wf.singles[irrep]
-            for i in range(new_wf.n_corr_orb[irrep]):
-                if (new_wf.n_corr_orb[irrep] + i) % 2 == 0:
-                    new_wf.Cs[irrep][i, :] *= -1
+        if intN_wf.singles is not None:
+            for irrep in new_wf.spirrep_blocks(restricted=True):
+                new_wf.Cs[irrep] += intN_wf.singles[irrep]
+                for i in range(new_wf.n_corr_orb[irrep]):
+                    if (new_wf.n_corr_orb[irrep] + i) % 2 == 0:
+                        new_wf.Cs[irrep][i, :] *= -1
         for N, doubles in enumerate(intN_wf.doubles):
             i, j, i_irrep, j_irrep, exc_type = intN_wf.ij_from_N(N)
             if i_irrep != j_irrep:
@@ -289,7 +294,8 @@ class Wave_Function_CISD(general.Wave_Function):
                 # and a_irrep == b_irrep, for this have only contrib from
                 # determinants with same occupation as the reference.
                 irp = i_irrep
-                singles = intN_wf.singles[irp]
+                if intN_wf.singles is not None:
+                    singles = intN_wf.singles[irp]
                 if i != j:
                     ij = get_n_from_triang(i, j, with_diag=False)
                 new_wf.Csd[irp][irp][i, :, j, :] += doubles[irp][:, :]

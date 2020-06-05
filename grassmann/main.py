@@ -93,7 +93,7 @@ def dGr_main(args, f_out):
         time.strftime("%d %b %Y - %H:%M", time.localtime(start_time))))
     toout()
     # ----- loading wave function
-    ## TODO: more versatile. this is not very compatible with at_ref
+    #  TODO: more versatile. this is not very compatible with at_ref
     if orbRot_opt:
         with logtime('Reading FCI wave function'):
             ext_wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
@@ -126,6 +126,7 @@ def dGr_main(args, f_out):
                 with logtime('Transforming int. norm. WF into CISD wf'):
                     ext_wf = cisd.Wave_Function_CISD.from_intNorm(ext_wf)
     logger.debug('External wave function:\n %r', ext_wf)
+    toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
         x = []
         for I in ext_wf.string_indices():
@@ -201,11 +202,12 @@ def dGr_main(args, f_out):
                 f_out=None,
                 at_reference=True)
         toout('-' * 30)
-        toout('|J|  = |t_i^a|    = {0:.7f}'.format(res.norm[1]))
-        if 'CCSD' in ext_wf.WF_type:
-            toout('T1 diagnostic     = {0:.7f}'.format(
-                res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
-        toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
+        if not ('CCD' in ext_wf.WF_type or 'BCCD' in ext_wf.WF_type):
+            toout('|J|  = |t_i^a|    = {0:.7f}'.format(res.norm[1]))
+            if 'CCSD' in ext_wf.WF_type:
+                toout('T1 diagnostic     = {0:.7f}'.format(
+                    res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
+            toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
         toout('Hessian (H) has {0:d} positive eigenvalues'.format(
             res.n_pos_H_eigVal))
         toout('-' * 30)
