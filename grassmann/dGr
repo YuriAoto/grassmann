@@ -24,6 +24,8 @@ if cmd_line_args.output is None:
     name_extra = cmd_line_args.state
     if name_extra:
         name_extra = '_' + name_extra
+    if cmd_line_args.at_ref:
+        name_extra = '_atRef'
     output_name = cmd_line_args.basename + '.min_dist' + name_extra
 else:
     output_name = cmd_line_args.output
