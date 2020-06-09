@@ -145,7 +145,7 @@ def ovlp_Slater_dets(U, n):
     U (list of np.ndarray)
         transformation matrices
     n (list of int)
-        number of orbitals
+        number of electrons
     
     Returns:
     --------

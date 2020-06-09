@@ -20,6 +20,7 @@ from collections import namedtuple
 
 from util import number_of_irreducible_repr, get_pos_from_rectangular
 from wave_functions import general
+import orbitals
 import molpro_util
 
 logger = logging.getLogger(__name__)
@@ -839,51 +840,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         The tuple (new_wf, U) where new_wf the wave function in the new basis
         and U is the transformation from the previous to the new orbital basis.
         """
-        logger.info('Current z vector:\n%s', z)
-        n_param = 0
-        spirrep_start = [0]
-        restricted = False
-        for spirrep in self.spirrep_blocks(restricted=False):
-            if spirrep == self.n_irrep and n_param == len(z):
-                restricted = True
-                break
-            nK = self.ref_occ[spirrep] * self.n_ext[spirrep]
-            spirrep_start.append(spirrep_start[-1] + nK)
-            n_param += nK
-        if n_param != len(z):
-            raise ValueError(
-                'Lenght of z is inconsitent with orbital spaces:\n'
-                + 'len(z) = ' + str(len(z))
-                + '; ref_occ = ' + str(self.ref_occ)
-                + '; n_ext = ' + str(self.n_ext))
-        U = []
-        for spirrep in self.spirrep_blocks(restricted=restricted):
-            if self.orb_dim[spirrep] == 0:
-                U.append(np.zeros((0, 0)))
-                logger.info('Adding zero-len array for spirrep %d.',
-                            spirrep)
-                continue
-            if spirrep_start[spirrep] == spirrep_start[spirrep + 1]:
-                K = np.zeros((self.orb_dim[spirrep],
-                              self.orb_dim[spirrep]))
-            else:
-                K = np.zeros((self.orb_dim[spirrep],
-                              self.orb_dim[spirrep]))
-                K[:self.ref_occ[spirrep],  # K[i,a]
-                  self.ref_occ[spirrep]:] = (
-                      np.reshape(z[spirrep_start[spirrep]:
-                                   spirrep_start[spirrep + 1]],
-                                 (self.ref_occ[spirrep],
-                                  self.n_ext[spirrep])))
-                K[self.ref_occ[spirrep]:,  # K[a,i] = -K[i,a]
-                  :self.ref_occ[spirrep]] = -(
-                      K[:self.ref_occ[spirrep],
-                        self.ref_occ[spirrep]:].T)
-                logger.info('Current K[spirrep=%d] matrix:\n%s',
-                            spirrep, K)
-            U.append(expm(K))
-            logger.info('Current U[spirrep=%d] = exp(-K):\n%s',
-                        spirrep, U[-1])
+        U = orbitals.calc_U_from_z(z, self)
         logger.info('Matrices U have been calculated.'
                     + ' Calculating transformed wf now.')
         return self.change_orb_basis(U, just_C0=just_C0), U

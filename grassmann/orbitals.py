@@ -13,7 +13,7 @@ import logging
 import xml.etree.ElementTree as ET
 
 import numpy as np
-from scipy.linalg import inv
+from scipy.linalg import inv, expm
 
 from wave_functions.int_norm import number_of_irreducible_repr
 
@@ -135,6 +135,55 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
         #         if np.dot(full_U[-1][:, q], Ui[:, q]) < 0:
         #             full_U[-1][:, q] *= -1
     return full_U
+
+
+def calc_U_from_z(z, wf):
+    logger.info('Current z vector:\n%s', z)
+    n_param = 0
+    spirrep_start = [0]
+    restricted = False
+    for spirrep in wf.spirrep_blocks(restricted=False):
+        if spirrep == wf.n_irrep and n_param == len(z):
+            restricted = True
+            break
+        nK = wf.ref_occ[spirrep] * wf.n_ext[spirrep]
+        spirrep_start.append(spirrep_start[-1] + nK)
+        n_param += nK
+    if n_param != len(z):
+        raise ValueError(
+            'Lenght of z is inconsitent with orbital spaces:\n'
+            + 'len(z) = ' + str(len(z))
+            + '; ref_occ = ' + str(wf.ref_occ)
+            + '; n_ext = ' + str(wf.n_ext))
+    U = []
+    for spirrep in wf.spirrep_blocks(restricted=restricted):
+        if wf.orb_dim[spirrep] == 0:
+            U.append(np.zeros((0, 0)))
+            logger.info('Adding zero-len array for spirrep %d.',
+                        spirrep)
+            continue
+        if spirrep_start[spirrep] == spirrep_start[spirrep + 1]:
+            K = np.zeros((wf.orb_dim[spirrep],
+                          wf.orb_dim[spirrep]))
+        else:
+            K = np.zeros((wf.orb_dim[spirrep],
+                          wf.orb_dim[spirrep]))
+            K[:wf.ref_occ[spirrep],  # K[i,a]
+              wf.ref_occ[spirrep]:] = (
+                  np.reshape(z[spirrep_start[spirrep]:
+                               spirrep_start[spirrep + 1]],
+                             (wf.ref_occ[spirrep],
+                              wf.n_ext[spirrep])))
+            K[wf.ref_occ[spirrep]:,  # K[a,i] = -K[i,a]
+              :wf.ref_occ[spirrep]] = -(
+                  K[:wf.ref_occ[spirrep],
+                    wf.ref_occ[spirrep]:].T)
+            logger.info('Current K[spirrep=%d] matrix:\n%s',
+                        spirrep, K)
+        U.append(expm(K))
+        logger.info('Current U[spirrep=%d] = exp(-K):\n%s',
+                    spirrep, U[-1])
+    return U
 
 
 class Molecular_Orbitals():

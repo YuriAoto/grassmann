@@ -39,12 +39,19 @@ def dGr_main(args, f_out):
     def toout(x='', add_new_line=True):
         f_out.write(x + ('\n' if add_new_line else ''))
     
-    def print_ovlp_D(pt1, pt2, ovlp):
-        toout('|<{0:s}|{1:s}>| = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.
-              format(pt1, pt2,
-                     abs(ovlp),
-                     dist_from_ovlp(ovlp)))
-    
+    def print_ovlp_D(pt1, pt2, ovlp, with_dist=True, extra=''):
+        if with_dist:
+            toout('|<{0:s}|{1:s}>|{4:s} = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.
+                  format(pt1, pt2,
+                         abs(ovlp),
+                         dist_from_ovlp(ovlp),
+                         extra))
+        else:
+            toout('|<{0:s}|{1:s}>|{3:s} = {2:12.8f}'.
+                  format(pt1, pt2,
+                         abs(ovlp),
+                         extra))
+
     toout('dGr - optimise the distance in the Grassmannian')
     toout('Yuri Aoto - 2018, 2019, 2020')
     toout()
@@ -183,12 +190,14 @@ def dGr_main(args, f_out):
                                       full=orbRot_opt)
 #    toout('Number of determinants in the external wave function: {0:d}'.
 #          format(len(ext_wf)))
-    toout('Dimension of orbital space: {0:}'.
-          format(ext_wf.orb_dim))
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
-    toout('Occupation of reference wave function: {0:}'.
+    toout('Dim. of core orb. space:  {0:}'.
+          format(ext_wf.n_core))
+    toout('Dim. of ref. determinant: {0:}'.
           format(ext_wf.ref_occ))
+    toout('Dim. of orbital space:    {0:}'.
+          format(ext_wf.orb_dim))
     toout()
     if args.at_ref:
         toout('Calculation at the reference wave function',
@@ -208,6 +217,19 @@ def dGr_main(args, f_out):
                 toout('T1 diagnostic     = {0:.7f}'.format(
                     res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
             toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
+            toout('|ΔK|/√(n_corr_el) = {0:.7f}'.format(
+                res.norm[0] / np.sqrt(ext_wf.n_corr_elec)))
+        ovlp_with_1st_it = ovlp_Slater_dets((2 * res.U)
+                                            if restricted else
+                                            res.U,
+                                            ext_wf.ref_occ)
+        print_ovlp_D('refWF', '1st it',
+                     ovlp_with_1st_it,
+                     with_dist=False)
+        print_ovlp_D('refWF', '1st it',
+                     ovlp_with_1st_it**(1/ext_wf.n_elec),
+                     with_dist=False,
+                     extra='^(1/n_el)')
         toout('Hessian (H) has {0:d} positive eigenvalues'.format(
             res.n_pos_H_eigVal))
         toout('-' * 30)

@@ -187,7 +187,7 @@ def optimise_overlap_orbRot(wf,
     the first determinant (that is what we are optimising), and det_maxC is
     the (complete) determinant with the largest coefficient.
     
-    If at_reference, only the fields f_final, norm and n_pos_H_eigVal
+    If at_reference, only the fields U, norm and n_pos_H_eigVal
     are meaningful.
     
     TODO:
@@ -309,6 +309,8 @@ def optimise_overlap_orbRot(wf,
         logger.debug('ΔK:\n%r', z)
         with logtime('Calculating norm of ΔK') as T_norm_Z:
             normZ = linalg.norm(z)
+        if at_reference:
+            U = orb.calc_U_from_z(z, cur_wf)
         elapsed_time = str(timedelta(seconds=(T_norm_Z.end_time
                                               - T_start.ini_time)))
         if f_out is not None:
@@ -325,12 +327,13 @@ def optimise_overlap_orbRot(wf,
                             format(str(cur_wf[i_max_coef])))
         if f_out is not None:
             f_out.flush()
-    if not at_reference and i_max_coef != cur_wf.i_ref:
-        f_final = (cur_wf.C0, cur_wf[i_max_coef])
-    else:
-        f_final = cur_wf.C0
-    return Results(f=f_final,
-                   U=None if at_reference else U,
+    if not at_reference:
+        if i_max_coef != cur_wf.i_ref:
+            f_final = (cur_wf.C0, cur_wf[i_max_coef])
+        else:
+            f_final = cur_wf.C0
+    return Results(f=None if at_reference else f_final,
+                   U=U,
                    norm=(normZ, normJ),
                    last_iteration=None if at_reference else i_iteration,
                    converged=None if at_reference else converged,
