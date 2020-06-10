@@ -1599,20 +1599,22 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     line, line_number,
                     new_wf.n_irrep, 'R')
                 new_wf.ref_occ += new_orbitals
+                new_wf.orb_dim += new_orbitals
                 if 'Number of core orbitals' in line:
                     new_wf.n_core += new_orbitals
             elif 'Number of active  orbitals' in line:
                 new_wf.n_act = molpro_util.get_orb_info(
                     line, line_number,
                     new_wf.n_irrep, 'A')
+                new_wf.orb_dim += molpro_util.get_orb_info(
+                    line, line_number,
+                    new_wf.n_irrep, 'R')
                 new_wf.ref_occ += new_wf.n_act
                 new_wf.Ms = len(new_wf.n_act) / 2
             elif 'Number of external orbitals' in line:
-                new_wf.orb_dim = (new_wf.ref_occ
-                                  + molpro_util.get_orb_info(
-                                      line, line_number,
-                                      new_wf.n_irrep, 'R'))
-                new_wf.orb_dim.restrict_it()
+                new_wf.orb_dim += molpro_util.get_orb_info(
+                    line, line_number,
+                    new_wf.n_irrep, 'R')
             elif 'Starting RMP2 calculation' in line:
                 MP2_step_passed = False
             elif 'RHF-RMP2 energy' in line:

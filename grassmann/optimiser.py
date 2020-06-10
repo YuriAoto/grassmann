@@ -496,8 +496,9 @@ def optimise_overlap_Absil(ci_wf,
         else:
             if len(ini_U) != 2 * ci_wf.n_irrep:
                 raise ValueError('ini_U must be a list,'
-                                 + ' of lenght ci_wf.n_irrep of numpy.array'
-                                 + ' (for unrestricted calculations).')
+                                 + ' of lenght 2 * ci_wf.n_irrep of numpy.array'
+                                 + ' (for unrestricted calculations).'
+                                 + ' Current value: ' + str(len(ini_U)))
         sum_n_a = sum_n_b = 0
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             i_irrep = i % ci_wf.n_irrep

@@ -145,11 +145,9 @@ def dGr_main(args, f_out):
     else:
         toout('Using |WFref> (the reference of |extWF>) as |min E>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
-    if args.algorithm == 'CISD_Absil':
-        restricted = True
-    elif args.algorithm == 'general_Absil':
+    if args.algorithm == 'general_Absil':
         restricted = False
-    elif args.algorithm == 'orb_rotations':
+    else:
         restricted = ext_wf.restricted
     if args.ini_orb is not None:
         if args.ini_orb[-4:] == '.npz':
