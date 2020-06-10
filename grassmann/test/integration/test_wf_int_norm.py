@@ -25,13 +25,11 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                         molecule='H2'):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(H2_sys))
-            wf_intN.calc_norm()
-            wf_CISD = cisd.Wave_Function_CISD.from_intNorm(wf_intN)
+            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CCSD_file(H2_sys))
             wf_intN.use_CISD_norm = True
-            wf_intN.calc_norm()
-            wf_CCSD = cisd.Wave_Function_CISD.from_intNorm(wf_intN)
+            wf_CCSD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
             with self.subTest(system=H2_sys, coef='C0'):
                 self.assertAlmostEqual(wf_CCSD.C0, wf_CISD.C0, places=5)
             for irp in wf_CCSD.spirrep_blocks(restricted=True):
@@ -50,11 +48,9 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                         molecule='H2'):
             wf_CI = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(H2_sys))
-            wf_CI.calc_norm()
             wf_CC = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CCSD_file(H2_sys))
             wf_CC.use_CISD_norm = True
-            wf_CC.calc_norm()
             str_ind_CC = wf_CC.string_indices()
             for Ind_CI in wf_CI.string_indices():
                 Ind_CC = next(str_ind_CC)

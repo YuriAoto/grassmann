@@ -8,7 +8,7 @@ import numpy as np
 from wave_functions import int_norm, cisd, fci
 import test
 
-molecule = None
+molecule = ('H2', 'Li2')
 basis = None
 symmetry = None
 
@@ -28,12 +28,11 @@ class CisdFciJacHessTestCase(unittest.TestCase):
                                           symmetry=symmetry):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(test_sys))
-            wf_intN.calc_norm()
-            wf_CISD = cisd.Wave_Function_CISD.from_intNorm(wf_intN)
+            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
             wf_FCI = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
                 test.FCI_file(test_sys), zero_coefficients=False)
             test.logger.debug("FCI before:\n%r", wf_FCI)
-            wf_FCI.get_coeff_from_Int_Norm_WF(wf_intN,
+            wf_FCI.get_coeff_from_int_norm_WF(wf_intN,
                                               change_structure=False,
                                               use_structure=True)
             test.logger.debug("CISD:\n%r", wf_CISD)
@@ -85,9 +84,8 @@ class CisdFciJacHessTestCase(unittest.TestCase):
                                           symmetry=symmetry):
             wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file(test_sys))
-            wf_intN.calc_norm()
-            wf_CISD = cisd.Wave_Function_CISD.from_intNorm(wf_intN)
-            wf_FCI = fci.Wave_Function_Norm_CI.from_Int_Norm(wf_intN)
+            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
+            wf_FCI = fci.Wave_Function_Norm_CI.from_int_norm(wf_intN)
             test.logger.debug("CISD:\n%r", wf_CISD)
             test.logger.debug("FCI:\n%r", wf_FCI)
             Jac_fci, Hess_fci = wf_FCI.make_Jac_Hess_overlap()

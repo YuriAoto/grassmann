@@ -240,7 +240,7 @@ class Wave_Function_CISD(general.Wave_Function):
             'change_orb_basis not implemented for Wave_Function_CISD!')
         
     @classmethod
-    def from_intNorm(cls, intN_wf):
+    def from_int_norm(cls, intN_wf):
         """Load the wave function from a Wave_Function_Int_Norm."""
         new_wf = cls()
         new_wf.source = 'From int. norm. WF> ' + intN_wf.source
@@ -270,7 +270,7 @@ class Wave_Function_CISD(general.Wave_Function):
             raise NotImplementedError(
                 'Currently for restricted wave functions only!')
         new_wf.initialize_SD_lists()
-        new_wf.C0 = 1.0
+        new_wf.C0 = intN_wf.C0
         if intN_wf.singles is not None:
             for irrep in new_wf.spirrep_blocks(restricted=True):
                 new_wf.Cs[irrep] += intN_wf.singles[irrep]
@@ -325,9 +325,6 @@ class Wave_Function_CISD(general.Wave_Function):
                     new_wf.Csd[irp][irp][i, :, j, :] *= -1
                     new_wf.Csd[irp][irp][j, :, i, :] *= -1
                     new_wf.Cd[irp][ij, :] *= -1
-        if intN_wf.norm is None:
-            intN_wf.calc_norm()
-        new_wf.C0 /= intN_wf.norm
         for irrep in new_wf.spirrep_blocks(restricted=True):
             new_wf.Cs[irrep] /= intN_wf.norm
             new_wf.Cd[irrep] /= intN_wf.norm

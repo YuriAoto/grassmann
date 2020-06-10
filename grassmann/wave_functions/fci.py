@@ -13,12 +13,12 @@ Yuri
 import logging
 import numpy as np
 from numpy import linalg
-from scipy.linalg import expm, lu
+from scipy.linalg import lu
 import copy
 import math
 from collections import namedtuple
 
-from util import number_of_irreducible_repr, get_pos_from_rectangular
+from util import get_pos_from_rectangular
 from wave_functions import general
 import orbitals
 import molpro_util
@@ -256,7 +256,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                 + '\n'.join(x))
     
     @classmethod
-    def from_Int_Norm(cls, wf_intN):
+    def from_int_norm(cls, wf_intN):
         """Construct the wave function from wf_intN
         
         wf_intN is an wave function in the intermediate normalisation
@@ -265,13 +265,15 @@ class Wave_Function_Norm_CI(general.Wave_Function):
               wf_intN that have sting_indices properly implemented.
         """
         new_wf = cls()
-        new_wf.get_coeff_from_Int_Norm_WF(wf_intN,
+        new_wf.get_coeff_from_int_norm_WF(wf_intN,
                                           change_structure=True,
                                           use_structure=False)
         return new_wf
     
     @classmethod
     def from_Molpro_FCI(cls, molpro_output,
+                        start_line_number=1,
+                        point_group=None,
                         state='1.1',
                         zero_coefficients=False,
                         change_structure=True,
@@ -283,6 +285,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         """
         new_wf = cls()
         new_wf.get_coeff_from_molpro(molpro_output,
+                                     start_line_number=start_line_number,
+                                     point_group=point_group,
                                      state=state,
                                      zero_coefficients=zero_coefficients,
                                      change_structure=change_structure,
@@ -326,7 +330,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     'Found occupation, but coefficient is different')
         raise ValueError('Occupation not found.')
     
-    def get_coeff_from_Int_Norm_WF(self, intN_wf,
+    def get_coeff_from_int_norm_WF(self, intN_wf,
                                    change_structure=True,
                                    use_structure=False):
         """Get coefficients from a wave function with int. normalisation
@@ -376,6 +380,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                 self._all_determinants.append(new_Slater_Det)
 
     def get_coeff_from_molpro(self, molpro_output,
+                              start_line_number=1,
+                              point_group=None,
                               state='1.1',
                               zero_coefficients=False,
                               change_structure=True,
@@ -384,8 +390,22 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Parameters:
         -----------
-        molpro_output (str)
-            the molpro output with the FCI wave function
+        molpro_output (str or file object)
+            the molpro output with the FCI wave function.
+            If it is a string, opens and closes the file.
+            If it is a file object, it is assumed that it is in
+            the beginning of a FCI program of Molpro.
+            It iterates over the lines,
+            stops when the wave function is completely loaded,
+            and do not closes the file.
+        
+        start_line_number (int, optional, default=1)
+            line number where file starts to be read.
+        
+        point_group (str, optional, default=None)
+            the point group.
+            It is mandatory in case a file object has been
+            passed in molpro_output.
         
         state (str, optional, default = '1.1')
             state of interest
@@ -407,79 +427,87 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         compatibility?
         """
         sgn_invert = False
-        FCI_found = False
-        FCI_prog_found = False
+        FCI_coefficients_found = False
         self.has_FCI_structure = True
         self.WF_type = 'FCI'
-        self.source = 'From file ' + molpro_output
         if not use_structure:
             self._all_determinants = []
-        with open(molpro_output, 'r') as f:
-            S = 0.0
-            for line_number, l in enumerate(f, start=1):
-                if 'Point group' in l:
-                    self.point_group = l.split()[2]
+        if isinstance(molpro_output, str):
+            f = open(molpro_output, 'r')
+            f_name = molpro_output
+            FCI_prog_found = False
+        else:
+            f = molpro_output
+            f_name = f.name
+            FCI_prog_found = True
+            if point_group is None:
+                raise ValueError(
+                    'point_group is mandatory when molpro_output'
+                    + ' is a file object')
+            self.point_group = point_group
+        self.source = 'From file ' + f_name
+        S = 0.0
+        for line_number, line in enumerate(f, start=start_line_number):
+            if not FCI_prog_found:
+                try:
+                    self.point_group = molpro_util.get_point_group_from_line(
+                        line, line_number, f_name)
+                except molpro_util.MolproLineHasNoPointGroup:
+                    if molpro_util.FCI_header == line:
+                        FCI_prog_found = True
+                continue
+            if FCI_coefficients_found:
+                if 'CI Vector' in line:
+                    continue
+                if 'EOF' in line:
+                    break
+                new_Slater_Det = _get_Slater_Det_from_FCI_line(
+                    line, self.orb_dim, self.n_core, self.n_irrep, self.Ms,
+                    molpro_output=molpro_output,
+                    line_number=line_number,
+                    zero_coefficients=zero_coefficients)
+                S += new_Slater_Det.c**2
+                if not zero_coefficients:
+                    if len(self) == 0:
+                        sgn_invert = new_Slater_Det.c < 0.0
+                    if sgn_invert:
+                        new_Slater_Det = Slater_Det(
+                            c=-new_Slater_Det.c,
+                            occupation=new_Slater_Det.occupation)
+                if use_structure:
                     try:
-                        number_of_irreducible_repr[self.point_group]
-                    except KeyError:
-                        raise molpro_util.MolproInputError(
-                            'Unknown point group!',
-                            line=l,
-                            line_number=line_number,
-                            file_name=molpro_output)
-                if 'FCI STATE  ' + state + ' Energy' in l and 'Energy' in l:
-                    FCI_found = True
-                    continue
-                if molpro_util.FCI_header == l:
-                    FCI_prog_found = True
-                    continue
-                if FCI_found:
-                    if 'CI Vector' in l:
-                        continue
-                    if 'EOF' in l:
-                        break
-                    new_Slater_Det = _get_Slater_Det_from_FCI_line(
-                        l, self.orb_dim, self.n_core, self.n_irrep, self.Ms,
-                        molpro_output=molpro_output,
-                        line_number=line_number,
-                        zero_coefficients=zero_coefficients)
-                    S += new_Slater_Det.c**2
-                    if not zero_coefficients:
-                        if len(self) == 0:
-                            sgn_invert = new_Slater_Det.c < 0.0
-                        if sgn_invert:
-                            new_Slater_Det = Slater_Det(
-                                c=-new_Slater_Det.c,
-                                occupation=new_Slater_Det.occupation)
-                    if use_structure:
-                        try:
-                            idet = self.index(new_Slater_Det)
-                        except ValueError:
-                            if change_structure:
-                                self._all_determinants.append(new_Slater_Det)
-                        else:
-                            self._all_determinants[idet] = new_Slater_Det
-                    elif change_structure:
-                        self._all_determinants.append(new_Slater_Det)
-                elif FCI_prog_found:
-                    if 'Frozen orbitals:' in l:
-                        self.n_core = molpro_util.get_orb_info(l, line_number,
-                                                               self.n_irrep,
-                                                               'R')
-                    if 'Active orbitals:' in l:
-                        self.orb_dim = (self.n_core
-                                        + molpro_util.get_orb_info(
-                                            l,
-                                            line_number,
-                                            self.n_irrep,
-                                            'R'))
-                    if 'Active electrons:' in l:
-                        active_el_in_out = int(l.split()[2])
-                    if 'Spin quantum number:' in l:
-                        self.Ms = float(l.split()[3])
-                        self.restricted = self.Ms == 0.0
-                        # if self.Ms != 0.0:
-                        #     raise Exception('Only singlet wave functions!')
+                        idet = self.index(new_Slater_Det)
+                    except ValueError:
+                        if change_structure:
+                            self._all_determinants.append(new_Slater_Det)
+                    else:
+                        self._all_determinants[idet] = new_Slater_Det
+                elif change_structure:
+                    self._all_determinants.append(new_Slater_Det)
+            else:
+                if ('FCI STATE  ' + state + ' Energy' in line
+                        and 'Energy' in line):
+                    FCI_coefficients_found = True
+                elif 'Frozen orbitals:' in line:
+                    self.n_core = molpro_util.get_orb_info(line, line_number,
+                                                           self.n_irrep,
+                                                           'R')
+                elif 'Active orbitals:' in line:
+                    self.orb_dim = (self.n_core
+                                    + molpro_util.get_orb_info(
+                                        line,
+                                        line_number,
+                                        self.n_irrep,
+                                        'R'))
+                elif 'Active electrons:' in line:
+                    active_el_in_out = int(line.split()[2])
+                elif 'Spin quantum number:' in line:
+                    self.Ms = float(line.split()[3])
+                    self.restricted = self.Ms == 0.0
+                    # if self.Ms != 0.0:
+                    #     raise Exception('Only singlet wave functions!')
+        if isinstance(molpro_output, str):
+            f.close()
         self.ref_occ = general.Orbitals_Sets(
             list(map(len, self[0].occupation)))
         self._i_ref = None

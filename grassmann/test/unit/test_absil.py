@@ -254,16 +254,14 @@ class CalcOverlap(unittest.TestCase):
         # H2:
         self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
                 test.CISD_file('H2__5__sto3g__D2h'))
-        self.intN_wf_H2.calc_norm()
-        self.wf_H2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_H2)
+        self.wf_H2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_occ,
                                                      self.wf_H2.orb_dim,
                                                      self.wf_H2.n_irrep)
         # Li2:
         self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('Li2__5__631g__C2v'))
-        self.intN_wf_Li2.calc_norm()
-        self.wf_Li2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
             self.wf_Li2.ref_occ,
             self.wf_Li2.orb_dim,
@@ -352,8 +350,7 @@ class CalcXCmatrices(unittest.TestCase):
         # H2:
         self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('H2__5__sto3g__D2h'))
-        self.intN_wf_H2.calc_norm()
-        self.wf_H2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_H2)
+        self.wf_H2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
             self.wf_H2.ref_occ,
             self.wf_H2.orb_dim,
@@ -361,8 +358,7 @@ class CalcXCmatrices(unittest.TestCase):
         # Li2:
         self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('Li2__5__631g__C2v'))
-        self.intN_wf_Li2.calc_norm()
-        self.wf_Li2 = cisd.Wave_Function_CISD.from_intNorm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
             self.wf_Li2.ref_occ,
             self.wf_Li2.orb_dim,

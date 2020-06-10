@@ -15,13 +15,12 @@ class WFConstructorsTestCase(unittest.TestCase):
     def setUp(self):
         self.int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('H2__5__sto3g__D2h'))
-        self.int_N_WF.calc_norm()
     
     def test_int_norm_contructor(self):
         wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
             test.FCI_file('H2__5__sto3g__D2h'),
             zero_coefficients=True)
-        wf.get_coeff_from_Int_Norm_WF(self.int_N_WF,
+        wf.get_coeff_from_int_norm_WF(self.int_N_WF,
                                       change_structure=False,
                                       use_structure=True)
         self.assertAlmostEqual(wf.C0, 0.7568532707525314, places=10)

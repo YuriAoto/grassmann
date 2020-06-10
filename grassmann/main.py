@@ -15,8 +15,8 @@ from scipy import linalg
 
 from util import dist_from_ovlp, ovlp_Slater_dets, logtime
 import orbitals as orb
-from wave_functions import fci, int_norm, cisd
 import optimiser
+import molpro_util
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -41,7 +41,8 @@ def dGr_main(args, f_out):
     
     def print_ovlp_D(pt1, pt2, ovlp, with_dist=True, extra=''):
         if with_dist:
-            toout('|<{0:s}|{1:s}>|{4:s} = {2:12.8f} ; D({0:s}, {1:s}) = {3:12.8f}'.
+            toout(('|<{0:s}|{1:s}>|{4:s} = {2:12.8f} ;'
+                   + ' D({0:s}, {1:s}) = {3:12.8f}').
                   format(pt1, pt2,
                          abs(ovlp),
                          dist_from_ovlp(ovlp),
@@ -100,38 +101,18 @@ def dGr_main(args, f_out):
         time.strftime("%d %b %Y - %H:%M", time.localtime(start_time))))
     toout()
     # ----- loading wave function
-    #  TODO: more versatile. this is not very compatible with at_ref
-    if orbRot_opt:
-        with logtime('Reading FCI wave function'):
-            ext_wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
-                args.molpro_output
-                if args.WF_templ is None else
-                args.WF_templ,
-                args.state if args.state else '1.1',
-                zero_coefficients=args.WF_templ is not None)
-        if args.WF_templ is not None:
-            with logtime('Reading wave function coefficients'):
-                int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
-                    args.molpro_output)
-                int_N_WF.calc_norm()
-                ext_wf.get_coeff_from_Int_Norm_WF(int_N_WF,
-                                                  change_structure=False,
-                                                  use_structure=True)
-                # ext_wf.get_coeff_from_molpro(args.molpro_output,
-                #                              args.state
-                #                              if args.state else
-                #                              '1.1',
-                #                              use_structure=True)
-    else:
-        with logtime('Reading int. norm. from Molpro output'):
-            ext_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
-                args.molpro_output)
-            if args.at_ref:
-                ext_wf.use_CISD_norm = False
-            ext_wf.calc_norm()
-            if args.algorithm == 'CISD_Absil':
-                with logtime('Transforming int. norm. WF into CISD wf'):
-                    ext_wf = cisd.Wave_Function_CISD.from_intNorm(ext_wf)
+    with logtime('Reading wave function'):
+        ext_wf = molpro_util.load_wave_function(
+            args.molpro_output,
+            WF_templ=args.WF_templ,
+            use_CISD_norm=not args.at_ref,
+            wf_obj_type=('cisd'
+                         if args.algorithm == 'CISD_Absil' else
+                         ('int_norm'
+                          if args.algorithm == 'general_Absil' else
+                          'fci')))
+    if args.at_ref:
+        ext_wf.use_CISD_norm = False
     logger.debug('External wave function:\n %r', ext_wf)
     toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':

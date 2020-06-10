@@ -602,13 +602,10 @@ class Wave_Function(ABC, Sequence):
     def initialize_data(self):
         if self.point_group is None:
             raise ValueError('I still do not know the point group!')
-        if self.restricted is None:
-            raise ValueError('I still do not know if it is a restricted'
-                             + ' or unrestricted wave function!')
         self.orb_dim = Orbitals_Sets(self.n_irrep,
                                      occ_type='R')
         self.ref_occ = Orbitals_Sets(self.n_irrep,
-                                     occ_type='R' if self.restricted else 'F')
+                                     occ_type='F')
         self.n_core = Orbitals_Sets(self.n_irrep,
                                     occ_type='R')
         self.n_act = Orbitals_Sets(self.n_irrep,

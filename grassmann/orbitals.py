@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from scipy.linalg import inv, expm
 
-from wave_functions.int_norm import number_of_irreducible_repr
+import util
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ def calc_U_from_z(z, wf):
         raise ValueError(
             'Lenght of z is inconsitent with orbital spaces:\n'
             + 'len(z) = ' + str(len(z))
-            + '; ref_occ = ' + str(wf.ref_occ)
+            + '; n_corr_orb = ' + str(wf.n_corr_orb)
             + '; n_ext = ' + str(wf.n_ext))
     U = []
     for spirrep in wf.spirrep_blocks(restricted=restricted):
@@ -358,7 +358,7 @@ class Molecular_Orbitals():
         point_group = molecule.find(
             'cml:molecule', ns).find(
                 'cml:symmetry', ns).attrib['pointGroup']
-        new_orbitals.n_irrep = number_of_irreducible_repr[point_group]
+        new_orbitals.n_irrep = util.number_of_irreducible_repr[point_group]
         new_orbitals._basis_len = int(molecule.find(
             'molpro:basisSet', ns).attrib['length'])
         if molecule.attrib['method'] == 'UHF':

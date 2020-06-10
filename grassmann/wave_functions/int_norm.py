@@ -12,7 +12,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from util import (number_of_irreducible_repr, zero, irrep_product,
+from util import (zero, irrep_product,
                   triangular, get_ij_from_triang, get_n_from_triang)
 from wave_functions import general as gen_wf
 import molpro_util
@@ -192,7 +192,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     """
     def __init__(self):
         super().__init__()
-        self.norm = None
+        self._norm = None
         self.use_CISD_norm = True
         self.singles = None
         self.BCC_orb_gen = None
@@ -200,8 +200,6 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     
     def __getitem__(self, I):
         """Return the CI coefficient from a String_Index_for_SD"""
-        if self.norm is None:
-            raise ValueError('Norm has not been calculated yet!')
         return I.C
     
     def __len__(self, I):
@@ -271,31 +269,33 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                        D_main.t, D_main.i, D_main.j,
                        D_main.a, D_main.b))
 
-    def calc_norm(self):
-        if (self.WF_type == 'CISD'
-                or self.WF_type in ('CCSD', 'BCCD', 'CCD')
-                and self.use_CISD_norm):
-            self.norm = 1.0
-            S = 0.0
-            for I in self.string_indices():
-                S += self[I]**2
-            self.norm = math.sqrt(S)
-            logger.warning(
-                'We are calculating the CCSD norm'
-                + ' considering only SD determinants!!')
-        elif self.WF_type in ('CCSD', 'BCCD', 'CCD'):
-            self.norm = 1.0
-            logger.warning('CCSD norm set to 1.0!!')
-        else:
-            raise ValueError(
-                'We do not know how to calculate the norm for '
-                + self.WF_type + '!')
+    @property
+    def norm(self):
+        if self._norm is None:
+            if (self.WF_type == 'CISD'
+                    or self.WF_type in ('CCSD', 'BCCD', 'CCD')
+                    and self.use_CISD_norm):
+                self._norm = 1.0
+                S = 0.0
+                for I in self.string_indices():
+                    S += self[I]**2
+                self._norm = math.sqrt(S)
+                if self.WF_type != 'CISD':
+                    logger.warning(
+                        'We are calculating the CCSD norm'
+                        + ' considering only SD determinants!!')
+            elif self.WF_type in ('CCSD', 'BCCD', 'CCD'):
+                self._norm = 1.0
+                logger.warning('CCSD norm set to 1.0!!')
+            else:
+                raise ValueError(
+                    'We do not know how to calculate the norm for '
+                    + self.WF_type + '!')
+        return self._norm
 
     @property
     def C0(self):
         """The coefficient of reference"""
-        if self.norm is None:
-            self.calc_norm()
         return 1.0 / self.norm
 
     def get_irrep(self, i, alpha_orb):
@@ -308,6 +308,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if i < corr_sum:
                 return i - prev_corr_sum, irrep
             prev_corr_sum = corr_sum
+        raise Exception('BUG: This point should never be reached!'
+                        + ' Data structure is incorrrect!')
     
     def ij_from_N(self, N):
         """Transform global index N to ij
@@ -686,7 +688,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         with too many inedentation levels
         """
         print_info_to_log = print_info_to_log and logger.level <= logging.DEBUG
-        if self.WF_type not in ['CISD', 'CCSD']:
+        if self.WF_type not in ('CISD', 'CCSD', 'CCD', 'BCCD'):
             raise NotImplementedError('Currently works only for CISD and CCSD')
         if self.WF_type == 'CCSD':
             logger.warning(
@@ -1538,234 +1540,222 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         raise NotImplementedError('Not implemented yet: make_Jac_Hess')
 
     @classmethod
-    def from_Molpro(cls, molpro_output):
-        """Load the wave function from Molpro output."""
-        check_pos_ij = False
+    def from_Molpro(cls, molpro_output,
+                    start_line_number=1,
+                    wf_type=None,
+                    point_group=None):
+        """Load the wave function from Molpro output.
+        
+        Parameters:
+        -----------
+        See fci.get_coeff_from_molpro for a description of the parameters.
+        The difference here is that molpro_output must have a CISD/CCSD wave
+        function described using intermediate normalisation.
+        """
         new_wf = cls()
-        new_wf.source = 'From file ' + molpro_output
+        new_wf.Ms = 0.0
+        new_wf.restricted = None
+        check_pos_ij = False
         sgl_found = False
         dbl_found = False
-        with open(molpro_output, 'r') as f:
-            for line_number, line in enumerate(f, start=1):
-                if 'Point group' in line:
-                    new_wf.point_group = line.split()[2]
-                    try:
-                        number_of_irreducible_repr[new_wf.point_group]
-                    except KeyError:
-                        raise molpro_util.MolproInputError(
-                            'Unknown point group!',
-                            line=line,
-                            line_number=line_number,
-                            file_name=molpro_output)
-                if new_wf.WF_type is None:
-                    if line == molpro_util.CISD_header:
-                        new_wf.WF_type = 'CISD'
-                        new_wf.restricted = True
-                        new_wf.Ms = 0.0
-                        CIcalc_found = True
+        MP2_step_passed = True
+        if isinstance(molpro_output, str):
+            f = open(molpro_output, 'r')
+            f_name = molpro_output
+        else:
+            f = molpro_output
+            f_name = f.name
+            if wf_type is None:
+                raise ValueError(
+                    'wf_type is mandatory when molpro_output'
+                    + ' is a file object')
+            if point_group is None:
+                raise ValueError(
+                    'point_group is mandatory when molpro_output'
+                    + ' is a file object')
+            new_wf.WF_type = wf_type
+            new_wf.point_group = point_group
+            new_wf.initialize_data()
+        new_wf.source = 'From file ' + f_name
+        for line_number, line in enumerate(f, start=start_line_number):
+            if new_wf.WF_type is None:
+                try:
+                    new_wf.point_group = molpro_util.get_point_group_from_line(
+                        line, line_number, f_name)
+                except molpro_util.MolproLineHasNoPointGroup:
+                    if line in (molpro_util.CISD_header,
+                                molpro_util.CCSD_header,
+                                molpro_util.BCCD_header,
+                                molpro_util.UCISD_header,
+                                molpro_util.RCISD_header,
+                                molpro_util.UCCSD_header,
+                                molpro_util.RCCSD_header):
+                        new_wf.WF_type = line[11:15]
                         new_wf.initialize_data()
-                    elif (line == molpro_util.UCISD_header
-                          or line == molpro_util.RCISD_header):
-                        new_wf.WF_type = 'CISD'
-                        new_wf.restricted = False
-                        raise NotImplementedError('What is the Ms?')
-                        # new_wf.Ms = 0.0
-                        CIcalc_found = False  # There are MP2 amplitudes first!
-                        new_wf.initialize_data()
-                    elif line == molpro_util.CCSD_header:
-                        new_wf.WF_type = 'CCSD'
-                        new_wf.restricted = True
-                        new_wf.Ms = 0.0
-                        CIcalc_found = True
-                        new_wf.initialize_data()
-                    elif line == molpro_util.BCCD_header:
-                        new_wf.WF_type = 'BCCD'
-                        new_wf.restricted = True
-                        new_wf.Ms = 0.0
-                        CIcalc_found = True
-                        new_wf.initialize_data()
+                continue
+            if ('Number of closed-shell orbitals' in line
+                    or 'Number of core orbitals' in line):
+                new_orbitals = molpro_util.get_orb_info(
+                    line, line_number,
+                    new_wf.n_irrep, 'R')
+                new_wf.ref_occ += new_orbitals
+                if 'Number of core orbitals' in line:
+                    new_wf.n_core += new_orbitals
+            elif 'Number of active  orbitals' in line:
+                new_wf.n_act = molpro_util.get_orb_info(
+                    line, line_number,
+                    new_wf.n_irrep, 'A')
+                new_wf.ref_occ += new_wf.n_act
+                new_wf.Ms = len(new_wf.n_act) / 2
+            elif 'Number of external orbitals' in line:
+                new_wf.orb_dim = (new_wf.ref_occ
+                                  + molpro_util.get_orb_info(
+                                      line, line_number,
+                                      new_wf.n_irrep, 'R'))
+                new_wf.orb_dim.restrict_it()
+            elif 'Starting RMP2 calculation' in line:
+                MP2_step_passed = False
+            elif 'RHF-RMP2 energy' in line:
+                MP2_step_passed = True
+            elif molpro_util.CC_sgl_str in line and MP2_step_passed:
+                sgl_found = True
+                new_wf.restricted = not ('Alpha-Alpha' in line
+                                         or 'Beta-Beta' in line)
+                if new_wf.singles is None:
+                    new_wf.initialize_SD_lists(
+                        with_singles=new_wf.WF_type in ('CISD',
+                                                        'CCSD'),
+                        with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+                exc_type = 'b' if 'Beta-Beta' in line else 'a'
+            elif molpro_util.CC_dbl_str in line and MP2_step_passed:
+                dbl_found = True
+                prev_Molpros_i = prev_Molpros_j = -1
+                pos_ij = i = j = -1
+                restricted = not ('Alpha-Alpha' in line
+                                  or 'Beta-Beta' in line
+                                  or 'Alpha-Beta' in line)
+                if (new_wf.restricted is not None
+                        and restricted != new_wf.restricted):
+                    raise molpro_util.MolproInputError(
+                        'Found restricted/unrestricted inconsistence '
+                        + 'between singles and doubles!',
+                        line=line,
+                        line_number=line_number,
+                        file_name=f_name)
                 else:
-                    if new_wf.WF_type in ('CCSD', 'CISD', 'BCCD'):
-                        if ('Number of closed-shell orbitals' in line
-                                or 'Number of core orbitals' in line):
-                            new_orbitals = molpro_util.get_orb_info(
-                                line, line_number,
-                                new_wf.n_irrep, 'R')
-                            new_wf.ref_occ += new_orbitals
-                            if 'Number of core orbitals' in line:
-                                new_wf.n_core += new_orbitals
-                        if 'Number of active  orbitals' in line:
-                            new_wf.n_act = molpro_util.get_orb_info(
-                                line, line_number,
-                                new_wf.n_irrep, 'A')
-                            new_wf.ref_occ += new_wf.n_act
-                        if 'Number of external orbitals' in line:
-                            new_wf.orb_dim = (new_wf.ref_occ
-                                              + molpro_util.get_orb_info(
-                                                  line, line_number,
-                                                  new_wf.n_irrep, 'R'))
-                            new_wf.orb_dim.restrict_it()
-                        if ('Starting RCISD calculation' in line
-                                or 'Starting UCISD calculation' in line):
-                            CIcalc_found = True
-                        if molpro_util.CC_sgl_str in line and CIcalc_found:
-                            if new_wf.singles is None:
-                                new_wf.initialize_SD_lists(
-                                    with_singles=new_wf.WF_type in ('CISD',
-                                                                    'CCSD'),
-                                    with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
-                            sgl_found = True
-                            if new_wf.restricted:
-                                if ('Alpha-Alpha' in line
-                                        or 'Beta-Beta' in line):
-                                    raise molpro_util.MolproInputError(
-                                        'Found spin information for '
-                                        + 'restricted wave function!',
-                                        line=line,
-                                        line_number=line_number,
-                                        file_name=molpro_output)
-                                exc_type = 'a'
-                            else:
-                                if 'Alpha-Alpha' in line:
-                                    exc_type = 'a'
-                                elif 'Beta-Beta' in line:
-                                    exc_type = 'b'
-                                else:
-                                    raise molpro_util.MolproInputError(
-                                        'Wrong spin information '
-                                        + 'for unrestricted wave function!',
-                                        line=line,
-                                        line_number=line_number,
-                                        file_name=molpro_output)
-                        elif molpro_util.CC_dbl_str in line and CIcalc_found:
-                            if new_wf.singles is None:
-                                if new_wf.WF_type == 'CCSD':
-                                    new_wf.WF_type = 'CCD'
-                                new_wf.initialize_SD_lists(
-                                    with_singles=False,
-                                    with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
-                            dbl_found = True
-                            prev_Molpros_i = prev_Molpros_j = -1
-                            pos_ij = i = j = -1
-                            if new_wf.restricted:
-                                if ('Alpha-Alpha' in line
-                                    or 'Beta-Beta' in line
-                                        or 'Alpha-Beta' in line):
-                                    raise molpro_util.MolproInputError(
-                                        'Found spin information for '
-                                        + 'restricted wave function!',
-                                        line=line,
-                                        line_number=line_number,
-                                        file_name=molpro_output)
-                                exc_type = 'aa'
-                            else:
-                                if 'Alpha-Alpha' in line:
-                                    exc_type = 'aa'
-                                elif 'Beta-Beta' in line:
-                                    exc_type = 'bb'
-                                elif 'Alpha-Beta' in line:
-                                    exc_type = 'ab'
-                                else:
-                                    raise molpro_util.MolproInputError(
-                                        'Wrong spin information for'
-                                        + ' unrestricted wave function!',
-                                        line=line,
-                                        line_number=line_number,
-                                        file_name=molpro_output)
-                        elif dbl_found:
-                            lspl = line.split()
-                            if len(lspl) == 7:
-                                (Molpros_i, Molpros_j,
-                                 irrep_a, irrep_b,
-                                 a, b) = map(
-                                     lambda x: int(x) - 1, lspl[0:-1])
-                                C = float(lspl[-1])
-                                if exc_type[0] == 'a':
-                                    a -= new_wf.n_act[irrep_a]
-                                if exc_type[1] == 'a':
-                                    b -= new_wf.n_act[irrep_b]
-                                if a < 0 or b < 0:
-                                    if abs(C) > zero:
-                                        raise molpro_util.MolproInputError(
-                                            'This coefficient of'
-                                            + ' singles should be zero!',
-                                            line=line,
-                                            line_numbe=line_number,
-                                            file_name=molpro_output)
-                                    continue
-                                if (Molpros_i, Molpros_j) != (prev_Molpros_i,
-                                                              prev_Molpros_j):
-                                    (prev_Molpros_i,
-                                     prev_Molpros_j) = Molpros_i, Molpros_j
-                                    # In Molpro's output,
-                                    # both occupied orbitals
-                                    # (alpha and beta) follow the
-                                    # same notation.
-                                    i, i_irrep = new_wf.get_irrep(
-                                        Molpros_i, True)
-                                    j, j_irrep = new_wf.get_irrep(
-                                        Molpros_j, True)
-                                    pos_ij = new_wf.N_from_ij(i, j,
-                                                              i_irrep, j_irrep,
-                                                              exc_type)
-                                elif check_pos_ij:
-                                    my_i, my_i_irrep = new_wf.get_irrep(
-                                        Molpros_i, True)
-                                    my_j, my_j_irrep = new_wf.get_irrep(
-                                        Molpros_j, True)
-                                    my_pos_ij = new_wf.N_from_ij(
-                                        my_i, my_j,
-                                        my_i_irrep, my_j_irrep,
-                                        exc_type)
-                                    if (i != my_i
-                                        or j != my_j
-                                        or i_irrep != my_i_irrep
-                                        or j_irrep != my_j_irrep
-                                            or pos_ij != my_pos_ij):
-                                        logger.warning(
-                                            'check_pos_ij: differ -->'
-                                            + ' i=(%s %s) j=(%s %s)'
-                                            + 'i_irrep=(%s %s)'
-                                            + ' j_irrep=(%s %s)'
-                                            + ' pos_ij=(%s %s)',
-                                            i, my_i, j, my_j,
-                                            i_irrep, my_i_irrep,
-                                            j_irrep, my_j_irrep,
-                                            pos_ij, my_pos_ij)
-                                new_wf.doubles[pos_ij][irrep_a][a, b] = C
-                        elif sgl_found:
-                            lspl = line.split()
-                            if len(lspl) == 4:
-                                i, irrep, a = map(lambda x: int(x) - 1,
-                                                  lspl[0:-1])
-                                C = float(lspl[-1])
-                                spirrep = (irrep
-                                           if exc_type == 'a' else
-                                           irrep + new_wf.n_irrep)
-                                i -= (sum(new_wf.ref_occ[:irrep])
-                                      - sum(new_wf.n_core[:irrep]))
-                                if exc_type == 'a':
-                                    a -= new_wf.n_act[irrep]
-                                if (a < 0
-                                    or i >= (new_wf.ref_occ[spirrep]
-                                             - new_wf.n_core[irrep])):
-                                    if abs(C) > zero:
-                                        raise molpro_util.MolproInputError(
-                                            'This coefficient of singles'
-                                            + ' should be zero!',
-                                            line=line,
-                                            line_number=line_number,
-                                            file_name=molpro_output)
-                                    continue
-                                if new_wf.WF_type == 'BCCD':
-                                    new_wf.BCC_orb_gen[spirrep][i, a] = C
-                                else:
-                                    new_wf.singles[spirrep][i, a] = C
-                        if (CIcalc_found
-                            and ('RESULTS' in line
-                                 or 'Spin contamination' in line)):
-                            if not dbl_found:
-                                raise molpro_util.MolproInputError(
-                                    'Double excitations not found!')
-                            break
+                    new_wf.restricted = restricted
+                if new_wf.singles is None and new_wf.doubles is None:
+                    if new_wf.WF_type == 'CCSD':
+                        new_wf.WF_type = 'CCD'
+                    elif new_wf.WF_type == 'CCSD':
+                        new_wf.WF_type = 'CID'
+                    new_wf.initialize_SD_lists(
+                        with_singles=False,
+                        with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+                if new_wf.restricted or 'Alpha-Alpha' in line:
+                    exc_type = 'aa'
+                elif 'Beta-Beta' in line:
+                    exc_type = 'bb'
+                elif 'Alpha-Beta' in line:
+                    exc_type = 'ab'
+            elif dbl_found:
+                lspl = line.split()
+                if len(lspl) == 7:
+                    (Molpros_i, Molpros_j,
+                     irrep_a, irrep_b,
+                     a, b) = map(
+                         lambda x: int(x) - 1, lspl[0:-1])
+                    C = float(lspl[-1])
+                    if exc_type[0] == 'a':
+                        a -= new_wf.n_act[irrep_a]
+                    if exc_type[1] == 'a':
+                        b -= new_wf.n_act[irrep_b]
+                    if a < 0 or b < 0:
+                        if abs(C) > zero:
+                            raise molpro_util.MolproInputError(
+                                'This coefficient of'
+                                + ' singles should be zero!',
+                                line=line,
+                                line_numbe=line_number,
+                                file_name=f_name)
+                        continue
+                    if (Molpros_i, Molpros_j) != (prev_Molpros_i,
+                                                  prev_Molpros_j):
+                        (prev_Molpros_i,
+                         prev_Molpros_j) = Molpros_i, Molpros_j
+                        # In Molpro's output,
+                        # both occupied orbitals
+                        # (alpha and beta) follow the
+                        # same notation.
+                        i, i_irrep = new_wf.get_irrep(
+                            Molpros_i, True)
+                        j, j_irrep = new_wf.get_irrep(
+                            Molpros_j, True)
+                        pos_ij = new_wf.N_from_ij(i, j,
+                                                  i_irrep, j_irrep,
+                                                  exc_type)
+                    elif check_pos_ij:
+                        my_i, my_i_irrep = new_wf.get_irrep(
+                            Molpros_i, True)
+                        my_j, my_j_irrep = new_wf.get_irrep(
+                            Molpros_j, True)
+                        my_pos_ij = new_wf.N_from_ij(
+                            my_i, my_j,
+                            my_i_irrep, my_j_irrep,
+                            exc_type)
+                        if (i != my_i
+                            or j != my_j
+                            or i_irrep != my_i_irrep
+                            or j_irrep != my_j_irrep
+                                or pos_ij != my_pos_ij):
+                            logger.warning(
+                                'check_pos_ij: differ -->'
+                                + ' i=(%s %s) j=(%s %s)'
+                                + 'i_irrep=(%s %s)'
+                                + ' j_irrep=(%s %s)'
+                                + ' pos_ij=(%s %s)',
+                                i, my_i, j, my_j,
+                                i_irrep, my_i_irrep,
+                                j_irrep, my_j_irrep,
+                                pos_ij, my_pos_ij)
+                    new_wf.doubles[pos_ij][irrep_a][a, b] = C
+            elif sgl_found:
+                lspl = line.split()
+                if len(lspl) == 4:
+                    i, irrep, a = map(lambda x: int(x) - 1,
+                                      lspl[0:-1])
+                    C = float(lspl[-1])
+                    spirrep = (irrep
+                               if exc_type == 'a' else
+                               irrep + new_wf.n_irrep)
+                    i -= (sum(new_wf.ref_occ[:irrep])
+                          - sum(new_wf.n_core[:irrep]))
+                    if exc_type == 'a':
+                        a -= new_wf.n_act[irrep]
+                    if (a < 0
+                        or i >= (new_wf.ref_occ[spirrep]
+                                 - new_wf.n_core[irrep])):
+                        if abs(C) > zero:
+                            raise molpro_util.MolproInputError(
+                                'This coefficient of singles'
+                                + ' should be zero!',
+                                line=line,
+                                line_number=line_number,
+                                file_name=f_name)
+                        continue
+                    if new_wf.WF_type == 'BCCD':
+                        new_wf.BCC_orb_gen[spirrep][i, a] = C
+                    else:
+                        new_wf.singles[spirrep][i, a] = C
+            if (MP2_step_passed
+                and ('RESULTS' in line
+                     or 'Spin contamination' in line)):
+                if not dbl_found:
+                    raise molpro_util.MolproInputError(
+                        'Double excitations not found!')
+                break
+        if new_wf.restricted:
+            new_wf.ref_occ.restrict_it()
+        if isinstance(molpro_output, str):
+            f.close()
         return new_wf

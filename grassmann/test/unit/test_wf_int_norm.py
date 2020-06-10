@@ -16,10 +16,8 @@ class He2StringIndicesTestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.He2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('He2__1.5__631g__D2h'))
-        self.He2_wf.calc_norm()
         self.He2_CCwf = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CCSD_file('He2__1.5__631g__D2h'))
-        self.He2_CCwf.calc_norm()
 
     def test_string_indices_singles_cisd_He2(self):
         irrep = 0
