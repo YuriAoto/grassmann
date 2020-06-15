@@ -223,13 +223,19 @@ def dGr_main(args, f_out):
                 f_out=f_out,
                 ini_U=U,
                 max_iter=args.maxiter,
-                enable_uphill=False)
+                enable_uphill=False,
+                save_all_U_dir=(args.output + '_all_U/'
+                                if args.save_all_U else
+                                None))
         else:
             res = optimiser.optimise_overlap_Absil(
                 ext_wf,
                 f_out=f_out,
                 max_iter=args.maxiter,
-                ini_U=U)
+                ini_U=U,
+                save_all_U_dir=(args.output + '_all_U/'
+                                if args.save_all_U else
+                                None))
         toout('-' * 30)
         logger.info('Optimisation completed')
         if isinstance(res.converged, bool):
@@ -281,7 +287,7 @@ def dGr_main(args, f_out):
         final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
                    if args.save_full_U else
                    res.U)
-        np.savez(args.basename + '.min_dist_U', *final_U)
+        np.savez(args.output + '_U', *final_U)
         if args.HF_orb != args.WF_orb:
             print_ovlp_D('refWF', 'min D',
                          ovlp_Slater_dets((2 * res.U)

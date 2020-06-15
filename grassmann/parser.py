@@ -117,6 +117,11 @@ def parse_cmd_line():
                         + ' also the virtual orbitals of the optimised'
                         + ' point.',
                         action='store_true')
+    parser.add_argument('--save_all_U',
+                        help='If set, the matrix U is saved in every'
+                        + ' iteration of the optimisation, in the files'
+                        + '<output_name>_all_U/orb_it_<i_it>.npz',
+                        action='store_true')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',

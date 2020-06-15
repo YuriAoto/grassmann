@@ -26,32 +26,32 @@ if cmd_line_args.output is None:
         name_extra = '_' + name_extra
     if cmd_line_args.at_ref:
         name_extra = '_atRef'
-    output_name = cmd_line_args.basename + '.min_dist' + name_extra
-else:
-    output_name = cmd_line_args.output
-logfile_name = output_name + '.log'
+    cmd_line_args.output = (cmd_line_args.basename
+                            + '.min_dist' + name_extra)
 
-if os.path.exists(output_name) or os.path.exists(logfile_name):
+all_files = [cmd_line_args.output,
+             cmd_line_args.output + '.log',
+             cmd_line_args.output + '_U.npz',
+             cmd_line_args.output + '_all_U']
+
+if any(map(os.path.exists, all_files)):
     i_backup = '_0'
-    while (os.path.exists(output_name + i_backup)
-           or os.path.exists(logfile_name + i_backup)):
+    while (any([os.path.exists(f_name + i_backup)
+                for f_name in all_files])):
         i_backup = '_' + str(int(i_backup[1:]) + 1)
-    try:
-        os.rename(output_name, output_name + i_backup)
-    except FileNotFoundError:
-        pass
-    try:
-        os.rename(output_name + '_U.npz', output_name + '_U.npz' + i_backup)
-    except FileNotFoundError:
-        pass
-    try:
-        os.rename(logfile_name, logfile_name + i_backup)
-    except FileNotFoundError:
-        pass
+    for f_to_rename in all_files:
+        try:
+            os.rename(f_to_rename,
+                      f_to_rename + i_backup)
+        except FileNotFoundError:
+            pass
+
+if cmd_line_args.save_all_U:
+    os.mkdir(all_files[3])
 
 log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
               + '\n%(message)s\n')
-logging.basicConfig(filename=logfile_name,
+logging.basicConfig(filename=all_files[1],
                     format=log_format,
                     filemode='w',
                     level=cmd_line_args.loglevel)
@@ -81,7 +81,7 @@ for handler in logging.root.handlers:
 f_out = None
 with_error = False
 try:
-    f_out = open(output_name, 'w')
+    f_out = open(cmd_line_args.output, 'w')
     dGr_main(cmd_line_args, f_out)
 except MolproInputError as e:
     with_error = True

@@ -85,7 +85,8 @@ def optimise_overlap_orbRot(wf,
                             thrsh_J=1.0E-8,
                             enable_uphill=True,
                             at_reference=False,
-                            update_meth=None):
+                            update_meth=None,
+                            save_all_U_dir=False):
     """Find a single Slater determinant that minimise the distance to wf
     
     Behaviour:
@@ -177,6 +178,11 @@ def optimise_overlap_orbRot(wf,
         If None, set to optimiser.GETTING_Z_PART_EIGEN if at_ref=True,
         and to optimiser.GETTING_Z_EIGEN otherwise
     
+    save_all_U_dir (str or None, optional, default=None)
+        If not None, saves the .npz file with the orbitals
+        for every iteration, in this directory.
+        Files are named orb_it_<i_it>.npz
+    
     Returns:
     --------
     
@@ -243,6 +249,8 @@ def optimise_overlap_orbRot(wf,
                 U[i] = U[i] @ cur_U[i]
             if loglevel <= logging.DEBUG:
                 logger.debug('Wave function:\n%s', cur_wf)
+        if save_all_U_dir is not None:
+            np.savez(save_all_U_dir + '/orb_it_' + str(i_iteration), *U)
         with logtime('Making Jacobian and Hessian'):
             Jac, Hess = cur_wf.make_Jac_Hess_overlap()
         logger.log(1, 'Jacobian:\n%r', Jac)
@@ -350,7 +358,8 @@ def optimise_overlap_Absil(ci_wf,
                            thrsh_C=1.0E-5,
                            only_C=False,
                            only_eta=False,
-                           check_equations=False):
+                           check_equations=False,
+                           save_all_U_dir=False):
     """Find the single Slater determinant that maximises the overlap to ci_wf
     
     Behaviour:
@@ -452,6 +461,11 @@ def optimise_overlap_Absil(ci_wf,
         If True, checks numerically if the Absil equation is satisfied.
         It is slow and for testing purposes.
         
+    save_all_U_dir (str or None, optional, default=None)
+        If not None, saves the .npz file with the orbitals
+        for every iteration, in this directory.
+        Files are named orb_it_<i_it>.npz
+    
     Return:
     -------
     
@@ -533,6 +547,8 @@ def optimise_overlap_Absil(ci_wf,
     f_out.write('{0:<5s}  {1:<11s}  {2:<11s}  {3:<11s}  {4:s}\n'.
                 format('it.', 'f', '|η|', '|C|', 'time in iteration'))
     for i_iteration in range(max_iter):
+        if save_all_U_dir is not None:
+            np.savez(save_all_U_dir + '/orb_it_' + str(i_iteration), *U)
         with logtime('Generating linear system') as T_gen_lin_system:
             f, X, C = absil.generate_lin_system(ci_wf, U, slice_XC)
         if loglevel <= logging.DEBUG:
