@@ -591,6 +591,7 @@ class Wave_Function(ABC, Sequence):
         x.append('n act: {}'.format(self.n_act))
         x.append('ref occ: {}'.format(self.ref_occ))
         x.append('Ms: {}'.format(self.Ms))
+        x.append('restricted: {}'.format(self.restricted))
         x.append('n electrons: {}'.format(self.n_elec))
         x.append('n alpha: {}'.format(self.n_alpha))
         x.append('n beta: {}'.format(self.n_beta))

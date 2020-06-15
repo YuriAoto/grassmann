@@ -428,6 +428,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         """
         sgn_invert = False
         FCI_coefficients_found = False
+        uhf_alpha_was_read = False
+        found_orbital_source = False
         self.has_FCI_structure = True
         self.WF_type = 'FCI'
         if not use_structure:
@@ -503,14 +505,39 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     active_el_in_out = int(line.split()[2])
                 elif 'Spin quantum number:' in line:
                     self.Ms = float(line.split()[3])
-                    self.restricted = self.Ms == 0.0
-                    # if self.Ms != 0.0:
-                    #     raise Exception('Only singlet wave functions!')
+                elif 'Molecular orbitals read from record' in line:
+                    if 'RHF' in line:
+                        self.restricted = True
+                        found_orbital_source = True
+                    elif 'UHF/ALPHA' in line:
+                        self.restricted = False
+                        uhf_alpha_was_read = True
+                    elif 'UHF/BETA' in line:
+                        if not uhf_alpha_was_read:
+                            raise molpro_util.MolproInputError(
+                                "Not sure what to do...\n"
+                                + "UHF/BETA orbitals but no UHF/ORBITALS!!",
+                                line=line,
+                                line_number=line_number,
+                                file_name=molpro_output)
+                        found_orbital_source = True
+                    else:
+                        raise molpro_util.MolproInputError(
+                            "Not sure how to treat a wf with these orbitals!\n"
+                            + "Neither RHF nor UHF!",
+                            line=line,
+                            line_number=line_number,
+                            file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
         self.ref_occ = general.Orbitals_Sets(
             list(map(len, self[0].occupation)))
         self._i_ref = None
+        if not found_orbital_source:
+            raise molpro_util.MolproInputError(
+                'I didnt find the source of molecular orbitals!')
+        if abs(self.Ms) > 0.001:
+            self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),
                                            occ_type='A')
