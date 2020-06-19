@@ -114,18 +114,67 @@ class logtime():
         if self.out_stream is not None:
             self.out_stream.write(self.out_fmt.format(self.elapsed_time))
 
-            
-def dist_from_ovlp(x):
-    """Convert from overlap to distance.
-    
-    See I. D'Amico et. al PRL 106 (2011) 050401
-    """
-    try:
-        return sqrt2 * math.sqrt(1 - abs(x))
-    except ValueError:
-        return 0.0
 
+def dist_from_ovlp(ovlp,
+                   metric='Fubini-Study',
+                   norms=(1.0, 1.0),
+                   tol=1E-8):
+    """Calculate the distance based on the overlap
     
+    Given the overlap between two wave functions,
+    <Psi|Phi>, calculates the distance between them.
+    The following metrics are available
+    (normalised wave functions are assumed in the following
+    expressions):
+    
+    Fubini-Study:
+        D(Psi, Phi) = arccos |<Psi|Phi>|
+    
+    DAmico (D'Amico et. al PRL 106 (2011) 050401):
+        D(Psi, Phi) = sqrt(2) sqrt(1 - |<Psi|Phi>|)
+    
+    Benavides-Riveros (Benavides-Riveros et. al PRA 95 (2017) 032507):
+        D(Psi, Phi) = 1 - |<Psi|Phi>|^2
+    
+    Parameters:
+    -----------
+    ovlp (float)
+        The overlap between two wave functions
+    
+    metric (str, optional, default='Fubini-Study')
+        The metric to be used.
+    
+    norms (2-tuple of floats, optional, default=(1.0, 1.0))
+        The norms of both wave functions
+    
+    tol (float, optional, default=1E-8)
+        Tolerance for acepting too large overlap (see Raises below)
+    
+    Returns:
+    --------
+    The distance associated to ovlp (float)
+    
+    Raises:
+    -------
+    ValueError
+        if metric is unknown or if
+        ovlp / (norms[0] * norms[1]) > 1 + tol
+    """
+    absovlp = abs(ovlp / (norms[0] * norms[1]))
+    if absovlp > 1.0 + tol:
+        raise ValueError(
+            '|<Psi|Phi>|/(|Psi||Phi|) > 1: ' + str(absovlp))
+    absovlp = min(absovlp, 1.0)
+    if metric == 'Fubini-Study':
+        return np.arccos(absovlp)
+    elif metric == 'DAmico':
+        return sqrt2 * math.sqrt(1 - absovlp)
+    elif metric == 'Benavides-Riveros':
+        return 1 - absovlp**2
+    else:
+        raise ValueError('Unknown metric in the wave functions space: '
+                             + metric)
+
 def ovlp_Slater_dets(U, n):
     """Calculate the overlap between two Slater determinants
     

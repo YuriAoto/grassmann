@@ -39,7 +39,7 @@ def dGr_main(args, f_out):
     def toout(x='', add_new_line=True):
         f_out.write(x + ('\n' if add_new_line else ''))
     
-    def print_ovlp_D(pt1, pt2, ovlp, with_dist=True, extra=''):
+    def print_ovlp_D(pt1, pt2, ovlp, with_dist=False, extra=''):
         if with_dist:
             toout(('|<{0:s}|{1:s}>|{4:s} = {2:12.8f} ;'
                    + ' D({0:s}, {1:s}) = {3:12.8f}').
@@ -67,7 +67,7 @@ def dGr_main(args, f_out):
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
-    toout('Hartree-Fock orbitals, |min E>: ' + args.HF_orb)
+    toout('Hartree-Fock orbitals, |minE>: ' + args.HF_orb)
     if args.ini_orb is not None:
         f_out.write('Initial guess: ')
         if args.ini_orb[-4:] == '.npz':
@@ -121,7 +121,7 @@ def dGr_main(args, f_out):
             x.append(str(I) + ': ' + str(ext_wf[I]))
         logger.debug('The determinants:\n' + '\n'.join(x))
     if args.HF_orb != args.WF_orb:
-        toout('Using as |min E> a Slater determinant different than |WFref>')
+        toout('Using as |minE> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
         try:
             HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
@@ -139,11 +139,11 @@ def dGr_main(args, f_out):
         except Exception as e:
             raise e
         else:
-            print_ovlp_D('min E', 'WFref',
+            print_ovlp_D('minE', 'WFref',
                          ovlp_Slater_dets(HF_in_basis_of_refWF,
                                           ext_wf.ref_occ))
     else:
-        toout('Using |WFref> (the reference of |extWF>) as |min E>.')
+        toout('Using |WFref> (the reference of |extWF>) as |minE>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
     if args.algorithm == 'general_Absil':
         restricted = False
@@ -279,17 +279,17 @@ def dGr_main(args, f_out):
             final_f = res.f[0]
         else:
             final_f = res.f
-        print_ovlp_D('min D', 'extWF', final_f)
+        print_ovlp_D('minD', 'extWF', final_f)
         logger.info("""Saving U matrices in a .npz file:
  These make the transformation from the basis used to expand the
- external wave function (|extWF>) to the one that makes |min D>
+ external wave function (|extWF>) to the one that makes |minD>
  the first determinant.""")
         final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
                    if args.save_full_U else
                    res.U)
         np.savez(args.output + '_U', *final_U)
         if args.HF_orb != args.WF_orb:
-            print_ovlp_D('refWF', 'min D',
+            print_ovlp_D('refWF', 'minD',
                          ovlp_Slater_dets((2 * res.U)
                                           if restricted else
                                           res.U,
@@ -298,7 +298,7 @@ def dGr_main(args, f_out):
                 if Ui.shape[1] > 0:
                     res.U[spirrep] = np.matmul(
                         linalg.inv(HF_in_basis_of_refWF[spirrep]), Ui)
-        print_ovlp_D('min E', 'min D',
+        print_ovlp_D('minE', 'minD',
                      ovlp_Slater_dets((2 * res.U)
                                       if restricted else
                                       res.U,
