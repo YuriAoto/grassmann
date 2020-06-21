@@ -17,6 +17,7 @@ from util import dist_from_ovlp, ovlp_Slater_dets, logtime
 import orbitals as orb
 import optimiser
 import molpro_util
+import wave_functions
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -113,6 +114,10 @@ def dGr_main(args, f_out):
                           'fci')))
     if args.at_ref:
         ext_wf.use_CISD_norm = False
+    if (isinstance(ext_wf, wave_functions.fci.Wave_Function_Norm_CI)
+        and 'Absil' in args.algorithm):
+        raise Exception('algorithm CISD_Absil is not compatible with'
+                        + 'fci.Wave_Function_Norm_CI')
     logger.debug('External wave function:\n %r', ext_wf)
     toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
@@ -167,8 +172,9 @@ def dGr_main(args, f_out):
                                        if restricted else
                                        2) * ext_wf.n_irrep,
                                       full=orbRot_opt)
-#    toout('Number of determinants in the external wave function: {0:d}'.
-#          format(len(ext_wf)))
+    toout('Restricted calculation'
+          if restricted else
+          'Unrestricted calculation')
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
     toout('Dim. of core orb. space:  {0:}'.

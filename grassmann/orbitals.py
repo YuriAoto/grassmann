@@ -146,13 +146,15 @@ def calc_U_from_z(z, wf):
         if spirrep == wf.n_irrep and n_param == len(z):
             restricted = True
             break
-        nK = wf.n_corr_orb[spirrep] * wf.n_ext[spirrep]
+        nK = wf.ref_occ[spirrep] * wf.n_ext[spirrep]
         spirrep_start.append(spirrep_start[-1] + nK)
         n_param += nK
     if n_param != len(z):
         raise ValueError(
             'Lenght of z is inconsitent with orbital spaces:\n'
             + 'len(z) = ' + str(len(z))
+            + '\nz:\n' + str(z)
+            + '\nn_param = ' + str(n_param)
             + '; n_corr_orb = ' + str(wf.n_corr_orb)
             + '; n_ext = ' + str(wf.n_ext))
     U = []
@@ -168,15 +170,15 @@ def calc_U_from_z(z, wf):
         else:
             K = np.zeros((wf.orb_dim[spirrep],
                           wf.orb_dim[spirrep]))
-            K[wf.n_core[spirrep]:wf.ref_occ[spirrep],  # K[i,a]
+            K[:wf.ref_occ[spirrep],  # K[i,a]
               wf.ref_occ[spirrep]:] = (
                   np.reshape(z[spirrep_start[spirrep]:
                                spirrep_start[spirrep + 1]],
-                             (wf.n_corr_orb[spirrep],
+                             (wf.ref_occ[spirrep],
                               wf.n_ext[spirrep])))
             K[wf.ref_occ[spirrep]:,  # K[a,i] = -K[i,a]
-              wf.n_core[spirrep]:wf.ref_occ[spirrep]] = -(
-                  K[wf.n_core[spirrep]:wf.ref_occ[spirrep],
+              :wf.ref_occ[spirrep]] = -(
+                  K[:wf.ref_occ[spirrep],
                     wf.ref_occ[spirrep]:].T)
             logger.info('Current K[spirrep=%d] matrix:\n%s',
                         spirrep, K)
