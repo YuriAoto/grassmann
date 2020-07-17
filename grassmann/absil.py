@@ -701,12 +701,13 @@ def _generate_lin_system_from_restricted_CISD(
         D *= D
         f += D * L[irrep]
         logger.debug(r'\Prod(irrep != %d) F0[irrep]**2 = %f', irrep, D)
-        X[slice_XC[irrep],
-          slice_XC[irrep]] -= np.outer(C[slice_XC[irrep]], U[irrep])
+###  old term: not needed because U will contract with eta
+##        X[slice_XC[irrep],
+##          slice_XC[irrep]] -= np.outer(C[slice_XC[irrep]], U[irrep])
         if n[irrep] > 0:
             logger.debug('For irrep = %d:\nprod F0[i]**2 (for i != irrep) = %f'
                          + '\nL = %f\nM:\n%r\n'
-                         + '-(MxU - bigG@Pi - bigH):\n%r',
+                         + 'bigG@Pi + bigH:\n%r',
                          irrep, D,
                          L[irrep], C[slice_XC[irrep]],
                          X[slice_XC[irrep],
@@ -779,8 +780,9 @@ def _generate_lin_system_from_restricted_CISD(
         H += np.einsum('pq,ts,rt ->pqrs',
                        G0[irrep], G0[irrep], Pi[irrep])
         Gd = F0[irrep] * G0[irrep]
-        H -= np.einsum('pq,rs->pqrs',
-                       Gd, U[irrep])
+###  old term: not needed because U will contract with eta
+##        H -= np.einsum('pq,rs->pqrs',
+##                       Gd, U[irrep])
         H *= -1
         D = 0.0
         for irrep2 in wf.spirrep_blocks(restricted=True):
@@ -934,7 +936,9 @@ def _generate_lin_system_from_genWF(
                                             i, j)
                 logger.debug('current H:\n%r', H)
                 logger.debug('current G_1:\n%r', G_1)
-                H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
+###  old term: not needed because U will contract with eta
+##                H = Pi @ (np.multiply.outer(U[spirrep_1], G_1) - H)
+                H = -Pi @ H
                 logger.debug('Pi (U G - H):\n%r', H)
             with logtime('Calc S'):
                 S = 0.0

@@ -234,8 +234,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             x.append('')
             for N, Dij in enumerate(self.doubles):
                 i, j, i_irrep, j_irrep, exc_type = self.ij_from_N(N)
-                x.append('N = {} (i={}, j={}, '
-                         + 'i_irrep={}, j_irrep={}, exc_type={}):'.
+                x.append(('N = {0:} (i={1:}, j={2:}, '
+                          + 'i_irrep={3:}, j_irrep={4:}, exc_type={5:}):').
                          format(N, i, j, i_irrep, j_irrep, exc_type))
                 x.append('')
                 for a_irrep, D in enumerate(Dij):
