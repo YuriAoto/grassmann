@@ -115,7 +115,8 @@ def dGr_main(args, f_out):
     if args.at_ref:
         ext_wf.use_CISD_norm = False
     if (isinstance(ext_wf, wave_functions.fci.Wave_Function_Norm_CI)
-        and 'Absil' in args.algorithm):
+        and 'Absil' in args.algorithm
+        and not args.at_ref):
         raise Exception('algorithm CISD_Absil is not compatible with'
                         + 'fci.Wave_Function_Norm_CI')
     logger.debug('External wave function:\n %r', ext_wf)

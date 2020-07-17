@@ -530,9 +530,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
+        self.get_i_max_coef(set_i_ref=True)
         self.ref_occ = general.Orbitals_Sets(
-            list(map(len, self[0].occupation)))
-        self._i_ref = None
+            list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
@@ -558,7 +558,21 @@ class Wave_Function_Norm_CI(general.Wave_Function):
             if self._i_ref is None:
                 raise Exception('Did not find reference for wave function!')
         return self._i_ref
-    
+
+    def get_i_max_coef(self, set_i_ref=False):
+        """Return index of determinant with largest coefficient
+        
+        If set_i_ref == True, also sets i_ref to it (default=False)
+        """
+        max_coef = 0.0
+        i_max_coef = -1
+        for i, det in enumerate(self):
+            if abs(det.c) > max_coef:
+                max_coef = abs(det.c)
+                i_max_coef = i
+        self._i_ref = i_max_coef
+        return i_max_coef
+
     @property
     def C0(self):
         return self[self.i_ref].c
