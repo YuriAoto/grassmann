@@ -87,7 +87,7 @@ except MolproInputError as e:
     with_error = True
     error_msg = ('Error in Molpro file ' + str(e.file_name)
                  + ', line number ' + str(e.line_number) + ':\n'
-                 + e.line + '\n' + e.msg)
+                 + str(e.line) + '\n' + e.msg)
 except Exception as e:
     with_error = True
     error_msg = ('Error: ' + str(e)

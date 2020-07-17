@@ -86,7 +86,7 @@ def optimise_overlap_orbRot(wf,
                             enable_uphill=True,
                             at_reference=False,
                             update_meth=None,
-                            save_all_U_dir=False):
+                            save_all_U_dir=None):
     """Find a single Slater determinant that minimise the distance to wf
     
     Behaviour:
@@ -203,14 +203,6 @@ def optimise_overlap_orbRot(wf,
     commented line below
 
     """
-    def get_i_max_coef(wf):
-        max_coef = 0.0
-        i_max_coef = -1
-        for i, det in enumerate(wf):
-            if abs(det.c) > max_coef:
-                max_coef = abs(det.c)
-                i_max_coef = i
-        return i_max_coef
     converged = False
     try_uphill = False
     i_iteration = 0
@@ -329,7 +321,7 @@ def optimise_overlap_orbRot(wf,
                                normJ,
                                elapsed_time))
         if not at_reference:
-            i_max_coef = get_i_max_coef(cur_wf)
+            i_max_coef = cur_wf.get_i_max_coef()
             if i_max_coef != cur_wf.i_ref and f_out is not None:
                 f_out.write('   ^ Max coefficient: {}\n'.
                             format(str(cur_wf[i_max_coef])))

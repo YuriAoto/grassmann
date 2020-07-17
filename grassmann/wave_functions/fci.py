@@ -530,9 +530,9 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
+        self.get_i_max_coef(set_i_ref=True)
         self.ref_occ = general.Orbitals_Sets(
-            list(map(len, self[0].occupation)))
-        self._i_ref = None
+            list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
@@ -558,18 +558,36 @@ class Wave_Function_Norm_CI(general.Wave_Function):
             if self._i_ref is None:
                 raise Exception('Did not find reference for wave function!')
         return self._i_ref
-    
+
+    def get_i_max_coef(self, set_i_ref=False):
+        """Return index of determinant with largest coefficient
+        
+        If set_i_ref == True, also sets i_ref to it (default=False)
+        """
+        max_coef = 0.0
+        i_max_coef = -1
+        for i, det in enumerate(self):
+            if abs(det.c) > max_coef:
+                max_coef = abs(det.c)
+                i_max_coef = i
+        self._i_ref = i_max_coef
+        return i_max_coef
+
     @property
     def C0(self):
         return self[self.i_ref].c
     
-    def get_exc_info(self, det, only_rank=False):
+    def get_exc_info(self, det, only_rank=False, consider_core=True):
         """Return some info about the excitation that lead from ref to det
         
         This will return the holes, the particles, and the rank of det,
         viewed as a excitation over self.ref_occ.
         Particles and holes are returned as lists of Orbital_Info.
         These lists have len = rank.
+        If consider_core == False, core orbitals are not considered,
+        and the first correlated orbitals is 0; Otherwise core orbitals
+        are taken into account and the first correlated orbital is
+        n_core[spirrep]
         The order that the holes/particles are put in the lists is the
         canonical: follows the spirrep, and the normal order inside each
         spirrep.
@@ -584,6 +602,10 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         only_rank (bool, optional, default=False
             If True, calculates and return only the rank
         
+        consider_core (bool, optional, default=True)
+            Whether or not core orbitals are considered when
+            assigning holes
+        
         Returns:
         --------
         The tuple (holes, particles, rank), or just the rank.
@@ -592,11 +614,15 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         holes = []
         particles = []
         for spirrep in self.spirrep_blocks(restricted=False):
+            ncore = (0
+                     if consider_core else
+                     self.n_core[spirrep])
             if not only_rank:
                 for orb in range(self.ref_occ[spirrep]):
                     if orb not in det.occupation[spirrep]:
-                        holes.append(Orbital_Info(orb=orb,
-                                                  spirrep=spirrep))
+                        holes.append(Orbital_Info(
+                            orb=orb - ncore,
+                            spirrep=spirrep))
             for orb in det.occupation[spirrep]:
                 if orb >= self.ref_occ[spirrep]:
                     rank += 1
@@ -787,7 +813,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
             return Jac, Hess
         # --- Analytic
         for det in self:
-            holes, particles, rank = self.get_exc_info(det)
+            holes, particles, rank = self.get_exc_info(det, consider_core=True)
             logger.debug('new det: %s', det)
             if rank > 2:
                 continue
