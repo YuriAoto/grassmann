@@ -1,21 +1,18 @@
-"""Main function of dGr
+"""Minimise the distance to extWF
 
-Functions:
-----------
-dGr_main
+
 """
 import os
 import datetime
 import time
 import logging
 
-import git
 import numpy as np
 from scipy import linalg
 
 from util import dist_from_ovlp, ovlp_Slater_dets, logtime
 import orbitals as orb
-import optimiser
+from . import optimiser
 import molpro_util
 import wave_functions
 
@@ -23,7 +20,7 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def dGr_main(args, f_out):
+def main(args, f_out):
     """The main function to calculate the distance to the Grassmannian.
     
     Parameters:
@@ -34,8 +31,6 @@ def dGr_main(args, f_out):
     f_out (file)
         where the output goes
     """
-    git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)) + '/../')
-    git_sha = git_repo.head.object.hexsha
     
     def toout(x='', add_new_line=True):
         f_out.write(x + ('\n' if add_new_line else ''))
@@ -54,17 +49,8 @@ def dGr_main(args, f_out):
                          abs(ovlp),
                          extra))
 
-    toout('dGr - optimise the distance in the Grassmannian')
-    toout('Yuri Aoto - 2018, 2019, 2020')
-    toout()
-    toout('Current git commit: ' + git_sha)
-    toout()
-    toout('Directory:\n' + args.wdir)
-    toout()
-    toout('Command:\n' + args.command)
-    toout()
     toout('From command line and environment:')
-    toout('External wave function, |extWF>: ' + args.molpro_output)
+    toout('External wave function, |extWF>: ' + args.input_file)
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
@@ -97,14 +83,10 @@ def dGr_main(args, f_out):
                  if 'QPY_JOB_ID' in os.environ else
                  'not in qpy'))
     toout()
-    start_time = time.time()
-    toout('Starting at {}'.format(
-        time.strftime("%d %b %Y - %H:%M", time.localtime(start_time))))
-    toout()
     # ----- loading wave function
     with logtime('Reading wave function'):
         ext_wf = molpro_util.load_wave_function(
-            args.molpro_output,
+            args.input_file,
             WF_templ=args.WF_templ,
             use_CISD_norm=not args.at_ref,
             wf_obj_type=('cisd'
@@ -116,7 +98,7 @@ def dGr_main(args, f_out):
         ext_wf.use_CISD_norm = False
     if (isinstance(ext_wf, wave_functions.fci.Wave_Function_Norm_CI)
         and 'Absil' in args.algorithm
-        and not args.at_ref):
+            and not args.at_ref):
         raise Exception('algorithm CISD_Absil is not compatible with'
                         + 'fci.Wave_Function_Norm_CI')
     logger.debug('External wave function:\n %r', ext_wf)
@@ -130,9 +112,9 @@ def dGr_main(args, f_out):
         toout('Using as |minE> a Slater determinant different than |WFref>')
         toout('(the reference of |extWF>). We have:')
         try:
-            HF_in_basis_of_refWF = orb.Molecular_Orbitals.from_file(
+            HF_in_basis_of_refWF = orb.MolecularOrbitals.from_file(
                 args.HF_orb).in_the_basis_of(
-                    orb.Molecular_Orbitals.from_file(args.WF_orb))
+                    orb.MolecularOrbitals.from_file(args.WF_orb))
         except ValueError as e:
             if 'keepspherical' in str(e):
                 logger.error(str(e))
@@ -164,8 +146,8 @@ def dGr_main(args, f_out):
             if not restricted and len(U) == ext_wf.n_irrep:
                 orb.extend_to_unrestricted(U)
         else:
-            U = orb.Molecular_Orbitals.from_file(args.ini_orb).in_the_basis_of(
-                orb.Molecular_Orbitals.from_file(args.WF_orb))
+            U = orb.MolecularOrbitals.from_file(args.ini_orb).in_the_basis_of(
+                orb.MolecularOrbitals.from_file(args.WF_orb))
     else:
         U = orb.construct_Id_orbitals(ext_wf.ref_occ,
                                       ext_wf.orb_dim,
@@ -311,8 +293,3 @@ def dGr_main(args, f_out):
                                       res.U,
                                       ext_wf.ref_occ))
     toout()
-    end_time = time.time()
-    elapsed_time = str(datetime.timedelta(seconds=(end_time - start_time)))
-    toout('Ending at {}'.format(
-        time.strftime("%d %b %Y - %H:%M", time.localtime(end_time))))
-    toout('Total time: {}'.format(elapsed_time))

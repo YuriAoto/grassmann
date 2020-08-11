@@ -81,10 +81,13 @@ def parse_cmd_line():
         <file_name> is the name of the file that Molpro generates,
         and it is what is passed to dGr after --ini_orb, for example.
         ''')))
-    parser.add_argument('molpro_output',
-                        help='Molpro output with the correlated wave function')
+    parser.add_argument('input_file',
+                        help='Molpro output with the correlated wave function'
+                        + ' or a xyz geometry file')
     parser.add_argument('--output',
                         help='Output file name')
+    parser.add_argument('--basis', default='cc-pVDZ',
+                        help='basis set')
     parser.add_argument('--ini_orb',
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'
@@ -97,7 +100,7 @@ def parse_cmd_line():
                         help='orbital basis of the wave function'
                         + ' (as Molpro\'s "put" xml file).'
                         + ' If not given, assume  to be the same as'
-                        + ' molpro_output')
+                        + ' input_file')
     parser.add_argument('--WF_templ',
                         help='a Molpro output with a Full CI wave function,'
                         + ' to be used as template')
@@ -130,7 +133,7 @@ def parse_cmd_line():
                         help='regular expression to filter function names'
                         + ' for logging (for debug)')
     cmd_args = parser.parse_args()
-    cmd_args.basename = re.sub(r'\.out$', '', cmd_args.molpro_output)
+    cmd_args.basename = re.sub(r'\.out$', '', cmd_args.input_file)
     cmd_args.wdir = os.getcwd()
     cmd_args.command = ''
     for i, arg in enumerate(sys.argv):
@@ -141,7 +144,9 @@ def parse_cmd_line():
                                                   or arg == '--at_ref'))
                                          else
                                          '')
-    __assert_molpro_output(cmd_args.molpro_output)
+    cmd_args.input_is_geom = cmd_args.input_file.endswith('.xyz')
+    if not cmd_args.input_is_geom:
+        __assert_molpro_output(cmd_args.input_file)
     if cmd_args.algorithm is None:
         cmd_args.algorithm = 'CISD_Absil'
     elif cmd_args.algorithm not in ['orb_rotations',
@@ -165,7 +170,7 @@ def parse_cmd_line():
         else:
             __assert_molpro_output(cmd_args.ini_orb, can_be_xml=True)
     if cmd_args.WF_orb is None:
-        cmd_args.WF_orb = cmd_args.molpro_output
+        cmd_args.WF_orb = cmd_args.input_file
     else:
         __assert_molpro_output(cmd_args.WF_orb, can_be_xml=True)
     if cmd_args.HF_orb is None:

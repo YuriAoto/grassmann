@@ -6,9 +6,10 @@ a description.
 
 Classes:
 --------
-Molecular_Orbitals
+MolecularOrbitals
 
 """
+from copy import deepcopy
 import logging
 import xml.etree.ElementTree as ET
 
@@ -188,7 +189,7 @@ def calc_U_from_z(z, wf):
     return U
 
 
-class Molecular_Orbitals():
+class MolecularOrbitals():
     """A set of molecular orbitals
     
     Behaviour:
@@ -196,12 +197,12 @@ class Molecular_Orbitals():
     The orbitals are stored in one or more np.ndarray
     with the coefficients of the i-th orbital in the i-th column:
     
-    1st MO    2nd MO    ...    nth MO
+    1st MO    2nd MO    ...    n-th MO
     
-    C[0,0]    C[1,1]    ...    C[1,n-1]   -> coef of 1st basis function
-    C[1,0]    C[2,1]    ...    C[2,n-1]   -> coef of 2nd basis function
+    C[0,0]    C[0,1]    ...    C[0,n-1]   -> coef of 1st basis function
+    C[1,0]    C[1,1]    ...    C[1,n-1]   -> coef of 2nd basis function
     ...       ...       ...    ...
-    C[K-1,0]  C[K-1,1]  ...    C[K-1,n-1]   -> coef of nth basis function
+    C[K-1,0]  C[K-1,1]  ...    C[K-1,n-1]   -> coef of K-th basis function
     
     There are n_irrep (restricted=True) or 2*n_irrep (restricted=False)
     such np.ndarray, each of shape (basis lenght, n orb of irrep).
@@ -230,13 +231,16 @@ class Molecular_Orbitals():
         The basis that is being used to expand the orbitals, that is, the basis
         of which the coefficients refer.
     
-    basis_is_per_irrep (bool)
+    sym_adapted_basis (bool)
         If True, np.ndarray for spirrep i is square, and have the coefficients
         of elements of the basis of that irrep (that is, K == n above).
         If False, np.ndarray for spirrep i has the coefficients of all elements
         of the basis (because the basis is not symmetry adapted,
         or perhaps with 0 for other irreps).
         Thus, there are possibly more rows than columns (K >= n).
+    
+    energies (1D ndarray)
+        Store the orbital energies
     
     Data model:
     -----------
@@ -250,14 +254,18 @@ class Molecular_Orbitals():
         Iterates over spirreps
 
     """
-    def __init__(self):
-        self.name = ''
-        self._basis_len = 0
-        self.n_irrep = None
-        self.restricted = True
-        self._coefficients = None
-        self.in_the_basis = ''
-        self.basis_is_per_irrep = False
+    def __init__(self, source=None):
+        if source is None:
+            self.name = ''
+            self._basis_len = 0
+            self.n_irrep = None
+            self.restricted = True
+            self._coefficients = None
+            self.in_the_basis = ''
+            self.sym_adapted_basis = False
+            self.energies = None
+        else:
+            self.__dict__ = deepcopy(source.__dict__)
 
     def __getitem__(self, key):
         if self.restricted and key > self.n_irrep:
@@ -286,7 +294,47 @@ class Molecular_Orbitals():
             x.append(str(orb_spirrep))
             x.append('')
         return '\n'.join(x)
-
+    
+    @classmethod
+    def from_array(cls, C, n_irrep,
+                   name='Coefficients from array',
+                   in_the_basis='',
+                   restricted=True):
+        """Load orbitals from a ndarray-like object
+        
+        
+        """
+        if (isinstance(C, tuple)
+            and len(C) != n_irrep * (1
+                                     if restricted else
+                                     2)):
+            raise ValueError(
+                'len of coefficients-tuple not consistent with n_irrep')
+        if n_irrep > 1 and not isinstance(C, tuple):
+            raise ValueError(
+                'Coefficients must be given as tuple of 2D-arrays.')
+        new_orbitals = cls()
+        new_orbitals.name = name
+        new_orbitals.n_irrep = n_irrep
+        new_orbitals.in_the_basis = in_the_basis
+        new_orbitals.sym_adapted_basis = False
+        new_orbitals._coefficients = []
+        new_orbitals.restricted = restricted
+        
+        if isinstance(C, tuple):
+            for Ci in C:
+                new_orbitals._coefficients.append(np.array(Ci, dtype=float))
+        else:
+            new_orbitals._coefficients.append(np.array(C, dtype=float))
+        if new_orbitals.sym_adapted_basis:
+            new_orbitals._basis_len = 0
+            for irrep in range(n_irrep): 
+                new_orbitals._basis_len += \
+                    new_orbitals._coefficients[irrep].shape[0]
+        else:
+            new_orbitals._basis_len = new_orbitals._coefficients[0].shape[0]
+        return new_orbitals
+    
     @classmethod
     def from_file(cls, file_name):
         """Load orbitals from file file_name.
@@ -298,7 +346,7 @@ class Molecular_Orbitals():
         
         Returns:
         --------
-        An instance of Molecular_Orbitals.
+        An instance of MolecularOrbitals.
         """
         if file_name[-4:] == '.xml':
             return cls._get_orbitals_from_Molpro_xml(file_name)
@@ -308,12 +356,12 @@ class Molecular_Orbitals():
     def identity(cls, orb_dim, n_elec, n_irrep, basis_len,
                  name='',
                  basis='',
-                 basis_is_per_irrep=False):
+                 sym_adapted_basis=False):
         raise NotImplementedError(
             'Not implemented!! (should we accept few orbitals??)')
         new_orbitals = cls()
         new_orbitals.name = name
-        new_orbitals.basis_is_per_irrep = basis_is_per_irrep
+        new_orbitals.sym_adapted_basis = sym_adapted_basis
         new_orbitals.in_the_basis = basis
         new_orbitals.n_irrep = n_irrep
         new_orbitals._basis_len = basis_len
@@ -332,7 +380,7 @@ class Molecular_Orbitals():
         
         Returns:
         --------
-        An instance of Molecular_Orbitals.
+        An instance of MolecularOrbitals.
         """
         def get_spin_shift(orb_type, method, n_irrep):
             if orb_type == 'BETA':
@@ -347,7 +395,7 @@ class Molecular_Orbitals():
                 raise ValueError('Unknown type of orbital: ' + orb_type)
         new_orbitals = cls()
         new_orbitals.name = xml_file[:-4]
-        new_orbitals.basis_is_per_irrep = False
+        new_orbitals.sym_adapted_basis = False
         tree = ET.parse(xml_file)
         molpro = tree.getroot()
         ns = {'molpro': 'http://www.molpro.net/schema/molpro-output',
@@ -417,7 +465,7 @@ class Molecular_Orbitals():
         
         Parameters:
         -----------
-        other (Molecular_Orbitals)
+        other (MolecularOrbitals)
             The molecular orbitals that will be used as basis for self.
             These orbitals have to be complete, that is, the number of
             orbitals (in each spin for unrestricted) must be the length
@@ -440,7 +488,7 @@ class Molecular_Orbitals():
         
         Returns:
         --------
-        A new instance of Molecular_Orbitals, that contains the orbitals
+        A new instance of MolecularOrbitals, that contains the orbitals
         self in the basis of other.
         
         """
@@ -448,11 +496,11 @@ class Molecular_Orbitals():
         logger.debug("MO (self):\n%s", self)
         if len(self) != len(other):
             raise ValueError('Orbitals do not have the same basis length!')
-        U = Molecular_Orbitals()
+        U = MolecularOrbitals()
         U.name = self.name
         U._basis_len = len(self)
         U.in_the_basis = other.name
-        U.basis_is_per_irrep = True
+        U.sym_adapted_basis = True
         if other.n_irrep == self.n_irrep:
             U.n_irrep = self.n_irrep
         else:

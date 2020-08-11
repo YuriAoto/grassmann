@@ -21,6 +21,7 @@ get_I
 import math
 import datetime
 import time
+from datetime import timedelta
 import logging
 
 import numpy as np
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 
 zero = 1.0E-10
 sqrt2 = math.sqrt(2.0)
+
+ANG_to_a0 = 1.8897261246
 
 irrep_product = np.asarray([[0, 1, 2, 3, 4, 5, 6, 7],
                             [1, 0, 3, 2, 5, 4, 7, 6],
@@ -50,6 +53,19 @@ number_of_irreducible_repr = {
     'C2h': 4,
     'D2': 4,
     'D2h': 8}
+
+ATOMS = ['X',
+         'H' ,                                                                                'He',
+         'Li','Be',                                                  'B' ,'C' ,'N' ,'O' ,'F' ,'Ne',
+         'Na','Mg',                                                  'Al','Si','P' ,'S' ,'Cl','Ar',
+         'K' ,'Ca','Sc','Ti','V' ,'Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr',
+         'Rb','Sr','Y' ,'Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I' ,'Xe',
+         'Cs','Ba',
+'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+                        'Hf','Ta','W' ,'Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rd',
+         'Fr','Ra',
+'Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+                        'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og']
 
 
 class logtime():
@@ -113,7 +129,10 @@ class logtime():
                     self.elapsed_time)
         if self.out_stream is not None:
             self.out_stream.write(self.out_fmt.format(self.elapsed_time))
-
+    
+    def relative_to(self, other):
+        """Return the time from other.ini_time to self.end_time"""
+        return str(timedelta(seconds=(self.end_time - other.ini_time)))
 
 def dist_from_ovlp(ovlp,
                    metric='Fubini-Study',

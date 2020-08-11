@@ -20,7 +20,6 @@ optimise_distance_to_CI
 import copy
 import sys
 import logging
-from datetime import timedelta
 
 from collections import namedtuple
 import numpy as np
@@ -29,7 +28,7 @@ from scipy import linalg
 from util import logtime
 from wave_functions.general import Wave_Function
 from wave_functions.cisd import Wave_Function_CISD
-import absil
+from . import absil
 import orbitals as orb
 
 logger = logging.getLogger(__name__)
@@ -239,8 +238,7 @@ def optimise_overlap_orbRot(wf,
                 cur_wf, cur_U = cur_wf.calc_wf_from_z(z)
             for i in range(len(U)):
                 U[i] = U[i] @ cur_U[i]
-            if loglevel <= logging.DEBUG:
-                logger.debug('Wave function:\n%s', cur_wf)
+            logger.debug('Wave function:\n%s', cur_wf)
         if save_all_U_dir is not None:
             np.savez(save_all_U_dir + '/orb_it_' + str(i_iteration), *U)
         with logtime('Making Jacobian and Hessian'):
@@ -311,8 +309,7 @@ def optimise_overlap_orbRot(wf,
             normZ = linalg.norm(z)
         if at_reference:
             U = orb.calc_U_from_z(z, cur_wf)
-        elapsed_time = str(timedelta(seconds=(T_norm_Z.end_time
-                                              - T_start.ini_time)))
+        elapsed_time = T_norm_Z.relative_to(T_start)
         if f_out is not None:
             f_out.write(fmt_full.
                         format(i_iteration,
@@ -625,8 +622,7 @@ def optimise_overlap_Absil(ci_wf,
                     'alpha' if i < ci_wf.n_irrep else 'beta',
                     i % ci_wf.n_irrep,
                     U[i])
-        elapsed_time = str(timedelta(seconds=(T_orth_U.end_time
-                                              - T_gen_lin_system.ini_time)))
+        elapsed_time = T_orth_U.relative_to(T_gen_lin_system)
         f_out.write(fmt_full.
                     format(i_iteration,
                            f,

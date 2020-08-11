@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Optimise the distance to the Grassmannian
+"""Grassmann
 
-Try `dGr --help` for the usage.
+Try `Grassmann --help` for the usage.
 
-Yuri Aoto, 2018, 2019
+Yuri Aoto, 2018, 2019, 2020
 """
 import os
 import sys
@@ -11,7 +11,7 @@ import logging
 import traceback
 
 import parser
-from main import dGr_main
+from main import main_grassmann
 from molpro_util import MolproInputError
 
 assert sys.version_info >= (3, 5)
@@ -21,13 +21,16 @@ except parser.ParseError as e:
     sys.exit(str(e))
 
 if cmd_line_args.output is None:
-    name_extra = cmd_line_args.state
-    if name_extra:
-        name_extra = '_' + name_extra
-    if cmd_line_args.at_ref:
-        name_extra = '_atRef'
-    cmd_line_args.output = (cmd_line_args.basename
-                            + '.min_dist' + name_extra)
+    if cmd_line_args.input_is_geom:
+        cmd_line_args.output = (cmd_line_args.basename[:-4] + '.out')
+    else:
+        name_extra = cmd_line_args.state
+        if name_extra:
+            name_extra = '_' + name_extra
+        if cmd_line_args.at_ref:
+            name_extra = '_atRef'
+        cmd_line_args.output = (cmd_line_args.basename
+                                + '.min_dist' + name_extra)
 
 all_files = [cmd_line_args.output,
              cmd_line_args.output + '.log',
@@ -82,7 +85,7 @@ f_out = None
 with_error = False
 try:
     f_out = open(cmd_line_args.output, 'w')
-    dGr_main(cmd_line_args, f_out)
+    main_grassmann(cmd_line_args, f_out)
 except MolproInputError as e:
     with_error = True
     error_msg = ('Error in Molpro file ' + str(e.file_name)
