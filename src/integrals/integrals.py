@@ -20,8 +20,8 @@ wmmeDir = '/home/yuriaoto/Documents/Codes/ir-wmme.20141030/ir-wmme.20141030/'
 
 class Integrals():
     """All molecular integrals
-
-
+    
+    
     """
     def __init__(self, mol_geo, basis_set,
                  method='ir-wmme',
@@ -101,45 +101,6 @@ class Integrals():
             logger.debug('X:\n%r', self.X)
             logger.debug('XSX:\n%r', self.X.T @ self.S @ self.X)
 
-            # def set_all_integrals(self,
-    #                       method=None,
-    #                       overlap_meth=None,
-    #                       one_elec_meth=None,
-    #                       two_elec_meth=None):
-    #     """Calculate all integrals."""
-    #     self.set_nuclear_repulsion()
-    #     self.overlap(method=overlap_meth
-    #                  if overlap_meth is not None else method)
-    #     # attention: for the moment            self.orthogonalize_S()
-    #     self.one_elec_int(method=one_elec_meth
-    #                       if one_elec_meth is not None else method)
-    #     self.two_elec_int(method=two_elec_meth
-    #                       if two_elec_meth is not None else method)
-
-    # def overlap(self, method='Obara-Saika'):
-    #     """Calculate the overlap matrix."""
-    #     if self.at_basis is None:
-    #         raise Exception('Can not calculate integrals: ' +
-    #                         'Atomic basis has not been defined.')
-    #     self.S = overlap.overlap(self.atoms, self.at_basis,
-    #                              method=method)
-
-    # def one_elec_int(self, method='Obara-Saika'):
-    #     """Calculate one-electron integrals."""
-    #     if self.at_basis is None:
-    #         raise Exception('Can not calculate integrals: ' +
-    #                         'Atomic basis has not been defined.')
-    #     self.h = one_elec.one_elec(self.atoms, self.at_basis,
-    #                                method=method)
-
-    # def two_elec_int(self, method='Obara-Saika'):
-    #     """Calculate two-electron integrals."""
-    #     if self.at_basis is None:
-    #         raise Exception('Can not calculate integrals: ' +
-    #                         'Atomic basis has not been defined.')
-    #     self.g = two_elec.two_elec(self.atoms, self.at_basis,
-    #                                method=method)
-
 
 class Two_Elec_Int():
     """Two electron integrals and related functions
@@ -148,21 +109,31 @@ class Two_Elec_Int():
     def __init__(self):
         self._format = None
         self._integrals = None
+        self.n_func = 0
     
     def __getitem__(self, key):
+        """
+        If key == F2e
+        g_ijkl = np.einsum('Fij,Fkl->ijkl',
+                            self.intgrls.g._integrals,
+                            self.intgrls.g._integrals)
+        """
         i, j, k, l = key
         if self._format == 'F2e':
             return np.dot(self._integrals[:, i, j], self._integrals[:, k, l])
         if self._format == 'ijkl':
             ij = j + i * (i + 1) // 2 if i >= j else i + j * (j + 1) // 2
             kl = l + k * (k + 1) // 2 if k >= l else k + l * (l + 1) // 2
-            ijkl = kl + ij * (ij + 1) // 2 if ij >= kl else ij + kl * (kl + 1) // 2
+            ijkl = (kl + ij * (ij + 1) // 2
+                    if ij >= kl else
+                    ij + kl * (kl + 1) // 2)
             return self._integrals[ijkl]
 
     @classmethod
     def from_wmme_fint2e(cls, wmme_fint2e_file, n_func):
         """Load integrals as intF2e"""
         new_int = cls()
+        new_int.n_func = n_func
         new_int._format = 'F2e'
         new_int._integrals = np.load(wmme_fint2e_file)
         new_int._integrals = new_int._integrals.reshape(
@@ -171,7 +142,7 @@ class Two_Elec_Int():
 
     def transform_to_ijkl(self):
         """Transform integrals in tho ijkl format"""
-        n_g = n_functions * (n_functions + 1) // 2
+        n_g = self.n_func * (self.n_func + 1) // 2
         n_g = n_g * (n_g + 1) // 2
         g_in_new_format = np.zeros(n_g)
         ij = -1

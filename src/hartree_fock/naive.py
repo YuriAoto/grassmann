@@ -19,68 +19,12 @@ from scipy import linalg
 
 from util import logtime
 from orbitals import MolecularOrbitals
-from .util import HFResult
+from . import util
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
-fmt_HF_header = '{0:<5s}  {1:<16s}  {2:<16s}  {3:s}\n'
-fmt_HF_iter = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:s}\n'
-
 sqrt2 = np.sqrt(2.0)
-
-
-def _calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
-    """Calculate a DIIS step
-    
-    
-    Parameters:
-    -----------
-    
-    Dmat (np.ndarray)
-        The density matrix
-    
-    grad (np.ndarray)
-        Hartree-Fock Gradient
-    
-    cur_n_DIIS (int)
-        The current dimension of the iterative subspace
-    
-    i_DIIS (int)
-        index of Dmat of current iteration
-    
-    Returns:
-    --------
-    Does not return anything, but the density matrix
-    is updated.
-    
-    TODO:
-    ----
-    This does not give the same result for equivalent
-    restricted and unrestricted calculations.
-    Investigate why.
-    """
-    B = np.zeros((cur_n_DIIS + 1, cur_n_DIIS + 1))
-    B[:cur_n_DIIS + 1, :cur_n_DIIS + 1] = np.einsum('iap,iaq->pq',
-                                                    grad[:, :, :cur_n_DIIS+1],
-                                                    grad[:, :, :cur_n_DIIS+1])
-    for i in range(cur_n_DIIS):
-        B[i, cur_n_DIIS] = B[cur_n_DIIS, i] = -1.0
-    B[cur_n_DIIS, cur_n_DIIS] = 0.0
-    logger.debug('DIIS B matrix:\n%r', B)
-    a = np.zeros((cur_n_DIIS + 1, 1))
-    a[cur_n_DIIS] = -1.0
-    w = linalg.solve(B, a)
-    logger.debug('DIIS w vector:\n%r', w)
-    logger.debug('w entry associated to the current step: %f',
-                 w[i_DIIS])
-    Dmat[:, :, i_DIIS] *= w[i_DIIS]
-    for k in range(cur_n_DIIS):
-        if k == i_DIIS:
-            continue
-        Dmat[:, :, i_DIIS] += w[k] * Dmat[:, :, k]
-    logger.debug('Density matrix (after DIIS):\n%r',
-                 Dmat[:, :, i_DIIS])
 
 
 def Restricted_Closed_Shell_SCF(mol_geom,
@@ -162,9 +106,9 @@ def Restricted_Closed_Shell_SCF(mol_geom,
     Dmat = np.zeros((len(orb), len(orb), max(n_DIIS, 1)))
     Fock = np.zeros((len(orb), len(orb)))
     if f_out is not None:
-        f_out.write(fmt_HF_header.format('it.', 'E',
-                                         '|Gradient|',
-                                         'time in iteration'))
+        f_out.write(util.fmt_HF_header.format('it.', 'E',
+                                              '|Gradient|',
+                                              'time in iteration'))
     
     for i_SCF in range(max_iter):
         logger.info('At SCF iteration: %d', i_SCF)
@@ -186,7 +130,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
         
         if n_DIIS > 0 and cur_n_DIIS > 0:
             with logtime('DIIS step'):
-                _calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS)
+                util.calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS)
         
         with logtime('Form Fock matrix'):
             for m in range(len(orb)):
@@ -225,7 +169,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
         with logtime('Fock matrix in the MO basis'):
             F_MO = orb[0].T @ Fock @ orb[0]
             grad[:, :, i_DIIS] = F_MO[:n_occ, n_occ:]
-            gradNorm = np.linalg.norm(grad[:, :, i_DIIS]) * sqrt2
+            gradNorm = linalg.norm(grad[:, :, i_DIIS]) * sqrt2
             logger.info('Gradient norm = %f', gradNorm)
             logger.debug('Gradient:\n%r', grad[:, :, i_DIIS])
             orb.energies = np.array([F_MO[i, i] for i in range(len(orb))])
@@ -249,7 +193,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
             logger.debug('New orbitals:\n%s', orb)
         
         if f_out is not None:
-            f_out.write(fmt_HF_iter.format(
+            f_out.write(util.fmt_HF_iter.format(
                 i_SCF, E, gradNorm, TorbAO.relative_to(Tdens)))
             f_out.flush()
         
@@ -259,7 +203,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
             break
     
     orb.name = 'RHF'
-    res = HFResult(E, orb, converged, i_SCF)
+    res = util.HFResult(E, orb, converged, i_SCF)
     res.kind = kind_of_calc
     if not converged:
         res.warning = 'No convergence was obtained'
@@ -387,9 +331,9 @@ def Unrestricted_SCF(mol_geom,
     Fock_a = np.zeros((len(orb_a), len(orb_a)))
     Fock_b = np.zeros((len(orb_b), len(orb_b)))
     if f_out is not None:
-        f_out.write(fmt_HF_header.format('it.', 'E',
-                                         '|Gradient|',
-                                         'time in iteration'))
+        f_out.write(util.fmt_HF_header.format('it.', 'E',
+                                              '|Gradient|',
+                                              'time in iteration'))
     
     for i_SCF in range(max_iter):
         logger.info('At SCF iteration: %d', i_SCF)
@@ -416,8 +360,8 @@ def Unrestricted_SCF(mol_geom,
         
         if n_DIIS > 0 and cur_n_DIIS > 0:
             with logtime('DIIS step'):
-                _calculate_DIIS(Dmat_a, grad_a, cur_n_DIIS, i_DIIS)
-                _calculate_DIIS(Dmat_b, grad_b, cur_n_DIIS, i_DIIS)
+                util.calculate_DIIS(Dmat_a, grad_a, cur_n_DIIS, i_DIIS)
+                util.calculate_DIIS(Dmat_b, grad_b, cur_n_DIIS, i_DIIS)
         
         with logtime('Form Fock matrix'):
             for m in range(len(orb_a)):
@@ -471,10 +415,10 @@ def Unrestricted_SCF(mol_geom,
             F_MO_a = orb_a[0].T @ Fock_a @ orb_a[0]
             F_MO_b = orb_b[0].T @ Fock_b @ orb_b[0]
             grad_a[:, :, i_DIIS] = F_MO_a[:n_occ_a, n_occ_a:]
-            gradNorm = np.linalg.norm(grad_a[:, :, i_DIIS])
+            gradNorm = linalg.norm(grad_a[:, :, i_DIIS])
             grad_b[:, :, i_DIIS] = F_MO_b[:n_occ_b, n_occ_b:]
             gradNorm = np.sqrt(gradNorm**2
-                               + np.linalg.norm(grad_b[:, :, i_DIIS])**2)
+                               + linalg.norm(grad_b[:, :, i_DIIS])**2)
             logger.info('Gradient norm = %f', gradNorm)
             logger.debug('Gradient (alpha):\n%r', grad_a[:, :, i_DIIS])
             logger.debug('Gradient (beta):\n%r', grad_b[:, :, i_DIIS])
@@ -515,7 +459,7 @@ def Unrestricted_SCF(mol_geom,
             logger.debug('New orbitals (beta):\n%s', orb_b)
         
         if f_out is not None:
-            f_out.write(fmt_HF_iter.format(
+            f_out.write(util.fmt_HF_iter.format(
                 i_SCF, E, gradNorm, TorbAO.relative_to(Tdens)))
             f_out.flush()
         
@@ -526,7 +470,7 @@ def Unrestricted_SCF(mol_geom,
         
     orb_a.name = 'UHF (alpha)'
     orb_b.name = 'UHF (beta)'
-    res = HFResult(E, (orb_a, orb_b), converged, i_SCF)
+    res = util.HFResult(E, (orb_a, orb_b), converged, i_SCF)
     res.kind = kind_of_calc
     if not converged:
         res.warning = 'No convergence was obtained'

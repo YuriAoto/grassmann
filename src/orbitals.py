@@ -14,7 +14,7 @@ import logging
 import xml.etree.ElementTree as ET
 
 import numpy as np
-from scipy.linalg import inv, expm
+from scipy.linalg import inv, expm, eigh
 
 import util
 
@@ -294,6 +294,14 @@ class MolecularOrbitals():
             x.append(str(orb_spirrep))
             x.append('')
         return '\n'.join(x)
+
+    @classmethod
+    def from_eig_h(cls, intgrls, basis_name=''):
+        h_orth = intgrls.X.T @ intgrls.h @ intgrls.X
+        logger.debug('h_orth:\n%r', h_orth)
+        e, C = eigh(h_orth)
+        return cls.from_array(intgrls.X @ C, 1,
+                              in_the_basis=basis_name)
     
     @classmethod
     def from_array(cls, C, n_irrep,
@@ -328,7 +336,7 @@ class MolecularOrbitals():
             new_orbitals._coefficients.append(np.array(C, dtype=float))
         if new_orbitals.sym_adapted_basis:
             new_orbitals._basis_len = 0
-            for irrep in range(n_irrep): 
+            for irrep in range(n_irrep):
                 new_orbitals._basis_len += \
                     new_orbitals._coefficients[irrep].shape[0]
         else:
@@ -459,6 +467,33 @@ class MolecularOrbitals():
                     raise e
                 cur_orb[spirrep] += 1
         return new_orbitals
+    
+    def orthogonalise(self, X=None):
+        """Orthogonalise the orbitals
+        
+        TODO: for more than one irrep
+        """
+        if self.n_irrep > 1:
+            raise NotImplementedError('TODO: for more than one irrep')
+        if X is None:
+            pass
+        else:
+            self._coefficients[0][:, :] = X @ self._coefficients[0]
+    
+    def is_orthonormal(self, Smat=None):
+        """Return True if orbitals are orthonormal
+        
+        TODO: for more than one irrep
+        """
+        if self.n_irrep > 1:
+            raise NotImplementedError('TODO: for more than one irrep')
+        if Smat is None:
+            id_mat = self[0].T @ self[0]
+        else:
+            id_mat = self[0].T @ Smat @ self[0]
+        logger.debug('This should be the identity matrix:\n%s',
+                     id_mat)
+        return np.allclose(id_mat, np.eye(id_mat.shape[0]))
     
     def in_the_basis_of(self, other):
         """Return self in the basis of other.
