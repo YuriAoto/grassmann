@@ -1,0 +1,21 @@
+#+TITLE: Tasks for Grassmann
+#+AUTHOR: Yuri Aoto
+
+
+* Improvements
+
+** TODO Make better code for generate_orb.py
+
+*** Integrals
+
+**** TODO Add interface cpp/Python to IR-WMME
+
+**** TODO Improve basis set library
+
+** TODO Better DIIS for Hartree-Fock
+
+
+* Bug fixes
+
+* Documentation
+
