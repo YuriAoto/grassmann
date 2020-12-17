@@ -96,11 +96,11 @@ where
   \{\phi_p\}_{p=1}^K
 \end{equation}
 is an orthonormal basis for the space of one-electron wave functions and $I$ is an ordered multi-index.
-We want to find $\ket{\Phi} \in Gr$ such that $|\bracket{\Psi_\text{FCI}}{\Phi}|$ is maximum, where $Gr$ is the image of the Grassmannian in the space of the $n$-electron wave functions.
+We want to find $\ket{\Phi} \in Gr$ such that $|\innerproduct{\Psi_\text{FCI}}{\Phi}|$ is maximum, where $Gr$ is the image of the Grassmannian in the space of the $n$-electron wave functions.
 
 Recall that
 \begin{equation}
-  D(\Psi_1, \Psi_2) = \sqrt{2}\sqrt{1 - |\bracket{\Psi_1}{\Psi_2}|}
+  D(\Psi_1, \Psi_2) = \sqrt{2}\sqrt{1 - |\innerproduct{\Psi_1}{\Psi_2}|}
 \end{equation}
 is a metric in $\projective \HilbSp$.\cite{}
 Also, $Gr$ is the set of all elements of $\HilbSp$ that can be written as a single Slater determinant (a decomposable element) for some orthonormal basis of $\orbSp{}$.
@@ -134,7 +134,7 @@ To find $\ket{\Phi_\text{minD}}$, it is equivalent to find the orbitals (namely,
       }
     C_I \ket{\Phi_I}\,,
 \end{equation}
-and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\bracket{\Psi_\text{FCI}}{\Phi_\text{minD}}|$.
+and $|C_0|$ is maximum (over all possible coefficients in all possible basis), since $|C_0| = |\innerproduct{\Psi_\text{FCI}}{\Phi_\text{minD}}|$.
 
 \subsection{Parametrisation by orbital rotations}
 We parametrise $Gr$ by the orbital rotations as\cite{}
@@ -155,14 +155,14 @@ For $\hat{K} = 0$ it is clear that $\ket{\Phi} = \ket{\Phi_0}$.
 
 Let
 \begin{equation}
-  f(K_i^a) = \left|\average{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
+  f(K_i^a) = \left|\mel{\Psi_\text{FCI}}{e^{-\hat{K}}}{\Phi_0}\right|\,,
 \end{equation}
 where the argument $K_i^a$ represent all the $n_\alpha(N-n_\alpha) + n_\beta(N-n_\beta)$ elements.
 Note that rotations that mix $\alpha$ and $\beta$ orbitals are not considered.
-We will also assume that $\bracket{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remains true for all steps
+We will also assume that $\innerproduct{\Psi_\text{FCI}}{\Phi_0} > 0$ and this remains true for all steps
 of our optimisation.
-If $\bracket{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function.
-If $\bracket{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
+If $\innerproduct{\Psi_\text{FCI}}{\Phi_0} < 0$ we of course can change the phase of the wave function.
+If $\innerproduct{\Psi_\text{FCI}}{\Phi_0} = 0$ for the first or any step of the optimisation, we likely started with a very poor initial guess.
 
 \subsubsection{spin and symmetry restricted}
 
@@ -359,7 +359,7 @@ Similarly to what we did in the first algorithm, we will just work without getti
 Thus, we will look for stationary points of:
 \begin{eqnarray}
   f : Gr &\to& \real\\
-  \ket{\Phi} &\mapsto& \bracket{\Psi_\text{ext}}{\Phi}\,.
+  \ket{\Phi} &\mapsto& \innerproduct{\Psi_\text{ext}}{\Phi}\,.
 \end{eqnarray}
 We will assume that the external wave function, $\ket{\Psi_\text{ext}}$, is eigenfunction of $S_z$, with eigenvalue $M_s$, and belongs to an irreducible representation (irrep, $\irp$) of the point group of the molecule.
 This means that, for all determinants of the expansion in Equation~\eqref{eq:ext_wf}, the following equations hold:
@@ -584,42 +584,42 @@ In this section we will describe the equations for $\ket{\Psi_\text{ext}}$ being
 Let $\ket{\Phi_0}$ be the reference determinant of closed shell and restricted type:
 It has even number of electrons, with the same occupied $\alpha$ and $\beta$ orbitals:
 \begin{eqnarray}
-  \ketbig{\Phi_0}
+  \ket{\Phi_0}
   &=& \phi_1^{\irp=1} \w \phi_2^{\irp=1} \w
       \dots \w \phi_{n_g}^{\irp=g} \w
       \overline{\phi}_1^{\irp=1} \w \overline{\phi}_2^{\irp=1} \w
       \dots \w \overline{\phi}_{n_g}^{\irp=g}\\
-  &=& \ketbig{\Phi_0}_1 \w \ketbig{\Phi_0}_2 \w
-      \dots \w \ketbig{\Phi_0}_g \w
-      \ketbig{\overline{\Phi}_0}_1 \w \ketbig{\overline{\Phi}_0}_2 \w
-      \dots \w \ketbig{\overline{\Phi}_0}_g\\
-  &=& \ketbig{\Phi_0} \w \ketbig{\overline{\Phi}_0}\,.
+  &=& \ket{\Phi_0}_1 \w \ket{\Phi_0}_2 \w
+      \dots \w \ket{\Phi_0}_g \w
+      \ket{\overline{\Phi}_0}_1 \w \ket{\overline{\Phi}_0}_2 \w
+      \dots \w \ket{\overline{\Phi}_0}_g\\
+  &=& \ket{\Phi_0} \w \ket{\overline{\Phi}_0}\,.
 \end{eqnarray}
 As can be seen in equations above, we will use the convention of an over line to indicate that it corresponds to $\beta$ spin, whereas no over line indicates $\alpha$ spin.
-Furthermore, $\ketbig{\Phi_0}_\irp$ corresponds to the part of $\ket{\Phi_0}$ for irrep $\irp$ and $\alpha$ spin (that is, the subspace of $\orbSp{}$ spanned by the occupied alpha orbitals of irrep $\irp$ in the reference).
-$\ketbig{\overline{\Phi}_0}_\irp$ is the same for the $\beta$ part.
+Furthermore, $\ket{\Phi_0}_\irp$ corresponds to the part of $\ket{\Phi_0}$ for irrep $\irp$ and $\alpha$ spin (that is, the subspace of $\orbSp{}$ spanned by the occupied alpha orbitals of irrep $\irp$ in the reference).
+$\ket{\overline{\Phi}_0}_\irp$ is the same for the $\beta$ part.
 We will also use the standard convention of denoting excited Slater determinants by subscripts for holes (``excited from'') and superscripts for particles (``excited to'').
 Thus, for example:
 
 \begin{equation}
-  \ketbig{\Phi_i^a}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
+  \ket{\Phi_i^a}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
   \dots \w \phi_{n_\irp}^\irp \w \phi_a^\irp
 \end{equation}
 \begin{equation}
-  \ketbig{\Phi_{ij}^{ab}}_\irp = \phi_1^\irp \w \dots
+  \ket{\Phi_{ij}^{ab}}_\irp = \phi_1^\irp \w \dots
   \w \hat{\phi}_j^\irp \w \dots \w \hat{\phi}_i^\irp \w
   \dots \w \phi_{n_\irp}^\irp \w \phi_b^\irp \w \phi_a^\irp
 \end{equation}
 \begin{equation}
-  \ketbig{\Phi_i}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
+  \ket{\Phi_i}_\irp = \phi_1^\irp \w \dots \w \hat{\phi}_i^\irp \w
   \dots \w \phi_{n_\irp}^\irp
 \end{equation}
 \begin{equation}
-  \ketbig{\Phi^{ab}}_\irp = \phi_1^\irp \w \dots
+  \ket{\Phi^{ab}}_\irp = \phi_1^\irp \w \dots
   \dots \w \phi_{n_\irp}^\irp \w \phi_b^\irp \w \phi_a^\irp\,.
 \end{equation}
 In these equations we are using the convention that a hat ($\hat{\phantom{a}}$) over an orbital indicates its absence in the product.
-Note that in the last two cases the number of electrons in $\ketbig{\Phi}_\irp$ is not preserved:
+Note that in the last two cases the number of electrons in $\ket{\Phi}_\irp$ is not preserved:
 These cases appear in the wave function, as discussed in Sect.~\ref{sec:alg_two}.
 
 The restricted closed shell CISD wave function is given as:
@@ -630,131 +630,131 @@ The restricted closed shell CISD wave function is given as:
   \label{eq:CISDwf}
   \begin{split}
     \ket{\Psi_\text{CISD}} =
-    & C_0 \ketbig{\Phi_0}\\
+    & C_0 \ket{\Phi_0}\\
     & + \sum_\irp\sum_{(i,a) \in \irp} C_{i}^{a, \irp}
     \Big(
-    \ketbig{\Phi_0}_1
+    \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_i^a}_\irp
+    \w \ket{\Phi_i^a}_\irp
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}
     \\ & \Qquad
-    {} + \ketbig{\Phi_0}
-    \w \ketbig{\overline{\Phi}_0}_1
+    {} + \ket{\Phi_0}
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_i^a}_\irp
+    \w \ket{\overline{\Phi}_i^a}_\irp
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g
+    \w \ket{\overline{\Phi}_0}_g
     \Big)\\
     & + \sum_\irp\sumijabrestr C_{ij}^{ab, \irp}
     \Big(
-    \ketbig{\Phi_0}_1
+    \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_{ij}^{ab}}_\irp
+    \w \ket{\Phi_{ij}^{ab}}_\irp
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}
     \\ & \Qquad
-    {} + \ketbig{\Phi_0}
-    \w \ketbig{\overline{\Phi}_0}_1
+    {} + \ket{\Phi_0}
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_{ij}^{ab}}_\irp
+    \w \ket{\overline{\Phi}_{ij}^{ab}}_\irp
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g
+    \w \ket{\overline{\Phi}_0}_g
     \Big)\\
     & + \sum_\irp \sumijabfull \Dss_{ij}^{ab, \irp} \,
-    \ketbig{\Phi_0}_1
+    \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \ket{\Phi_{i}^{a}}_\irp
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}_1
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_{j}^{b}}_\irp
+    \w \ket{\overline{\Phi}_{j}^{b}}_\irp
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g\\
+    \w \ket{\overline{\Phi}_0}_g\\
     & + \sum_{\irp > \irpP} \sumijabmix \Dmixaa_{ij}^{ab, \irp\irpP}
     \Big(
-    \ketbig{\Phi_0}_1
+    \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_{j}^{b}}_\irpP
+    \w \ket{\Phi_{j}^{b}}_\irpP
     \w \dots
-    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \ket{\Phi_{i}^{a}}_\irp
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}
     \\ & \Qquad
-    {} + \ketbig{\Phi_0}
-    \w \ketbig{\overline{\Phi}_0}_1
+    {} + \ket{\Phi_0}
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \w \ket{\overline{\Phi}_{j}^{b}}_\irpP
     \w \dots
-    \w \ketbig{\overline{\Phi}_{a}^{a}}_\irp
+    \w \ket{\overline{\Phi}_{a}^{a}}_\irp
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g
+    \w \ket{\overline{\Phi}_0}_g
     \Big)\\
     & + \sum_{\irp > \irpP} \sumijabmix \Dmixab_{ij}^{ab, \irp\irpP}
     \Big(
-    \ketbig{\Phi_0}_1
+    \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_{j}^{b}}_\irpP
+    \w \ket{\Phi_{j}^{b}}_\irpP
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}_1
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_{i}^{a}}_\irp
+    \w \ket{\overline{\Phi}_{i}^{a}}_\irp
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g
+    \w \ket{\overline{\Phi}_0}_g
     \\ & \Qquad
-    {} + \ketbig{\Phi_0}_1
+    {} + \ket{\Phi_0}_1
     \w \dots
-    \w \ketbig{\Phi_{i}^{a}}_\irp
+    \w \ket{\Phi_{i}^{a}}_\irp
     \w \dots
-    \w \ketbig{\Phi_0}_g
-    \w \ketbig{\overline{\Phi}_0}_1
+    \w \ket{\Phi_0}_g
+    \w \ket{\overline{\Phi}_0}_1
     \w \dots
-    \w \ketbig{\overline{\Phi}_{a}^{a}}_\irpP
+    \w \ket{\overline{\Phi}_{a}^{a}}_\irpP
     \w \dots
-    \w \ketbig{\overline{\Phi}_0}_g
+    \w \ket{\overline{\Phi}_0}_g
     \Big)\\
     & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
-    C_I \ketbig{\Phi_I}\\
-    = & C_0 \ketbig{\Phi_0}\\
+    C_I \ket{\Phi_I}\\
+    = & C_0 \ket{\Phi_0}\\
     & + \sum_\irp\sum_{(i,a) \in \irp} C_{i}^{a, \irp}
     \Big(
-    \ketbig{\Phi_i^a}_\irp
-    + \ketbig{\overline{\Phi}_i^a}_\irp
+    \ket{\Phi_i^a}_\irp
+    + \ket{\overline{\Phi}_i^a}_\irp
     \Big)\\
     & + \sum_\irp\sumijabrestr C_{ij}^{ab, \irp}
     \Big(
-    \ketbig{\Phi_{ij}^{ab}}_\irp
-    + \ketbig{\overline{\Phi}_{ij}^{ab}}_\irp
+    \ket{\Phi_{ij}^{ab}}_\irp
+    + \ket{\overline{\Phi}_{ij}^{ab}}_\irp
     \Big)\\
     & + \sum_\irp\sumijabfull\Dss_{ij}^{ab, \irp} \,
-    \ketbig{\Phi_{i}^{a}}_\irp
+    \ket{\Phi_{i}^{a}}_\irp
     \dots
-    \ketbig{\overline{\Phi}_{j}^{b}}_\irp\\
+    \ket{\overline{\Phi}_{j}^{b}}_\irp\\
     & + \sum_{\irp > \irpP} \sumijabmix \Dmixaa_{ij}^{ab, \irp\irpP}
     \Big(
-    \ketbig{\Phi_{j}^{b}}_\irpP
+    \ket{\Phi_{j}^{b}}_\irpP
     \dots
-    \ketbig{\Phi_{i}^{a}}_\irp
-    + \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \ket{\Phi_{i}^{a}}_\irp
+    + \ket{\overline{\Phi}_{j}^{b}}_\irpP
     \dots
-    \ketbig{\overline{\Phi}_{i}^{a}}_\irp
+    \ket{\overline{\Phi}_{i}^{a}}_\irp
     \Big)\\
     &  + \sum_{\irp > \irpP}\sumijabmix \Dmixab_{ij}^{ab, \irp\irpP}
     \Big(
-    \ketbig{\Phi_{j}^{b}}_\irpP
+    \ket{\Phi_{j}^{b}}_\irpP
     \dots
-    \ketbig{\overline{\Phi}_{i}^{a}}_\irp
-    + \ketbig{\Phi_{i}^{a}}_\irp
+    \ket{\overline{\Phi}_{i}^{a}}_\irp
+    + \ket{\Phi_{i}^{a}}_\irp
     \dots
-    \ketbig{\overline{\Phi}_{j}^{b}}_\irpP
+    \ket{\overline{\Phi}_{j}^{b}}_\irpP
     \Big)\\
     & \sum_{\substack{I\text{ doubles over }\ket{\Phi_0}\\\text{occ}(I) \ne \text{occ}(0)}}
-    C_I \ketbig{\Phi_I}\,.
+    C_I \ket{\Phi_I}\,.
   \end{split}
 \end{equation}
 
