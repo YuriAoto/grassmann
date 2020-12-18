@@ -1,0 +1,160 @@
+\newcommand{\C}[1]{0.0+#1*4.0}
+\newcommand{\T}[1]{0.0-#1*2.5}
+\newcommand{\W}[1]{#1*3}
+
+\newcommand{\toBlue}{\color{blue}}
+\newcommand{\toBlack}{\color{black}}
+
+\newcommand{\pyVar}[1]{\textit{$\langle$#1$\rangle$}}
+
+
+\tikzset{
+  hyperlink node/.style={
+    alias=sourcenode,
+    append after command={
+      let     \p1 = (sourcenode.north west),
+      \p2=(sourcenode.south east),
+      \n1={\x2-\x1},
+      \n2={\y1-\y2} in
+      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)] {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
+      % xelatex needs \XeTeXLinkBox, won't create a link unless it
+      % finds text --- rules don't work without \XeTeXLinkBox.
+      % Still builds correctly with pdflatex and lualatex
+    }
+  }
+}
+
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick,
+  proj/.style={
+    align=center,
+    font=\bfseries,
+    color=red
+  },
+  projBox/.style={
+    thin
+  },
+  algstep/.style={
+    align=center,
+    anchor=north,
+    rectangle,
+    minimum size=6mm,
+    rounded corners=3mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=black!20
+  },
+  algmultistep/.style={
+    align=center,
+    anchor=north,
+    rectangle,
+    minimum size=6mm,
+    rounded corners=3mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=white
+  }
+  ]
+
+  
+  \def\lwdB{0.2cm};
+  \def\lwd{0.1cm};
+  \def\lwdE{0.0cm}
+
+  % ======
+  \node (ener)  at (\C{0.0}, \T{0.0})
+  [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{Energy}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      {\footnotesize \texttt{ccsd.get\_energy}}\\\vspace{\lwd}
+      
+    \end{minipage}
+  };
+  % ------
+
+  
+  % ================================================
+  \node (res) at (\C{0.0}, \T{1.0})
+  [algmultistep, text width=\W{120}, minimum height=4cm, hyperlink node=sec:residual]
+  {
+    \textbf{Set residual}\\\vspace{\lwdB}
+    \begin{minipage}[t][7cm]{0.4\textwidth}
+      \centering
+      {\footnotesize \texttt{ccsd.equation}}\\\vspace{\lwd}
+    \end{minipage}
+  };
+
+
+  % ======
+  \node (resterm1) at (\C{-0.7}, \T{2.0})
+  [algstep, text width=\W{50}, hyperlink node=sec:residual_eq1]
+  {
+    \textbf{Set term1}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      {\footnotesize \texttt{ccsd.equation.term1}}\\\vspace{\lwd}
+    \end{minipage}
+  };
+  % ------
+
+  % ======
+  \node (resterm2) at (\C{0.7}, \T{2.0})
+  [algstep, text width=\W{30}, hyperlink node=sec:residual_eq2]
+  {
+    \textbf{Set term2}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      {\footnotesize \texttt{ccsd.equation.term2}}\\\vspace{\lwd}
+    \end{minipage}
+  };
+  % ------
+
+  % ======
+  \node (resterm3) at (\C{0.0}, \T{3.0})
+  [algstep, text width=\W{30}, hyperlink node=sec:residual_eq3]
+  {
+    \textbf{Set term3}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\lwd}
+    \end{minipage}
+  };
+  % ------
+
+    \draw [->] (resterm1.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
+    \draw [->] (resterm2.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
+    
+  
+  % ------------------------------------------------
+
+  
+  % ======
+  \node (update) at (\C{0.0}, \T{6.0})
+  [algstep, text width=\W{90}, hyperlink node=sec:update_t]
+  {
+    \textbf{Update amplitudes}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      \centering
+      {\footnotesize \texttt{ccsd.step}}\\\vspace{\lwd}
+    \end{minipage}
+  };
+  % ------
+
+  \draw [->] (ener.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (res.90);
+  \draw [->] (res.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (update.90);
+  \draw [->] (update.270) -- (\C{0.0}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
+  (\C{-2.0}, \T{-0.5}) -- (\C{-0.0}, \T{-0.5}) -- (ener.90);
+
+\end{tikzpicture}
+\end{center}
+
+ 	
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

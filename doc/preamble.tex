@@ -1,0 +1,153 @@
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+\usepackage[top=2.0cm,left=1.5cm,right=1.0cm,bottom=2.25cm]{geometry}
+\linespread{1.25}
+
+%% To add chapter's author. From:
+%% https://tex.stackexchange.com/questions/156862/displaying-author-for-each-chapter-in-book
+\usepackage{suffix}
+\newcommand\chapterauthor[1]{\authortoc{#1}\printchapterauthor{#1}}
+\WithSuffix\newcommand\chapterauthor*[1]{\printchapterauthor{#1}}
+\makeatletter
+\newcommand{\printchapterauthor}[1]{%
+  {\parindent0pt\vspace*{-25pt}%
+  \linespread{1.1}\large\scshape#1%
+  \par\nobreak\vspace*{35pt}}
+  \@afterheading%
+}
+\newcommand{\authortoc}[1]{%
+  \addtocontents{toc}{\vskip-10pt}%
+  \addtocontents{toc}{%
+    \protect\contentsline{chapter}%
+    {\hskip1.3em\mdseries\scshape\protect\scriptsize#1}{}{}}
+  \addtocontents{toc}{\vskip5pt}%
+}
+\makeatother
+
+
+\usepackage[pdftex]{graphicx}
+\usepackage{pdflscape}
+
+\usepackage{physics}
+
+\usepackage{eufrak}
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{bm}
+\usepackage{bbold}
+
+\usepackage[version=4]{mhchem}
+\usepackage[makeroom]{cancel}
+\usepackage[table]{xcolor}
+\usepackage{capt-of}
+\usepackage{hyperref}
+
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning}
+\usetikzlibrary{arrows.meta}
+
+\newcommand{\tikzmark}[1]{\tikz[baseline,remember picture] \coordinate (#1) {};}
+
+\newcommand{\tsc}{\textsuperscript}
+\newcommand{\etal}{\textit{et al.}}
+\newcommand{\ansatz}{\textit{ansatz}}
+\newcommand{\ansatze}{\textit{ans{\"a}tze}}
+\newcommand{\mulc}{\multicolumn}
+\newcommand{\mulr}{\multirow}
+\newcommand{\abinitio}{\textit{ab initio}}
+\newcommand{\azero}{a$_0$}
+\newcommand{\kcalmol}{kcal mol$^{-1}$}
+\newcommand{\degree}{\ensuremath{^\circ}}
+\newcommand{\sub}[1]{$_\textrm{#1}$}
+\newcommand{\wnumb}{cm$^{-1}$}
+\newcommand{\snote}[1]{\marginpar{\scriptsize{\begin{flushleft}#1\end{flushleft}}}}
+\newcommand{\JM}{Jeziorski-Monkhorst}
+\newcommand{\we}{\ensuremath{\omega_e}}
+\newcommand{\wexe}{\ensuremath{\omega_e x_e}}
+\newcommand{\integers}{\ensuremath{\mathbb{Z}}}
+\newcommand{\rational}{\ensuremath{\mathbb{Q}}}
+\newcommand{\realnumb}{\ensuremath{\mathbb{R}}}
+\newcommand{\complex}{\ensuremath{\mathbb{C}}}
+\newcommand{\projective}{\ensuremath{\mathbb{P}}}
+\newcommand{\field}{\ensuremath{\mathbb{K}}}
+\newcommand{\x}{\ensuremath{\mathbf{x}}}
+
+\newcommand{\w}{\wedge}
+
+% \newcommand{\bra}[1]{\ensuremath{\left< #1 \right|}}
+% \newcommand{\brabig}[1]{\ensuremath{\big< #1 \big|}}
+% \newcommand{\braBig}[1]{\ensuremath{\Big< #1 \Big|}}
+
+% \newcommand{\ket}[1]{\ensuremath{\left| #1 \right>}}
+% \newcommand{\ketbig}[1]{\ensuremath{\big| #1 \big>}}
+% \newcommand{\ketBig}[1]{\ensuremath{\Big| #1 \Big>}}
+
+% \newcommand{\bracket}[2]{\ensuremath{\left< #1 \big| #2 \right>}}
+% \newcommand{\bracketbig}[2]{\ensuremath{\big< #1 \big| #2 \big>}}
+% \newcommand{\bracketBig}[2]{\ensuremath{\Big< #1 \Big| #2 \Big>}}
+
+% \newcommand{\ketbra}[2]{\ensuremath{\left| #1 \big>\big< #2 \right|}}
+% \newcommand{\ketbrabig}[2]{\ensuremath{\big| #1 \big>\big< #2 \big|}}
+% \newcommand{\ketbraBig}[2]{\ensuremath{\Big| #1 \Big>\Big< #2 \Big|}}
+
+% \newcommand{\average}[3]{\ensuremath{\left< #1 \big| #2 \big| #3 \right>}}
+% \newcommand{\averagebig}[3]{\ensuremath{\big< #1 \big| #2 \big| #3 \big>}}
+% \newcommand{\averageBig}[3]{\ensuremath{\Big< #1 \Big| #2 \Big| #3 \Big>}}
+
+\newcommand{\HilbSp}{\ensuremath{\mathscr{H}}}
+\newcommand{\Hamilt}{\ensuremath{\mathcal{H}}}
+\newcommand{\orbSp}{\ensuremath{\mathcal{V}}}
+
+\newcommand{\up}[1]{\ensuremath{{#1}^\uparrow}}
+\newcommand{\down}[1]{\ensuremath{{#1}^\downarrow}}
+
+\newcommand*{\Kmat}{\ensuremath{\mathbf{K}}}
+\newcommand*{\Hess}{\ensuremath{\mathbf{H}}}
+\newcommand*{\Jac}{\ensuremath{\mathbf{J}}}
+
+\newcommand{\Dss}{\ensuremath{\mathcal{C}}}
+\newcommand{\Dmixaa}{\ensuremath{\mathcal{A}}}
+\newcommand{\Dmixab}{\ensuremath{\mathcal{B}}}
+\newcommand{\Dmix}{\ensuremath{\mathcal{D}}}
+
+\newcommand{\matG}{\ensuremath{{\mathbf{G}}}}
+\newcommand{\matM}{\ensuremath{{\bm{\mathcal{M}}}}}
+\newcommand{\bigG}{\ensuremath{{\mathscr{G}}}}
+\newcommand{\bigH}{\ensuremath{{\mathscr{H}}}}
+
+% Symbols for irreducible representation, irrep
+\newcommand{\irp}{\ensuremath{\Gamma}}
+\newcommand{\irpP}{{\ensuremath{\Gamma'}}}
+\newcommand{\irpPP}{{\ensuremath{\Gamma''}}}
+\newcommand{\irpPPP}{{\ensuremath{\Gamma'''}}}
+\newcommand{\irpB}{{\ensuremath{\overline{\Gamma}}}}
+\newcommand{\irpBB}{{\ensuremath{\overline{\overline{\Gamma}}}}}
+
+\newcommand{\sumijabrestr}{\ensuremath{
+    \quad\sum_{\mathclap{\left.\substack{(i>j)\\(a>b)}\right\}\in\irp}}\quad}}
+\newcommand{\sumijabfull}{\ensuremath{
+    \quad\sum_{\mathclap{\left.\substack{(i,a)\\(j,b)}\right\}\in\irp}}\quad}}
+\newcommand{\sumijabmix}{\ensuremath{
+    \quad\sum_{\mathclap{\substack{(i,a)\in\irp\\(j,b)\in\irpP}}}\quad}}
+
+\newcommand{\sumB}{\ensuremath{
+    \sum_{\irpB \ne \irp}}}
+\newcommand{\sumBB}{\ensuremath{
+    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp\\\irpBB \ne \irp}}}}}
+
+\newcommand{\sumBp}{\ensuremath{
+    \sum_{\irpB \ne \irp,\irpP}}}
+\newcommand{\sumBBp}{\ensuremath{
+    \sum_{\mathclap{\substack{\irpBB > \irpB\\\irpB \ne \irp,\irpP\\\irpBB \ne \irp,\irpP}}}}}
+
+%\newcommand*{\HilbSp}{\ensuremath{\mathscr{H}}}
+%\newcommand*{\orbSp}{\ensuremath{\mathcal{W}}}
+\newcommand*{\grass}[2]{\ensuremath{\text{Gr}(#1,#2)}}
+\newcommand*{\stiefel}[2]{\ensuremath{\text{ST}(#1,#2)}}
+\newcommand*{\extAlg}{\ensuremath{\bigwedge \orbSp}}
+\newcommand*{\extProd}{\ensuremath{\bigwedge\nolimits^n \orbSp}}
+\newcommand*{\extProdTwo}{\ensuremath{\bigwedge\nolimits^2 \orbSp}}
