@@ -1,5 +1,5 @@
 \hypertarget{chap:ccsd}{}
-\chapter{closed shell coupled cluster with singles and doubles}
+\chapter{Closed shell coupled cluster with singles and doubles}
 \label{sec:ccsd}
 \chaptermark{CCSD}
 \chapterauthor{}
@@ -17,7 +17,11 @@
 \begin{center}
   \begin{tabular}{ll}
     \hline
-    \Hamilt             & The electronic Hamiltonian                                               \\
+    \Hamilt    & The electronic Hamiltonian \\
+    $g_{pqrs}$ & Two electron integrals over spatial orbitals \\
+               & $= \int dr_1 dr_2 \frac{\phi^*_p(r_1)\phi^*_r(r_2)\phi_q(r_1)\phi_s(r_2)}{r_{12}}$\\
+    $L_{pqrs}$ & $= 2g_{pqrs} - g_{psrq}$\\
+               & (as suggested in \cite{})\\
     \hline
   \end{tabular}
 \end{center}
@@ -25,6 +29,35 @@
 \newpage
 \section{Introduction}
 
+The general equations of coupled cluster theory are ``deceptively simple'',
+as R. Bartlet has stated \cite{}:
+\begin{equation}
+  E = \mel{\Phi_0}{e^{-T}\Hamilt e^T}{\Phi_0}
+\end{equation}
+\begin{equation}\label{eq:gen_ccsd_ampl_eq}
+  0 = \mel{\Phi_\mu}{e^{-T}\Hamilt e^T}{\Phi_0}\,\\\
+\end{equation}
+where $\Phi_0$ is the reference Slater determinant,
+$\Hamilt$ is the electronic Hamiltonian,
+and
+\begin{equation}
+  T = \sum_\mu t_\mu \tau_\mu
+\end{equation}
+is the cluster operator, with amplitudes $t_\mu$ associated to the excitations $\tau_\mu$.
+The amplitudes are obtained after solving equations \eqref{eq:gen_ccsd_ampl_eq},
+where $\ket{\Phi_\mu} = \tau_\mu \ket{\Phi_0}$ is the Slater determinant
+obtained after acting the excitation $\tau_\mu$ on top of $\ket{\Phi_0}$.
+
+These equations can be made specific to a particular case,
+and put in terms of the molecular integrals.
+This is done in Section 13.7 of reference \cite{}, that we followed closely in the present
+implementation.
+Below we show the main equations.
+Some of them are directly obtained from \cite{},
+whereas in other cases we have adapted them to a form that is more directly related to our implementation.
+In section \ref{sec:ccsd_flowchart} we have a flowchart that show,
+as precisely as we could make,
+the connection between the equations and the code.
 
 
 \section{Equations}
@@ -34,10 +67,67 @@
 \label{sec:ccsd_energy}
 
 \begin{equation}
-  E = xxx
+  \begin{split}
+    E =& \mel{\Phi_0}{e^{-T}\Hamilt e^T}{\Phi_0}\\
+    =& \mel{\Phi_0}{\Hamilt e^T}{\Phi_0}\\
+    =& E_{HF} + \sum_{aibj}(t_{ij}^{ab} + t_i^at_j^b) L_{iajb}
+  \end{split}
 \end{equation}
 
 
+\subsection{Residuals}
+\hypertarget{sec:ccsd_res}{}
+\label{sec:ccsd_res}
+
+\subsubsection{Singles}
+\hypertarget{sec:ccsd_res_sing}{}
+\label{sec:ccsd_res_sing}
+
+\begin{equation}
+  \begin{split}
+    \Omega_i^a = ...
+  \end{split}
+\end{equation}
+
+\subsubsection{Doubles}
+\hypertarget{sec:ccsd_res_doub}{}
+\label{sec:ccsd_res_doub}
+
+\begin{equation}
+  \begin{split}
+    \Omega_{ij}^{ab} = ...
+  \end{split}
+\end{equation}
+
+
+\subsection{Amplitudes update}
+\hypertarget{sec:ccsd_update}{}
+\label{sec:ccsd_update}
+
+\begin{equation}
+  t_\mu = t_\mu + \Delta t_\mu
+\end{equation}
+
+\begin{equation}
+  \Delta t_i^a = \frac{\Omega_i^a(\mathbf{t})}{\epsilon_a - \epsilon_i}
+\end{equation}
+
+\begin{equation}
+  \Delta t_{ij}^{ab} = \frac{\Omega_{ij}^{ab}(\mathbf{t})}
+  {\epsilon_a + \epsilon_b - \epsilon_i - \epsilon_j}
+\end{equation}
+
+
+
+\newpage
 \section{Flowchart of the algorithm}
+\label{sec:ccsd_flowchart}
 
 \input{ccsd_flowchart}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

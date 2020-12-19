@@ -67,8 +67,22 @@
   \def\lwd{0.1cm};
   \def\lwdE{0.0cm}
 
+
   % ======
-  \node (ener)  at (\C{0.0}, \T{0.0})
+  \node (init)  at (\C{0.3}, \T{-1.5})
+  [algstep, text width=\W{80}, hyperlink node=sec:]
+  {
+    \textbf{Initialisation}\\\vspace{\lwdB}
+    \begin{minipage}{0.4\textwidth}
+      {\footnotesize \texttt{ccsd.}}\\\vspace{\lwd}
+      
+    \end{minipage}
+  };
+  % ------
+
+  
+  % ======
+  \node (ener)  at (\C{-0.0}, \T{0.0})
   [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
   {
     \textbf{Energy}\\\vspace{\lwdB}
@@ -82,10 +96,10 @@
   
   % ================================================
   \node (res) at (\C{0.0}, \T{1.0})
-  [algmultistep, text width=\W{120}, minimum height=4cm, hyperlink node=sec:residual]
+  [algmultistep, text width=\W{150}, minimum height=4cm, hyperlink node=sec:ccsd_res]
   {
     \textbf{Set residual}\\\vspace{\lwdB}
-    \begin{minipage}[t][7cm]{0.4\textwidth}
+    \begin{minipage}[t][9cm]{0.4\textwidth}
       \centering
       {\footnotesize \texttt{ccsd.equation}}\\\vspace{\lwd}
     \end{minipage}
@@ -93,35 +107,29 @@
 
 
   % ======
-  \node (resterm1) at (\C{-0.7}, \T{2.0})
-  [algstep, text width=\W{50}, hyperlink node=sec:residual_eq1]
+  \node (resterm1) at (\C{-1.0}, \T{2.0})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
   {
-    \textbf{Set term1}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.equation.term1}}\\\vspace{\lwd}
-    \end{minipage}
+    \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lwdB}
+    {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\lwd}
   };
   % ------
 
   % ======
-  \node (resterm2) at (\C{0.7}, \T{2.0})
-  [algstep, text width=\W{30}, hyperlink node=sec:residual_eq2]
+  \node (resterm2) at (\C{1.0}, \T{2.0})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
   {
-    \textbf{Set term2}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.equation.term2}}\\\vspace{\lwd}
-    \end{minipage}
+    \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lwdB}
+    {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\lwd}
   };
   % ------
 
   % ======
-  \node (resterm3) at (\C{0.0}, \T{3.0})
+  \node (resterm3) at (\C{0.0}, \T{3.5})
   [algstep, text width=\W{30}, hyperlink node=sec:residual_eq3]
   {
     \textbf{Set term3}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\lwd}
-    \end{minipage}
+    {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\lwd}
   };
   % ------
 
@@ -134,7 +142,7 @@
   
   % ======
   \node (update) at (\C{0.0}, \T{6.0})
-  [algstep, text width=\W{90}, hyperlink node=sec:update_t]
+  [algstep, text width=\W{90}, hyperlink node=sec:ccsd_update]
   {
     \textbf{Update amplitudes}\\\vspace{\lwdB}
     \begin{minipage}{0.4\textwidth}
@@ -144,10 +152,25 @@
   };
   % ------
 
+
+
+  \draw [->] (init.270) -- (ener.50);
+
   \draw [->] (ener.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (res.90);
   \draw [->] (res.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (update.90);
-  \draw [->] (update.270) -- (\C{0.0}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
-  (\C{-2.0}, \T{-0.5}) -- (\C{-0.0}, \T{-0.5}) -- (ener.90);
+
+  \draw [->] (update.230) -- (\C{-0.3}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
+  (\C{-2.0}, \T{-0.5}) -- (\C{-0.3}, \T{-0.5}) -- (ener.130);
+  % ======
+  \node at (\C{-0.5}, \T{6.8}) []
+  {$|\mathbf{\Omega}| > \epsilon$};
+  % ------
+
+  \draw [->] (update.310) -- (\C{0.3}, \T{7.0})  --  (\C{1.0}, \T{7.0});
+  % ======
+  \node at (\C{0.5}, \T{6.8}) []
+  {$|\mathbf{\Omega}| < \epsilon$};
+  % ------
 
 \end{tikzpicture}
 \end{center}
