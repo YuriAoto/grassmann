@@ -22,6 +22,7 @@ from util import get_pos_from_rectangular
 from wave_functions import general
 import orbitals
 import molpro_util
+import memory
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +256,11 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                 + super().__repr__() + '\n'
                 + '\n'.join(x))
     
+    def calc_memory(self):
+        """Calculate memory of current determinants in wave function"""
+        return memory.convert((self.n_elec + 8) * len(self),
+                              'B', memory.unit())
+    
     @classmethod
     def from_int_norm(cls, wf_intN):
         """Construct the wave function from wf_intN
@@ -378,6 +384,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     self._all_determinants[idet] = new_Slater_Det
             elif change_structure:
                 self._all_determinants.append(new_Slater_Det)
+        self._set_memory()
 
     def get_coeff_from_molpro(self, molpro_output,
                               start_line_number=1,
@@ -547,6 +554,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
+        self._set_memory()
         
     @property
     def i_ref(self):
@@ -1029,6 +1037,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                                                        occupation=new_occ))
             if just_C0:
                 break
+        new_wf._set_memory()
         logger.info('Number of det calculations: %d', n_calcs)
         return new_wf
 

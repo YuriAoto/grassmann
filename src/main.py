@@ -12,6 +12,8 @@ import git
 from util import logtime
 import dist_grassmann
 import hartree_fock
+import memory
+
 
 def main_grassmann(args, f_out):
     """The main function of Grassmann
@@ -26,11 +28,13 @@ def main_grassmann(args, f_out):
     """
     git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)) + '/../')
     git_sha = git_repo.head.object.hexsha
-    with logtime('Main program') as T:    
+    memory.set_total_memory(args.memory[0], unit=args.memory[1])
+    with logtime('Main program') as T:
         def toout(x='', add_new_line=True):
             f_out.write(x + ('\n' if add_new_line else ''))
 
-        toout('dGr - optimise the distance in the Grassmannian')
+        toout('Grassmann')
+        toout('Exploring the geometry of the electronic wave functions space')
         toout('Yuri Aoto - 2018, 2019, 2020')
         toout()
         toout('Current git commit: ' + git_sha)
@@ -46,6 +50,8 @@ def main_grassmann(args, f_out):
             hartree_fock.main(args, f_out)
         else:
             dist_grassmann.main(args, f_out)
+    toout('Memory usage:')
+    toout(memory.show_status())
     toout('Ending at {}'.format(
         time.strftime("%d %b %Y - %H:%M", time.localtime(T.end_time))))
     toout('Total time: {}'.format(T.elapsed_time))

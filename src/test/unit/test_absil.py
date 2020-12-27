@@ -8,7 +8,7 @@ from scipy import linalg
 
 from wave_functions import cisd, int_norm
 import orbitals
-import absil
+from dist_grassmann import absil
 import test
 
 

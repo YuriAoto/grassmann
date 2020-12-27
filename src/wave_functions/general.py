@@ -9,6 +9,7 @@ Orbitals_Sets
 Spirrep_Index
 Wave_Function
 """
+import logging
 from collections import namedtuple
 from collections.abc import Sequence, Mapping, Sized, Iterable, Container
 from abc import ABC, abstractmethod
@@ -16,6 +17,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from util import number_of_irreducible_repr
+import memory
+
+logger = logging.getLogger(__name__)
 
 
 class Spirrep_String_Index(Sized, Iterable, Container):
@@ -579,7 +583,8 @@ class Wave_Function(ABC, Sequence):
         self.ref_occ = None
         self.WF_type = None
         self.source = None
-    
+        self.mem = 0.0
+
     def __repr__(self):
         """Return string with parameters of the wave function."""
         x = []
@@ -599,6 +604,50 @@ class Wave_Function(ABC, Sequence):
         x.append('source: {}'.format(self.source))
         x.append('-' * 50)
         return '\n'.join(x)
+    
+    def __del__(self):
+        logger.info(
+            'Destroying instance of wave function:\n%s: %s\n.Freeing %f %s.',
+            self.WF_type, self.source, self.mem, memory.unit())
+        memory.free(self.mem)
+    
+    def _set_memory(self, destination=None, calc_args=()):
+        """Set the amount of memory used by this wave function
+        
+        If the new amount of memory does not exceed available
+        memory, sets self.mem and changes mem. Otherwise raises
+        memory.MemoryExceededError
+        
+        Parameter
+        ---------
+        destination (str)
+            Where the memory is used. For the message in Exception
+        
+        calc_args (tuple)
+            A tuple with extra parameters for calc_memory
+        
+        """
+        if destination is None:
+            destination = "For wave function {} from {}".format(
+                self.WF_type, self.source)
+        new_mem = self.calc_memory(*calc_args)
+        memory.allocate(new_mem, destination)
+        self.mem = new_mem
+    
+    @abstractmethod
+    def calc_memory(self):
+        """Calculate and return the memory used (or to be used)
+        
+        This method shall not store the needed or used memory,
+        but only calculates it and returns it, as a float in the unit
+        used internaly in the module memory. This unit can be accessed
+        by memory.unit(). See module memory for more details and auxiliary
+        functions;
+        
+        Optionally, add extra arguments to this method, that should
+        be given to _set_memory through calc_args
+        """
+        pass
     
     def initialize_data(self):
         if self.point_group is None:

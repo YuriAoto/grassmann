@@ -134,6 +134,7 @@ class logtime():
         """Return the time from other.ini_time to self.end_time"""
         return str(timedelta(seconds=(self.end_time - other.ini_time)))
 
+
 def dist_from_ovlp(ovlp,
                    metric='Fubini-Study',
                    norms=(1.0, 1.0),
@@ -192,7 +193,8 @@ def dist_from_ovlp(ovlp,
         return 1 - absovlp**2
     else:
         raise ValueError('Unknown metric in the wave functions space: '
-                             + metric)
+                         + metric)
+
 
 def ovlp_Slater_dets(U, n):
     """Calculate the overlap between two Slater determinants

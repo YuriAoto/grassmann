@@ -18,8 +18,8 @@ results
 """
 import os
 
-main_files_dir = ('/home/yuriaoto/Documents/Codes/min_dist_Gr/'
-                  + 'grassmann/test/inputs_outputs/')
+main_files_dir = ('/home/yuriaoto/Documents/Codes/'
+                  + 'grassmann/src/test/inputs_outputs/')
 
 _all_test_systems = [
     'H2__5__sto3g__C1',

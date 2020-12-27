@@ -15,6 +15,7 @@ from util import ANG_to_a0, ATOMS
 
 re_get_number = re.compile(r'\d+$')
 
+
 def norm_sq(x):
     """Return sum_i x[i]**2."""
     S = 0.0
@@ -163,7 +164,7 @@ class MolecularGeometry():
         """Construct a MolecularGeometry from a xyz file"""
         new_geom = cls()
         with open(file_name, 'r') as f:
-            n_atoms = int(f.readline())
+            int(f.readline())  # n atoms
             new_geom.name = f.readline()
             for line in f:
                 try:
@@ -177,11 +178,10 @@ class MolecularGeometry():
                     continue
                 element = re_get_number.sub('', line[0])
                 new_geom.add_atom(Atom(element, tuple(map(
-                    lambda x:float(x) * ANG_to_a0, line[1:])),
+                    lambda x: float(x) * ANG_to_a0, line[1:])),
                                        line[0]))
         return new_geom
 
-    
     def add_atom(self, atom):
         """Add a new Atom to the Molecular Geometry."""
         self._n_elec = None

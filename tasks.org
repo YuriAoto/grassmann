@@ -4,7 +4,25 @@
 
 * Improvements
 
+** Memory
+
+*** TODO at wave_functions.fci, call the function _set_memory() before
+
+    The way it is, with _set_memory() being called after storing all determinants
+    we are using the memory before declaring it. This is not appropriate.
+    However, to change this behaviour we need to calculate the number of determinants
+    before, what is not trivial.
+
+*** TODO at memory.py, save all chunks
+
+    We can save all allocated chuncks, so that this can be nicely printed
+    or logged if one wants to see where memory is being used.
+
+
 ** TODO Make better code for generate_orb.py
+
+
+
 
 *** Integrals
 

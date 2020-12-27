@@ -12,6 +12,7 @@ import numpy as np
 from util import (triangular, get_n_from_triang, get_ij_from_triang,
                   get_pos_from_rectangular)
 from wave_functions import general
+from memory import mem_of_floats
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class Wave_Function_CISD(general.Wave_Function):
         self.Cd = None
         self.Csd = None
     
-    def __getitem__(self, I):
+    def __getitem__(self, Index):
         raise NotImplementedError(
             '[] is not implemented for Wave_Function_CISD!')
 
@@ -129,10 +130,25 @@ class Wave_Function_CISD(general.Wave_Function):
                 + super().__repr__() + '\n'
                 + '\n'.join(x))
 
+    def calc_memory(self):
+        """Calculate memory used by the wave function"""
+        n_floats = 0.0
+        for irrep in self.spirrep_blocks(restricted=True):
+            n_floats += self.n_corr_orb[irrep] * self.n_ext[irrep]
+            n_floats += (triangular(self.n_corr_orb[irrep] - 1)
+                         * triangular(self.n_ext[irrep] - 1))
+            for irrep2 in range(irrep + 1):
+                n_floats += (self.n_corr_orb[irrep]
+                             * self.n_ext[irrep]
+                             * self.n_corr_orb[irrep2]
+                             * self.n_ext[irrep2])
+        return mem_of_floats(n_floats)
+
     def initialize_SD_lists(self):
         """
         Initialise lists of coefficients for singles and doubles with zeros.
         """
+        self._set_memory()
         self.C0 = 0.0
         self.Cs = []
         self.Cd = []

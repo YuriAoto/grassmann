@@ -91,12 +91,12 @@ def get_point_group_from_line(line, line_number, molpro_output):
     raise MolproLineHasNoPointGroup()
 
 
-def get_orb_info(l, line_number, n_irrep, occ_type):
+def get_orb_info(line, line_number, n_irrep, occ_type):
     """Load orbital info, per irrep, from Molpro's output"""
-    re_orb = re.compile(r'.*\s([\d]+)\s*\(([\s\d]*)\)').match(l)
+    re_orb = re.compile(r'.*\s([\d]+)\s*\(([\s\d]*)\)').match(line)
     if re_orb is None:
         raise MolproInputError('Problems reading orbital information',
-                               line=l, line_number=line_number)
+                               line=line, line_number=line_number)
     try:
         re_orb = list(map(int, re_orb.group(2).split()))
         if len(re_orb) < n_irrep:
@@ -108,7 +108,7 @@ def get_orb_info(l, line_number, n_irrep, occ_type):
         return general.Orbitals_Sets(re_orb, occ_type=occ_type)
     except Exception:
         raise MolproInputError('Problems reading orbital information.',
-                               line=l, line_number=line_number)
+                               line=line, line_number=line_number)
 
 
 def load_wave_function(molpro_output,

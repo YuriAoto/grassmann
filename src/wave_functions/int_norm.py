@@ -16,6 +16,7 @@ from util import (zero, irrep_product,
                   triangular, get_ij_from_triang, get_n_from_triang)
 from wave_functions import general as gen_wf
 import molpro_util
+from memory import mem_of_floats
 
 logger = logging.getLogger(__name__)
 
@@ -264,10 +265,10 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 if D_main is None or abs(D_main.t) < abs(D.t):
                     D_main = D
         return ('|0> + {0:5f} |{1:d} -> {2:d}> + ... + '
-                + '{3:5f} |{4:d},{5:d} -> {6:d},{7:d}> + ...'.
-                format(S_main.t, S_main.i, S_main.a,
-                       D_main.t, D_main.i, D_main.j,
-                       D_main.a, D_main.b))
+                + '{3:5f} |{4:d},{5:d} -> {6:d},{7:d}> + ...').format(
+                    S_main.t, S_main.i, S_main.a,
+                    D_main.t, D_main.i, D_main.j,
+                    D_main.a, D_main.b)
 
     @property
     def norm(self):
@@ -419,10 +420,64 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                    and exc_type == my_exc_type) else
             ' <<< differ')
     
+    def calc_memory(self, with_singles, with_BCC_orb_gen):
+        """Calculate memory needed for amplitudes
+        
+        Parameters:
+        -----------
+        with_singles and with_BCC_orb_gen are booleans,
+        similar to the arguments of initialize_SD_lists,
+        and if True the memory needed to store singles and the
+        BCC orbital generators are also taken into account
+        
+        Return:
+        -------
+        A float, with the memory used to store the wave function amplitudes
+        """
+        n_floats = 0.0
+        if with_singles:
+            for spirrep in self.spirrep_blocks():
+                n_floats += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
+        if with_BCC_orb_gen:
+            for spirrep in self.spirrep_blocks():
+                n_floats += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
+        for exc_type in (['aa']
+                         if self.restricted else
+                         ['aa', 'bb', 'ab']):
+            for i_irrep in range(self.n_irrep):
+                i_spirrep = i_irrep + (self.n_irrep
+                                       if exc_type[0] == 'b' else 0)
+                for i in range(self.n_corr_orb[i_spirrep]):
+                    for j_irrep in range(self.n_irrep):
+                        j_spirrep = j_irrep + (self.n_irrep
+                                               if exc_type[1] == 'b' else 0)
+                        for j in range(self.n_corr_orb[j_spirrep]):
+                            if self.restricted or exc_type[0] == exc_type[1]:
+                                if i_irrep < j_irrep:
+                                    continue
+                                elif i_irrep == j_irrep:
+                                    if i < j:
+                                        continue
+                                    elif i == j and not self.restricted:
+                                        continue
+                            for a_spirrep in range(self.n_irrep):
+                                b_spirrep = irrep_product[
+                                    a_spirrep, irrep_product[i_irrep,
+                                                             j_irrep]]
+                                if exc_type[0] == 'b':
+                                    a_spirrep += self.n_irrep
+                                if exc_type[1] == 'b':
+                                    b_spirrep += self.n_irrep
+                                n_floats += (self.n_ext[a_spirrep]
+                                             * self.n_ext[b_spirrep])
+        return mem_of_floats(n_floats)
+
     def initialize_SD_lists(self,
                             with_singles=True,
-                            with_BCC_orb_gen=True):
+                            with_BCC_orb_gen=False):
         """Initialise the lists for singles and doubles amplitudes."""
+        self._set_memory('SD lists of Wave_Function_Int_Norm',
+                         calc_args=(with_singles, with_BCC_orb_gen))
         test_ind_func = False
         if with_singles:
             self.singles = []

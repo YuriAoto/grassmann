@@ -10,6 +10,7 @@ import sys
 import logging
 import traceback
 
+import memory
 import parser
 from main import main_grassmann
 from molpro_util import MolproInputError
@@ -91,6 +92,16 @@ except MolproInputError as e:
     error_msg = ('Error in Molpro file ' + str(e.file_name)
                  + ', line number ' + str(e.line_number) + ':\n'
                  + str(e.line) + '\n' + e.msg)
+except memory.MemoryExceededError as e:
+    with_error = True
+    error_msg = ('The memory limit of {0} {1} has been exceeded:'
+                 + '\nAt "{2}" we needed {3} {1},'
+                 + '\nbut we had only {4} {1}.').format(
+                     cmd_line_args.memory[0],
+                     cmd_line_args.memory[1],
+                     e.action,
+                     e.mem_required,
+                     e.mem_remaining)
 except Exception as e:
     with_error = True
     error_msg = ('Error: ' + str(e)

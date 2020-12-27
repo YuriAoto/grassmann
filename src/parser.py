@@ -37,8 +37,8 @@ def __is_molpro_xml_file(file):
 def __is_molpro_output(file):
     """Return True if file is a Molpro output."""
     with open(file, 'r') as f:
-        for l in f:
-            if '***  PROGRAM SYSTEM MOLPRO  ***' in l:
+        for line in f:
+            if '***  PROGRAM SYSTEM MOLPRO  ***' in line:
                 return True
     return False
 
@@ -86,6 +86,8 @@ def parse_cmd_line():
                         + ' or a xyz geometry file')
     parser.add_argument('--output',
                         help='Output file name')
+    parser.add_argument('--memory', default='100.0kB',
+                        help='memory')
     parser.add_argument('--basis', default='cc-pVDZ',
                         help='basis set')
     parser.add_argument('--ini_orb',
@@ -157,6 +159,18 @@ def parse_cmd_line():
                          + 'orb_rotations (default), '
                          + 'general_Absil, '
                          + 'and CISD_Absil')
+    mem_re = re.match('([0-9]*\.?[0-9]*)([kMGT]?B)?$', cmd_args.memory)
+    if mem_re:
+        x, unit = mem_re.groups()
+        try:
+            x = float(x)
+        except ValueError:
+            raise ParseError(cmd_args.memory
+                             + ' is not a valid memory specification')
+        cmd_args.memory = (x, 'kB' if unit is None else unit)
+    else:
+        raise ParseError(cmd_args.memory
+                         + ' is not a valid memory specification')
     if cmd_args.maxiter is None:
         cmd_args.maxiter = 20
     elif cmd_args.at_ref:

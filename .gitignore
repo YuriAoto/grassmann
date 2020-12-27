@@ -1,6 +1,6 @@
 *.pyc
-doc/grassmann_doc.aux
-doc/grassmann_doc.log
-doc/grassmann_doc.out
+doc/*.aux
+doc/*.log
+doc/*.out
 grassmann/testing.log
 grassmann/test/inputs_outputs/*/*min_dist*

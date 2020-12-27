@@ -9,12 +9,12 @@ import numpy as np
 from wave_functions import general, fci, int_norm
 import test
 
-
 class WFConstructorsTestCase(unittest.TestCase):
     
     def setUp(self):
         self.int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
             test.CISD_file('H2__5__sto3g__D2h'))
+        test.logger.info('end of WFConstructorsTestCase.SetUp')
     
     def test_int_norm_contructor(self):
         wf = fci.Wave_Function_Norm_CI.from_Molpro_FCI(
@@ -30,6 +30,7 @@ class WFConstructorsTestCase(unittest.TestCase):
         self.assertAlmostEqual(wf[1].c, -0.6535848273569357, places=10)
         self.assertEqual(wf[1].occupation[4], np.array([0]))
         self.assertEqual(wf[1].occupation[12], np.array([0]))
+        test.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
 
 
 class SlaterDetTestCase(unittest.TestCase):
