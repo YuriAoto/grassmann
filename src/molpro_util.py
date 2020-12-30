@@ -4,7 +4,7 @@
 """
 import re
 
-from wave_functions import general, fci, int_norm, cisd
+from wave_functions import general, norm_ci, int_norm, cisd
 import util
 
 CISD_header = (
@@ -247,7 +247,7 @@ def load_wave_function(molpro_output,
                 wf_type = line[11:15]
                 if line == FCI_header:
                     if WF_templ is None:
-                        wf = fci.Wave_Function_Norm_CI()
+                        wf = norm_ci.Wave_Function_Norm_CI()
                     wf.WF_type = 'FCI'
                     wf.point_group = point_group
                     wf.source = 'From file ' + molpro_output
@@ -275,6 +275,6 @@ def load_wave_function(molpro_output,
                         if wf_obj_type == 'cisd':
                             wf = cisd.Wave_Function_CISD.from_int_norm(wf)
                         elif wf_obj_type == 'fci':
-                            wf = fci.Wave_Function_Norm_CI.from_int_norm(wf)
+                            wf = norm_ci.Wave_Function_Norm_CI.from_int_norm(wf)
                 break
     return wf

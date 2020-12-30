@@ -1,18 +1,19 @@
-"""A FCI-like wave function, normalised to unity
+"""A CI like wave function, normalised to unity.
 
-The class defined here stores the wave function coefficients as a matrix
-of alpha and beta strings, as described in Helgaker's book.
+The class defined here stores all determinants explicitly
+and contains the methods for the dGr optimisation that uses
+the algorithm based on orbital rotations
 
 History:
-    Dez 2020 - Start
-
+    Aug 2018 - Start
+    Mar 2019 - Add CISD wave function
+               Add to git
 Yuri
 """
 import logging
 import numpy as np
 from numpy import linalg
 from scipy.linalg import lu
-from scipy.special import comb
 import copy
 import math
 from collections import namedtuple
@@ -21,122 +22,90 @@ from util import get_pos_from_rectangular
 from wave_functions import general
 import orbitals
 import molpro_util
-from memory import mem_of_floats
-from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
-import wave_functions.strings_rev_lexical_order as str_order
+import memory
 
 logger = logging.getLogger(__name__)
 
 lehtola_files = '/Documents/Codes/clusterdec-master/source/recipes'
 
 
-def make_occ(x):
-    """Return an orbital occupation from x"""
-    return np.array(x, dtype=np.intc)
-
-
-def _compare_strings(ref, exc):
-    """Compare strings ref and exc and return information about excitation
-    
-    This function look at exc as being an excitation over ref, and tell
-    the rank of the excitation, the particles and the holes.
-    
-    Parameters:
-    -----------
-    ref (np.array of int)
-        The "reference" string
-    
-    exc (np.array of int)
-        The "excited" string
-    
-    Return:
-    -------
-    The tuple (rank, holes, particles), where:
-    
-    rank is an integer, with the excitation rank
-    (0 for no exception, 1 for singly excited, 2 for doubly ...);
-    
-    holes are np.arrays with the indices that are in ref,
-    but not in exc (thus, associated to orbitals where the excitation
-    come from);
-    
-    particles are np.arrays with the indices that are in exc,
-    but not in ref (thus, associated to orbitals where the excitation
-    go to).
-    
-    Raise:
-    ------
-    ValueError if ref and exc have different lengths
-    
-    """
-    holes = []
-    particles = []
-    for i in ref:
-        if i not in exc:
-            holes.append(i)
-    for i in exc:
-        if i not in ref:
-            particles.append(i)
-    return len(holes), holes, particles
-
-
-class SlaterDet(namedtuple('SlaterDet',
+class Slater_Det(namedtuple('Slater_Det',
                             ['c',
-                             'alpha_occ',
-                             'beta_occ'])):
-    """A namedtuple for a generic Slater determinant
+                             'occupation'])):
+    """A namedtuple for a generic Slater_Det of the wave function
     
     Attributes:
     -----------
     c (float)
-        The coefficient associated to this Slater determinant
+        The coefficient of the Slater determinant in the wave function
     
-    {alpha,beta}_occ (1D np.arrays of int)
-        The occupied orbitals for {alpha,beta} orbitals
+    occupation (list of np.arrays of int)
+        The occupied orbitals for each spirrep
     """
     __slots__ = ()
     
     def __str__(self):
-        return ('Slater determinant: c = {0:15.12f} ; '.
-                format(self.c)
-                + '^'.join(map(str, self.alpha_occ))
-                + ' ^ '
-                + '^'.join(map(str, self.beta_occ)))
+        spirreps = []
+        for occ in self.occupation:
+            spirreps.append(str(occ))
+        return ('Slater_Det: c = {0:15.12f} ; '.
+                format(self.c) + '^'.join(spirreps))
 
 
-def _get_slater_det_from_fci_line(line, Ms, n_core,
+Orbital_Info = namedtuple('Orbital_Info', ['orb', 'spirrep'])
+
+
+def _get_Slater_Det_from_String_Index(Index, n_irrep,
+                                      zero_coefficients=False):
+    """return the Slater_Det corresponding to String_Index Index"""
+    coeff = Index.C
+    final_occ = [np.array([], dtype=np.int8) for i in range(2 * n_irrep)]
+    for spirrep, spirrep_I in enumerate(Index):
+        if spirrep != spirrep_I.spirrep:
+            raise Exception(
+                'spirrep of spirrep_I is not consistent with position in list')
+        final_occ[spirrep_I.spirrep] = np.array(spirrep_I.occ_orb)
+    return Slater_Det(c=0.0 if zero_coefficients else coeff,
+                      occupation=final_occ)
+
+
+def _get_Slater_Det_from_FCI_line(l, orb_dim, n_core, n_irrep, Ms,
                                   molpro_output='', line_number=-1,
-                                  zero_coefficient=False):
+                                  zero_coefficients=False):
     """Read a FCI configuration from Molpro output and return a Slater Determinant
     
     Parameters:
     -----------
-    line (str)
+    l (str)
         The line with a configuration, from the FCI program in Molpro
         to be converted to a Slater Determinant.
     
-
-
-
+    orb_dim (Orbitals_Sets)
+        Dimension of orbital space
+    
+    n_core (Orbitals_Sets)
+        Dimension of frozen orbitals space
+    
+    n_irrep (int)
+        Number of irreps
+    
+    Ms (float)
+        Ms of total wave function (n_alpha - n_beta)/2
+    
     molpro_output (str, optional, default='')
         The output file name (only for error message)
     
     line_number (int, optional, default=-1)
         The line number in Molpro output
     
-    zero_coefficient (bool, optional, default=False)
-        If True, the coefficient is set to zero and the value
-        in line is discarded
+    zero_coefficients (bool, optional, default=False)
+        If True, the coefficient is set to zero and the value in l is discarded
     
-    Return:
+    Returns:
     --------
-    An instance of SlaterDet containing only active orbitals.
-    That is, all core electrons are discarded and the first
-    non-core orbital is indexed by 0.
-    All irreps are merged in a single array
+    A Slater_Det
     
-    Raise:
-    ------
+    Raises:
     molpro_util.MolproInputError
     
     Examples:
@@ -146,322 +115,166 @@ def _get_slater_det_from_fci_line(line, Ms, n_core,
     
     -0.162676901257  1  2  7  1  2  7
     gives
-    c=-0.162676901257; alpha_occ=[0,1,6]; beta_occ=[0,1,6]
+    c=-0.162676901257; occupation=[(0,1) (0) () () (0,1) (0) () ()]
     
     -0.049624632911  1  2  4  1  2  6
     gives
-    c=-0.049624632911; alpha_occ=[0,1,3]; beta_occ=[0,1,5]
+    c=-0.049624632911; occupation=[(0,1,3) () () () (0,1,5) () () ()]
     
     0.000000000000  1  2  9  1  2 10
     gives
-    c=-0.000000000000; alpha_occ=[0,1,8]; alpha_occ=[0,1,9]
+    c=-0.000000000000; occupation=[(0,1) () (0) () (0,1) () (1) ()]
     
     # but if n_core = (1,1,0,0) then the above cases give
-        (because frozen electrons are indexed first in Molpro convention
-         and they do not enter in the returned SlaterDet)
+         (because frozen electrons are indexed first in Molpro convention)
     
-    c=-0.162676901257; alpha_occ=[4]; beta_occ=[4]
+    c=-0.162676901257; occupation=[(0,5) (0) () () (0,5) (0) () ()]
     
-    c=-0.049624632911; alpha_occ=[1]; beta_occ=[3]
+    c=-0.049624632911; occupation=[(0,2) (0) () () (0,4) (0) () ()]
     
-    c=-0.000000000000; alpha_occ=[6]; beta_occ=[7]
+    c=-0.000000000000; occupation=[(0) (0) (0) () (0) (0) (1) ()]
+
+
     """
-    lspl = line.split()
-    n_total_core = len(n_core) // 2
+    lspl = l.split()
+    final_occ = [list(range(n_core[irp])) for irp in range(2 * n_irrep)]
+    n_tot_core = sum(map(len, final_occ)) // 2
     try:
         coeff = float(lspl[0])
-        occ = [int(x) - 1 - n_total_core for x in lspl[1:] if int(x) > n_total_core]
+        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_core]
     except Exception as e:
         raise molpro_util.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
             + str(e),
-            line=line,
+            line=l,
             line_number=line_number,
             file_name=molpro_output)
-    n_alpha = (len(occ) + int(2 * Ms)) // 2
-    n_beta = (len(occ) - int(2 * Ms)) // 2
-    if n_beta + n_alpha != len(occ):
-        raise ValueError('Ms = {} is not consistent with occ = {}'.format(
-            Ms, occ))
-    return SlaterDet(c=0.0 if zero_coefficient else coeff,
-                     alpha_occ=make_occ(occ[:n_alpha]),
-                     beta_occ=make_occ(occ[n_alpha:]))
+    if len(occ) + 2 * n_tot_core + 1 != len(lspl):
+        raise molpro_util.MolproInputError(
+            "Inconsistency in number of core orbitals for FCI. n_core:\n"
+            + str(n_core),
+            line=l,
+            line_number=line_number,
+            file_name=molpro_output)
+    total_orbs = [sum(n_core[irp] for irp in range(n_irrep))]
+    for i in range(n_irrep):
+        total_orbs.append(total_orbs[-1]
+                          + orb_dim[i] - n_core[i])
+    irrep = irrep_shift = 0
+    ini_beta = (len(occ) + int(2 * Ms)) // 2
+    for i, orb in enumerate(occ):
+        if i == ini_beta:
+            irrep_shift = n_irrep
+            irrep = 0
+        while True:
+            if irrep == n_irrep:
+                raise molpro_util.MolproInputError(
+                    'Configuration is not consistent with orb_dim = '
+                    + str(orb_dim),
+                    line=l,
+                    line_number=line_number,
+                    file_name=molpro_output)
+            if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
+                final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep]
+                                                      + n_core[irrep])
+                break
+            else:
+                irrep += 1
+    for i, o in enumerate(final_occ):
+        final_occ[i] = np.array(o, dtype=int)
+    return Slater_Det(c=0.0 if zero_coefficients else coeff,
+                      occupation=final_occ)
 
 
-class WaveFunctionFCI(general.Wave_Function):
-    """A FCI-like wave function, based on alpha and beta strings
+class ExcitedSlaterDet(namedtuple('ExcitedSlaterDet',
+                                  ['c',
+                                   'holes',
+                                   'particles'])):
+    """A namedtuple to represent an excited determinant
+
+    It contains the coefficient and the hole and particle indices
+    that represent the excitation
+
+    """
+    __slots__ = ()
+
+
+class Wave_Function_Norm_CI(general.Wave_Function):
+    """A normalised CI-like wave function, with explicit determinants
     
-    The wave function is stored in a 2D np.array, whose rows and columns
-    refer to alpha and beta strings
+    The wave function is stored explicitly, with all Slater determinants
+    (as instances of Slater_Det).
+    
+    Atributes:
+    ----------
+    has_FCI_structure (bool)
+        If True, it contains all possible Slater determinants
+        (of that Ms and irrep), even those that have zero coefficient
+        in the wave function.
     
     Data Model:
     -----------
-    []
-    Should receive an object that can be interpreted as the index
-    of a 2D np.array (that is the coefficients matrix for alpha and beta
-    strings
+    len
+        The number of determinants
+    
+    [int]
+        Get corresponding determinant
+    
+    iterable
+        Iterates over determinants
     
     """
-    rtol = 1E-5
-    atol = 1E-8
+    tol_eq = 1E-8
     
     def __init__(self):
         """Initialise the wave function"""
         super().__init__()
-        self._coefficients = None
-        self._alpha_string_graph = None
-        self._beta_string_graph = None
-        self._n_alpha_str = None
-        self._n_beta_str = None
-        self.ref_det = None
+        self._all_determinants = []
+        self.has_FCI_structure = False
+        self._i_ref = None
     
     def __len__(self):
-        try:
-            return self._coefficients.size
-        except AttributeError:
-            return 0
+        return len(self._all_determinants)
     
     def __getitem__(self, i):
-        return self._coefficients[i]
+        return self._all_determinants[i]
     
     def __iter__(self):
         """Generator for determinants"""
-        aocc = np.array(np.arange(self.n_corr_alpha))
-        for ia in range(self._coefficients.shape[0]):
-            bocc = np.array(np.arange(self.n_corr_beta))
-            for ib in range(self._coefficients.shape[1]):
-                yield SlaterDet(c=self._coefficients[ia, ib],
-                                alpha_occ=aocc, beta_occ=bocc)
-                str_order.next_str(bocc)
-            str_order.next_str(aocc)
+        for det in self._all_determinants:
+            yield det
         
-    def __eq__(self, other):
-        """Checks if both wave functions are the same within
-        TODO: compare all attributes
-        """
-        global rtol
-        global atol
-        return np.allclose(self._coefficients, other._coefficients,
-                           rtol=rtol, atol=atol)
-    
     def __str__(self):
         """Return a string version of the wave function."""
+        return ("Wave function: "
+                + str(self._all_determinants[0].c)
+                + ' + |' + str(self.ref_occ) + '> ...')
+    
+    def __eq__(self, other):
+        """Checks if both wave functions are the same within tol
+        TODO: compare all attributes
+        """
+        for i, det in enumerate(self):
+            if (det.occupation != other[i].occupation
+                    or abs(det.c - other[i].c) > self.tol_eq):
+                return False
+        return True
+        
+    def __repr__(self):
         x = []
         for det in self:
-            x.append(
-                str(det) + ' >> RANK: {}'.format(
-                    self.get_exc_info(det)[0]))
+            x.append(str(det)
+                     + ' >> RANK: {0:d}'.format(
+                         self.get_exc_info(det, only_rank=True)))
         x.append('-' * 50)
-        return '\n'.join(x)
-    
-    def enumerate(self):
-        """Generator for determinants that also yield the index
-        
-        Has the same philosophy as enumerate(self), but
-        give the indices for alpha and beta strings. Usage:
-        
-        for ia, ib, det in self.enumerate:
-            print(ia, ib, det)
-            print((ia, ib) == wf.index(det)) # Should be always True
-        """
-        aocc = np.array(np.arange(self.n_corr_alpha))
-        for ia in range(self._coefficients.shape[0]):
-            bocc = np.array(np.arange(self.n_corr_beta))
-            for ib in range(self._coefficients.shape[1]):
-                yield ia, ib, SlaterDet(c=self._coefficients[ia, ib],
-                                        alpha_occ=aocc, beta_occ=bocc)
-                str_order.next_str(bocc)
-            str_order.next_str(aocc)
-    
-    @property
-    def n_alpha_str(self):
-        if self._n_alpha_str is None:
-            self._n_alpha_str = comb(self.n_orb_nocore, self.n_corr_alpha,
-                                     exact=True)
-        return self._n_alpha_str
-    
-    @property
-    def n_beta_str(self):
-        if self._n_beta_str is None:
-            self._n_beta_str = comb(self.n_orb_nocore, self.n_corr_beta,
-                                    exact=True)
-        return self._n_beta_str
+        return ('<CI-like Wave Function normalised to unity>\n'
+                + super().__repr__() + '\n'
+                + '\n'.join(x))
     
     def calc_memory(self):
         """Calculate memory of current determinants in wave function"""
-        return mem_of_floats(self.n_alpha_str * self.n_beta_str)
-    
-    def initialise_coeff_matrix(self):
-        """Initialise the matrix with the coefficients"""
-        self._alpha_string_graph = str_order.generate_graph(self.n_corr_alpha,
-                                                            self.n_orb_nocore)
-        self._beta_string_graph = str_order.generate_graph(self.n_corr_beta,
-                                                           self.n_orb_nocore)
-        self._set_memory()
-        self._coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
-
-    def set_slater_det(self, det):
-        """Set a the Slater Determinant coefficient to the wave function
-        
-        Parameter:
-        ----------
-        det (Slater_Det)
-            The Slater determinant
-        
-        Return:
-        -------
-        The index of this determinant
-        """
-        ii = self.index(det)
-        self._coefficients[ii] = det.c
-        return ii
-    
-    def index(self, det):
-        """Return the index of det in the coefficients matrix
-        
-        Parameters:
-        -----------
-        det (Slater_Det)
-            the Slater_Det whose index must be found
-        
-        Return:
-        -------
-        a 2-tuple, the index of element as alpha and beta string indices
-        
-        Raise:
-        ------
-        ValueError if element is not in self
-        
-        """
-        return (str_order.get_index(det.alpha_occ, self._alpha_string_graph),
-                str_order.get_index(det.beta_occ, self._beta_string_graph))
-            
-    @property
-    def i_ref(self):
-        return self.index(self.ref_det)
-    
-    def get_i_max_coef(self, set_ref_det=False):
-        """Return the index of determinant with largest coefficient
-        
-        If set_ref_det is True, also sets ref_det to the corresponding
-        determinant (default=False)
-        """
-        i_max = np.unravel_index(np.argmax(self._coefficients),
-                                 self._coefficients.shape)
-        if set_ref_det:
-            self.ref_det = SlaterDet(
-                c=self[i_max],
-                alpha_occ=self.alpha_orb_occupation(i_max[0]),
-                beta_occ=self.beta_orb_occupation(i_max[1]))
-        return i_max
-    
-    @property
-    def C0(self):
-        return self.ref_det.c
-    
-    def alpha_orb_occupation(self, i):
-        """Return the alpha occupied orbitals of index i
-        
-        Parameters:
-        -----------
-        i (int)
-            The index of the slater determinant in the alpha string graph matrix
-        
-        Return:
-        -------
-        A 1D np.array with the occupied alpha orbitals (without considering
-        core orbitals)
-        """
-        return str_order.occ_from_pos(i, self._alpha_string_graph)
-
-    def beta_orb_occupation(self, i):
-        """Return the beta occupied orbitals of index i
-        
-        Parameters:
-        -----------
-        i (int)
-            The index of the slater determinant in the beta string graph matrix
-        
-        Return:
-        -------
-        A 1D np.array with the occupied beta orbitals (without considering
-        core orbitals)
-        """
-        return str_order.occ_from_pos(i, self._beta_string_graph)
-    
-    def get_slater_det(self, ii):
-        """Return the slater determinant associated to index i
-        
-        Parameters:
-        -----------
-        ii (2-tuple of int)
-            The index of the slater determinant in the coefficients matrix
-        
-        Return:
-        -------
-        An instance of SlaterDet with the coefficient associated to ii
-        and the alpha and beta occupation, without considering core orbitals
-        """
-        return SlaterDet(c=self[ii],
-                         alpha_occ=self.alpha_orb_occupation(ii[0]),
-                         beta_occ=self.beta_orb_occupation(ii[1]))
-    
-    def get_exc_info(self, det,
-                     ref=None,
-                     only_rank=False):
-        """Return some info about the excitation that lead from ref to det
-        
-        This will return the holes, the particles, and the rank of det,
-        viewed as a excitation over self.ref_occ.
-        Particles and holes are returned as lists of Orbital_Info.
-        These lists have len = rank.
-        If consider_core == False, core orbitals are not considered,
-        and the first correlated orbitals is 0; Otherwise core orbitals
-        are taken into account and the first correlated orbital is
-        n_core[spirrep]
-        The order that the holes/particles are put in the lists is the
-        canonical: follows the spirrep, and the normal order inside each
-        spirrep.
-        Particles are numbered starting at zero, that is, the index at det
-        minus self.ref_occ[spirrep].
-        
-        Parameters:
-        -----------
-        det (SlaterDet)
-            The Slater determinant to be verified.
-        
-        ref (None or a SlaterDet)
-            The Slater determinant as reference.
-            If None, use self.ref_det
-        
-        only_rank (bool, optional, default=False
-            If True, calculates and return only the rank
-        
-        TODO:
-        -----
-        consider_core (bool, optional, default=True)
-            Not implemented yet! Currently it does not consider core orbitals
-            Whether or not core orbitals are considered when
-            assigning holes
-        
-        Returns:
-        --------
-        rank, (alpha holes, alpha particles), (beta holes, beta particles)
-        """
-        if ref is None:
-            ref = self.ref_det
-        rank_a, holes_a, particles_a = _compare_strings(ref.alpha_occ, det.alpha_occ)
-        rank_b, holes_b, particles_b = _compare_strings(ref.beta_occ, det.beta_occ)
-        return rank_a + rank_b, (holes_a, particles_a), (holes_a, particles_b)
-    
-    def normalise(self):
-        """Normalise the wave function to unity"""
-        S = 0.0
-        for c in self:
-            S += c**2
-        S = math.sqrt(S)
-        for i in self.all_indices():
-            self._coefficients[i] /= S
+        return memory.convert((self.n_elec + 8) * len(self),
+                              'B', memory.unit())
     
     @classmethod
     def from_int_norm(cls, wf_intN):
@@ -473,7 +286,9 @@ class WaveFunctionFCI(general.Wave_Function):
               wf_intN that have sting_indices properly implemented.
         """
         new_wf = cls()
-        new_wf.get_coeff_from_int_norm_WF(wf_intN)
+        new_wf.get_coeff_from_int_norm_WF(wf_intN,
+                                          change_structure=True,
+                                          use_structure=False)
         return new_wf
     
     @classmethod
@@ -481,7 +296,9 @@ class WaveFunctionFCI(general.Wave_Function):
                         start_line_number=1,
                         point_group=None,
                         state='1.1',
-                        zero_coefficients=False):
+                        zero_coefficients=False,
+                        change_structure=True,
+                        use_structure=False):
         """Construct a FCI wave function from an Molpro output
         
         This is a class constructor wrapper for get_coefficients.
@@ -492,16 +309,64 @@ class WaveFunctionFCI(general.Wave_Function):
                                      start_line_number=start_line_number,
                                      point_group=point_group,
                                      state=state,
-                                     zero_coefficients=zero_coefficients)
+                                     zero_coefficients=zero_coefficients,
+                                     change_structure=change_structure,
+                                     use_structure=use_structure)
         return new_wf
     
-    def get_coeff_from_int_norm_WF(self, intN_wf):
+    def index(self, element, check_coeff=False):
+        """Return index of element
+        
+        Parameters:
+        -----------
+        element (Slater_Det)
+            the Slater_Det whose index must be found
+        
+        check_coeff (bool, optional, default=False)
+            If True, return the index only if the coefficient
+            is the same
+        
+        Return:
+        -------
+        the index of element, if in self
+        
+        Raises
+        ------
+        ValueError if element is not in self
+        
+        """
+        for idet, det in enumerate(self):
+            found_det = True
+            for occ1, occ2 in zip(det.occupation,
+                                  element.occupation):
+                if (len(occ1) != len(occ2)
+                        or not np.all(occ1 == occ2)):
+                    found_det = False
+                    break
+            if found_det:
+                if (not check_coeff
+                        or abs(self[idet].c - element.c) < self.tol_eq):
+                    return idet
+                raise ValueError(
+                    'Found occupation, but coefficient is different')
+        raise ValueError('Occupation not found.')
+    
+    def get_coeff_from_int_norm_WF(self, intN_wf,
+                                   change_structure=True,
+                                   use_structure=False):
         """Get coefficients from a wave function with int. normalisation
         
         Parameters:
         -----------
         intN_wf (Wave_Function_Int_Norm)
             wave function in intermediate normalisation
+        
+        change_structure (bool, optional, default=True)
+            If True, new determinants coefficients are allowed to be added
+        
+        use_structure (bool, optional, default=False)
+            If True, uses present structure in self.
+            Otherwise the eventual Slater determinants already in self
             are discarded.
         
         TODO:
@@ -509,7 +374,6 @@ class WaveFunctionFCI(general.Wave_Function):
         what is DANGEROUS
         
         """
-        raise NotImplementedError('do it! We need string_indices adapted to this')
         self.restricted = intN_wf.restricted
         self.point_group = intN_wf.point_group
         self.Ms = intN_wf.Ms
@@ -519,15 +383,31 @@ class WaveFunctionFCI(general.Wave_Function):
         self.ref_occ = intN_wf.ref_occ
         self.WF_type = intN_wf.WF_type
         self.source = intN_wf.source
-        self.initialise_coeff_matrix()
+        self._i_ref = None
+        if not use_structure:
+            self._all_determinants = []
         for Index in intN_wf.string_indices():
-            self.add_element(Index)
+            new_Slater_Det = _get_Slater_Det_from_String_Index(Index,
+                                                               self.n_irrep)
+            if use_structure:
+                try:
+                    idet = self.index(new_Slater_Det)
+                except ValueError:
+                    if change_structure:
+                        self._all_determinants.append(new_Slater_Det)
+                else:
+                    self._all_determinants[idet] = new_Slater_Det
+            elif change_structure:
+                self._all_determinants.append(new_Slater_Det)
+        self._set_memory()
 
     def get_coeff_from_molpro(self, molpro_output,
                               start_line_number=1,
                               point_group=None,
                               state='1.1',
-                              zero_coefficients=False):
+                              zero_coefficients=False,
+                              change_structure=True,
+                              use_structure=False):
         """Read coefficients from molpro_output but keep the structure.
         
         Parameters:
@@ -554,7 +434,15 @@ class WaveFunctionFCI(general.Wave_Function):
         
         zero_coefficients (bool, optional, default=False)
             If False, set coefficients of new determinants to zero
-                
+        
+        change_structure (bool, optional, default=True)
+            If True, new determinants coefficients are allowed to be added
+        
+        use_structure (bool, optional, default=False)
+            If True, uses present structure in self.
+            Otherwise the eventual Slater determinants already in self
+            are discarded.
+        
         TODO:
         -----
         If use_structure, should we compare old attributes to check
@@ -564,7 +452,10 @@ class WaveFunctionFCI(general.Wave_Function):
         FCI_coefficients_found = False
         uhf_alpha_was_read = False
         found_orbital_source = False
+        self.has_FCI_structure = True
         self.WF_type = 'FCI'
+        if not use_structure:
+            self._all_determinants = []
         if isinstance(molpro_output, str):
             f = open(molpro_output, 'r')
             f_name = molpro_output
@@ -580,8 +471,6 @@ class WaveFunctionFCI(general.Wave_Function):
             self.point_group = point_group
         self.source = 'From file ' + f_name
         S = 0.0
-        first_determinant = True
-        cur_c_ref = 0.0
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
@@ -596,28 +485,29 @@ class WaveFunctionFCI(general.Wave_Function):
                     continue
                 if 'EOF' in line:
                     break
-                det = _get_slater_det_from_fci_line(
-                    line, self.Ms, self.n_core,
+                new_Slater_Det = _get_Slater_Det_from_FCI_line(
+                    line, self.orb_dim, self.n_core, self.n_irrep, self.Ms,
                     molpro_output=molpro_output,
-                    line_number=line_number)
-                if first_determinant:
-                    first_determinant = False
-                    # Improve!! do not use old version
-                    # This definition of ref_occ seem to be
-                    # quite bad, because the first slater determinant
-                    # might not have the same ref_occ (per spirrep) as
-                    # the True reference determinant... I think that this
-                    # is not a real problem, 
-                    self.ref_occ = general.Orbitals_Sets(
-                        list(map(len, get_SD_old(
-                            line, self.orb_dim, self.n_core,
-                            self.n_irrep, self.Ms).occupation)))
-                    self.initialise_coeff_matrix()
-                S += det.c**2
-                self.set_slater_det(det)
-                if self.ref_det is None or abs(det.c) > abs(self.ref_det.c):
-                    self.ref_det = det
-                    line_ref = line
+                    line_number=line_number,
+                    zero_coefficients=zero_coefficients)
+                S += new_Slater_Det.c**2
+                if not zero_coefficients:
+                    if len(self) == 0:
+                        sgn_invert = new_Slater_Det.c < 0.0
+                    if sgn_invert:
+                        new_Slater_Det = Slater_Det(
+                            c=-new_Slater_Det.c,
+                            occupation=new_Slater_Det.occupation)
+                if use_structure:
+                    try:
+                        idet = self.index(new_Slater_Det)
+                    except ValueError:
+                        if change_structure:
+                            self._all_determinants.append(new_Slater_Det)
+                    else:
+                        self._all_determinants[idet] = new_Slater_Det
+                elif change_structure:
+                    self._all_determinants.append(new_Slater_Det)
             else:
                 if ('FCI STATE  ' + state + ' Energy' in line
                         and 'Energy' in line):
@@ -662,10 +552,9 @@ class WaveFunctionFCI(general.Wave_Function):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
+        self.get_i_max_coef(set_i_ref=True)
         self.ref_occ = general.Orbitals_Sets(
-            list(map(len, get_SD_old(
-                line_ref, self.orb_dim, self.n_core,
-                self.n_irrep, self.Ms).occupation)))
+            list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
@@ -680,12 +569,109 @@ class WaveFunctionFCI(general.Wave_Function):
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
+        self._set_memory()
+        
+    @property
+    def i_ref(self):
+        if self._i_ref is None:
+            for i, det in enumerate(self):
+                if self.get_exc_info(det, only_rank=True) == 0:
+                    self._i_ref = i
+                    break
+            if self._i_ref is None:
+                raise Exception('Did not find reference for wave function!')
+        return self._i_ref
+
+    def get_i_max_coef(self, set_i_ref=False):
+        """Return index of determinant with largest coefficient
+        
+        If set_i_ref == True, also sets i_ref to it (default=False)
+        """
+        max_coef = 0.0
+        i_max_coef = -1
+        for i, det in enumerate(self):
+            if abs(det.c) > max_coef:
+                max_coef = abs(det.c)
+                i_max_coef = i
+        self._i_ref = i_max_coef
+        return i_max_coef
+
+    @property
+    def C0(self):
+        return self[self.i_ref].c
     
+    def get_exc_info(self, det, only_rank=False, consider_core=True):
+        """Return some info about the excitation that lead from ref to det
+        
+        This will return the holes, the particles, and the rank of det,
+        viewed as a excitation over self.ref_occ.
+        Particles and holes are returned as lists of Orbital_Info.
+        These lists have len = rank.
+        If consider_core == False, core orbitals are not considered,
+        and the first correlated orbitals is 0; Otherwise core orbitals
+        are taken into account and the first correlated orbital is
+        n_core[spirrep]
+        The order that the holes/particles are put in the lists is the
+        canonical: follows the spirrep, and the normal order inside each
+        spirrep.
+        Particles are numbered starting at zero, that is, the index at det
+        minus self.ref_occ[spirrep].
+        
+        Parameters:
+        -----------
+        det (Slater_Det)
+            The Slater determinant to be verified.
+        
+        only_rank (bool, optional, default=False
+            If True, calculates and return only the rank
+        
+        consider_core (bool, optional, default=True)
+            Whether or not core orbitals are considered when
+            assigning holes
+        
+        Returns:
+        --------
+        The tuple (holes, particles, rank), or just the rank.
+        """
+        rank = 0
+        holes = []
+        particles = []
+        for spirrep in self.spirrep_blocks(restricted=False):
+            ncore = (0
+                     if consider_core else
+                     self.n_core[spirrep])
+            if not only_rank:
+                for orb in range(self.ref_occ[spirrep]):
+                    if orb not in det.occupation[spirrep]:
+                        holes.append(Orbital_Info(
+                            orb=orb - ncore,
+                            spirrep=spirrep))
+            for orb in det.occupation[spirrep]:
+                if orb >= self.ref_occ[spirrep]:
+                    rank += 1
+                    if not only_rank:
+                        particles.append(
+                            Orbital_Info(orb=orb
+                                         - self.ref_occ[spirrep],
+                                         spirrep=spirrep))
+        if only_rank:
+            return rank
+        else:
+            return holes, particles, rank
+
+    def normalise(self):
+        """Normalise the wave function to unity"""
+        S = 0.0
+        for det in self:
+            S += det.c**2
+        S = math.sqrt(S)
+        for det in self:
+            det.c /= S
+
     def get_trans_max_coef(self):
         """
-        Return U that the determinant with largest coefficient as the ref
+        Return U that the determinant with larges coefficient as the ref
         """
-        raise NotImplementedError('do it')
         det_max_coef = None
         for det in self:
             if det_max_coef is None or abs(det.c) > abs(det_max_coef.c):
@@ -799,7 +785,6 @@ class WaveFunctionFCI(general.Wave_Function):
         Implement the unrestricted version
         
         """
-        raise NotImplementedError('do it')
         if restricted is None:
             restricted = self.restricted
         if restricted and not self.restricted:
@@ -1020,7 +1005,6 @@ class WaveFunctionFCI(general.Wave_Function):
                              + method)
     
     def _change_orb_basis_traditional(self, U, just_C0=False):
-        raise NotImplementedError('do it')
         new_wf = Wave_Function_Norm_CI()
         new_wf.restricted = self.restricted
         new_wf.point_group = self.point_group
@@ -1162,7 +1146,6 @@ class WaveFunctionFCI(general.Wave_Function):
         are relative to self[self.i_ref]
         
         """
-        raise NotImplementedError('do it')
         doubles = []
         rest = []
         for det in self:
@@ -1202,7 +1185,6 @@ class WaveFunctionFCI(general.Wave_Function):
         have the "right sign" for the CCD and CCSD manifolds, respectivelly.
         
         """
-        raise NotImplementedError('do it')
         all_same_sign = True
         doubles, rest = self.extract_doubles_ampl()
         for high_rank in rest:

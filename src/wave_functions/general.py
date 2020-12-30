@@ -85,7 +85,7 @@ class Spirrep_String_Index(Sized, Iterable, Container):
                  'spirrep')
     
     def __init__(self, n_elec):
-        self._occ_orb = np.arange(n_elec, dtype=np.int8)
+        self._occ_orb = np.arange(n_elec, dtype=np.intc)
         self._std_pos = None
         self._clear_std_pos_in_setitem = True
         self.wf = None
@@ -262,13 +262,12 @@ class String_Index(Mapping):
 
 
 class Orbitals_Sets(Sequence):
-    """The number of occupied orbitals per spirrep
+    """The number of orbitals per spirrep
     
     Behaviour:
     ----------
     
-    Objects of this class represents the number of occupied
-    orbitals in each spirrep.
+    Objects of this class represents orbitals in each spirrep.
     
     Attributes:
     -----------
@@ -281,13 +280,13 @@ class Orbitals_Sets(Sequence):
     Data Model:
     -----------
     []
-        Get/set the number of occupied orbitals for the given spirrep
+        Get/set the number of orbitals for the given spirrep
     
     len
-        The total number of occupied orbitals.
+        The total number of orbitals (if 'R', considers both alpha and beta).
     
     ==
-        Gives True if the number of occupied orbitals is the same for all
+        Gives True if the number of orbitals is the same for all
         spirreps, even for different occ_type.
     
     +, -, +=
@@ -315,10 +314,10 @@ class Orbitals_Sets(Sequence):
             self._occupation = np.zeros((2
                                          if self._type == 'F' else
                                          1) * self._n_irrep,
-                                        dtype=np.uint8)
+                                        dtype=np.intc)
         else:
             self._occupation = np.array(occ_or_n_irrep,
-                                        dtype=np.uint8)
+                                        dtype=np.intc)
             self._n_irrep = (len(self._occupation) // 2
                              if self._type == 'F' else
                              len(self._occupation))
@@ -405,7 +404,7 @@ class Orbitals_Sets(Sequence):
         else:
             new_occ_type = 'F'
             new_occupation = np.zeros(self._n_irrep * 2,
-                                      dtype=np.int8)
+                                      dtype=np.intc)
             if self._type != 'B':
                 new_occupation[:self._n_irrep] += (
                     self._occupation[:self._n_irrep])
@@ -437,7 +436,7 @@ class Orbitals_Sets(Sequence):
         else:
             self_occ = self._occupation
             self._occupation = np.zeros(self._n_irrep * 2,
-                                        dtype=np.int8)
+                                        dtype=np.intc)
             if self._type != 'B':
                 self._occupation[:self._n_irrep] += self_occ[:self._n_irrep]
             if self._type != 'A':
@@ -468,7 +467,7 @@ class Orbitals_Sets(Sequence):
         else:
             new_occ_type = 'F'
             new_occupation = np.zeros(self._n_irrep * 2,
-                                      dtype=np.int8)
+                                      dtype=np.intc)
             if self._type != 'B':
                 new_occupation[:self._n_irrep] += (
                     self._occupation[:self._n_irrep])
@@ -556,6 +555,9 @@ class Wave_Function(ABC, Sequence):
     n_alpha, n_beta, n_elec, n_corr_alpha, n_corr_beta, n_corr_elec (int)
         Number of alpha, beta, total, correlated alpha, correlated beta,
         and total correlated electrons, respectively
+    
+    n_orb n_orb_nocore (int)
+        Number of spatial orbitals (with and without core orbitals
 
     WF_type (str)
        Type of wave function
@@ -587,7 +589,7 @@ class Wave_Function(ABC, Sequence):
 
     def __repr__(self):
         """Return string with parameters of the wave function."""
-        x = []
+        x = [super().__repr__()]
         x.append('-' * 50)
         x.append('point group: {}'.format(self.point_group))
         x.append('n irrep: {}'.format(self.n_irrep))
@@ -720,6 +722,18 @@ class Wave_Function(ABC, Sequence):
             return None
         return len(self.ref_occ)
     
+    @property
+    def n_orb(self):
+        if self.orb_dim is None:
+            return None
+        return len(self.orb_dim) // 2
+
+    @property
+    def n_orb_nocore(self):
+        if self.orb_dim is None or self.n_core is None:
+            return None
+        return len(self.orb_dim - self.n_core) // 2
+
     @property
     def n_corr_alpha(self):
         if (self.n_alpha is None
