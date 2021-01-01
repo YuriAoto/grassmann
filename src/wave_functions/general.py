@@ -608,9 +608,6 @@ class Wave_Function(ABC, Sequence):
         return '\n'.join(x)
     
     def __del__(self):
-        logger.info(
-            'Destroying instance of wave function:\n%s: %s\n.Freeing %f %s.',
-            self.WF_type, self.source, self.mem, memory.unit())
         memory.free(self.mem)
     
     def _set_memory(self, destination=None, calc_args=()):

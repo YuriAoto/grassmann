@@ -27,7 +27,19 @@ import wave_functions.strings_rev_lexical_order as str_order
 
 logger = logging.getLogger(__name__)
 
-lehtola_files = '/Documents/Codes/clusterdec-master/source/recipes'
+default_recipe_files = (
+    '/home/yuriaoto/Documents/Codes/grassmann/src/wave_functions/recipes')
+
+
+_str_excitation_list = ['R',
+                        'S',
+                        'D',
+                        'T',
+                        'Q']
+
+
+def _str_excitation(x):
+    return _str_excitation_list[x] if x < 5 else str(x)
 
 
 def make_occ(x):
@@ -80,10 +92,115 @@ def _compare_strings(ref, exc):
     return len(holes), holes, particles
 
 
+def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
+    """Carry out the decomposition
+    
+    Given the alpha and beta hole-particle indices,
+    that indicate the excitation, return how this excitation
+    is decomposed in clusters. This is returned as a list with the
+    terms in the decomposition. Each of these terms is a tuple
+    with the sign (+1 or -1) and all determinants that, multiplied,
+    give this term.
+    This decomposition is into doubles (mode = 'D')
+    or into singles and doubles (mode = 'SD')
+    
+    
+    Examples:
+    ---------
+    holes = [ijkl]
+    particles = [abcd]
+    return  [(sign, det_ij_ab, det_kl_cd),
+             (sign, det_ik_ab, det_jl_cd),
+                ...  ]
+    
+    holes = [ijklmn...]
+    particles = [abcdef..]
+    return  [(sign, det_ij_ab, det_kl_cd, det_mn_ef, ...),
+             (sign, det_ik_ab, det_kl_cd, det_mn_ef, ...),
+                ...   ]
+    
+    Parameters:
+    -----------
+    alpha_hp (2-tuple of np.array of int):
+        alpha holes, alpha particles
+    
+    beta_hp (2-tuple of np.array of int):
+        beta holes, beta particles
+    
+    ref_det (SlaterDet)
+        The reference Slater determinant
+    
+    mode (str: "D" or "SD")
+        decompose into doubles or single and double
+    
+    recipes_f (None or str with a file name prefix)
+        use the files
+            recipes_f + '_{}.dat'.format(rank)
+        as the recipes to obtain the decomposition.
+        If None, use the module variable default_recipe_files
+    
+    Return:
+    -------
+    All terms in the decomposition that preserve spin projection,
+    that is, do not change the number of alpha/beta electrons.
+    See the Example for the details
+    
+    """
+    recipes_f = default_recipe_files if recipes_f is None else recipes_f
+    n_alpha = alpha_hp[0].shape[0]
+    n_beta = beta_hp[0].shape[0]
+    rank =  n_alpha + n_beta
+    all_decompositions = []
+    only_doubles = mode == 'D'
+    # Example:
+    # alpha_hp, beta_hp = ([i,j,k], [l]), ([a,b,c], [d])
+    # orbitals = [i,j,k,l,a,b,c,d]
+    #
+    orbitals = np.concatenate((alpha_hp[0], beta_hp[0],
+                               alpha_hp[1], beta_hp[1]))
+    with open(recipes_f + '_{}.dat'.format(rank), 'r') as f:
+        for line in f:
+            lspl = list(map(int, line.split()))
+            if only_doubles and rank // 2 != lspl[1]:
+                continue
+            use_this_decomposition = True
+            new_decomposition = [lspl[0]]
+            i = 2
+            while i < len(lspl):
+                exc_rank = lspl[i]
+                if exc_rank > 2 or exc_rank == 1 and only_doubles:
+                    use_this_decomposition = False
+                    break
+                first_h = i + 1
+                first_p = first_h + exc_rank
+                n_alpha_h = sum(orbind < n_alpha
+                                for orbind in lspl[first_h:first_p])
+                n_alpha_p = sum(orbind < rank + n_alpha
+                                for orbind in lspl[first_p:first_p+exc_rank])
+                if n_alpha_h != n_alpha_p:
+                    use_this_decomposition = False
+                    break
+                alpha_hp = ([], [])
+                beta_hp = ([], [])
+                for r in range(exc_rank):
+                    if r < n_alpha_h:
+                        alpha_hp[0].append(orbitals[lspl[first_h + r]])
+                        alpha_hp[1].append(orbitals[lspl[first_p + r]])
+                    else:
+                        beta_hp[0].append(orbitals[lspl[first_h + r]])
+                        beta_hp[1].append(orbitals[lspl[first_p + r]])
+                new_decomposition.append(_get_slater_det_from_excitation(
+                    ref_det, 0.0, alpha_hp, beta_hp))
+                i += 2 * exc_rank + 1
+            if use_this_decomposition:
+                all_decompositions.append(new_decomposition)
+    return all_decompositions
+
+
 class SlaterDet(namedtuple('SlaterDet',
-                            ['c',
-                             'alpha_occ',
-                             'beta_occ'])):
+                           ['c',
+                            'alpha_occ',
+                            'beta_occ'])):
     """A namedtuple for a generic Slater determinant
     
     Attributes:
@@ -102,6 +219,39 @@ class SlaterDet(namedtuple('SlaterDet',
                 + '^'.join(map(str, self.alpha_occ))
                 + ' ^ '
                 + '^'.join(map(str, self.beta_occ)))
+
+
+def _get_slater_det_from_excitation(ref_det, c, alpha_hp, beta_hp):
+    """Create a new SlaterDet as an excitation on top of reference
+    
+    Parameters:
+    -----------
+    ref_det (SlaterDet)
+        The reference Slater determinant
+    
+    c (float)
+        The coefficient of the returned Slater determinant
+    
+    alpha_hp (2-tuple of np.array)
+        The alpha holes and particles of the excitation
+
+    beta_hp (2-tuple of np.array)
+        The beta holes and particles of the excitation
+    
+    Return:
+    -------
+    The new Slater determinant
+    
+    """
+    return SlaterDet(c=c,
+                     alpha_occ=np.array(sorted(
+                         [x for x in ref_det.alpha_occ
+                          if x not in alpha_hp[0]] + alpha_hp[1]),
+                                        dtype=np.intc),
+                     beta_occ=np.array(sorted(
+                         [x for x in ref_det.beta_occ
+                          if x not in beta_hp[0]] + beta_hp[1]),
+                                       dtype=np.intc))
 
 
 def _get_slater_det_from_fci_line(line, Ms, n_core,
@@ -170,7 +320,9 @@ def _get_slater_det_from_fci_line(line, Ms, n_core,
     n_total_core = len(n_core) // 2
     try:
         coeff = float(lspl[0])
-        occ = [int(x) - 1 - n_total_core for x in lspl[1:] if int(x) > n_total_core]
+        occ = [int(x) - 1 - n_total_core
+               for x in lspl[1:]
+               if int(x) > n_total_core]
     except Exception as e:
         raise molpro_util.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
@@ -365,7 +517,8 @@ class WaveFunctionFCI(general.Wave_Function):
         Parameters:
         -----------
         i (int)
-            The index of the slater determinant in the alpha string graph matrix
+            The index of the slater determinant in the
+            alpha string graph matrix
         
         Return:
         -------
@@ -380,7 +533,8 @@ class WaveFunctionFCI(general.Wave_Function):
         Parameters:
         -----------
         i (int)
-            The index of the slater determinant in the beta string graph matrix
+            The index of the slater determinant in the
+            beta string graph matrix
         
         Return:
         -------
@@ -450,9 +604,15 @@ class WaveFunctionFCI(general.Wave_Function):
         """
         if ref is None:
             ref = self.ref_det
-        rank_a, holes_a, particles_a = _compare_strings(ref.alpha_occ, det.alpha_occ)
-        rank_b, holes_b, particles_b = _compare_strings(ref.beta_occ, det.beta_occ)
-        return rank_a + rank_b, (holes_a, particles_a), (holes_a, particles_b)
+        rank_a, holes_a, particles_a = _compare_strings(ref.alpha_occ,
+                                                        det.alpha_occ)
+        rank_b, holes_b, particles_b = _compare_strings(ref.beta_occ,
+                                                        det.beta_occ)
+        return (rank_a + rank_b,
+                (np.array(holes_a, dtype=np.intc),
+                 np.array(particles_a, dtype=np.intc)),
+                (np.array(holes_b, dtype=np.intc),
+                 np.array(particles_b, dtype=np.intc)))
     
     def normalise(self):
         """Normalise the wave function to unity"""
@@ -509,7 +669,8 @@ class WaveFunctionFCI(general.Wave_Function):
         what is DANGEROUS
         
         """
-        raise NotImplementedError('do it! We need string_indices adapted to this')
+        raise NotImplementedError(
+            'do it! We need string_indices adapted to this')
         self.restricted = intN_wf.restricted
         self.point_group = intN_wf.point_group
         self.Ms = intN_wf.Ms
@@ -560,7 +721,6 @@ class WaveFunctionFCI(general.Wave_Function):
         If use_structure, should we compare old attributes to check
         compatibility?
         """
-        sgn_invert = False
         FCI_coefficients_found = False
         uhf_alpha_was_read = False
         found_orbital_source = False
@@ -581,7 +741,6 @@ class WaveFunctionFCI(general.Wave_Function):
         self.source = 'From file ' + f_name
         S = 0.0
         first_determinant = True
-        cur_c_ref = 0.0
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
@@ -607,7 +766,7 @@ class WaveFunctionFCI(general.Wave_Function):
                     # quite bad, because the first slater determinant
                     # might not have the same ref_occ (per spirrep) as
                     # the True reference determinant... I think that this
-                    # is not a real problem, 
+                    # is not a real problem
                     self.ref_occ = general.Orbitals_Sets(
                         list(map(len, get_SD_old(
                             line, self.orb_dim, self.n_core,
@@ -666,6 +825,11 @@ class WaveFunctionFCI(general.Wave_Function):
             list(map(len, get_SD_old(
                 line_ref, self.orb_dim, self.n_core,
                 self.n_irrep, self.Ms).occupation)))
+        if self.ref_det.c < 0:
+            self._coefficients *= -1
+        self.ref_det = SlaterDet(c=self.ref_det.c,
+                                 alpha_occ=self.ref_det.alpha_occ,
+                                 beta_occ=self.ref_det.beta_occ)
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
@@ -1021,7 +1185,7 @@ class WaveFunctionFCI(general.Wave_Function):
     
     def _change_orb_basis_traditional(self, U, just_C0=False):
         raise NotImplementedError('do it')
-        new_wf = Wave_Function_Norm_CI()
+        new_wf = WaveFunctionFCI()
         new_wf.restricted = self.restricted
         new_wf.point_group = self.point_group
         new_wf.Ms = self.Ms
@@ -1064,8 +1228,8 @@ class WaveFunctionFCI(general.Wave_Function):
                     logger.debug(
                         'New contribution = %f\n det_J:\n%s\n det_I:\n%s',
                         C_times_det_minor_IJ, det_J, det_I)
-            new_wf._all_determinants.append(Slater_Det(c=new_c,
-                                                       occupation=new_occ))
+            new_wf._all_determinants.append(SlaterDet(c=new_c,
+                                                      occupation=new_occ))
             if just_C0:
                 break
         new_wf._set_memory()
@@ -1148,41 +1312,20 @@ class WaveFunctionFCI(general.Wave_Function):
                        only_ref_occ=False,
                        only_this_occ=None):
         raise NotImplementedError('undone')
+    
+    def compare_to_CC_manifold(self, level='D', recipes_f=None):
+        """Analyse how the wave function relates to the CCD manifold
+        
+        This function is intended to compare the wave function to the
+        CCD manifold, and writes several information to the logfile
+        (at info level). These are:
 
-    def extract_doubles_ampl(self):
-        """Separate the doubly excited determinants from the rest
-        
-        Return:
-        -------
-        The tuple (doubles, rest), where both entries
-        are lists of excited determinants:
-            doubles are the doubly excited determinants
-            rest are quadruply, sextuply and octuply excited determinants
-        The elements of these lists are instances of Excitation, and
-        are relative to self[self.i_ref]
-        
-        """
-        raise NotImplementedError('do it')
-        doubles = []
-        rest = []
-        for det in self:
-            holes, particles, rank = self.get_exc_info(det)
-            if rank % 2 == 0 and rank > 0:
-                new_Exc = ExcitedSlaterDet(c=det.c,
-                                           holes=holes,
-                                           particles=particles)
-                if rank == 2:
-                    doubles.append(new_Exc)
-                else:
-                    rest.append(new_Exc)
-        return doubles, rest
-
-    def check_CCD_curves_toward(self, recipes_f=lehtola_files):
-        """Check if the CCD manifold curves towards the wave function
-        
-        For every triple, quadruple, ..., and octuple excitation,
-        check if the coefficient has the "correct" sign to be in the
+        For every quadruple, ..., and octuple excitation,
+        compares the coefficient of the excitation to the sum of product of
+        the coefficients given by the cluster decomposition of that excitation.
+        It checks if the coefficient has the "correct" sign to be in the
         "right direction" to which the CCD manifold curves to.
+        A general information is printed to log in the end of the function
         
         Behaviour:
         ----------
@@ -1191,27 +1334,70 @@ class WaveFunctionFCI(general.Wave_Function):
         
         Parameters:
         -----------
-        recipes_f (str, a file name, optional, default given by lehtola_files)
-            The files that describe the decomposition of Ci coefficients
-            into cluster amplitudes. They should be as <recipes_f>_X.dat,
-            where X=2, 3, ...
+        level (str, optional, default='D'; possible values: 'D', 'SD')
+            The level of CC theory to compare.
+        
+        recipes_f (str, a file name, optional, default None)
+            The files that describe the cluster decomposition.
+            See decompose for the details
         
         Return:
         -------
-        A 2-tuple with booleans, that are True if all tested coefficients
-        have the "right sign" for the CCD and CCSD manifolds, respectivelly.
+        The "vertical" distance between self and the CCD manifold,
+        in the metric induced by intermediate normalisation.
         
         """
-        raise NotImplementedError('do it')
-        all_same_sign = True
-        doubles, rest = self.extract_doubles_ampl()
-        for high_rank in rest:
-            estimated_C = 0.0
-            for sign, dbls in rest.cluster_dec():
-                estimated_C += sign * doubles.get_product(dbls)
-            same_sign = high_rank.c*estimated_C > 0
-            logger.info("C (%s)  = %f\n"
-                        + "C (est) = %f\n"
-                        + high_rank, high_rank.c, estimated_C, same_sign)
-            all_same_sign = same_sign and all_same_sign
-        return all_same_sign
+        logfmt = '\n'.join(['det = %s',
+                            'C dec = %s',
+                            'C dec/C = %s',
+                            '(C dec - C)^2 = %s',
+                            'same sign = %s'])
+        #### Have to use intermediate normalisation to calculate norm
+        if level not in ['D', 'SD']:
+            raise ValueError('Possible values for level are "S" and "SD"')
+        if level == 'SD':
+            raise NotImplementedError('Extract S from D. Fix "recipes_1.')
+        norm = 0.0
+        right_dir = {}
+        # Another possibility: run over holes and particles directly:
+        # for `all_Q_6_8_...` in self:
+        for ia, ib, det in self.enumerate():
+            rank, alpha_hp, beta_hp = self.get_exc_info(det)
+            even_rank = rank > 2 and rank % 2 == 0
+            rank = _str_excitation(rank)
+            if even_rank or level == 'SD':
+                if rank not in right_dir:
+                    right_dir[rank] = [0, 1]
+                else:
+                    right_dir[rank][1] += 1
+            if rank != 'R':
+                if even_rank or level == 'SD':
+                    decomposition = cluster_decompose(
+                        alpha_hp, beta_hp, self.ref_det,
+                        mode=level, recipes_f=recipes_f)
+                    C = 0.0
+                    for d in decomposition:
+                        new_contribution = d[0]
+                        for cluster_det in d[1:]:
+                            new_contribution *= self[self.index(cluster_det)]
+                        C -= new_contribution
+                    norm_contribution = (det.c - C)**2
+                    CC_towards_wf = det.c * C >= 0
+                    norm += norm_contribution
+                    if CC_towards_wf:
+                        right_dir[rank][0] += 1
+                    logger.info(logfmt,
+                                det,
+                                C,
+                                C/det.c
+                                if abs(det.c) > 1.0E-10 else
+                                ' c = ' + str(det.c) + ' << 1',
+                                norm_contribution,
+                                CC_towards_wf)
+                elif rank == 'S' and level == 'D':
+                    norm += det.c**2
+        tolog = ['Number of excitations in the right direction:']
+        for rank, n in right_dir.items():
+            tolog.append('{}: {} of {}'.format(rank, n[0], n[1]))
+        logger.info('\n'.join(tolog))
+        return math.sqrt(norm)

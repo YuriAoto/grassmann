@@ -211,14 +211,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.12345, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.int8))
-        self.assertEqual(det.occupation[1], np.array([0], dtype=np.int8))
-        self.assertEqual(det.occupation[2], np.array([], dtype=np.int8))
-        self.assertEqual(det.occupation[3], np.array([0], dtype=np.int8))
-        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.int8))
-        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.int8))
-        self.assertEqual(det.occupation[6], np.array([], dtype=np.int8))
-        self.assertEqual(det.occupation[7], np.array([0], dtype=np.int8))
+        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.intc))
+        self.assertEqual(det.occupation[1], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[2], np.array([], dtype=np.intc))
+        self.assertEqual(det.occupation[3], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.intc))
+        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.intc))
+        self.assertEqual(det.occupation[6], np.array([], dtype=np.intc))
+        self.assertEqual(det.occupation[7], np.array([0], dtype=np.intc))
     
     def test_get_from_String_Index_2(self):
         det = norm_ci._get_Slater_Det_from_String_Index(
@@ -229,14 +229,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index_2,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.6789, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.int8))
-        self.assertEqual(det.occupation[1], np.array([0], dtype=np.int8))
-        self.assertEqual(det.occupation[2], np.array([], dtype=np.int8))
-        self.assertEqual(det.occupation[3], np.array([0], dtype=np.int8))
-        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.int8))
-        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.int8))
-        self.assertEqual(det.occupation[6], np.array([], dtype=np.int8))
-        self.assertEqual(det.occupation[7], np.array([0], dtype=np.int8))
+        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.intc))
+        self.assertEqual(det.occupation[1], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[2], np.array([], dtype=np.intc))
+        self.assertEqual(det.occupation[3], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.intc))
+        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.intc))
+        self.assertEqual(det.occupation[6], np.array([], dtype=np.intc))
+        self.assertEqual(det.occupation[7], np.array([0], dtype=np.intc))
 
 
 class JacHess_H2_TestCase(unittest.TestCase):
