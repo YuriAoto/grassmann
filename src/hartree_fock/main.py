@@ -5,7 +5,7 @@ TODO: Loading molecular geometry elsewhere
 
 Yuri Aoto, 2020
 """
-from . import naive
+
 from . import optimiser
 from molecular_geometry import MolecularGeometry
 from util import logtime

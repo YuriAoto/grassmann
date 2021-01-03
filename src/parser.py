@@ -75,6 +75,8 @@ def _parser():
     parser.add_argument('--HF_orb',
                          help='Hartree-Fock orbitals'
                          + ' (as Molpro\'s "put" xml file)')
+    parser.add_argument('--method',
+                         help='The method.')
     parser.add_argument('--WF_orb',
                          help='orbital basis of the wave function'
                          + ' (as Molpro\'s "put" xml file).'
@@ -211,6 +213,11 @@ def _check(args):
             pass
         else:
             _assert_molpro_output(args.ini_orb, can_be_xml=True)
+    if args.method is None:
+        if args.geometry is None:
+            args.method = 'dist_Grassmann'
+        else:
+            args.method = 'Hartree_Fock'
     if args.WF_orb is None:
         args.WF_orb = args.molpro_output
     else:
@@ -295,7 +302,7 @@ def _argvise_file(filename, files_content, indentation):
                             'Failed when reading line at ' + filename + ':\n'
                             + line)
                     args.append('--' + k.strip().replace(' ', '_'))
-                    args.append(v.strip())
+                    args.append(v.strip().replace(' ', '_'))
                 elif line_nocomment:
                     if ' ' in line_nocomment:
                         args.append('--' + line_nocomment.replace(' ', '_'))

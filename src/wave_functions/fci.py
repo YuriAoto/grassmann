@@ -149,7 +149,7 @@ def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
     recipes_f = default_recipe_files if recipes_f is None else recipes_f
     n_alpha = alpha_hp[0].shape[0]
     n_beta = beta_hp[0].shape[0]
-    rank =  n_alpha + n_beta
+    rank = n_alpha + n_beta
     all_decompositions = []
     only_doubles = mode == 'D'
     # Example:
@@ -1352,7 +1352,6 @@ class WaveFunctionFCI(general.Wave_Function):
                             'C dec/C = %s',
                             '(C dec - C)^2 = %s',
                             'same sign = %s'])
-        #### Have to use intermediate normalisation to calculate norm
         if level not in ['D', 'SD']:
             raise ValueError('Possible values for level are "S" and "SD"')
         if level == 'SD':

@@ -17,9 +17,9 @@ from main import main_grassmann
 from molpro_util import MolproInputError
 
 try:
-    assert sys.version_info >= (3, 5)
+    assert sys.version_info >= (3, 6)
 except AssertionError:
-    sys.exit('Python version 3.5 or later is required.')
+    sys.exit('Python version 3.6 or later is required.')
 
 try:
     args = parser.parse()

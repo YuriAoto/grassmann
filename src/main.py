@@ -5,14 +5,15 @@ Functions:
 main_grassmann
 """
 import os
-import time
+from datetime import datetime as dt
 
 import git
 
 from util import logtime
+import memory
 import dist_grassmann
 import hartree_fock
-import memory
+import coupled_cluster
 
 
 def main_grassmann(args, f_out):
@@ -46,15 +47,18 @@ def main_grassmann(args, f_out):
             toout()
             toout(''.join(args.files_content))
         toout()
-        toout('Starting at {}'.format(
-            time.strftime("%d %b %Y - %H:%M", time.localtime(T.ini_time))))
+        toout(f'Starting at {dt.fromtimestamp(T.ini_time):%d %b %Y - %H:%M}')
         toout()
-        if args.geometry is not None:
-            hartree_fock.main(args, f_out)
-        else:
+        if args.method == 'dist_Grassmann':
             dist_grassmann.main(args, f_out)
+        elif args.method == 'Hartree_Fock':
+            hartree_fock.main(args, f_out)
+        elif args.method in ('CCD_manifold', 'CCSD_manifold'):
+            coupled_cluster.main(args, f_out)
+        else:
+            raise ValueError('Unknown method: ' + args.method)
+    toout()
     toout('Memory usage:')
     toout(memory.show_status())
-    toout('Ending at {}'.format(
-        time.strftime("%d %b %Y - %H:%M", time.localtime(T.end_time))))
+    toout(f'Ending at {dt.fromtimestamp(T.end_time):%d %b %Y - %H:%M}')
     toout('Total time: {}'.format(T.elapsed_time))
