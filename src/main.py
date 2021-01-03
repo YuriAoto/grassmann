@@ -21,10 +21,10 @@ def main_grassmann(args, f_out):
     Parameters:
     ---------
     args (argparse.Namespace)
-        The parsed information. See parse.parse_cmd_line
+        The parsed information. See parse for more information
     
     f_out (file)
-        where the output goes
+        Where the output goes
     """
     git_repo = git.Repo(os.path.dirname(os.path.abspath(__file__)) + '/../')
     git_sha = git_repo.head.object.hexsha
@@ -41,12 +41,15 @@ def main_grassmann(args, f_out):
         toout()
         toout('Directory:\n' + args.wdir)
         toout()
-        toout('Command:\n' + args.command)
+        toout('Command:\n' + ' '.join(args.sys_argv))
+        if args.files_content:
+            toout()
+            toout(''.join(args.files_content))
         toout()
         toout('Starting at {}'.format(
             time.strftime("%d %b %Y - %H:%M", time.localtime(T.ini_time))))
         toout()
-        if args.input_is_geom:
+        if args.geometry is not None:
             hartree_fock.main(args, f_out)
         else:
             dist_grassmann.main(args, f_out)

@@ -49,8 +49,8 @@ def main(args, f_out):
                          abs(ovlp),
                          extra))
 
-    toout('From command line and environment:')
-    toout('External wave function, |extWF>: ' + args.input_file)
+    toout('From command line and input:')
+    toout('External wave function, |extWF>: ' + args.molpro_output)
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
@@ -86,7 +86,7 @@ def main(args, f_out):
     # ----- loading wave function
     with logtime('Reading wave function'):
         ext_wf = molpro_util.load_wave_function(
-            args.input_file,
+            args.molpro_output,
             WF_templ=args.WF_templ,
             use_CISD_norm=not args.at_ref,
             wf_obj_type=('cisd'
@@ -96,7 +96,7 @@ def main(args, f_out):
                           'fci')))
     if args.at_ref:
         ext_wf.use_CISD_norm = False
-    if (isinstance(ext_wf, wave_functions.fci.Wave_Function_Norm_CI)
+    if (isinstance(ext_wf, wave_functions.norm_ci.Wave_Function_Norm_CI)
         and 'Absil' in args.algorithm
             and not args.at_ref):
         raise Exception('algorithm CISD_Absil is not compatible with'

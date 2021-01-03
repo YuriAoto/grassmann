@@ -135,6 +135,34 @@ class logtime():
         return str(timedelta(seconds=(self.end_time - other.ini_time)))
 
 
+class LogFilter():
+    """Define a filter for logging, to be attached to all handlers."""
+    def __init__(self, logfilter_re):
+        """Initialises the class
+        
+        Parameters:
+        -----------
+        logfilter_re (str, with a regular expression)
+            Only functions that satisfy this RE will be logged
+        """
+        self.logfilter_re = logfilter_re
+    
+    def filter(self, rec):
+        """Return a boolean, indicating whether rec will be logged or not."""
+        if rec.funcName == '__enter__':
+            rec.funcName = 'Entering time management'
+        elif rec.funcName == '__exit__':
+            rec.funcName = 'Finishing time management'
+        if self.logfilter_re is not None:
+            return self.logfilter_re.search(rec.funcName) is not None
+        # Uncomment this to check for possible records to filter
+        # print()
+        # print(rec)
+        # print(rec.__dict__)
+        # print()
+        return True
+
+
 def dist_from_ovlp(ovlp,
                    metric='Fubini-Study',
                    norms=(1.0, 1.0),
