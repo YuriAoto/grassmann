@@ -114,3 +114,64 @@ def occ_from_pos(str_ind, Y):
         next_str(occ)
     return occ
 
+def sign_relative_to_ref(int[:] holes, int[:] particles, int[:] ref_det_occ):
+    """Get sign to adapt to reference Slater determinant
+    
+    Lehtola's decomposition assume that the orbitals are ordered
+    with the reference determinant having first all occupied
+    orbitals, followed by all virtual orbitals.
+    Due to symmetry adapted orbitals, this might not be tha case
+    here. This function find the sign to correct this, namely,
+    given the holes and particles associated to an excitation
+    relative to a given occupation, give the sign to reorder
+    the excited determinant as if all occupied orbitals are
+    ordered before the virtuals in the reference
+    
+    Examples:
+    ---------
+    holes, particles = [5], [2]
+    ref_det_occ = [0, 1, 5, 6]
+        The excited determinant would be [0, 1, 2, 6]
+        in that convention, but [0, 1, 6, 2] if occ < virtual
+    return -1
+    
+    holes, particles = [1, 5], [2, 3]
+    ref_det_occ = [0, 1, 5, 6]
+        The excited determinant would be [0, 2, 3, 6]
+        in that convention, but [0, 6, 2, 3] if occ < virtual
+    return 1
+    
+    holes, particles = [5], [2]
+    ref_det_occ = [0, 1, 5]
+        The excited determinant would be [0, 1, 2]
+        in that convention, and also [0, 1, 2] if occ < virtual
+    return 1
+    
+    holes, particles = [1, 5], [2, 3]
+    ref_det_occ = [0, 1, 5]
+        The excited determinant would be [0, 2, 3]
+        in that convention, and [0, 2, 3] if occ < virtual
+    return 1
+    
+    Parameters:
+    -----------
+    hole, particles (1D np.array)
+        holes and particles, that is, where the excitation comes from 
+        and where goes to
+    
+    ref_det_occ (1D np.array)
+        The occupation of the reference
+    
+    Return:
+    -------
+    1 or -1
+    
+"""
+    cdef int n = 0
+    cdef int p
+    cdef int occ
+    for p in particles:
+        for occ in ref_det_occ:
+            if occ > p and occ not in holes:
+                n += 1
+    return 1 - (n % 2) * 2

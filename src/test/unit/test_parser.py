@@ -47,7 +47,7 @@ class InternalsTestCase(unittest.TestCase):
         file_content = []
         args = parser._argvise_file(self.filename2, file_content, '')
         self.assertEqual(args[0], '--key_a')
-        self.assertEqual(args[1], 'value a')
+        self.assertEqual(args[1], 'value_a')
         self.assertEqual(args[2], '--key2')
         self.assertEqual(args[3], 'value2')
         self.assertEqual(args[4], '--key1')
@@ -59,7 +59,7 @@ class InternalsTestCase(unittest.TestCase):
         self.assertEqual(args[10], '--key4')
         self.assertEqual(args[11], 'value4')
         self.assertEqual(args[12], '--key4')
-        self.assertEqual(args[13], 'new value 4')
+        self.assertEqual(args[13], 'new_value_4')
 
     def test_argvise_sysargv(self):
         testargs = [__name__, '--key1', 'value1', self.filename, '--key7', 'value7']
@@ -85,7 +85,7 @@ class InternalsTestCase(unittest.TestCase):
             self.assertEqual(sys.argv[1], '--key1')
             self.assertEqual(sys.argv[2], 'value1')
             self.assertEqual(sys.argv[3], '--key_a')
-            self.assertEqual(sys.argv[4], 'value a')
+            self.assertEqual(sys.argv[4], 'value_a')
             self.assertEqual(sys.argv[5], '--key2')
             self.assertEqual(sys.argv[6], 'value2')
             self.assertEqual(sys.argv[7], '--key1')
@@ -97,7 +97,7 @@ class InternalsTestCase(unittest.TestCase):
             self.assertEqual(sys.argv[13], '--key4')
             self.assertEqual(sys.argv[14], 'value4')
             self.assertEqual(sys.argv[15], '--key4')
-            self.assertEqual(sys.argv[16], 'new value 4')
+            self.assertEqual(sys.argv[16], 'new_value_4')
             self.assertEqual(sys.argv[17], '--key7')
             self.assertEqual(sys.argv[18], 'value7')
 

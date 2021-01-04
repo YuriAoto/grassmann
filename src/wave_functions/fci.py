@@ -17,7 +17,7 @@ import copy
 import math
 from collections import namedtuple
 
-from util import get_pos_from_rectangular
+from util import get_pos_from_rectangular, logtime
 from wave_functions import general
 import orbitals
 import molpro_util
@@ -400,9 +400,11 @@ class WaveFunctionFCI(general.Wave_Function):
         """Return a string version of the wave function."""
         x = []
         for det in self:
+            excinfo = self.get_exc_info(det)
             x.append(
-                str(det) + ' >> RANK: {}'.format(
-                    self.get_exc_info(det)[0]))
+                f'{det!s} >> RANK: {excinfo[0]}'
+                + f' ({excinfo[1][0]!s}->{excinfo[1][1]!s})'
+                + f' ({excinfo[2][0]!s}->{excinfo[2][1]!s})')
         x.append('-' * 50)
         return '\n'.join(x)
     
@@ -614,14 +616,28 @@ class WaveFunctionFCI(general.Wave_Function):
                 (np.array(holes_b, dtype=np.intc),
                  np.array(particles_b, dtype=np.intc)))
     
-    def normalise(self):
-        """Normalise the wave function to unity"""
-        S = 0.0
-        for c in self:
-            S += c**2
-        S = math.sqrt(S)
-        for i in self.all_indices():
-            self._coefficients[i] /= S
+    def normalise(self, mode='unit'):
+        """Normalise the wave function
+        
+        Parameters:
+        -----------
+        mode (str, optional, default='unit')
+            How the wave function is normalised.
+            'unit' normalises to unit.
+            'intermediate' put in the intermediate normalisation
+                (with respect to .ref_det)
+        """
+        if mode == 'unit':
+            S = 0.0
+            for c in self:
+                S += c**2
+            S = math.sqrt(S)
+        elif mode == 'intermediate':
+            S = self.C0
+        self.ref_det = SlaterDet(c=self.ref_det.c/S,
+                                 alpha_occ=self.ref_det.alpha_occ,
+                                 beta_occ=self.ref_det.beta_occ)
+        self._coefficients /= S
     
     @classmethod
     def from_int_norm(cls, wf_intN):
@@ -827,9 +843,9 @@ class WaveFunctionFCI(general.Wave_Function):
                 self.n_irrep, self.Ms).occupation)))
         if self.ref_det.c < 0:
             self._coefficients *= -1
-        self.ref_det = SlaterDet(c=self.ref_det.c,
-                                 alpha_occ=self.ref_det.alpha_occ,
-                                 beta_occ=self.ref_det.beta_occ)
+            self.ref_det = SlaterDet(c=-self.ref_det.c,
+                                     alpha_occ=self.ref_det.alpha_occ,
+                                     beta_occ=self.ref_det.beta_occ)
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
@@ -1313,7 +1329,73 @@ class WaveFunctionFCI(general.Wave_Function):
                        only_this_occ=None):
         raise NotImplementedError('undone')
     
-    def compare_to_CC_manifold(self, level='D', recipes_f=None):
+    def _extract_S_from_D(self, recipes_f=None):
+        """Extract the contribution of singles from the doubles
+        
+        Changes the coefficients of the double excitations
+        by its decomposition into singles:
+        
+        new_c_{ij}^{ab} = c_{ij}^{ab}
+                          - (c_{i}^{a}c_{j}^{b} + c_{i}^{b}c_{j}^{a})
+        
+        Side Effect:
+        ------------
+        The coefficients of all double excitations are changed!
+        
+        TODO:
+        -----
+        Implement an option that creates another coefficients matrix
+        instead of changing this matrix.
+        (or implement a referse function)
+        
+        """
+        for ia, ib, det in self.enumerate():
+            rank, alpha_hp, beta_hp = self.get_exc_info(det)
+            if rank == 2:
+                decomposition = cluster_decompose(
+                    alpha_hp, beta_hp, self.ref_det,
+                    mode='SD', recipes_f=recipes_f)
+                for d in decomposition:
+                    singles_contr = d[0]
+                    for cluster_det in d[1:]:
+                        singles_contr *= self[self.index(cluster_det)]
+                    self._coefficients[ia, ib] += singles_contr
+                    
+    def _restore_S_to_D(self, recipes_f=None):
+        """The reverse of _extract_S_from_D"""
+        raise NotImplementedError('Do it')
+                    
+    def _coeff_as_order_relative_to_ref(self):
+        """Change the coefficients as if the orbitals were relative to ref_det
+        
+        Because of symmetry, the reference Slater determinant might not be
+        that with all occupied orbitals first. This causes some sign problems
+        in the cluster decomposition of the wave function, and thus this subroutine
+        changes the sign of the determinants as if the orbitals were reordered
+        with all occupied orbitals in the reference coming first.
+        However, the order of the orbitals (and thus of the alpha and beta strings)
+        are not really changed! 
+        If the wave function is to be used again after decompose, this method
+        has to be called again to change back the signs!
+        
+        See strings_rev_lexical_order.sign_relative_to_ref
+        
+        """
+        for ia, ib, det in self.enumerate():
+            rank, alpha_hp, beta_hp = self.get_exc_info(det)
+            self._coefficients[ia, ib] *= (
+                str_order.sign_relative_to_ref(alpha_hp[0],
+                                               alpha_hp[1],
+                                               self.ref_det.alpha_occ)
+                * str_order.sign_relative_to_ref(beta_hp[0],
+                                                 beta_hp[1],
+                                                 self.ref_det.beta_occ))
+    
+    def compare_to_CC_manifold(self,
+                               level='D',
+                               recipes_f=None,
+                               coeff_thr=1.0E-10,
+                               restore_wf=True):
         """Analyse how the wave function relates to the CCD manifold
         
         This function is intended to compare the wave function to the
@@ -1332,6 +1414,25 @@ class WaveFunctionFCI(general.Wave_Function):
         It will print to the logs all tests, if loglevel is larger or equal
         20 (INFO)
         
+        Attention:
+        ----------
+        For the result (the vertical distance in the intermediate
+        normalisation) to be meaningful, this wave function should
+        be in the intermediate normalisation.
+        This is not checked or tested! The user is responsible to transform
+        (if desired) the wave function first (using normalise(mode='intermediate')).
+        If the coefficient of the reference (.ref_det) is positive,
+        the information about curving towards FCI is correct, even if
+        not in the intermediate normalisation.
+        
+        Side Effect:
+        ------------
+        If level == 'SD', this function changes the coefficients
+        of the wave function! The double excitations are transformed
+        to amplitudes by removing the contribution from singles.
+        Thus, does not the wave function for other purposes
+        (unless you know very well what you are doing)!
+        
         Parameters:
         -----------
         level (str, optional, default='D'; possible values: 'D', 'SD')
@@ -1341,10 +1442,27 @@ class WaveFunctionFCI(general.Wave_Function):
             The files that describe the cluster decomposition.
             See decompose for the details
         
+        coeff_thr (float, optional, default=1.0E-10)
+            Slater determinants with coefficients lower than this
+            threshold value are ignored in the analysis
+        
+        change_wf_back (bool, optional, default=True)
+            During this analysis the coefficients of the function is changed
+            
+        restore_wf (bool, optional, default=True)
+            Restore all changes made to the wave function dureing this function,
+            such that it can be further used.
+            If the wave function is not going to be used for further purposes,
+            set it to False.
+        
         Return:
         -------
         The "vertical" distance between self and the CCD manifold,
         in the metric induced by intermediate normalisation.
+        
+        TODO:
+        -----
+        Change back the doubles. See _extract_S_from_D.
         
         """
         logfmt = '\n'.join(['det = %s',
@@ -1355,48 +1473,54 @@ class WaveFunctionFCI(general.Wave_Function):
         if level not in ['D', 'SD']:
             raise ValueError('Possible values for level are "S" and "SD"')
         if level == 'SD':
-            raise NotImplementedError('Extract S from D. Fix "recipes_1.')
+            with logtime('Extracting S from D'):
+                self._extract_S_from_D()
+        with logtime('Changing coefficients as order is relative to ref_det.'):
+            self._coeff_as_order_relative_to_ref()
         norm = 0.0
         right_dir = {}
         # Another possibility: run over holes and particles directly:
         # for `all_Q_6_8_...` in self:
-        for ia, ib, det in self.enumerate():
+        for det in self:
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            even_rank = rank > 2 and rank % 2 == 0
-            rank = _str_excitation(rank)
-            if even_rank or level == 'SD':
+            do_decomposition = (abs(det.c) > coeff_thr
+                                and rank > 2
+                                and (level == 'SD' or rank % 2 == 0))
+            if do_decomposition:
+                decomposition = cluster_decompose(
+                    alpha_hp, beta_hp, self.ref_det,
+                    mode=level, recipes_f=recipes_f)
+                C = 0.0
+                for d in decomposition:
+                    new_contribution = d[0]
+                    for cluster_det in d[1:]:
+                        new_contribution *= self[self.index(cluster_det)]
+                    C -= new_contribution
+                norm_contribution = (det.c - C)**2
+                CC_towards_wf = det.c * C >= 0
+                norm += norm_contribution
+                rank = _str_excitation(rank)
                 if rank not in right_dir:
                     right_dir[rank] = [0, 1]
                 else:
                     right_dir[rank][1] += 1
-            if rank != 'R':
-                if even_rank or level == 'SD':
-                    decomposition = cluster_decompose(
-                        alpha_hp, beta_hp, self.ref_det,
-                        mode=level, recipes_f=recipes_f)
-                    C = 0.0
-                    for d in decomposition:
-                        new_contribution = d[0]
-                        for cluster_det in d[1:]:
-                            new_contribution *= self[self.index(cluster_det)]
-                        C -= new_contribution
-                    norm_contribution = (det.c - C)**2
-                    CC_towards_wf = det.c * C >= 0
-                    norm += norm_contribution
-                    if CC_towards_wf:
-                        right_dir[rank][0] += 1
-                    logger.info(logfmt,
-                                det,
-                                C,
-                                C/det.c
-                                if abs(det.c) > 1.0E-10 else
-                                ' c = ' + str(det.c) + ' << 1',
-                                norm_contribution,
-                                CC_towards_wf)
-                elif rank == 'S' and level == 'D':
-                    norm += det.c**2
-        tolog = ['Number of excitations in the right direction:']
+                if CC_towards_wf:
+                    right_dir[rank][0] += 1
+                logger.info(logfmt,
+                            det,
+                            C,
+                            C/det.c,
+                            norm_contribution,
+                            CC_towards_wf)
+            elif rank > 2 or (rank, level) == (1, 'D'):
+                norm += det.c**2
+        tolog = ['Number of excitations where the CC manifold\n'
+                 + '   curves towards the wave function:']
         for rank, n in right_dir.items():
-            tolog.append('{}: {} of {}'.format(rank, n[0], n[1]))
+            tolog.append(f'{rank}: {n[0]} of {n[1]}')
         logger.info('\n'.join(tolog))
-        return math.sqrt(norm)
+        if restore_wf:
+            if level == 'SD':
+                self._restore_S_to_D()
+            self._coeff_as_order_relative_to_ref()
+        return math.sqrt(norm), right_dir

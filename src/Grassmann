@@ -48,6 +48,8 @@ logging.basicConfig(filename=args.logfile,
                     format=log_format,
                     filemode='w',
                     level=args.loglevel)
+logging.logThreads = 0
+logging.logProcesses = 0
 logger = logging.getLogger(__name__)
 for handler in logging.root.handlers:
     handler.addFilter(util.LogFilter(args.logfilter))

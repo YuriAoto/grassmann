@@ -173,8 +173,7 @@ def _check(args):
         args.basename = re.sub(r'\.out$', '', args.molpro_output)
     else:
         args.basename = 'grassmann'
-    if args.output is None:
-        args.output = args.basename + args.out_extension
+    args.output = args.basename + args.out_extension
     args.logfile = args.basename + args.log_extension
     args.outdir = args.basename + args.dir_extension
     args.wdir = os.getcwd()

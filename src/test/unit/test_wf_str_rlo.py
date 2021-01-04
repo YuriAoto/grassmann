@@ -221,3 +221,27 @@ class RevLexOrdTestCase3(unittest.TestCase):
         occ = make_occ([4, 5, 6, 7])
         str_order.next_str(occ)
         self.assertEqual(occ, make_occ([0, 1, 2, 8]))
+
+class SignRelRefTestCase(unittest.TestCase):
+
+    def test_sign_rel_ref(self):
+        self.assertEqual(str_order.sign_relative_to_ref(
+            make_occ([5]),
+            make_occ([2]),
+            make_occ([0, 1, 5, 6])),
+                         -1)
+        self.assertEqual(str_order.sign_relative_to_ref(
+            make_occ([1, 5]),
+            make_occ([2, 3]),
+            make_occ([0, 1, 5, 6])),
+                         1)
+        self.assertEqual(str_order.sign_relative_to_ref(
+            make_occ([5]),
+            make_occ([2]),
+            make_occ([0, 1, 5])),
+                         1)
+        self.assertEqual(str_order.sign_relative_to_ref(
+            make_occ([1, 5]),
+            make_occ([2, 3]),
+            make_occ([0, 1, 5])),
+                         1)
