@@ -73,7 +73,7 @@ CID $\leftrightarrow$ CCD, CISD $\leftrightarrow$ CCSD, etc)
 after ``curving'' it.
 It is expected that, being CC more accurate that CI, this ``curving'' goes towards the exact
 ground state wave function.
-This is what we investigate here, and the precise definition is given below.
+This is what we want to investigate, and the precise definition is given below.
 
 \section{The CCD manifold}
 
@@ -101,33 +101,69 @@ for quadruply excited determinants,
   c_{ijklmn}^{abcdef} = t_{ij}^{ab} * t_{kl}^{cd} * t_{mn}^{ef}\,,
 \end{equation}
 for sextuply excited determinants, etc.
-The way that these are expressed in terms of $t_{ij}^{ab}$ can be found in Lehtola's work \cite{}.
+
+The way that these are expressed in terms of $t_{ij}^{ab}$ can be obtained by expanding the operator $e^{T_2}$.
+This has been done by Lehtola and coauthors \cite{}.
+They report in their paper the \emph{cluster decomposition} of the FCI wave function,
+and show how each CI coefficient is decomposed in amplitudes.
+for the case with no truncation in the cluster operator $T$).
+Whenever we consider only the $T_2$ operator,
+we can simply neglect all contribution from amplitudes other than doubles.
+For instance:
+\begin{equation}
+  \begin{split}
+    c_{ijkl}^{abcd} =
+    & \phantom{+} t_{ij}^{ab}t_{kl}^{cd} - t_{ij}^{ac}t_{kl}^{bd} + t_{ij}^{ad}t_{kl}^{bc}\\
+  & + t_{ij}^{bc}t_{kl}^{ad} - t_{ij}^{bd}t_{kl}^{ac} + t_{ij}^{cd}t_{kl}^{ab}\\
+  & - t_{ik}^{ab}t_{jl}^{cd} + t_{ik}^{ac}t_{jl}^{bd} - t_{ik}^{ad}t_{jl}^{bc}\\
+  & - t_{ik}^{bc}t_{jl}^{ad} + t_{ik}^{bd}t_{jl}^{ac} - t_{ik}^{cd}t_{jl}^{ab}\\
+  & + t_{il}^{ab}t_{jk}^{cd} - t_{il}^{ac}t_{jk}^{bd} + t_{il}^{ad}t_{jk}^{bc}\\
+  & + t_{il}^{bc}t_{jk}^{ad} - t_{il}^{bd}t_{jk}^{ac} + t_{il}^{cd}t_{jk}^{ab}
+  \end{split}
+\end{equation}
+This rules for the decomposition until eight-rank excitations can be obtained
+from Lehtola's Github repository.
+The decomposition is done in \texttt{wave\_functions.fci.cluster\_decompose}.
+Note, however, that the above rules hold when we consider occupied orbitals
+in the reference coming before the virtuals (for each alpha or beta parts).
+If the orbitals are ordered in a different way a sign correction should be applied.
 
 For each one of the higher-rank excited determinant (quadruples, etc),
 we say that the CCD manifold bends towards the FCI wave function in that direction if
 the sign of $c_I$ in the FCI wave function is the same as of the corresponding cluster expansion
-in doubles, using the coefficients of doubles the same wave function.
+in doubles, using the coefficients of doubles of the same wave function.
 For instance, if the FCI wave function is given in the intermediate normalization,
 the CCD manifold bends toward FCI in the direction of $\Phi_{ijkl}^{abcd}$ if:
 \begin{equation}
   \frac{c_{ij}^{ab} * c_{kl}^{cd}}{c_{ijkl}^{abcd}} > 0\,.
 \end{equation}
-
-The \emph{vertical distance} between the wave function $\Psi_0$ and the CCD manifold is obtained as
-$D_{IN}(\Psi_0, \Psi_0^{CCD,vert})$, where $\Psi_0^{CCD,vert}$ is the CCD wave function
+Furthermore,
+the \emph{vertical distance} between the wave function $\Psi_0$ and the CCD manifold is obtained as
+\begin{equation}
+  D_\text{IN}(\Psi_0, \Psi_0^{CCD,vert})\,,
+\end{equation}
+where $\Psi_0^{CCD,vert}$ is the CCD wave function
 with the same double amplitudes as the coefficients of double excitations as in $\Psi_0$:
 \begin{equation}
-  D_{CCD}^{vert}(\Psi_0) = 
-  D_{IN}(\Psi_0, \Psi_0^{CCD,vert}) = \sqrt{
-    \sum_i^a (c_i^a)^2 + \sum_{i<j<k}^{a<b<c} (c_{ijk}^{abc})^2 + \sum_{i<j<k<l}^{a<b<c<d}(c_{ijkl}^{abcd} - c_{ij}^{ab} * c_{kl}^{cd})^2 + \dots
-  }
+  \begin{split}
+    D_{CCD}^{vert}(\Psi_0) =& D_{IN}(\Psi_0, \Psi_0^{CCD,vert})\\
+    =& \sqrt{
+      \sum_i^a (c_i^a)^2
+      + \sum_{i<j<k}^{a<b<c} (c_{ijk}^{abc})^2
+      + \sum_{i<j<k<l}^{a<b<c<d}(c_{ijkl}^{abcd} - c_{ij}^{ab} * c_{kl}^{cd})^2 + \dots
+    }
+  \end{split}
 \end{equation}
 
+The calculation of the vertical distance between $\Psi_0$ and the CCD manifold,
+as well as the check if the manifold curves towards $\Psi_0$,
+is made at \texttt{fci.WaveFunctionFCI.compare\_to\_CC\_manifold}.
+
 \section{The CCSD manifold}
-We will extend the ideas and equations to the CCSD manifold, formed by the wave functions equation
-of the form:
+We will extend the ideas and equations discussed above to the CCSD manifold,
+formed by the wave functions of the form:
 \begin{equation}
-  \Psi_{CCD} = e^{T_1 + T_2} \Phi_0 =
+  \Psi_{CCSD} = e^{T_1 + T_2} \Phi_0 =
   \left(1 + T_1 + T_2 + \frac{1}{2!}(T_1 + T_2)^2 + \frac{1}{3!}(T_1 + T_2)^3 + ...\right) \Phi_0\,,
 \end{equation}
 where $T_1$ is further defined by:
@@ -137,46 +173,49 @@ where $T_1$ is further defined by:
 
 Now the CC wave functions contain not only even rank excitations,
 but also singles, triples, etc.
-To decompose triple and higher rank excitation in terms of single and doubles can be done
-as before, following the work of Lehtola.
+The decomposition triple and higher rank excitations in terms of single and doubles \emph{amplitudes}
+can be done as before, following the work of Lehtola.
 However, now we cannot use the coefficients of double and single excitations in $\Psi_0$
-directly, since the singles also contribute to the doubles in the CCSD wave function.
-Thus,
-we have first to extract the contribution of singles from the coefficients of doubles in $\Psi_0$:
-\begin{equation}
-  \tilde{c}_{ij}^{ab} = c_{ij}^{ab} - c_i^a * c_j^b\,.
+directly, since the amplitudes of singles also contribute to the coefficient of doubly excited
+determinants in the CCSD wave function
+Thus, we have first to extract the contribution of singles
+from the coefficients of doubles in $\Psi_0$:
+\begin{equation}\label{eq:extract_S_from_D}
+  t_{ij}^{ab} = c_{ij}^{ab} - c_i^a * c_j^b\,.
 \end{equation}
+Note that $c_i^a = t_i^a$.
 
-Thus, we say that the CCSD manifold curve to the direction of $\Psi_0$ in the direction of
-$\Phi_{ijk}^{abc}$ if:
+Thus, we say that the CCSD manifold curves towards $\Psi_0$ in the direction of
+$\Phi_{ijk}^{abc}$ if
 \begin{equation}
-  \frac{c_{ijk}^{abc}}{c_{i}^{a} * \tilde{c}_{jk}^{bc}} > 0\,,
+  \frac{c_{ijk}^{abc}}{c_{i}^{a} * t_{jk}^{bc}} > 0\,,
 \end{equation}
-and that the CCSD manifold curve towards $\Psi_0$ in the direction of
-$\Phi_{ijkl}^{abcd}$ if:
+and that the CCSD manifold curves towards $\Psi_0$ in the direction of
+$\Phi_{ijkl}^{abcd}$ if
 \begin{equation}
   \frac{c_{ijkl}^{abcd}}
   {c_{i}^{a} * c_{j}^{b} * c_{k}^{c} * c_{l}^{d}
-    + c_{i}^{a} * c_{j}^{b} * \tilde{c}_{kl}^{cd}
-    + \tilde{c}_{ij}^{ab} * \tilde{c}_{kl}^{cd}} > 0\,.
+    + c_{i}^{a} * c_{j}^{b} * t_{kl}^{cd}
+    + t_{ij}^{ab} * t_{kl}^{cd}} > 0\,.
 \end{equation}
 
-Finally the \emph{vertical distance} between the wave function $\Psi_0$ and the CCSD manifold is obtained as
-$D_{IN}(\Psi_0, \Psi_0^{CCSD,vert})$, where $\Psi_0^{CCSD,vert}$ is the CCSD wave function
+Finally the \emph{vertical distance} between the wave function $\Psi_0$
+and the CCSD manifold is obtained as
+$D_\text{IN}(\Psi_0, \Psi_0^{CCSD,vert})$, where $\Psi_0^{CCSD,vert}$ is the CCSD wave function
 with the same single amplitudes as the coefficients of single excitations as in $\Psi_0$,
-but doubles amplitudes given by $\tilde{c}_{ij}^{ab}$:
+but doubles amplitudes given by Equation~\eqref{eq:extract_S_from_D}:
 \begin{equation}
   \begin{split}
     D_{CCSD}^{vert}(\Psi_0) &= 
     D_{IN}(\Psi_0, \Psi_0^{CCSD,vert})\\
     &= \sqrt{
       \sum_{i<j<k}^{a<b<c}
-      (c_{ijk}^{abc} - c_{i}^{a} * \tilde{c}_{jk}^{bc})^2
+      (c_{ijk}^{abc} - c_{i}^{a} * t_{jk}^{bc})^2
       + \sum_{i<j<k<l}^{a<b<c<d}
       (c_{ijkl}^{abcd}
       - c_{i}^{a} * c_{j}^{b} * c_{k}^{c} * c_{l}^{d}
-      - c_{i}^{a} * c_{j}^{b} * \tilde{c}_{kl}^{cd}
-      - \tilde{c}_{ij}^{ab} * \tilde{c}_{kl}^{cd})^2 + \dots
+      - c_{i}^{a} * c_{j}^{b} * t_{kl}^{cd}
+      - t_{ij}^{ab} * t_{kl}^{cd})^2 + \dots
     }
   \end{split}
 \end{equation}
