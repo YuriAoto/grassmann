@@ -31,6 +31,43 @@ default_recipe_files = (
     '/home/yuriaoto/Documents/Codes/grassmann/src/wave_functions/recipes')
 
 
+class Results(namedtuple('Results',
+                         ['distance',
+                          'wf',
+                          'norm',
+                          'last_iteration',
+                          'converged',
+                          'right_dir',
+                          'n_pos_H_eigVal'])):
+    """A namedtuple for the results of optimisation
+    
+    Attributes:
+    -----------
+    distance (float)
+        The value of the distance in the end of the procedure
+    
+    wf (list of 2d np.arrays)
+        The CC wave function
+    
+    norm (float or tuple of floats)
+        norm of vectors that should vanish at convergence
+    
+    last_iteration (int)
+        number of iterations
+    
+    converged (bool)
+        Indicates convergence
+    
+    right_dir (dict)
+        Indicates the number of directions where the manifold curves
+        towards the wave function
+    
+    n_pos_HeigVal (int)
+        number of positive eigenvalues of the Hessian
+    """
+    __slots__ = ()
+
+
 _str_excitation_list = ['R',
                         'S',
                         'D',
@@ -1523,4 +1560,103 @@ class WaveFunctionFCI(general.Wave_Function):
             if level == 'SD':
                 self._restore_S_to_D()
             self._coeff_as_order_relative_to_ref()
-        return math.sqrt(norm), right_dir
+        return Results(distance=math.sqrt(norm),
+                       wf=CC_wf,
+                       norm=None,
+                       last_iteration=None,
+                       converged=None,
+                       right_dir=right_dir,
+                       n_pos_H_eigVal=None)
+
+    def calc_dist_to_CC_manifold(self,
+                                 level='D',
+                                 maxiter=10,
+                                 thrsh_Z=1.0E-8,
+                                 thrsh_J=1.0E-8,
+                                 ini_CC_wf=None,
+                                 recipes_f=None,
+                                 coeff_thr=1.0E-10,
+                                 restore_wf=True):
+        """Calculate the distance to the coupled cluster manifold
+        
+        
+        
+        Parameters:
+        -----------
+        level (str, optional, default='D'; possible values: 'D', 'SD')
+            The level of CC theory to compare.
+        
+        maxiter (int, optional, default=10)
+            The maximum number of iterations
+        
+        thrsh_Z (float, optional, default=1.0E-8)
+            Convergence threshold for z
+        
+        thrsh_J (float, optional, default=1.0E-8)
+            Convergence threshold for the Jacobian
+        
+        ini_CC_wf (None or an instance of Wave_Function_Int_Norm)
+            The initial coupled cluster wave function.
+            If None, the "vertical" projection is used.
+        
+        recipes_f (str, a file name, optional, default None)
+            The files that describe the cluster decomposition.
+            See decompose for the details
+        
+        coeff_thr (float, optional, default=1.0E-10)
+            Slater determinants with coefficients lower than this
+            threshold value are ignored in the analysis
+        
+        change_wf_back (bool, optional, default=True)
+            During this analysis the coefficients of the function is changed
+            
+        restore_wf (bool, optional, default=True)
+            Restore all changes made to the wave function dureing this function,
+            such that it can be further used.
+            If the wave function is not going to be used for further purposes,
+            set it to False.
+        
+        Return:
+        -------
+        The distance between self and the CC manifold,
+        in the metric induced by intermediate normalisation.
+        """
+        converged = False
+        if ini_CC_wf is None:
+            ini_CC_wf = self.compare_to_CC_manifold(level=level,
+                                                    recipes_f=recipes_f,
+                                                    coeff_thr=coeff_thr,
+                                                    restore_wf=True).wf
+        for i_iteration in range(maxiter):
+            with logtime(f'Starting iteration {i_iteration}') as T_iter:
+                if i_iteration > 0:
+                    if normJ < thrsh_J and normZ < thrsh_Z
+                        converged=True
+                        break
+                with logtime('Making Jacobian and Hessian'):
+                    Jac, Hess = make_cc_minD_Jac_hess()
+                logger.log(1, 'Jacobian:\n%r', Jac)
+                logger.log(1, 'Hessian:\n%r', Hess)
+                normJ = linalg.norm(Jac)
+                # Newton update
+                with logtime('Calculating z: Solving linear system.'):
+                    z = -linalg.solve(Hess, Jac)
+                normZ = linalg.norm(z)
+                ini_CC_wf = make_new_cc_wf_from_z(ini_CC_wf, z)
+            if f_out is not None:
+                f_out.write(fmt_full.
+                            format(i_iteration,
+                                   dist,
+                                   normZ,
+                                   normJ,
+                                   T_iter.elapsed_time))
+                f_out.flush()
+        return Results(distance=dist,
+                       wf=ini_CC_wf,
+                       norm=(normZ, normJ),
+                       last_iteration=i_iteration,
+                       converged=converged,
+                       right_dir=None,
+                       n_pos_H_eigVal=None)
+
+    

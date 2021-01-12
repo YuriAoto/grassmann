@@ -75,7 +75,9 @@ It is expected that, being CC more accurate that CI, this ``curving'' goes towar
 ground state wave function.
 This is what we want to investigate, and the precise definition is given below.
 
-\section{The CCD manifold}
+\section{The vertical distance and the vertical ``projection''}
+
+\subsection{The CCD manifold}
 
 The CCD manifold is made by all wave functions of the type:
 \begin{equation}
@@ -159,7 +161,7 @@ The calculation of the vertical distance between $\Psi_0$ and the CCD manifold,
 as well as the check if the manifold curves towards $\Psi_0$,
 is made at \texttt{fci.WaveFunctionFCI.compare\_to\_CC\_manifold}.
 
-\section{The CCSD manifold}
+\subsection{The CCSD manifold}
 We will extend the ideas and equations discussed above to the CCSD manifold,
 formed by the wave functions of the form:
 \begin{equation}
@@ -220,7 +222,59 @@ but doubles amplitudes given by Equation~\eqref{eq:extract_S_from_D}:
   \end{split}
 \end{equation}
 
+\section{The distance to the coupled-cluster manifold}
 
+For the CI manifold, the vertical projection of an arbitrary wave function
+is the point of the manifold that maximises the distance between the manifold
+and the wave function, that is just the vertical distance.
+For the coupled-cluster manifold, however, this is no longer true, since it is curved.
+We will assume that there is a point in the coupled cluster manifold that minimises the
+distance (in the intermediate normalisation) to a given wave function.
+Since this manifold is not compact this is not necessarily true,
+but seems a reasonable assumption if the wave function is the exact ground state
+wave function for a well behaved system.
+To find the point at this manifold that minimises this distance a optimisation has to be done.
+
+The goal is to find $\Psi_{CC}^{minD}$ at the CC manifold (of a given level)
+such that
+\begin{equation}
+  D_{IN}(\Psi_0, \Psi_{CC})^2 = \braket{\Psi_0 - \Psi_{CC}}{\Psi_0 - \Psi_{CC}}
+\end{equation}
+is minimum for all $\Psi_{CC} \in U_{CC}$.
+Minimising the square of the distance is just a matter of convenience.
+Since the manifold is already parametrised by the amplitudes,
+we will use them, stored in a vector $\mathbf{t}$ whose elements are $t_\rho$.
+Applying the stationary condition we have:
+\begin{equation}
+  \begin{split}
+    0 =& \frac{1}{2} \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
+    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
+    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
+  \end{split}
+\end{equation}
+The factor $\frac{1}{2}$ is just for convenience again.
+The wave function $\Psi_0$ must be in the intermediate normalisation.
+$\Phi_\rho = \tau_\rho\Phi_0$ and the last equality holds because $\tau_\rho$ commutes with
+the cluster operator.
+The Hessian, needed for a Newton optimisation:
+\begin{equation}
+  \begin{split}
+    H_{\sigma\rho}(\mathbf{t}) =
+    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}}
+    - \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}\\
+    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})}
+    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,.
+  \end{split}
+\end{equation}
+
+If these quantities are calculated, the Newton step is obtained as:
+\begin{equation}
+  \mathbf{t}_\text{new} =
+  \mathbf{t} - \left(\mathbf{H}(\mathbf{t})\right)^{-1}\mathbf{J}(\mathbf{t})\,.
+\end{equation}
+This is implemented at \texttt{wave\_functions.fci.WaveFunctionFCI.calc\_dist\_to\_CC\_manifold}.
+What is more challenging, and time consuming, is the calculation of $\mathbf{J}(\mathbf{t})$ and
+$\mathbf{H}(\mathbf{t})$.
 
 
 %%% Local Variables:
