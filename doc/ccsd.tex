@@ -85,8 +85,16 @@ the connection between the equations and the code.
 
 \begin{equation}
   \begin{split}
-    \Omega_i^a = ...
-  \end{split}
+%    \Omega_i^a &=\sum_{cd}\sum_k(2t_{ki}^{cd}{\tilde g}_{adkc}-t_{ik}^{cd}{\tilde g}_{adkc})\\
+%    &-\sum_c\sum_{kl}(2t_{kl}^{ac}{\tilde g}_{kilc}-t_{lk}^{ac}{\tilde g}_{kilc})\\
+%    &+\sum_c\sum_k(2t_{ik}^{ac}-t_{ki}^{ac})({\tilde h}_{kc}+\sum_l2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
+%    &+{\tilde h}_{ai}+\sum_k2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
+    \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
+    &+\sum_c[(2t_{ik}^{ac}-t_{ki}^{ac}){\tilde h}_{kc}+\sum_d(2t_{ki}^{cd}-t_{ik}^{cd}){\tilde g}_{adkc}\\
+    &-\sum_l(2t_{kl}^{ac}-t_{lk}^{ac}){\tilde g}_{kilc}+(2t_{ik}^{ac}-t_{ki}^{ac})(2{\tilde g}_{kcll}-{\tilde g}_{kllc})]\}\\
+    &={\tilde h}_{ai}+\sum_{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+\sum_d(u_{ki}^{cd}{\tilde g}_{adkc})\\
+      &-\sum_l(u_{kl}^{ac}{\tilde g}_{kilc}+u_{ik}^{ac}{\tilde L}_{kcll})]\}
+   \end{split}
 \end{equation}
 
 \subsubsection{Doubles}
@@ -95,7 +103,15 @@ the connection between the equations and the code.
 
 \begin{equation}
   \begin{split}
-    \Omega_{ij}^{ab} = ...
+    \Omega_{ij}^{ab}&={\tilde g}_{aibj}\\
+    &+\sum_{c}[t_{ij}^{ac}({\tilde h}_{bc}+\sum_{k}2{\tilde g}_{bckk}-{\tilde g}_{bkkc})+t_{ji}^{bc}({\tilde h}_{ac}+\sum_{k}2{\tilde g}_{ackk}-{\tilde g}_{akkc})+\sum_dt_{ij}^{cd}{\tilde g}_{acbd}]\\
+    &+\sum_{k}[t_{ik}^{ab}({\tilde h}_{kj}+\sum_{l}2{\tilde g}_{kjll}-{\tilde g}_{kllj})+t_{jk}^{ba}({\tilde h}_{ki}+\sum_{l}2{\tilde g}_{kill}-{\tilde g}_{klli})+\sum_lt_{kl}^{ab}{\tilde g}_{kilj}]\\
+    &+\sum_{c}\sum_{k}\{-2^{-1}t_{kj}^{bc}{\tilde g}_{kiac}-t_{ki}^{bc}{\tilde g}_{kjac}-2^{-1}t_{ki}^{ac}{\tilde g}_{kjbc}-t_{kj}^{ac}{\tilde g}_{kibc}\\
+    &+(t_{jk}^{bc}-2^{-1}t_{kj}^{bc})(2{\tilde g}_{aikc}-{\tilde g}_{acki})+(t_{ik}^{ac}-2^{-1}t_{ki}^{ac})(2{\tilde g}_{bjkc}-{\tilde g}_{bckj})\\
+    &+\sum_{d}\sum_{l}[t_{kl}^{ab}t_{ij}^{cd}+t_{kj}^{bd}t_{li}^{ac}+2^{-1}t_{ki}^{bd}t_{lj}^{ac}+t_{ki}^{ad}t_{lj}^{bc}+2^{-1}t_{kj}^{ad}t_{li}^{bc}\\
+    &+2t_{jl}^{bd}t_{ik}^{ac}-t_{jl}^{bc}t_{ik}^{ad}-t_{jl}^{bd}t_{ki}^{ac}-t_{lj}^{bd}t_{ik}^{ac}+2^{-1}t_{jl}^{bc}t_{ki}^{ad}+2^{-1}t_{lj}^{bc}t_{ik}^{ad}+2^{-1}t_{lj}^{bd}t_{ki}^{ac}-4^{-1}t_{lj}^{bc}t_{ki}^{ad}\\
+    &+2t_{il}^{ad}t_{jk}^{bc}-t_{il}^{ac}t_{jk}^{bd}-t_{il}^{ad}t_{kj}^{bc}-t_{li}^{ad}t_{jk}^{bc}+2^{-1}t_{il}^{ac}t_{kj}^{bd}+2^{-1}t_{li}^{ac}t_{jk}^{bd}+2^{-1}t_{li}^{ad}t_{kj}^{bc}-4^{-1}t_{li}^{ac}t_{kj}^{bd}\\
+    &-t_{ij}^{ad}(2t_{lk}^{bc}-t_{kl}^{bc})-t_{ik}^{ab}(2t_{lj}^{dc}-t_{jl}^{dc}))-t_{ji}^{bd}(2t_{lk}^{ac}-t_{kl}^{ac})-t_{jk}^{ba}(2t_{li}^{dc}-t_{il}^{dc})]{\tilde g}_{kcld}\}
   \end{split}
 \end{equation}
 
