@@ -57,7 +57,7 @@ Any state not orthogonal to $\Phi_0$ can be uniquely written in the intermediate
 \end{equation}
 where $\Phi_I$ are excited Slater determinants (relative to $\Phi_0$).
 The distance between two such wave functions is:
-\begin{equation}
+\begin{equation}\label{eq:dist_intem_norm}
   \begin{split}
     D_\text{IN}(\Psi,\Psi') &= |\Psi - \Psi'|\\
     &=\sqrt{\sum_{I \ne I_0} (c_I - c'_I)^2 }\\
@@ -223,6 +223,8 @@ but doubles amplitudes given by Equation~\eqref{eq:extract_S_from_D}:
 \end{equation}
 
 \section{The distance to the coupled-cluster manifold}
+\hypertarget{sec:dist_cc_man}{}
+\label{sec:dist_cc_man}
 
 For the CI manifold, the vertical projection of an arbitrary wave function
 is the point of the manifold that maximises the distance between the manifold
@@ -237,7 +239,7 @@ To find the point at this manifold that minimises this distance a optimisation h
 
 The goal is to find $\Psi_{CC}^{minD}$ at the CC manifold (of a given level)
 such that
-\begin{equation}
+\begin{equation}\label{eq:dist_CC_FCI}
   D_{IN}(\Psi_0, \Psi_{CC})^2 = \braket{\Psi_0 - \Psi_{CC}}{\Psi_0 - \Psi_{CC}}
 \end{equation}
 is minimum for all $\Psi_{CC} \in U_{CC}$.
@@ -245,7 +247,7 @@ Minimising the square of the distance is just a matter of convenience.
 Since the manifold is already parametrised by the amplitudes,
 we will use them, stored in a vector $\mathbf{t}$ whose elements are $t_\rho$.
 Applying the stationary condition we have:
-\begin{equation}
+\begin{equation}\label{eq:cc_minD_jac}
   \begin{split}
     0 =& \frac{1}{2} \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
     =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
@@ -257,7 +259,7 @@ The wave function $\Psi_0$ must be in the intermediate normalisation.
 $\Phi_\rho = \tau_\rho\Phi_0$ and the last equality holds because $\tau_\rho$ commutes with
 the cluster operator.
 The Hessian, needed for a Newton optimisation:
-\begin{equation}
+\begin{equation}\label{eq:cc_minD_hess}
   \begin{split}
     H_{\sigma\rho}(\mathbf{t}) =
     & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}}
@@ -268,7 +270,7 @@ The Hessian, needed for a Newton optimisation:
 \end{equation}
 
 If these quantities are calculated, the Newton step is obtained as:
-\begin{equation}
+\begin{equation}\label{eq:cc_minD_update}
   \mathbf{t}_\text{new} =
   \mathbf{t} - \left(\mathbf{H}(\mathbf{t})\right)^{-1}\mathbf{J}(\mathbf{t})\,.
 \end{equation}
@@ -276,6 +278,41 @@ This is implemented at \texttt{wave\_functions.fci.WaveFunctionFCI.calc\_dist\_t
 What is more challenging, and time consuming, is the calculation of $\mathbf{J}(\mathbf{t})$ and
 $\mathbf{H}(\mathbf{t})$.
 
+\subsection{One possible approximation to the Hessian}
+\label{sec:cc_man_appr_hess}
+
+It is clear from the equations above that the calculation of the Hessian is the most time consuming.
+However, although the Jacobian must be accurate to obtain the minimum of the distance,
+the Hessian can be approximate.
+One possible approximation, inspired in traditional coupled cluster theory,
+is to use only the diagonal elements of the Hessian:
+
+\begin{equation}\label{eq:cc_minD_hess_diag}
+  \begin{split}
+    H_{\rho\rho}(\mathbf{t}) =
+    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
+  \end{split}
+\end{equation}
+where we used the fact that $\tau_\rho\tau_\rho = 0$
+(we would remove electrons twice of the same spin-orbital).
+It is not clear if this would be a good approximation
+(namely, that the off diagonal terms are indeed lower than the diagonal),
+but the simplicity suggests that it is worth trying.
+With this, the amplitudes update is:
+\begin{equation}\label{eq:cc_minD_update}
+  (t_\rho)_\text{new}
+  = t_\rho + \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
+  = t_\rho
+  + \frac{\mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
+  {\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}}\,.
+\end{equation}
+
+
+
+\newpage
+\subsection{Flowchart}
+
+\input{cc_minD_flowchart}
 
 %%% Local Variables:
 %%% mode: latex

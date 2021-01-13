@@ -1,12 +1,3 @@
-\newcommand{\C}[1]{0.0+#1*4.0}
-\newcommand{\T}[1]{0.0-#1*2.5}
-\newcommand{\W}[1]{#1*3}
-
-\newcommand{\toBlue}{\color{blue}}
-\newcommand{\toBlack}{\color{black}}
-
-\newcommand{\pyVar}[1]{\textit{$\langle$#1$\rangle$}}
-
 
 \tikzset{
   hyperlink node/.style={
@@ -16,7 +7,8 @@
       \p2=(sourcenode.south east),
       \n1={\x2-\x1},
       \n2={\y1-\y2} in
-      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)] {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
+      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)]
+      {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
       % xelatex needs \XeTeXLinkBox, won't create a link unless it
       % finds text --- rules don't work without \XeTeXLinkBox.
       % Still builds correctly with pdflatex and lualatex
@@ -62,19 +54,18 @@
   }
   ]
 
-  
-  \def\lwdB{0.2cm};
-  \def\lwd{0.1cm};
-  \def\lwdE{0.0cm}
+
+  \def\lsT{0.2cm}; % line spacing after node's title
+  \def\ls{0.1cm}; % line spacing inside node
 
 
   % ======
   \node (init)  at (\C{0.3}, \T{-1.5})
   [algstep, text width=\W{80}, hyperlink node=sec:]
   {
-    \textbf{Initialisation}\\\vspace{\lwdB}
+    \textbf{Initialisation}\\\vspace{\lsT}
     \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.}}\\\vspace{\lwd}
+      {\footnotesize \texttt{ccsd.}}\\\vspace{\ls}
       
     \end{minipage}
   };
@@ -85,9 +76,9 @@
   \node (ener)  at (\C{-0.0}, \T{0.0})
   [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
   {
-    \textbf{Energy}\\\vspace{\lwdB}
+    \textbf{Energy}\\\vspace{\lsT}
     \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.get\_energy}}\\\vspace{\lwd}
+      {\footnotesize \texttt{ccsd.get\_energy}}\\\vspace{\ls}
       
     \end{minipage}
   };
@@ -98,10 +89,10 @@
   \node (res) at (\C{0.0}, \T{1.0})
   [algmultistep, text width=\W{150}, minimum height=4cm, hyperlink node=sec:ccsd_res]
   {
-    \textbf{Set residual}\\\vspace{\lwdB}
+    \textbf{Set residual}\\\vspace{\lsT}
     \begin{minipage}[t][9cm]{0.4\textwidth}
       \centering
-      {\footnotesize \texttt{ccsd.equation}}\\\vspace{\lwd}
+      {\footnotesize \texttt{ccsd.equation}}\\\vspace{\ls}
     \end{minipage}
   };
 
@@ -110,8 +101,8 @@
   \node (resterm1) at (\C{-1.0}, \T{2.0})
   [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
   {
-    \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\lwd}
+    \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lsT}
+    {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\ls}
   };
   % ------
 
@@ -119,8 +110,8 @@
   \node (resterm2) at (\C{1.0}, \T{2.0})
   [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
   {
-    \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\lwd}
+    \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lsT}
+    {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\ls}
   };
   % ------
 
@@ -128,8 +119,8 @@
   \node (resterm3) at (\C{0.0}, \T{3.5})
   [algstep, text width=\W{30}, hyperlink node=sec:residual_eq3]
   {
-    \textbf{Set term3}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\lwd}
+    \textbf{Set term3}\\\vspace{\lsT}
+    {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\ls}
   };
   % ------
 
@@ -144,10 +135,10 @@
   \node (update) at (\C{0.0}, \T{6.0})
   [algstep, text width=\W{90}, hyperlink node=sec:ccsd_update]
   {
-    \textbf{Update amplitudes}\\\vspace{\lwdB}
+    \textbf{Update amplitudes}\\\vspace{\lsT}
     \begin{minipage}{0.4\textwidth}
       \centering
-      {\footnotesize \texttt{ccsd.step}}\\\vspace{\lwd}
+      {\footnotesize \texttt{ccsd.step}}\\\vspace{\ls}
     \end{minipage}
   };
   % ------

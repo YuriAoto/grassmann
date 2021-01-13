@@ -24,6 +24,7 @@ import molpro_util
 from memory import mem_of_floats
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 import wave_functions.strings_rev_lexical_order as str_order
+from coupled_cluster import manifold
 
 logger = logging.getLogger(__name__)
 
@@ -1629,20 +1630,26 @@ class WaveFunctionFCI(general.Wave_Function):
                                                     restore_wf=True).wf
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
-                if i_iteration > 0:
-                    if normJ < thrsh_J and normZ < thrsh_Z
-                        converged=True
-                        break
-                with logtime('Making Jacobian and Hessian'):
-                    Jac, Hess = make_cc_minD_Jac_hess()
-                logger.log(1, 'Jacobian:\n%r', Jac)
-                logger.log(1, 'Hessian:\n%r', Hess)
+                dist = self.calc_dist_to_CC_wf(CC_as_FCI)
+                if i_iteration > 0 and normJ < thrsh_J and normZ < thrsh_Z:
+                    converged=True
+                    break
+                if approx_hess:
+                    with logtime('Making Jacobian and approximate Hessian'):
+                        Jac, z = manifold.min_dist_app_hess()
+                    logger.log(1, 'Jacobian:\n%r', Jac)
+                    logger.log(1, 'Update vector z:\n%r', z)
+                else:
+                    with logtime('Making Jacobian and Hessian'):
+                        Jac, Hess = manifold.min_dist_jac_hess()
+                    logger.log(1, 'Jacobian:\n%r', Jac)
+                    logger.log(1, 'Hessian:\n%r', Hess)
+                    with logtime('Calculating z: Solving linear system.'):
+                        z = -linalg.solve(Hess, Jac)
                 normJ = linalg.norm(Jac)
-                # Newton update
-                with logtime('Calculating z: Solving linear system.'):
-                    z = -linalg.solve(Hess, Jac)
                 normZ = linalg.norm(z)
                 ini_CC_wf = make_new_cc_wf_from_z(ini_CC_wf, z)
+                CC_as_FCI = WaveFunctionFCI.from_CC(ini_CC_wf)
             if f_out is not None:
                 f_out.write(fmt_full.
                             format(i_iteration,
