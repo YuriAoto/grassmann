@@ -1,132 +1,80 @@
 
-\tikzset{
-  hyperlink node/.style={
-    alias=sourcenode,
-    append after command={
-      let     \p1 = (sourcenode.north west),
-      \p2=(sourcenode.south east),
-      \n1={\x2-\x1},
-      \n2={\y1-\y2} in
-      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)]
-      {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
-      % xelatex needs \XeTeXLinkBox, won't create a link unless it
-      % finds text --- rules don't work without \XeTeXLinkBox.
-      % Still builds correctly with pdflatex and lualatex
-    }
-  }
-}
-
 \begin{center}
 \footnotesize
 \begin{tikzpicture}[
   ->,
   double,
-  very thick,
-  proj/.style={
-    align=center,
-    font=\bfseries,
-    color=red
-  },
-  projBox/.style={
-    thin
-  },
-  algstep/.style={
-    align=center,
-    anchor=north,
-    rectangle,
-    minimum size=6mm,
-    rounded corners=3mm,
-    very thick,
-    draw=black!50,
-    top color=white,
-    bottom color=black!20
-  },
-  algmultistep/.style={
-    align=center,
-    anchor=north,
-    rectangle,
-    minimum size=6mm,
-    rounded corners=3mm,
-    very thick,
-    draw=black!50,
-    top color=white,
-    bottom color=white
-  }
-  ]
-
-
-  \def\lsT{0.2cm}; % line spacing after node's title
-  \def\ls{0.1cm}; % line spacing inside node
+  very thick]
+%  \def\lsT{0.2cm}; % line spacing after node's title
+%  \def\ls{0.1cm}; % line spacing inside node
 
 
   % ======
   \node (init)  at (\C{0.3}, \T{-1.5})
-  [algstep, text width=\W{80}, hyperlink node=sec:]
+  [algstep, text width=\W{80}]
   {
     \textbf{Initialisation}\\\vspace{\lsT}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.}}\\\vspace{\ls}
-      
-    \end{minipage}
+    {\footnotesize $\Psi_{CC}$ as instance of \texttt{wave\_functions.IntermNormWF}}\\\vspace{\ls}
   };
   % ------
 
-  
   % ======
   \node (ener)  at (\C{-0.0}, \T{0.0})
   [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
   {
     \textbf{Energy}\\\vspace{\lsT}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.get\_energy}}\\\vspace{\ls}
-      
-    \end{minipage}
+    {\footnotesize \texttt{wave\_functions.IntermNormWF.energy}}\\\vspace{\ls}
+  };
+  % ------
+
+  % ======
+  \node (conv)  at (\C{-0.0}, \T{1.0})
+  [algcond, text width=\W{40}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{Converged?}\\\vspace{\lsT}
+    {\footnotesize $|\Omega| < \epsilon$}\\\vspace{\ls}
+  };
+  % ------
+
+  % ======
+  \node (transf_hg)  at (\C{-0.0}, \T{2.0})
+  [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{$T_1$ transformed Hamiltonian}\\\vspace{\lsT}
+    {\footnotesize \texttt{coupled\_cluster.ccsd.get\_t1\_transf}}\\\vspace{\ls}
   };
   % ------
 
   
   % ================================================
-  \node (res) at (\C{0.0}, \T{1.0})
+  \node (res) at (\C{0.0}, \T{4.0})
   [algmultistep, text width=\W{150}, minimum height=4cm, hyperlink node=sec:ccsd_res]
   {
     \textbf{Set residual}\\\vspace{\lsT}
-    \begin{minipage}[t][9cm]{0.4\textwidth}
+    \begin{minipage}[t][5cm]{0.4\textwidth}
       \centering
-      {\footnotesize \texttt{ccsd.equation}}\\\vspace{\ls}
+      {\footnotesize \texttt{coupled\_cluster.ccsd.equation}}\\\vspace{\ls}
     \end{minipage}
   };
 
 
-  % ======
-  \node (resterm1) at (\C{-1.0}, \T{2.0})
-  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
-  {
-    \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lsT}
-    {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\ls}
-  };
-  % ------
+  % % ======
+  % \node (resterm1) at (\C{-1.0}, \T{2.0})
+  % [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
+  % {
+  %   \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lsT}
+  %   {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\ls}
+  % };
+  % % ------
 
-  % ======
-  \node (resterm2) at (\C{1.0}, \T{2.0})
-  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
-  {
-    \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lsT}
-    {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\ls}
-  };
-  % ------
-
-  % ======
-  \node (resterm3) at (\C{0.0}, \T{3.5})
-  [algstep, text width=\W{30}, hyperlink node=sec:residual_eq3]
-  {
-    \textbf{Set term3}\\\vspace{\lsT}
-    {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\ls}
-  };
-  % ------
-
-    \draw [->] (resterm1.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
-    \draw [->] (resterm2.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
-    
+  % % ======
+  % \node (resterm2) at (\C{1.0}, \T{2.0})
+  % [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
+  % {
+  %   \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lsT}
+  %   {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\ls}
+  % };
+  % % ------
   
   % ------------------------------------------------
 
@@ -138,7 +86,7 @@
     \textbf{Update amplitudes}\\\vspace{\lsT}
     \begin{minipage}{0.4\textwidth}
       \centering
-      {\footnotesize \texttt{ccsd.step}}\\\vspace{\ls}
+      {\footnotesize \texttt{coupled\_cluster.ccsd.step}}\\\vspace{\ls}
     \end{minipage}
   };
   % ------
@@ -146,21 +94,15 @@
 
 
   \draw [->] (init.270) -- (ener.50);
-
-  \draw [->] (ener.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (res.90);
+  \draw [->] (ener.270) -- (conv.90);
+  \draw [->, condFalse] (conv.270) -- (transf_hg.90);
+  \draw [->, condTrue] (conv.0) -- (\C{2.0}, \T{1.0});
+  \draw [->] (transf_hg.270) -- (res.90);
   \draw [->] (res.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (update.90);
 
-  \draw [->] (update.230) -- (\C{-0.3}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
+  \draw [->] (update.270) -- (\C{0.0}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
   (\C{-2.0}, \T{-0.5}) -- (\C{-0.3}, \T{-0.5}) -- (ener.130);
-  % ======
-  \node at (\C{-0.5}, \T{6.8}) []
-  {$|\mathbf{\Omega}| > \epsilon$};
-  % ------
 
-  \draw [->] (update.310) -- (\C{0.3}, \T{7.0})  --  (\C{1.0}, \T{7.0});
-  % ======
-  \node at (\C{0.5}, \T{6.8}) []
-  {$|\mathbf{\Omega}| < \epsilon$};
   % ------
 
 \end{tikzpicture}
