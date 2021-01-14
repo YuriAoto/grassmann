@@ -9,127 +9,120 @@
 
 
   % ======
-  \node (init)  at (\C{0.3}, \T{-1.2})
-  [algstep, text width=\W{80}, hyperlink node=sec:]
+  \node (init)  at (\X{15}, \Y{-15})
+  [algstep, text width=\W{30}, hyperlink node=sec:]
   {
-    \textbf{Input}\\\vspace{\lsT}
-    {\footnotesize The $\Psi_0$ wave function}\\\vspace{\ls}
-    {\footnotesize Initial $\Psi_{CC}$ wave function}\\\vspace{\ls}
+    \textbf{Input}\vspT
+    {The $\Psi_0$ wave function}\vsp
+    {Initial $\Psi_{CC}$ wave function}\vsp
   };
   % ------
 
   % ======
-  \node (cc_wf)  at (\C{-0.0}, \T{0.0})
-  [algstep, text width=\W{80}, hyperlink node=sec:]
+  \node (cc_wf)  at (\X{0}, \Y{0})
+  [algstep, text width=\W{50}, hyperlink node=sec:]
   {
-    \textbf{$\Psi_{CC}$ as a FCI wave function}\\\vspace{\lsT}
-    {\footnotesize \texttt{fci.WaveFunctionFCI.from\_CC}}
+    \textbf{$\Psi_{CC}$ as a FCI wave function}\vspT
+    \texttt{fci.WaveFunctionFCI.from\_CC}\vsp
   };
   % ------
 
   % ======
-  \node (dist)  at (\C{-0.0}, \T{1.0})
-  [algstep, text width=\W{80}]
+  \node (dist)  at (\X{0}, \Y{15})
+  [algstep, text width=\W{50}]
   {
-    \textbf{Distance between $\Psi_0$ and $\Psi_{CC}$}\\\vspace{\lsT}
-    {\footnotesize \texttt{fci.WaveFunctionFCI.dist\_to}}\\\vspace{\ls}
-    {\footnotesize Eq.~\eqref{eq:dist_intem_norm}}\\\vspace{\ls}
+    \textbf{Distance between $\Psi_0$ and $\Psi_{CC}$}\vspT
+    \texttt{fci.WaveFunctionFCI.dist\_to}\vsp
+    {Eq.~\eqref{eq:dist_intem_norm}}\vsp
   };
   % ------
 
   % ======
-  \node (conv)  at (\C{-0.0}, \T{2.0})
-  [algcond, text width=\W{40}]
+  \node (conv)  at (\X{0}, \Y{30})
+  [algcond, text width=\W{35}]
   {
-    \textbf{Converged?}\\\vspace{\lsT}
-    {\footnotesize {$|\mathbf{J}| < \epsilon_J$ and $|\mathbf{H}^{-1}\mathbf{J}| < \epsilon_z$}}
+    \textbf{Converged?}\vspT
+    {$|\mathbf{J}| < \epsilon_J$ and $|\mathbf{H}^{-1}\mathbf{J}| < \epsilon_z$}\vsp
   };
   % ------
 
   % ======
-  \node (app_hess)  at (\C{-0.0}, \T{2.7})
+  \node (app_hess)  at (\X{0}, \Y{40})
   [algcond, text width=\W{40}, hyperlink node=sec:cc_man_appr_hess]
   {
-    \textbf{Approximate Hessian?}\\\vspace{\lsT}
+    \textbf{Approximate Hessian?}\vspT
   };
   % ------
 
   
   % ================================================
-  \node (jachess) at (\C{1.0}, \T{5.0})
-  [algmultistep,
-  text width=\W{80},
-  minimum height=2cm,
-  hyperlink node=sec:dist_cc_man]
+  \node (jachess) at (\X{25}, \Y{75})
+  [algmultistep, text width=\W{50}, hyperlink node=sec:dist_cc_man]
   {
-    \textbf{Set Jacobian and Hessian}\\\vspace{\lsT}
+    \textbf{Set Jacobian and Hessian}\vspT
     \begin{minipage}[t][5cm]{1.0\textwidth}
       \centering
-      {\footnotesize \texttt{coupled\_cluster.manifold.make\_min\_dist\_jac\_hess}}
+      \texttt{coupled\_cluster.manifold.make\_min\_dist\_jac\_hess}
     \end{minipage}
   };
 
   % ======
-  \node (jac) at (\C{0.7}, \T{5.0})
-  [algstep, text width=\W{50}]
+  \node (jac) at (\X{20}, \Y{70})
+  [algstep, text width=\W{30}]
   {
-    \textbf{Set Jacobian, $\mathbf{J}_{\rho}$}\\\vspace{\lsT}
-    {\footnotesize Eq.~\eqref{eq:cc_minD_jac}}\\\vspace{\ls}
+    \textbf{Set Jacobian, $\mathbf{J}_{\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_jac}}\vsp
   };
   % ------
 
   % ======
-  \node (hess) at (\C{1.3}, \T{5.7})
-  [algstep, text width=\W{50}]
+  \node (hess) at (\X{30}, \Y{85})
+  [algstep, text width=\W{30}]
   {
-    \textbf{Set Hessian, $\mathbf{H}_{\sigma\rho}$}\\\vspace{\lsT}
-    {\footnotesize Eq.~\eqref{eq:cc_minD_hess}}\\\vspace{\ls}
+    \textbf{Set Hessian, $\mathbf{H}_{\sigma\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_hess}}\vsp
   };
   % ------
   
   % ------------------------------------------------
 
 
-  
   % ================================================
-  \node (jachess_app) at (\C{-1.0}, \T{5.0})
-  [algstep,
-  text width=\W{70},
-  minimum height=2cm,
-  hyperlink node=sec:dist_cc_man]
+  \node (jachess_app) at (\X{-29}, \Y{75})
+  [algstep, text width=\W{40}, hyperlink node=sec:dist_cc_man]
   {
-    \textbf{Set $\mathbf{J}_{\rho}$, $\mathbf{H}_{\rho\rho}$}\\\vspace{\lsT}
-    {\footnotesize \texttt{coupled\_cluster.manifold.new\_t\_app\_hess}}\\\vspace{\ls}
-    {\footnotesize Eq.~\eqref{eq:cc_minD_jac}}\\\vspace{\ls}
-    {\footnotesize Eq.~\eqref{eq:cc_minD_update}}\\\vspace{\ls}
+    \textbf{Set $\mathbf{J}_{\rho}$, $\mathbf{H}_{\rho\rho}$}\vspT
+    \texttt{coupled\_cluster.manifold.new\_t\_app\_hess}\vsp
+    {Eq.~\eqref{eq:cc_minD_jac}}\vsp
+    {Eq.~\eqref{eq:cc_minD_update}}\vsp
   };
   
   % ------------------------------------------------
 
   
   % ======
-  \node (update) at (\C{1.0}, \T{7.0})
-  [algstep, text width=\W{90}]
+  \node (update) at (\X{25}, \Y{105})
+  [algstep, text width=\W{50}]
   {
-    \textbf{Update amplitudes}\\\vspace{\lsT}
-    {\footnotesize \texttt{fci.WaveFunctionFCI.calc\_dist\_to\_CC\_manifold}}\\\vspace{\ls}
-    {\footnotesize Eq.~\eqref{eq:cc_minD_update}}
+    \textbf{Update amplitudes}\vspT
+    \texttt{fci.WaveFunctionFCI.calc\_dist\_to\_CC\_manifold}\vsp
+    {Eq.~\eqref{eq:cc_minD_update}}
   };
   % ------
-
-
 
   \draw [->] (init.270) -- (cc_wf.50);
   \draw [->] (cc_wf.270) -- (dist.90);
   \draw [->] (dist.270) -- (conv.90);
   \draw [->, condFalse] (conv.270) -- (app_hess.90);
-  \draw [->, condTrue] (conv.0) -- (\C{1.5}, \T{2.0});
+  \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{30});
   \draw [->, condFalse] (app_hess.300) -- (jachess.90);
   \draw [->, condTrue] (app_hess.240) -- (jachess_app.90);
   \draw [->] (jachess.270) -- (update.90);
-  \draw [->] (update.270) -- (\C{1.0}, \T{7.5})  --  (\C{-2.0}, \T{7.5}) --
-  (\C{-2.0}, \T{-0.5}) -- (\C{-0.3}, \T{-0.5}) -- (cc_wf.130);
-  \draw [->] (jachess_app.270) -- (\C{-1.0},\T{7.5});
+
+  \algloop{update.270}{120}{-10}{cc_wf.130}
+
+  \draw [->, rounded corners]
+  (jachess_app.270) -- (\X{-29},\Y{120}) -- (\X{-31},\Y{120});
 
 
 \end{tikzpicture}

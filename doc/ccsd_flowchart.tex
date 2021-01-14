@@ -1,114 +1,116 @@
-
 \begin{center}
 \footnotesize
 \begin{tikzpicture}[
   ->,
   double,
   very thick]
-%  \def\lsT{0.2cm}; % line spacing after node's title
-%  \def\ls{0.1cm}; % line spacing inside node
-
 
   % ======
-  \node (init)  at (\C{0.3}, \T{-1.5})
-  [algstep, text width=\W{80}]
+  \node (init)  at (\X{10}, \Y{-15})
+  [algstep, text width=\W{60}]
   {
-    \textbf{Initialisation}\\\vspace{\lsT}
-    {\footnotesize $\Psi_{CC}$ as instance of \texttt{wave\_functions.IntermNormWF}}\\\vspace{\ls}
+    \textbf{Initialisation}\vspT
+    {$\Psi_{CC}$ as instance of \texttt{wave\_functions.IntermNormWF}}\vsp
   };
   % ------
 
   % ======
-  \node (ener)  at (\C{-0.0}, \T{0.0})
-  [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
+  \node (ener)  at (\X{0}, \Y{0})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_energy]
   {
-    \textbf{Energy}\\\vspace{\lsT}
-    {\footnotesize \texttt{wave\_functions.IntermNormWF.energy}}\\\vspace{\ls}
+    \textbf{Energy}\vspT
+    \texttt{wave\_functions.IntermNormWF.energy}\vsp
   };
   % ------
 
   % ======
-  \node (conv)  at (\C{-0.0}, \T{1.0})
-  [algcond, text width=\W{40}, hyperlink node=sec:ccsd_energy]
+  \node (conv)  at (\X{0}, \Y{15})
+  [algcond, text width=\W{20}, hyperlink node=sec:ccsd_energy]
   {
-    \textbf{Converged?}\\\vspace{\lsT}
-    {\footnotesize $|\Omega| < \epsilon$}\\\vspace{\ls}
+    \textbf{Converged?}\vspT
+    {$|\Omega| < \epsilon$}\vsp
   };
   % ------
 
   % ======
-  \node (transf_hg)  at (\C{-0.0}, \T{2.0})
-  [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
+  \node (cc_version)  at (\X{-30}, \Y{30})
+  [algcond, text width=\W{20}]
   {
-    \textbf{$T_1$ transformed Hamiltonian}\\\vspace{\lsT}
-    {\footnotesize \texttt{coupled\_cluster.ccsd.get\_t1\_transf}}\\\vspace{\ls}
+    \textbf{CC version?}\vspT
+  };
+  % ------
+
+  % ======
+  \node (transf_hg)  at (\X{20}, \Y{30})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{$T_1$ transformed Hamiltonian}\vspT
+    \texttt{coupled\_cluster.ccsd.get\_t1\_transf}\vsp
   };
   % ------
 
   
   % ================================================
-  \node (res) at (\C{0.0}, \T{4.0})
-  [algmultistep, text width=\W{150}, minimum height=4cm, hyperlink node=sec:ccsd_res]
+  \node (res) at (\X{0}, \Y{70})
+  [algmultistep, text width=\W{80}, hyperlink node=sec:ccsd_res]
   {
-    \textbf{Set residual}\\\vspace{\lsT}
-    \begin{minipage}[t][5cm]{0.4\textwidth}
+    \begin{minipage}[t][7cm]{1.0\textwidth}
       \centering
-      {\footnotesize \texttt{coupled\_cluster.ccsd.equation}}\\\vspace{\ls}
+      \textbf{Set residual}\vspT
+      \texttt{coupled\_cluster.ccsd.equation}\vsp
     \end{minipage}
   };
 
 
-  % % ======
-  % \node (resterm1) at (\C{-1.0}, \T{2.0})
-  % [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
-  % {
-  %   \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lsT}
-  %   {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\ls}
-  % };
-  % % ------
+  % ======
+  \node (res_sing) at (\X{20}, \Y{70})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_sing]
+  {
+    \textbf{Singles, $\Omega_i^a$}\vspT
+    \texttt{ccsd.equation.res\_singles}\vsp
+  };
+  % ------
 
-  % % ======
-  % \node (resterm2) at (\C{1.0}, \T{2.0})
-  % [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
-  % {
-  %   \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lsT}
-  %   {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\ls}
-  % };
-  % % ------
+  % ======
+  \node (res_doub) at (\X{-20}, \Y{80})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
+    \texttt{ccsd.equation.res\_doubles}\vsp
+  };
+  % ------
   
   % ------------------------------------------------
 
   
   % ======
-  \node (update) at (\C{0.0}, \T{6.0})
-  [algstep, text width=\W{90}, hyperlink node=sec:ccsd_update]
+  \node (update) at (\X{0}, \Y{100})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_update]
   {
-    \textbf{Update amplitudes}\\\vspace{\lsT}
-    \begin{minipage}{0.4\textwidth}
-      \centering
-      {\footnotesize \texttt{coupled\_cluster.ccsd.step}}\\\vspace{\ls}
-    \end{minipage}
+    \textbf{Update amplitudes}\vspT
+    \texttt{coupled\_cluster.ccsd.step}\vsp
   };
   % ------
 
 
-
   \draw [->] (init.270) -- (ener.50);
   \draw [->] (ener.270) -- (conv.90);
-  \draw [->, condFalse] (conv.270) -- (transf_hg.90);
-  \draw [->, condTrue] (conv.0) -- (\C{2.0}, \T{1.0});
-  \draw [->] (transf_hg.270) -- (res.90);
-  \draw [->] (res.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (update.90);
+  \draw [->, condFalse] (conv.180) .. controls +(left:2) and +(up:1) .. (cc_version.90);
+  \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{15});
+  \draw [->] (cc_version.0) -- (transf_hg.180)
+  node [midway, above, sloped] (cc) {CCSD};
+  \draw [->] (cc_version.270) .. controls +(down:1) and +(up:1) .. (res.115)
+  node [midway, above, sloped] (cc) {CCD};
+  \draw [->] (transf_hg.270) .. controls +(down:1) and +(up:1) .. (res.70);
+  \draw [->] (res.270) -- (update.90);
 
-  \draw [->] (update.270) -- (\C{0.0}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
-  (\C{-2.0}, \T{-0.5}) -- (\C{-0.3}, \T{-0.5}) -- (ener.130);
+  \algloop{update.270}{110}{-10}{ener.130}
+  
 
   % ------
 
 \end{tikzpicture}
 \end{center}
-
- 	
 
 %%% Local Variables:
 %%% mode: latex

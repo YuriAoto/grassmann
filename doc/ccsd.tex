@@ -59,6 +59,30 @@ In section \ref{sec:ccsd_flowchart} we have a flowchart that show,
 as precisely as we could make,
 the connection between the equations and the code.
 
+\section{The wave function}
+
+The CCD and the CCSD wave functions are:
+\begin{equation}
+  \Psi_{CCSD} = e^{T_1 + T_2}\Phi_0
+\end{equation}
+\begin{equation}
+  \Psi_{CCD} = e^{T_2}\Phi_0
+\end{equation}
+The operators are defined as:
+\begin{equation}
+  T_1 = \sum_{i,a} t_i^a E_i^a = \sum_{i,a} t_i^a (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+\end{equation}
+\begin{equation}
+  \begin{split}
+    T_2 =& \frac{1}{2}\sum_{i,j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+    (a_{b\alpha}^\dagger a_{j\alpha} + a_{b\beta}^\dagger a_{j\beta})
+  \end{split}
+\end{equation}
+
+The wave function is stored in the class \texttt{wave\_functions.interm\_norm.IntermNormWF}
+
 
 \section{Equations}
 

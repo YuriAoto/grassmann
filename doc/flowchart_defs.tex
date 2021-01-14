@@ -1,3 +1,13 @@
+% Definitions and styles for the flowcharts
+%
+%
+%
+%
+%
+%
+%
+%
+%
 
 \tikzset{
   algcond/.style={
@@ -66,5 +76,31 @@
   }
 }
 
-\newcommand{\lsT}{0.2cm}; % line spacing after node's title
-\newcommand{\ls}{0.1cm}; % line spacing inside node
+% Line spacings:
+\newcommand{\vspT}{\\\vspace{0.2cm}}  % After node's title
+\newcommand{\vsp}{\\\vspace{0.1cm}}   % inside node
+
+% Positioning of nodes:
+
+% width: \W{100} should be the maximum to be used (100% of paper)
+\newcommand{\W}[1]{#1*5}
+
+% x position:
+%  \X is compatible with \W:
+%    \X{0} is the center of the page
+%    \X{-50} is the leftmost margin (that can be used)
+%    \X{50} is the rightmost margin (that can be used)
+\newcommand{\X}[1]{#1*0.182}
+
+% Position in y: inverted: top of the page has lower value than bottom
+\newcommand{\Y}[1]{-#1*0.182}
+
+\newcommand{\algloop}[4]{
+  \draw [->, rounded corners] (#1) -- ( #1 |- \X{-100},\Y{#2})  --  (\X{-50}, \Y{#2}) --
+  (\X{-50}, \Y{#3}) -- (\X{-15}, \Y{#3}) -- (#4);
+}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
