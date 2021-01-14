@@ -90,10 +90,10 @@ the connection between the equations and the code.
 %    &+\sum_c\sum_k(2t_{ik}^{ac}-t_{ki}^{ac})({\tilde h}_{kc}+\sum_l2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
 %    &+{\tilde h}_{ai}+\sum_k2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
     \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
-    &+\sum_c[(2t_{ik}^{ac}-t_{ki}^{ac}){\tilde h}_{kc}+\sum_d(2t_{ki}^{cd}-t_{ik}^{cd}){\tilde g}_{adkc}\\
-    &-\sum_l(2t_{kl}^{ac}-t_{lk}^{ac}){\tilde g}_{kilc}+(2t_{ik}^{ac}-t_{ki}^{ac})(2{\tilde g}_{kcll}-{\tilde g}_{kllc})]\}\\
-    &={\tilde h}_{ai}+\sum_{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+\sum_d(u_{ki}^{cd}{\tilde g}_{adkc})\\
-      &-\sum_l(u_{kl}^{ac}{\tilde g}_{kilc}+u_{ik}^{ac}{\tilde L}_{kcll})]\}
+    &+\sum_c[(2t_{ik}^{ac}-t_{ki}^{ac}){\tilde h}_{kc}+(2t_{ik}^{ac}-t_{ki}^{ac})\sum_l(2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
+    &+\sum_d(2t_{ki}^{cd}-t_{ik}^{cd}){\tilde g}_{adkc}-\sum_l(2t_{kl}^{ac}-t_{lk}^{ac}){\tilde g}_{kilc}]\}\\
+    &={\tilde h}_{ai}+\sum_{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+u_{ik}^{ac}\sum_l({\tilde L}_{kcll})+\sum_d(u_{ki}^{cd}{\tilde g}_{adkc})\\
+      &-\sum_l(u_{kl}^{ac}{\tilde g}_{kilc})]\}
    \end{split}
 \end{equation}
 
