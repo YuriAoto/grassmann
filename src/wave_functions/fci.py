@@ -24,7 +24,7 @@ import molpro_util
 from memory import mem_of_floats
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 import wave_functions.strings_rev_lexical_order as str_order
-from coupled_cluster import manifold
+from coupled_cluster import manifold as cc_manifold
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class Results(namedtuple('Results',
         The value of the distance in the end of the procedure
     
     wf (list of 2d np.arrays)
-        The CC wave function
+        The coupled cluster wave function
     
     norm (float or tuple of floats)
         norm of vectors that should vanish at convergence
@@ -732,12 +732,11 @@ class WaveFunctionFCI(general.Wave_Function):
         self.n_act = intN_wf.n_act
         self.orb_dim = intN_wf.orb_dim
         self.ref_occ = intN_wf.ref_occ
-        self.WF_type = intN_wf.WF_type
+        self.WF_type = intN_wf.WF_type + 'as FCI'
         self.source = intN_wf.source
         self.initialise_coeff_matrix()
-        for Index in intN_wf.string_indices():
-            self.add_element(Index)
-
+        
+ 
     def get_coeff_from_molpro(self, molpro_output,
                               start_line_number=1,
                               point_group=None,
@@ -1429,7 +1428,47 @@ class WaveFunctionFCI(general.Wave_Function):
                                                  beta_hp[1],
                                                  self.ref_det.beta_occ))
     
-    def compare_to_CC_manifold(self,
+    def dist_to(self, other,
+                metric='IN',
+                normalise=True):
+        """Distance between self and other
+        
+        Parameters:
+        -----------
+        other (WaveFunctionFCI)
+            The wave function to which the distance will be calculated
+        
+        metric (str, optional, default='IN')
+            metric to calculate the distance.
+            Possible values are:
+            'IN' - Intermediate normalisation
+            'overlap' - The overlap between self and other
+                        (that is not exactly the distance, but related to)
+        
+        normalise (bool, optional, default=False)
+            If True, normalise the wave function in a compatible way
+            with the metric option
+        
+        Return:
+        -------
+        A float, with the distance
+        
+        Side Effect:
+        ------------
+        If normalise is True, the wave function is changed!
+        
+        """
+        if normalise:
+            if metric == 'IN':
+                self.normalise(mode='intermediate')
+                other.normalise(mode='intermediate')
+            else:
+                self.normalise(mode='unit')
+                other.normalise(mode='unit')
+        if metric == 'IN':
+            return linalg.norm(self._coefficients - other.coefficients)
+    
+    def compare_to_cc_manifold(self,
                                level='D',
                                recipes_f=None,
                                coeff_thr=1.0E-10,
@@ -1535,21 +1574,21 @@ class WaveFunctionFCI(general.Wave_Function):
                         new_contribution *= self[self.index(cluster_det)]
                     C -= new_contribution
                 norm_contribution = (det.c - C)**2
-                CC_towards_wf = det.c * C >= 0
+                cc_towards_wf = det.c * C >= 0
                 norm += norm_contribution
                 rank = _str_excitation(rank)
                 if rank not in right_dir:
                     right_dir[rank] = [0, 1]
                 else:
                     right_dir[rank][1] += 1
-                if CC_towards_wf:
+                if cc_towards_wf:
                     right_dir[rank][0] += 1
                 logger.info(logfmt,
                             det,
                             C,
                             C/det.c,
                             norm_contribution,
-                            CC_towards_wf)
+                            cc_towards_wf)
             elif rank > 2 or (rank, level) == (1, 'D'):
                 norm += det.c**2
         tolog = ['Number of excitations where the CC manifold\n'
@@ -1562,30 +1601,36 @@ class WaveFunctionFCI(general.Wave_Function):
                 self._restore_S_to_D()
             self._coeff_as_order_relative_to_ref()
         return Results(distance=math.sqrt(norm),
-                       wf=CC_wf,
+                       wf=cc_wf,
                        norm=None,
                        last_iteration=None,
                        converged=None,
                        right_dir=right_dir,
                        n_pos_H_eigVal=None)
 
-    def calc_dist_to_CC_manifold(self,
+    def calc_dist_to_cc_manifold(self,
                                  level='D',
                                  maxiter=10,
                                  thrsh_Z=1.0E-8,
                                  thrsh_J=1.0E-8,
-                                 ini_CC_wf=None,
+                                 ini_cc_wf=None,
                                  recipes_f=None,
                                  coeff_thr=1.0E-10,
                                  restore_wf=True):
         """Calculate the distance to the coupled cluster manifold
         
-        
+        Attention:
+        ----------
+        For the result (the distance in the intermediate
+        normalisation) to be meaningful, this wave function should
+        be in the intermediate normalisation.
+        This is not checked or tested! The user is responsible to transform
+        (if desired) the wave function first (using normalise(mode='intermediate')).
         
         Parameters:
         -----------
         level (str, optional, default='D'; possible values: 'D', 'SD')
-            The level of CC theory to compare.
+            The level of coupled cluster theory to compare.
         
         maxiter (int, optional, default=10)
             The maximum number of iterations
@@ -1596,7 +1641,7 @@ class WaveFunctionFCI(general.Wave_Function):
         thrsh_J (float, optional, default=1.0E-8)
             Convergence threshold for the Jacobian
         
-        ini_CC_wf (None or an instance of Wave_Function_Int_Norm)
+        ini_cc_wf (None or an instance of Wave_Function_Int_Norm)
             The initial coupled cluster wave function.
             If None, the "vertical" projection is used.
         
@@ -1621,35 +1666,44 @@ class WaveFunctionFCI(general.Wave_Function):
         -------
         The distance between self and the CC manifold,
         in the metric induced by intermediate normalisation.
+        
         """
         converged = False
-        if ini_CC_wf is None:
-            ini_CC_wf = self.compare_to_CC_manifold(level=level,
-                                                    recipes_f=recipes_f,
-                                                    coeff_thr=coeff_thr,
-                                                    restore_wf=True).wf
+        if ini_cc_wf is None:
+            cc_wf = self.compare_to_cc_manifold(level=level,
+                                                recipes_f=recipes_f,
+                                                coeff_thr=coeff_thr,
+                                                restore_wf=True).wf
+        elif isinstance(ini_cc_wf, IntermNormWF):
+            cc_wf = WaveFunctionFCI.from_int_norm(ini_cc_wf)
+        elif isinstance(ini_cc_wf, WaveFunctionFCI):
+            pass
+        else:
+            raise ValueError('Unknown type of initial wave function')
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
-                dist = self.calc_dist_to_CC_wf(CC_as_FCI)
+                cc_wf_as_fci = WaveFunctionFCI.from_int_norm(cc_wf)
+                dist = self.dist_to(cc_wf_as_fci, mode='IN')
                 if i_iteration > 0 and normJ < thrsh_J and normZ < thrsh_Z:
-                    converged=True
+                    converged = True
                     break
                 if approx_hess:
                     with logtime('Making Jacobian and approximate Hessian'):
-                        Jac, z = manifold.min_dist_app_hess()
+                        Jac, z = cc_manifold.min_dist_app_hess(self,
+                                                               cc_wf_as_fci)
                     logger.log(1, 'Jacobian:\n%r', Jac)
                     logger.log(1, 'Update vector z:\n%r', z)
                 else:
                     with logtime('Making Jacobian and Hessian'):
-                        Jac, Hess = manifold.min_dist_jac_hess()
+                        Jac, Hess = cc_manifold.min_dist_jac_hess(self,
+                                                                  cc_wf_as_fci)
                     logger.log(1, 'Jacobian:\n%r', Jac)
                     logger.log(1, 'Hessian:\n%r', Hess)
                     with logtime('Calculating z: Solving linear system.'):
                         z = -linalg.solve(Hess, Jac)
                 normJ = linalg.norm(Jac)
                 normZ = linalg.norm(z)
-                ini_CC_wf = make_new_cc_wf_from_z(ini_CC_wf, z)
-                CC_as_FCI = WaveFunctionFCI.from_CC(ini_CC_wf)
+                cc_wf.update_amplitudes(z)
             if f_out is not None:
                 f_out.write(fmt_full.
                             format(i_iteration,
@@ -1659,7 +1713,7 @@ class WaveFunctionFCI(general.Wave_Function):
                                    T_iter.elapsed_time))
                 f_out.flush()
         return Results(distance=dist,
-                       wf=ini_CC_wf,
+                       wf=cc_wf,
                        norm=(normZ, normJ),
                        last_iteration=i_iteration,
                        converged=converged,

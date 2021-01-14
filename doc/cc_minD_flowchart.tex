@@ -1,4 +1,3 @@
-
 \begin{center}
 \footnotesize
 \begin{tikzpicture}[
@@ -7,23 +6,27 @@
   very thick,
   ]
 
+  \node (import) at (\X{-50}, \Y{-18}) [anchor=west]
+  {\texttt{from coupled\_cluster import manifold as cc\_manifold}};
+  \node (import) at (\X{-50}, \Y{-15}) [anchor=west]
+  {\texttt{from wave\_functions import fci, interm\_norm}};
 
   % ======
-  \node (init)  at (\X{15}, \Y{-15})
+  \node (init)  at (\X{20}, \Y{-15})
   [algstep, text width=\W{30}, hyperlink node=sec:]
   {
     \textbf{Input}\vspT
-    {The $\Psi_0$ wave function}\vsp
+    {The $\Psi_0$ wave function in the intermediate normalisation}\vsp
     {Initial $\Psi_{CC}$ wave function}\vsp
   };
   % ------
 
   % ======
   \node (cc_wf)  at (\X{0}, \Y{0})
-  [algstep, text width=\W{50}, hyperlink node=sec:]
+  [algstep, text width=\W{55}, hyperlink node=sec:]
   {
     \textbf{$\Psi_{CC}$ as a FCI wave function}\vspT
-    \texttt{fci.WaveFunctionFCI.from\_CC}\vsp
+    \texttt{fci.WaveFunctionFCI.from\_int\_norm}\vsp
   };
   % ------
 
@@ -62,7 +65,7 @@
     \textbf{Set Jacobian and Hessian}\vspT
     \begin{minipage}[t][5cm]{1.0\textwidth}
       \centering
-      \texttt{coupled\_cluster.manifold.make\_min\_dist\_jac\_hess}
+      \texttt{cc\_manifold.make\_min\_dist\_jac\_hess}
     \end{minipage}
   };
 
@@ -88,11 +91,11 @@
 
 
   % ================================================
-  \node (jachess_app) at (\X{-29}, \Y{75})
+  \node (jachess_app) at (\X{-25}, \Y{75})
   [algstep, text width=\W{40}, hyperlink node=sec:dist_cc_man]
   {
     \textbf{Set $\mathbf{J}_{\rho}$, $\mathbf{H}_{\rho\rho}$}\vspT
-    \texttt{coupled\_cluster.manifold.new\_t\_app\_hess}\vsp
+    \texttt{cc\_manifold.min\_dist\_app\_hess}\vsp
     {Eq.~\eqref{eq:cc_minD_jac}}\vsp
     {Eq.~\eqref{eq:cc_minD_update}}\vsp
   };
@@ -101,11 +104,11 @@
 
   
   % ======
-  \node (update) at (\X{25}, \Y{105})
+  \node (update) at (\X{0}, \Y{105})
   [algstep, text width=\W{50}]
   {
     \textbf{Update amplitudes}\vspT
-    \texttt{fci.WaveFunctionFCI.calc\_dist\_to\_CC\_manifold}\vsp
+    \texttt{interm\_norm.IntermNormWF.update\_amplitudes}\vsp
     {Eq.~\eqref{eq:cc_minD_update}}
   };
   % ------
@@ -115,14 +118,12 @@
   \draw [->] (dist.270) -- (conv.90);
   \draw [->, condFalse] (conv.270) -- (app_hess.90);
   \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{30});
-  \draw [->, condFalse] (app_hess.300) -- (jachess.90);
-  \draw [->, condTrue] (app_hess.240) -- (jachess_app.90);
-  \draw [->] (jachess.270) -- (update.90);
+  \draw [->, condFalse] (app_hess.0) .. controls +(right:1) and +(up:1) .. (jachess.90);
+  \draw [->, condTrue] (app_hess.180) .. controls +(left:1) and +(up:1) .. (jachess_app.90);
+  \draw [->] (jachess.south) .. controls +(down:1) and +(east:1) .. (update.east);
+  \draw [->] (jachess_app.south) .. controls +(down:1) and +(west:1) .. (update.west);
 
-  \algloop{update.270}{120}{-10}{cc_wf.130}
-
-  \draw [->, rounded corners]
-  (jachess_app.270) -- (\X{-29},\Y{120}) -- (\X{-31},\Y{120});
+  \algloop{update.270}{115}{-10}{cc_wf.130}
 
 
 \end{tikzpicture}
