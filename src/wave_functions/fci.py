@@ -23,6 +23,7 @@ import orbitals
 import molpro_util
 from memory import mem_of_floats
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
+### Change class names from wave_functions.int_norm import IntermNormWF
 import wave_functions.strings_rev_lexical_order as str_order
 from coupled_cluster import manifold as cc_manifold
 
@@ -735,8 +736,7 @@ class WaveFunctionFCI(general.Wave_Function):
         self.WF_type = intN_wf.WF_type + 'as FCI'
         self.source = intN_wf.source
         self.initialise_coeff_matrix()
-        
- 
+    
     def get_coeff_from_molpro(self, molpro_output,
                               start_line_number=1,
                               point_group=None,
@@ -1407,11 +1407,11 @@ class WaveFunctionFCI(general.Wave_Function):
         
         Because of symmetry, the reference Slater determinant might not be
         that with all occupied orbitals first. This causes some sign problems
-        in the cluster decomposition of the wave function, and thus this subroutine
-        changes the sign of the determinants as if the orbitals were reordered
-        with all occupied orbitals in the reference coming first.
-        However, the order of the orbitals (and thus of the alpha and beta strings)
-        are not really changed! 
+        in the cluster decomposition of the wave function, and thus this
+        subroutine changes the sign of the determinants as if the orbitals
+        were reordered with all occupied orbitals in the reference coming
+        first. However, the order of the orbitals (and thus of the alpha
+        and beta strings) are not really changed!
         If the wave function is to be used again after decompose, this method
         has to be called again to change back the signs!
         
@@ -1497,7 +1497,8 @@ class WaveFunctionFCI(general.Wave_Function):
         normalisation) to be meaningful, this wave function should
         be in the intermediate normalisation.
         This is not checked or tested! The user is responsible to transform
-        (if desired) the wave function first (using normalise(mode='intermediate')).
+        (if desired) the wave function first
+        (using normalise(mode='intermediate')).
         If the coefficient of the reference (.ref_det) is positive,
         the information about curving towards FCI is correct, even if
         not in the intermediate normalisation.
@@ -1527,8 +1528,8 @@ class WaveFunctionFCI(general.Wave_Function):
             During this analysis the coefficients of the function is changed
             
         restore_wf (bool, optional, default=True)
-            Restore all changes made to the wave function dureing this function,
-            such that it can be further used.
+            Restore all changes made to the wave function during
+            this function, such that it can be further used.
             If the wave function is not going to be used for further purposes,
             set it to False.
         
@@ -1556,6 +1557,7 @@ class WaveFunctionFCI(general.Wave_Function):
             self._coeff_as_order_relative_to_ref()
         norm = 0.0
         right_dir = {}
+        cc_wf = IntermNormWF.similar_to(self)
         # Another possibility: run over holes and particles directly:
         # for `all_Q_6_8_...` in self:
         for det in self:
@@ -1609,11 +1611,13 @@ class WaveFunctionFCI(general.Wave_Function):
                        n_pos_H_eigVal=None)
 
     def calc_dist_to_cc_manifold(self,
-                                 level='D',
+                                 level='SD',
                                  maxiter=10,
+                                 f_out=None,
+                                 approx_hess=True,
                                  thrsh_Z=1.0E-8,
                                  thrsh_J=1.0E-8,
-                                 ini_cc_wf=None,
+                                 ini_wf=None,
                                  recipes_f=None,
                                  coeff_thr=1.0E-10,
                                  restore_wf=True):
@@ -1625,7 +1629,8 @@ class WaveFunctionFCI(general.Wave_Function):
         normalisation) to be meaningful, this wave function should
         be in the intermediate normalisation.
         This is not checked or tested! The user is responsible to transform
-        (if desired) the wave function first (using normalise(mode='intermediate')).
+        (if desired) the wave function first
+        (using normalise(mode='intermediate')).
         
         Parameters:
         -----------
@@ -1635,15 +1640,19 @@ class WaveFunctionFCI(general.Wave_Function):
         maxiter (int, optional, default=10)
             The maximum number of iterations
         
+        approx_hess (bool, optional, default=True)
+            Use approximate hessian (only diagonal elements)
+        
         thrsh_Z (float, optional, default=1.0E-8)
             Convergence threshold for z
         
         thrsh_J (float, optional, default=1.0E-8)
             Convergence threshold for the Jacobian
         
-        ini_cc_wf (None or an instance of Wave_Function_Int_Norm)
-            The initial coupled cluster wave function.
-            If None, the "vertical" projection is used.
+        ini_wf (None or an instance of WaveFunction)
+            The initial wave function.
+            If None or and intance of WaveFunctionFCI,
+            the "vertical" projection of self or of ini_wf is used.
         
         recipes_f (str, a file name, optional, default None)
             The files that describe the cluster decomposition.
@@ -1657,8 +1666,8 @@ class WaveFunctionFCI(general.Wave_Function):
             During this analysis the coefficients of the function is changed
             
         restore_wf (bool, optional, default=True)
-            Restore all changes made to the wave function dureing this function,
-            such that it can be further used.
+            Restore all changes made to the wave function during
+            this function, such that it can be further used.
             If the wave function is not going to be used for further purposes,
             set it to False.
         
@@ -1669,48 +1678,53 @@ class WaveFunctionFCI(general.Wave_Function):
         
         """
         converged = False
-        if ini_cc_wf is None:
+        normZ = normJ = 1.0
+        if ini_wf is None:
             cc_wf = self.compare_to_cc_manifold(level=level,
                                                 recipes_f=recipes_f,
                                                 coeff_thr=coeff_thr,
                                                 restore_wf=True).wf
-        elif isinstance(ini_cc_wf, IntermNormWF):
-            cc_wf = WaveFunctionFCI.from_int_norm(ini_cc_wf)
-        elif isinstance(ini_cc_wf, WaveFunctionFCI):
+        elif isinstance(ini_wf, WaveFunctionFCI):
+            cc_wf = ini_wf.compare_to_cc_manifold(level=level,
+                                                  recipes_f=recipes_f,
+                                                  coeff_thr=coeff_thr,
+                                                  restore_wf=True).wf
+        elif isinstance(ini_wf, IntermNormWF):
             pass
         else:
             raise ValueError('Unknown type of initial wave function')
+        n_ampl = cc_wf.calc_n_ampl(True, False)
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
                 cc_wf_as_fci = WaveFunctionFCI.from_int_norm(cc_wf)
                 dist = self.dist_to(cc_wf_as_fci, mode='IN')
-                if i_iteration > 0 and normJ < thrsh_J and normZ < thrsh_Z:
+                if (i_iteration > 0
+                    and normJ < thrsh_J
+                        and normZ < thrsh_Z):
                     converged = True
                     break
                 if approx_hess:
                     with logtime('Making Jacobian and approximate Hessian'):
-                        Jac, z = cc_manifold.min_dist_app_hess(self,
-                                                               cc_wf_as_fci)
-                    logger.log(1, 'Jacobian:\n%r', Jac)
+                        z, normJ = cc_manifold.min_dist_app_hess(self,
+                                                                 cc_wf_as_fci,
+                                                                 n_ampl,
+                                                                 level=level)
                     logger.log(1, 'Update vector z:\n%r', z)
                 else:
                     with logtime('Making Jacobian and Hessian'):
                         Jac, Hess = cc_manifold.min_dist_jac_hess(self,
-                                                                  cc_wf_as_fci)
+                                                                  cc_wf_as_fci,
+                                                                  n_ampl)
                     logger.log(1, 'Jacobian:\n%r', Jac)
                     logger.log(1, 'Hessian:\n%r', Hess)
                     with logtime('Calculating z: Solving linear system.'):
                         z = -linalg.solve(Hess, Jac)
-                normJ = linalg.norm(Jac)
+                    normJ = linalg.norm(Jac)
                 normZ = linalg.norm(z)
                 cc_wf.update_amplitudes(z)
             if f_out is not None:
-                f_out.write(fmt_full.
-                            format(i_iteration,
-                                   dist,
-                                   normZ,
-                                   normJ,
-                                   T_iter.elapsed_time))
+                f_out.write(
+                    f'{i_iteration}  {dist}  {normZ}  {normJ}   {T_iter.elapsed_time}')
                 f_out.flush()
         return Results(distance=dist,
                        wf=cc_wf,
@@ -1719,5 +1733,3 @@ class WaveFunctionFCI(general.Wave_Function):
                        converged=converged,
                        right_dir=None,
                        n_pos_H_eigVal=None)
-
-    

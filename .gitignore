@@ -9,3 +9,6 @@ grassmann/test/inputs_outputs/*/*min_dist*
 src/wave_functions/strings_rev_lexical_order.c
 src/wave_functions/strings_rev_lexical_order.cpython-37m-x86_64-linux-gnu.so
 src/wave_functions/strings_rev_lexical_order.html
+src/coupled_cluster/manifold.c
+src/coupled_cluster/manifold.cpython-37m-x86_64-linux-gnu.so
+src/coupled_cluster/manifold.html

@@ -34,6 +34,8 @@ sqrt2 = math.sqrt(2.0)
 
 ANG_to_a0 = 1.8897261246
 
+int_dtype = np.intc
+
 irrep_product = np.asarray([[0, 1, 2, 3, 4, 5, 6, 7],
                             [1, 0, 3, 2, 5, 4, 7, 6],
                             [2, 3, 0, 1, 6, 7, 4, 5],
@@ -42,7 +44,7 @@ irrep_product = np.asarray([[0, 1, 2, 3, 4, 5, 6, 7],
                             [5, 4, 7, 6, 1, 0, 3, 2],
                             [6, 7, 4, 5, 2, 3, 0, 1],
                             [7, 6, 5, 4, 3, 2, 1, 0]],
-                           dtype=np.uint8)
+                           dtype=int_dtype)
 
 number_of_irreducible_repr = {
     'C1': 1,

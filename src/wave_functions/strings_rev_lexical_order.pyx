@@ -6,7 +6,7 @@
 import cython
 import numpy as np
 
-def next_str(occ):
+def next_str(cdef int [:] occ):
     """Change occ to the next occupation in reverse lexical order"""
     cdef int i_to_be_raised = 0
     cdef int len_occ_2 = len(occ) - 2

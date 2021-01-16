@@ -420,8 +420,8 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                    and exc_type == my_exc_type) else
             ' <<< differ')
     
-    def calc_memory(self, with_singles, with_BCC_orb_gen):
-        """Calculate memory needed for amplitudes
+    def calc_n_ampl(self, with_singles, with_BCC_orb_gen):
+        """Calculate the number of amplitudes amplitudes
         
         Parameters:
         -----------
@@ -432,15 +432,15 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         
         Return:
         -------
-        A float, with the memory used to store the wave function amplitudes
+        A integer
         """
-        n_floats = 0.0
+        n_ampl = 0
         if with_singles:
             for spirrep in self.spirrep_blocks():
-                n_floats += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
+                n_ampl += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
         if with_BCC_orb_gen:
             for spirrep in self.spirrep_blocks():
-                n_floats += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
+                n_ampl += self.n_corr_orb[spirrep] * self.n_ext[spirrep]
         for exc_type in (['aa']
                          if self.restricted else
                          ['aa', 'bb', 'ab']):
@@ -468,9 +468,26 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                     a_spirrep += self.n_irrep
                                 if exc_type[1] == 'b':
                                     b_spirrep += self.n_irrep
-                                n_floats += (self.n_ext[a_spirrep]
+                                n_ampl += (self.n_ext[a_spirrep]
                                              * self.n_ext[b_spirrep])
-        return mem_of_floats(n_floats)
+        return n_ampl
+    
+    def calc_memory(self, with_singles, with_BCC_orb_gen):
+        """Calculate memory needed for amplitudes
+        
+        Parameters:
+        -----------
+        with_singles and with_BCC_orb_gen are booleans,
+        similar to the arguments of initialize_SD_lists,
+        and if True the memory needed to store singles and the
+        BCC orbital generators are also taken into account
+        
+        Return:
+        -------
+        A float, with the memory used to store the wave function amplitudes
+        """
+        return mem_of_floats(self.calc_n_ampl(with_singles,
+                                              with_BCC_orb_gen))
 
     def initialize_SD_lists(self,
                             with_singles=True,
