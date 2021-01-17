@@ -18,7 +18,7 @@ import copy
 import math
 from collections import namedtuple
 
-from util import get_pos_from_rectangular
+from util import get_pos_from_rectangular, int_dtype
 from wave_functions import general
 import orbitals
 import molpro_util
@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 lehtola_files = '/Documents/Codes/clusterdec-master/source/recipes'
 
 
-class Slater_Det(namedtuple('Slater_Det',
+class SlaterDet(namedtuple('SlaterDet',
                             ['c',
                              'occupation'])):
-    """A namedtuple for a generic Slater_Det of the wave function
+    """A namedtuple for a generic SlaterDet of the wave function
     
     Attributes:
     -----------
@@ -48,7 +48,7 @@ class Slater_Det(namedtuple('Slater_Det',
         spirreps = []
         for occ in self.occupation:
             spirreps.append(str(occ))
-        return ('Slater_Det: c = {0:15.12f} ; '.
+        return ('SlaterDet: c = {0:15.12f} ; '.
                 format(self.c) + '^'.join(spirreps))
 
 
@@ -57,15 +57,15 @@ Orbital_Info = namedtuple('Orbital_Info', ['orb', 'spirrep'])
 
 def _get_Slater_Det_from_String_Index(Index, n_irrep,
                                       zero_coefficients=False):
-    """return the Slater_Det corresponding to String_Index Index"""
+    """return the SlaterDet corresponding to StringIndex Index"""
     coeff = Index.C
-    final_occ = [np.array([], dtype=np.int8) for i in range(2 * n_irrep)]
+    final_occ = [np.array([], dtype=int_dtype) for i in range(2 * n_irrep)]
     for spirrep, spirrep_I in enumerate(Index):
         if spirrep != spirrep_I.spirrep:
             raise Exception(
                 'spirrep of spirrep_I is not consistent with position in list')
         final_occ[spirrep_I.spirrep] = np.array(spirrep_I.occ_orb)
-    return Slater_Det(c=0.0 if zero_coefficients else coeff,
+    return SlaterDet(c=0.0 if zero_coefficients else coeff,
                       occupation=final_occ)
 
 
@@ -80,10 +80,10 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_core, n_irrep, Ms,
         The line with a configuration, from the FCI program in Molpro
         to be converted to a Slater Determinant.
     
-    orb_dim (Orbitals_Sets)
+    orb_dim (OrbitalsSets)
         Dimension of orbital space
     
-    n_core (Orbitals_Sets)
+    n_core (OrbitalsSets)
         Dimension of frozen orbitals space
     
     n_irrep (int)
@@ -103,7 +103,7 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_core, n_irrep, Ms,
     
     Returns:
     --------
-    A Slater_Det
+    A SlaterDet
     
     Raises:
     molpro_util.MolproInputError
@@ -181,9 +181,9 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, n_core, n_irrep, Ms,
             else:
                 irrep += 1
     for i, o in enumerate(final_occ):
-        final_occ[i] = np.array(o, dtype=int)
-    return Slater_Det(c=0.0 if zero_coefficients else coeff,
-                      occupation=final_occ)
+        final_occ[i] = np.array(o, dtype=int_dtype)
+    return SlaterDet(c=0.0 if zero_coefficients else coeff,
+                     occupation=final_occ)
 
 
 class ExcitedSlaterDet(namedtuple('ExcitedSlaterDet',
@@ -199,11 +199,11 @@ class ExcitedSlaterDet(namedtuple('ExcitedSlaterDet',
     __slots__ = ()
 
 
-class Wave_Function_Norm_CI(general.Wave_Function):
+class NormCI_WaveFunction(general.WaveFunction):
     """A normalised CI-like wave function, with explicit determinants
     
     The wave function is stored explicitly, with all Slater determinants
-    (as instances of Slater_Det).
+    (as instances of SlaterDet).
     
     Atributes:
     ----------
@@ -319,8 +319,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Parameters:
         -----------
-        element (Slater_Det)
-            the Slater_Det whose index must be found
+        element (SlaterDet)
+            the SlaterDet whose index must be found
         
         check_coeff (bool, optional, default=False)
             If True, return the index only if the coefficient
@@ -358,7 +358,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Parameters:
         -----------
-        intN_wf (Wave_Function_Int_Norm)
+        intN_wf (IntermNormWaveFunction)
             wave function in intermediate normalisation
         
         change_structure (bool, optional, default=True)
@@ -495,7 +495,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     if len(self) == 0:
                         sgn_invert = new_Slater_Det.c < 0.0
                     if sgn_invert:
-                        new_Slater_Det = Slater_Det(
+                        new_Slater_Det = SlaterDet(
                             c=-new_Slater_Det.c,
                             occupation=new_Slater_Det.occupation)
                 if use_structure:
@@ -553,7 +553,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         if isinstance(molpro_output, str):
             f.close()
         self.get_i_max_coef(set_i_ref=True)
-        self.ref_occ = general.Orbitals_Sets(
+        self.ref_occ = general.OrbitalsSets(
             list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
             raise molpro_util.MolproInputError(
@@ -561,7 +561,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),
+        self.n_act = general.OrbitalsSets(np.zeros(self.n_irrep),
                                            occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
@@ -619,7 +619,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Parameters:
         -----------
-        det (Slater_Det)
+        det (SlaterDet)
             The Slater determinant to be verified.
         
         only_rank (bool, optional, default=False
@@ -992,7 +992,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
         
         Return:
         -------
-        The transformed wave function, as instace of Wave_Function_Norm_CI.
+        The transformed wave function, as instace of NormCI_WaveFunction.
         Optionally, only C0 is calculated, and the final wave function has
         only one determinant (associated to C0)
         """
@@ -1005,7 +1005,7 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                              + method)
     
     def _change_orb_basis_traditional(self, U, just_C0=False):
-        new_wf = Wave_Function_Norm_CI()
+        new_wf = NormCI_WaveFunction()
         new_wf.restricted = self.restricted
         new_wf.point_group = self.point_group
         new_wf.Ms = self.Ms
@@ -1048,8 +1048,8 @@ class Wave_Function_Norm_CI(general.Wave_Function):
                     logger.debug(
                         'New contribution = %f\n det_J:\n%s\n det_I:\n%s',
                         C_times_det_minor_IJ, det_J, det_I)
-            new_wf._all_determinants.append(Slater_Det(c=new_c,
-                                                       occupation=new_occ))
+            new_wf._all_determinants.append(SlaterDet(c=new_c,
+                                                      occupation=new_occ))
             if just_C0:
                 break
         new_wf._set_memory()

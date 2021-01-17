@@ -7,17 +7,19 @@ from scipy import linalg
 import numpy as np
 
 from wave_functions import general, norm_ci, int_norm
+from wave_functions.fci import make_occ
 import test
+from util import int_dtype
 
 class WFConstructorsTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.int_N_WF = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.int_N_WF = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CISD_file('H2__5__sto3g__D2h'))
         test.logger.info('end of WFConstructorsTestCase.SetUp')
     
     def test_int_norm_contructor(self):
-        wf = norm_ci.Wave_Function_Norm_CI.from_Molpro_FCI(
+        wf = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
             test.FCI_file('H2__5__sto3g__D2h'),
             zero_coefficients=True)
         wf.get_coeff_from_int_norm_WF(self.int_N_WF,
@@ -25,11 +27,11 @@ class WFConstructorsTestCase(unittest.TestCase):
                                       use_structure=True)
         self.assertAlmostEqual(wf.C0, 0.7568532707525314, places=10)
         self.assertAlmostEqual(wf[0].c, 0.7568532707525314, places=10)
-        self.assertEqual(wf[0].occupation[0], np.array([0]))
-        self.assertEqual(wf[0].occupation[8], np.array([0]))
+        self.assertEqual(wf[0].occupation[0], make_occ([0]))
+        self.assertEqual(wf[0].occupation[8], make_occ([0]))
         self.assertAlmostEqual(wf[1].c, -0.6535848273569357, places=10)
-        self.assertEqual(wf[1].occupation[4], np.array([0]))
-        self.assertEqual(wf[1].occupation[12], np.array([0]))
+        self.assertEqual(wf[1].occupation[4], make_occ([0]))
+        self.assertEqual(wf[1].occupation[12], make_occ([0]))
         test.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
 
 
@@ -38,40 +40,40 @@ class SlaterDetTestCase(unittest.TestCase):
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.n_irrep = 4
-        self.string_index = int_norm.String_Index_for_SD()
+        self.string_index = int_norm.SD_StringIndex()
         self.string_index.C = 0.12345
         self.string_index.append(
-            general.Spirrep_String_Index.make_hole(3, 1))
+            general.SpirrepStringIndex.make_hole(3, 1))
         self.string_index[-1][2] = 4
-        self.string_index.append(general.Spirrep_String_Index(1))
-        self.string_index.append(general.Spirrep_String_Index(0))
-        self.string_index.append(general.Spirrep_String_Index(1))
-        self.string_index.append(general.Spirrep_String_Index(3))
+        self.string_index.append(general.SpirrepStringIndex(1))
+        self.string_index.append(general.SpirrepStringIndex(0))
+        self.string_index.append(general.SpirrepStringIndex(1))
+        self.string_index.append(general.SpirrepStringIndex(3))
         self.string_index.append(
-            general.Spirrep_String_Index.make_hole(2, 0))
+            general.SpirrepStringIndex.make_hole(2, 0))
         self.string_index[-1][1] = 3
-        self.string_index.append(general.Spirrep_String_Index(0))
-        self.string_index.append(general.Spirrep_String_Index(1))
+        self.string_index.append(general.SpirrepStringIndex(0))
+        self.string_index.append(general.SpirrepStringIndex(1))
         # ------
-        self.string_index_2 = int_norm.String_Index_for_SD()
+        self.string_index_2 = int_norm.SD_StringIndex()
         self.string_index_2.C = 0.6789
         self.string_index_2.append(
-            general.Spirrep_String_Index.make_hole(3, 1))
+            general.SpirrepStringIndex.make_hole(3, 1))
         self.string_index_2[-1][2] = 4
-        self.string_index_2.append(general.Spirrep_String_Index(1))
-        self.string_index_2.append(general.Spirrep_String_Index(0))
-        self.string_index_2.append(general.Spirrep_String_Index(1))
-        self.string_index_2.append(general.Spirrep_String_Index(3))
+        self.string_index_2.append(general.SpirrepStringIndex(1))
+        self.string_index_2.append(general.SpirrepStringIndex(0))
+        self.string_index_2.append(general.SpirrepStringIndex(1))
+        self.string_index_2.append(general.SpirrepStringIndex(3))
         self.string_index_2.append(
-            general.Spirrep_String_Index.make_hole(2, 0))
+            general.SpirrepStringIndex.make_hole(2, 0))
         self.string_index_2[-1][1] = 3
-        self.string_index_2.append(general.Spirrep_String_Index(0))
-        self.string_index_2.append(general.Spirrep_String_Index(1))
+        self.string_index_2.append(general.SpirrepStringIndex(0))
+        self.string_index_2.append(general.SpirrepStringIndex(1))
     
     def test_simple_construction(self):
-        det = norm_ci.Slater_Det(c=0.123,
-                                 occupation=(np.array([0, 1, 2]),
-                                             np.array([1])))
+        det = norm_ci.SlaterDet(c=0.123,
+                                occupation=(make_occ([0, 1, 2]),
+                                            make_occ([1])))
         self.assertEqual(det.c, 0.123)
         self.assertEqual(det[0], 0.123)
         self.assertEqual(det.occupation[0][1], 1)
@@ -81,44 +83,44 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_1(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.162676901257, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 1]))
-        self.assertEqual(det.occupation[1], np.array([0]))
-        self.assertEqual(det.occupation[2], np.array([]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0, 1]))
-        self.assertEqual(det.occupation[5], np.array([0]))
-        self.assertEqual(det.occupation[6], np.array([]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0, 1]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0, 1]))
+        self.assertEqual(det.occupation[5], make_occ([0]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([]))
 
     def test_get_from_FCI_line_2(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.049624632911, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 1, 3]))
-        self.assertEqual(det.occupation[1], np.array([]))
-        self.assertEqual(det.occupation[2], np.array([]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0, 1, 5]))
-        self.assertEqual(det.occupation[5], np.array([]))
-        self.assertEqual(det.occupation[6], np.array([]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0, 1, 3]))
+        self.assertEqual(det.occupation[1], make_occ([]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0, 1, 5]))
+        self.assertEqual(det.occupation[5], make_occ([]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([]))
 
     def test_get_from_FCI_line_3(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -127,62 +129,62 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_4(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.000000000000, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 1]))
-        self.assertEqual(det.occupation[1], np.array([]))
-        self.assertEqual(det.occupation[2], np.array([0]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0, 1]))
-        self.assertEqual(det.occupation[5], np.array([]))
-        self.assertEqual(det.occupation[6], np.array([1]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0, 1]))
+        self.assertEqual(det.occupation[1], make_occ([]))
+        self.assertEqual(det.occupation[2], make_occ([0]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0, 1]))
+        self.assertEqual(det.occupation[5], make_occ([]))
+        self.assertEqual(det.occupation[6], make_occ([1]))
+        self.assertEqual(det.occupation[7], make_occ([]))
 
     def test_get_from_FCI_line_5(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.162676901257, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 5]))
-        self.assertEqual(det.occupation[1], np.array([0]))
-        self.assertEqual(det.occupation[2], np.array([]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0, 5]))
-        self.assertEqual(det.occupation[5], np.array([0]))
-        self.assertEqual(det.occupation[6], np.array([]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0, 5]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0, 5]))
+        self.assertEqual(det.occupation[5], make_occ([0]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([]))
 
     def test_get_from_FCI_line_6(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.049624632911, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 2]))
-        self.assertEqual(det.occupation[1], np.array([0]))
-        self.assertEqual(det.occupation[2], np.array([]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0, 4]))
-        self.assertEqual(det.occupation[5], np.array([0]))
-        self.assertEqual(det.occupation[6], np.array([]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0, 2]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0, 4]))
+        self.assertEqual(det.occupation[5], make_occ([0]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([]))
 
     def test_get_from_FCI_line_7(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -191,34 +193,34 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_8(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        orb_dim = general.Orbitals_Sets([6, 2, 2, 0], occ_type='R')
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.000000000000, places=10)
-        self.assertEqual(det.occupation[0], np.array([0]))
-        self.assertEqual(det.occupation[1], np.array([0]))
-        self.assertEqual(det.occupation[2], np.array([0]))
-        self.assertEqual(det.occupation[3], np.array([]))
-        self.assertEqual(det.occupation[4], np.array([0]))
-        self.assertEqual(det.occupation[5], np.array([0]))
-        self.assertEqual(det.occupation[6], np.array([1]))
-        self.assertEqual(det.occupation[7], np.array([]))
+        self.assertEqual(det.occupation[0], make_occ([0]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([0]))
+        self.assertEqual(det.occupation[3], make_occ([]))
+        self.assertEqual(det.occupation[4], make_occ([0]))
+        self.assertEqual(det.occupation[5], make_occ([0]))
+        self.assertEqual(det.occupation[6], make_occ([1]))
+        self.assertEqual(det.occupation[7], make_occ([]))
     
     def test_get_from_String_Index_1(self):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.12345, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.intc))
-        self.assertEqual(det.occupation[1], np.array([0], dtype=np.intc))
-        self.assertEqual(det.occupation[2], np.array([], dtype=np.intc))
-        self.assertEqual(det.occupation[3], np.array([0], dtype=np.intc))
-        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.intc))
-        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.intc))
-        self.assertEqual(det.occupation[6], np.array([], dtype=np.intc))
-        self.assertEqual(det.occupation[7], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[0], make_occ([0, 2, 4]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([0]))
+        self.assertEqual(det.occupation[4], make_occ([0, 1, 2]))
+        self.assertEqual(det.occupation[5], make_occ([1, 3]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([0]))
     
     def test_get_from_String_Index_2(self):
         det = norm_ci._get_Slater_Det_from_String_Index(
@@ -229,21 +231,21 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index_2,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.6789, places=10)
-        self.assertEqual(det.occupation[0], np.array([0, 2, 4], dtype=np.intc))
-        self.assertEqual(det.occupation[1], np.array([0], dtype=np.intc))
-        self.assertEqual(det.occupation[2], np.array([], dtype=np.intc))
-        self.assertEqual(det.occupation[3], np.array([0], dtype=np.intc))
-        self.assertEqual(det.occupation[4], np.array([0, 1, 2], dtype=np.intc))
-        self.assertEqual(det.occupation[5], np.array([1, 3], dtype=np.intc))
-        self.assertEqual(det.occupation[6], np.array([], dtype=np.intc))
-        self.assertEqual(det.occupation[7], np.array([0], dtype=np.intc))
+        self.assertEqual(det.occupation[0], make_occ([0, 2, 4]))
+        self.assertEqual(det.occupation[1], make_occ([0]))
+        self.assertEqual(det.occupation[2], make_occ([]))
+        self.assertEqual(det.occupation[3], make_occ([0]))
+        self.assertEqual(det.occupation[4], make_occ([0, 1, 2]))
+        self.assertEqual(det.occupation[5], make_occ([1, 3]))
+        self.assertEqual(det.occupation[6], make_occ([]))
+        self.assertEqual(det.occupation[7], make_occ([0]))
 
 
 class JacHess_H2_TestCase(unittest.TestCase):
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        self.WF = norm_ci.Wave_Function_Norm_CI.from_Molpro_FCI(
+        self.WF = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
             test.FCI_file('H2__5__sto3g__D2h'))
         Ures = []
         Uunres = []
@@ -307,7 +309,7 @@ class JacHess_H2_TestCase(unittest.TestCase):
 class WForbChangeTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.WF = norm_ci.Wave_Function_Norm_CI.from_Molpro_FCI(
+        self.WF = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
             test.FCI_file('H2__5__sto3g__D2h'))
         self.U1 = []
         self.U2 = []

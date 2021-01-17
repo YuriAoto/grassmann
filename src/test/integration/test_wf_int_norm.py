@@ -23,13 +23,13 @@ class CISDvsCCSDTestCase(unittest.TestCase):
     def test_check_CCvsCI_cisd_for_H2(self):
         for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
                                         molecule='H2'):
-            wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file(H2_sys))
-            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
-            wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
+            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CCSD_file(H2_sys))
             wf_intN.use_CISD_norm = True
-            wf_CCSD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
+            wf_CCSD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
             with self.subTest(system=H2_sys, coef='C0'):
                 self.assertAlmostEqual(wf_CCSD.C0, wf_CISD.C0, places=5)
             for irp in wf_CCSD.spirrep_blocks(restricted=True):
@@ -46,9 +46,9 @@ class CISDvsCCSDTestCase(unittest.TestCase):
     def test_check_CCvsCI_string_indices_for_H2(self):
         for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
                                         molecule='H2'):
-            wf_CI = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_CI = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file(H2_sys))
-            wf_CC = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_CC = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CCSD_file(H2_sys))
             wf_CC.use_CISD_norm = True
             str_ind_CC = wf_CC.string_indices()

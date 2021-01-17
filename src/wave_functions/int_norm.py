@@ -3,8 +3,8 @@
 Classes:
 --------
 
-String_Index_for_SD
-Wave_Function_Int_Norm
+StringIndex_for_SD
+IntermNormWaveFunction
 """
 import math
 import logging
@@ -12,7 +12,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from util import (zero, irrep_product,
+from util import (zero, irrep_product, int_dtype,
                   triangular, get_ij_from_triang, get_n_from_triang)
 from wave_functions import general as gen_wf
 import molpro_util
@@ -21,7 +21,7 @@ from memory import mem_of_floats
 logger = logging.getLogger(__name__)
 
 
-class String_Index_for_SD(gen_wf.String_Index):
+class SD_StringIndex(gen_wf.StringIndex):
     """The string index for wave function with single and doubles
     
     Atributes:
@@ -47,7 +47,7 @@ class String_Index_for_SD(gen_wf.String_Index):
         
         Parameters:
         -----------
-        coupled_to (list of gen_wf.Spirrep_Index)
+        coupled_to (list of gen_wf.SpirrepIndex)
             Return True only if all elements of coupled_to
             are part of self, respecting the spirreps
         """
@@ -64,7 +64,7 @@ DoublesTypes = namedtuple('DoublesTypes',
                           'baba abab abba baab aaaa bbbb')
 
 
-class Wave_Function_Int_Norm(gen_wf.Wave_Function):
+class IntermNormWaveFunction(gen_wf.WaveFunction):
     """An electronic wave function in intermediate normalisation
     
     Atributes:
@@ -178,7 +178,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
     
     Data Model:
     -----------
-    [(String_Index_for_SD)]
+    [(SD_StringIndex)]
         Only get the CI coefficient (of the normalised version!)
         of that determinant
     
@@ -200,7 +200,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         self.doubles = None
     
     def __getitem__(self, I):
-        """Return the CI coefficient from a String_Index_for_SD"""
+        """Return the CI coefficient from a SD_StringIndex"""
         return I.C
     
     def __len__(self, I):
@@ -493,7 +493,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             with_singles=True,
                             with_BCC_orb_gen=False):
         """Initialise the lists for singles and doubles amplitudes."""
-        self._set_memory('SD lists of Wave_Function_Int_Norm',
+        self._set_memory('SD lists of IntermNormWaveFunction',
                          calc_args=(with_singles, with_BCC_orb_gen))
         test_ind_func = False
         if with_singles:
@@ -563,12 +563,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         if 'occupation' in kargs:
             occ_case = len(kargs['occupation']) - self.ref_occ[spirrep]
             for ii in np.arange(self.ref_occ[spirrep],
-                                dtype=np.int8):
+                                dtype=int_dtype):
                 if ii not in kargs['occupation']:
                     i.append(ii - self.n_core[spirrep])
             for aa in np.arange(self.ref_occ[spirrep],
                                 self.orb_dim[spirrep],
-                                dtype=np.int8):
+                                dtype=int_dtype):
                 if aa in kargs['occupation']:
                     a.append(aa - self.ref_occ[spirrep])
         else:
@@ -632,7 +632,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                        only_ref_occ=False,
                        only_this_occ=None,
                        print_info_to_log=False):
-        """Yield String_Index or String_Index_for_SD
+        """Yield StringIndex or SD_StringIndex
         
         Parameters:
         -----------
@@ -646,7 +646,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         This means: for each spirrep, there is a standard order
         associated to all possible strings of this spirrep
         The attribute standard_position_of_string
-        of gen_wf.Spirrep_String_Index is the position of such
+        of gen_wf.SpirrepStringIndex is the position of such
         string in this standard order.
         We will describe such ordering here:
         There are, in fact, a standard order for each possible
@@ -781,19 +781,19 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         if (spirrep is None
             and only_this_occ is not None
             and not isinstance(only_this_occ,
-                               gen_wf.Orbitals_Sets)):
+                               gen_wf.OrbitalsSets)):
             raise ValueError(
                 'If spirrep is not given, only_this_occ must be'
-                + ' an instance of gen_wf.Orbitals_Sets.')
+                + ' an instance of gen_wf.OrbitalsSets.')
         if coupled_to is not None:
             if not isinstance(coupled_to, tuple):
                 raise ValueError('Parameter coupled_to must be a tuple.')
-            if not isinstance(coupled_to, gen_wf.Spirrep_Index):
+            if not isinstance(coupled_to, gen_wf.SpirrepIndex):
                 for cpl in coupled_to:
-                    if not isinstance(cpl, gen_wf.Spirrep_Index):
+                    if not isinstance(cpl, gen_wf.SpirrepIndex):
                         raise ValueError(
                             'Parameter coupled_to must be a tuple'
-                            + ' of gen_wf.Spirrep_Index.')
+                            + ' of gen_wf.SpirrepIndex.')
             else:
                 coupled_to = (coupled_to,)
         logger.debug('only_this_occ:\n%s', only_this_occ)
@@ -818,7 +818,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                                      print_info_to_log=False):
         if (only_this_occ is None
                 or only_this_occ == self.ref_occ):
-            Index = String_Index_for_SD.make_reference(
+            Index = SD_StringIndex.make_reference(
                 self.ref_occ, self.n_irrep)
             Index.exc_type = 'R'
             Index.C = 1.0 / self.norm
@@ -876,7 +876,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             return
         if print_info_to_log:
             to_log = []
-        Index = String_Index_for_SD.make_reference(self.ref_occ, self.n_irrep)
+        Index = SD_StringIndex.make_reference(self.ref_occ, self.n_irrep)
         Index.exc_type = 'S'
         Index.set_wave_function(self)
         sign = (1 if
@@ -888,7 +888,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 Index[irp][self.n_core[irp]:-1] = np.arange(
                     self.n_core[irp] + 1,
                     self.ref_occ[irp],
-                    dtype=np.uint8)
+                    dtype=int_dtype)
             for a_virt in range(self.n_ext[irp]):
                 Index.C = (sign * self.singles[irp][i_occ, a_virt]
                            / self.norm)
@@ -923,7 +923,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             irp_a, irp_a)
         # Maybe this can be made directly:
         if (only_this_occ is not None
-            and only_this_occ != gen_wf.Orbitals_Sets(
+            and only_this_occ != gen_wf.OrbitalsSets(
                 list(map(len, Index)))):
             return
         Index[irp_a][-1] = self.ref_occ[irp_a]
@@ -1020,7 +1020,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             irrep_a, irrep_b)
         if only_this_occ is not None:
             indices_occ = DoublesTypes(
-                *[gen_wf.Orbitals_Sets(occ, occ_type='F')
+                *[gen_wf.OrbitalsSets(occ, occ_type='F')
                   for occ in map(lambda x: list(map(len, x)), indices)])
             if only_this_occ not in indices_occ:
                 return
@@ -1158,11 +1158,11 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         
         Return:
         -------
-        An instance of, or a namedtuple of, String_Index_for_SD
+        An instance of, or a namedtuple of, SD_StringIndex
         
         if (i, irrep_i) == (j, irrep_j), that is,
         the initial orbital is the same for both electrons,
-        return a single String_Index_for_SD, for a configuration with holes
+        return a single SD_StringIndex, for a configuration with holes
         i == j, for both alpha and beta.
         
         if (i, irrep_i) != (j, irrep_j), that is,
@@ -1177,7 +1177,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         # ---------------------
         # The easy case
         if (irrep_i, i) == (irrep_j, j):
-            Index = String_Index_for_SD()
+            Index = SD_StringIndex()
             Index.exc_type = 'D'
             for spin in ['alpha', 'beta']:
                 for irrep in self.spirrep_blocks():
@@ -1188,9 +1188,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         if irrep == irrep_i:
                             n_electrons -= 1
                     Index.append(
-                        gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                        gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
                         if irrep == irrep_i else
-                        gen_wf.Spirrep_String_Index(n_electrons))
+                        gen_wf.SpirrepStringIndex(n_electrons))
             Index.set_wave_function(self)
             return Index
         # ---------------------
@@ -1203,12 +1203,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
         # hole in i alpha
         # virtual in irrep_b beta
         # virtual in irrep_a alpha
-        Index = DoublesTypes(String_Index_for_SD(),
-                             String_Index_for_SD(),
-                             String_Index_for_SD(),
-                             String_Index_for_SD(),
-                             String_Index_for_SD(),
-                             String_Index_for_SD())
+        Index = DoublesTypes(SD_StringIndex(),
+                             SD_StringIndex(),
+                             SD_StringIndex(),
+                             SD_StringIndex(),
+                             SD_StringIndex(),
+                             SD_StringIndex())
         for Ind in Index:
             Ind.exc_type = 'D'
         # ---------------------
@@ -1220,9 +1220,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_a:
                 n_electrons += 1
             Index.baba.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
                 if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_j:
@@ -1230,9 +1230,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_b:
                 n_electrons += 1
             Index.abab.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
                 if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_j:
@@ -1240,9 +1240,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_a:
                 n_electrons += 1
             Index.abba.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
                 if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_i:
@@ -1250,9 +1250,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_b:
                 n_electrons += 1
             Index.baab.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
                 if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep_a != irrep_i and irrep_a != irrep_j:
@@ -1261,18 +1261,18 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 if irrep == irrep_i or irrep == irrep_j:
                     n_electrons -= 2 if irrep_i == irrep_j else 1
             if irrep == irrep_i and irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons,
                                                               (j, i))
             elif irrep == irrep_i:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
             elif irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
             else:
-                index = gen_wf.Spirrep_String_Index(n_electrons)
+                index = gen_wf.SpirrepStringIndex(n_electrons)
             Index.aaaa.append(index)
             # ===============
             n_electrons = self.ref_occ[irrep]
-            Index.bbbb.append(gen_wf.Spirrep_String_Index(n_electrons))
+            Index.bbbb.append(gen_wf.SpirrepStringIndex(n_electrons))
         # ---------------------
         # Second, the beta electrons
         for irrep in self.spirrep_blocks():
@@ -1282,9 +1282,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_b:
                 n_electrons += 1
             Index.baba.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
                 if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_i:
@@ -1292,9 +1292,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_a:
                 n_electrons += 1
             Index.abab.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
                 if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_i:
@@ -1302,9 +1302,9 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_b:
                 n_electrons += 1
             Index.abba.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
                 if irrep == irrep_i else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep == irrep_j:
@@ -1312,12 +1312,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
             if irrep == irrep_a:
                 n_electrons += 1
             Index.baab.append(
-                gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
                 if irrep == irrep_j else
-                gen_wf.Spirrep_String_Index(n_electrons))
+                gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
-            Index.aaaa.append(gen_wf.Spirrep_String_Index(n_electrons))
+            Index.aaaa.append(gen_wf.SpirrepStringIndex(n_electrons))
             # ===============
             n_electrons = self.ref_occ[irrep]
             if irrep_b != irrep_i and irrep_b != irrep_j:
@@ -1326,14 +1326,14 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                 if irrep == irrep_i or irrep == irrep_j:
                     n_electrons -= 2 if irrep_i == irrep_j else 1
             if irrep == irrep_i and irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons,
                                                               (j, i))
             elif irrep == irrep_i:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, i)
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons, i)
             elif irrep == irrep_j:
-                index = gen_wf.Spirrep_String_Index.make_hole(n_electrons, j)
+                index = gen_wf.SpirrepStringIndex.make_hole(n_electrons, j)
             else:
-                index = gen_wf.Spirrep_String_Index(n_electrons)
+                index = gen_wf.SpirrepStringIndex(n_electrons)
             Index.bbbb.append(index)
         # ---------------------
         for Ind in Index:
@@ -1401,7 +1401,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                     yield from self._string_indices_case_minus_1(spirrep)
             elif nel_case == 0:
                 n_electrons = self.ref_occ[spirrep]
-                Index = gen_wf.Spirrep_String_Index(n_electrons)
+                Index = gen_wf.SpirrepStringIndex(n_electrons)
                 Index.start()
                 yield Index
                 if (coupled_to is None
@@ -1410,17 +1410,17 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                             self.n_corr_orb[cpl_to.spirrep]
                             * self.n_ext[cpl_to.spirrep]
                             + 1))):
-                    Index = gen_wf.Spirrep_String_Index.make_hole(
+                    Index = gen_wf.SpirrepStringIndex.make_hole(
                         n_electrons, (self.n_core[spirrep],))
                     Index.do_not_clear_std_pos()
                     Index.start()
                     Index += 1
                     for j in np.arange(self.n_core[spirrep],
                                        n_electrons,
-                                       dtype=np.int8):
+                                       dtype=int_dtype):
                         for a in np.arange(self.ref_occ[spirrep],
                                            self.orb_dim[spirrep],
-                                           dtype=np.int8):
+                                           dtype=int_dtype):
                             Index[-1] = a
                             yield Index
                             Index += 1
@@ -1430,7 +1430,7 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         or (nel_case_cpl_to == 0
                             and int(cpl_to.Index) == 0)):
                         last_standard_position = int(Index)
-                        Index = gen_wf.Spirrep_String_Index.make_hole(
+                        Index = gen_wf.SpirrepStringIndex.make_hole(
                             n_electrons,
                             (self.n_core[spirrep],
                              self.n_core[spirrep] + 1))
@@ -1438,18 +1438,18 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
                         Index.set_std_pos(last_standard_position)
                         for i in np.arange(self.n_core[spirrep] + 1,
                                            n_electrons,
-                                           dtype=np.int8):
+                                           dtype=int_dtype):
                             for j in np.arange(self.n_core[spirrep],
                                                i,
-                                               dtype=np.int8):
+                                               dtype=int_dtype):
                                 for a in np.arange(self.ref_occ[spirrep],
                                                    self.orb_dim[spirrep],
-                                                   dtype=np.int8):
+                                                   dtype=int_dtype):
                                     Index[-1] = a
                                     for b in np.arange(
                                             self.ref_occ[spirrep],
                                             a,
-                                            dtype=np.int8):
+                                            dtype=int_dtype):
                                         Index[-2] = b
                                         yield Index
                                         Index += 1
@@ -1480,16 +1480,16 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
 
     def _string_indices_case_minus_2(self, spirrep):
         n_electrons = self.ref_occ[spirrep] - 2
-        Index = gen_wf.Spirrep_String_Index.make_hole(
+        Index = gen_wf.SpirrepStringIndex.make_hole(
             n_electrons,
             (self.n_core[spirrep],
              self.n_core[spirrep] + 1))
         Index.start()
         for i in np.arange(self.n_core[spirrep] + 1,
                            n_electrons + 2,
-                           dtype=np.int8):
+                           dtype=int_dtype):
             for j in np.arange(self.n_core[spirrep], i,
-                               dtype=np.int8):
+                               dtype=int_dtype):
                 yield Index
                 Index += 1
                 if j == n_electrons:
@@ -1501,28 +1501,28 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
 
     def _string_indices_case_plus_2(self, spirrep):
         n_electrons = self.ref_occ[spirrep] + 2
-        Index = gen_wf.Spirrep_String_Index(n_electrons)
+        Index = gen_wf.SpirrepStringIndex(n_electrons)
         Index.do_not_clear_std_pos()
         Index.start()
         for a in np.arange(self.ref_occ[spirrep],
                            self.orb_dim[spirrep],
-                           dtype=np.int8):
+                           dtype=int_dtype):
             Index[-1] = a
             for b in np.arange(self.ref_occ[spirrep],
                                a,
-                               dtype=np.int8):
+                               dtype=int_dtype):
                 Index[-2] = b
                 yield Index
                 Index += 1
 
     def _string_indices_case_minus_1(self, spirrep):
         n_electrons = self.ref_occ[spirrep] - 1
-        Index = gen_wf.Spirrep_String_Index.make_hole(n_electrons,
-                                                      (self.n_core[spirrep],))
+        Index = gen_wf.SpirrepStringIndex.make_hole(n_electrons,
+                                                    (self.n_core[spirrep],))
         Index.do_not_clear_std_pos()
         Index.start()
         for j in np.arange(self.n_core[spirrep], n_electrons + 1,
-                           dtype=np.int8):
+                           dtype=int_dtype):
             yield Index
             Index += 1
             if j < n_electrons:
@@ -1530,12 +1530,12 @@ class Wave_Function_Int_Norm(gen_wf.Wave_Function):
 
     def _string_indices_case_plus_1(self, spirrep):
         n_electrons = self.ref_occ[spirrep] + 1
-        Index = gen_wf.Spirrep_String_Index(n_electrons)
+        Index = gen_wf.SpirrepStringIndex(n_electrons)
         Index.do_not_clear_std_pos()
         Index.start()
         for a in np.arange(self.ref_occ[spirrep] + 1,
                            self.orb_dim[spirrep] + 1,
-                           dtype=np.int8):
+                           dtype=int_dtype):
             yield Index
             Index[-1] = a
             Index += 1

@@ -7,15 +7,13 @@ import numpy as np
 
 
 from wave_functions.strings_rev_lexical_order import next_str, get_index
-from util import irrep_product
+from util import irrep_product, int_dtype
 
 cdef int EXC_TYPE_A = 0
 cdef int EXC_TYPE_B = 1
 cdef int EXC_TYPE_AA = 2
 cdef int EXC_TYPE_AB = 3
 cdef int EXC_TYPE_BB = 4
-
-int_dtype = np.intc
 
 
 def min_dist_app_hess(wf, wf_cc, int n_ampl, level='SD'):

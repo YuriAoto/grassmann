@@ -6,6 +6,8 @@ to the Cython version
 """
 import numpy as np
 
+from util import int_dtype
+
 def next_str(occ):
     """Change occ to the next occupation in reverse lexical order"""
     i_to_be_raised = 0
@@ -14,7 +16,7 @@ def next_str(occ):
             break
         i_to_be_raised += 1
     occ[i_to_be_raised] += 1
-    occ[:i_to_be_raised] = np.arange(i_to_be_raised, dtype=np.intc)
+    occ[:i_to_be_raised] = np.arange(i_to_be_raised, dtype=int_dtype)
 
 
 def generate_graph(nel, norb):
@@ -39,8 +41,8 @@ def generate_graph(nel, norb):
     if nel <= 0 or norb <= 0 or nel > norb:
         raise ValueError('nel and norb must be positive and nel > norb')
     str_gr = np.zeros((norb-nel+1, nel),
-                      dtype=np.intc)
-    str_gr[:,0] = np.arange(norb-nel+1, dtype=np.intc)
+                      dtype=int_dtype)
+    str_gr[:,0] = np.arange(norb-nel+1, dtype=int_dtype)
     str_gr[1,:] = 1
     for i in range(2, norb-nel+1):
         for j in range(1, nel):
@@ -106,7 +108,7 @@ def occ_from_pos(str_ind, Y):
     ValueError if the occupation cannot be retrieved from str_ind
     """
     occ = np.arange(Y.shape[1],
-                    dtype=np.intc)
+                    dtype=int_dtype)
     for i in range(str_ind):
         next_str(occ)
     return occ

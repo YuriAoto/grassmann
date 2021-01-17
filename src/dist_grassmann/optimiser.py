@@ -26,8 +26,8 @@ import numpy as np
 from scipy import linalg
 
 from util import logtime
-from wave_functions.general import Wave_Function
-from wave_functions.cisd import Wave_Function_CISD
+from wave_functions.general import WaveFunction
+from wave_functions.cisd import CISD_WaveFunction
 from . import absil
 import orbitals as orb
 
@@ -106,7 +106,7 @@ def optimise_overlap_orbRot(wf,
     Parameters:
     -----------
     
-    wf (dGr_general_WF.Wave_Function)
+    wf (wave_functions.general.WaveFunction)
         The external wave function
     
     max_iter (int, default = 20)
@@ -392,7 +392,7 @@ def optimise_overlap_Absil(ci_wf,
     Parameters:
     -----------
     
-    ci_wf (dGr_general_WF.Wave_Function)
+    ci_wf (wave_functions.general.WaveFunction)
         The external wave function
     
     max_iter (int, default = 20)
@@ -471,9 +471,9 @@ def optimise_overlap_Absil(ci_wf,
     implement restricted calculations
     calculate n_pos_H_eigVal
     """
-    if not isinstance(ci_wf, Wave_Function):
+    if not isinstance(ci_wf, WaveFunction):
         raise ValueError(
-            'ci_wf should be an instance of dGr_general_WF.Wave_Function.')
+            'ci_wf should be an instance of wave_functions.general.WaveFunction.')
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
@@ -481,7 +481,7 @@ def optimise_overlap_Absil(ci_wf,
     f = None
     if only_C and only_eta:
         raise ValueError('Do not set both only_C and only_eta to True!')
-    restricted = isinstance(ci_wf, Wave_Function_CISD)
+    restricted = isinstance(ci_wf, CISD_WaveFunction)
     if ini_U is None:
         U = []
         ini_occ = occupation if occupation is not None else ci_wf.ref_occ
@@ -577,7 +577,7 @@ def optimise_overlap_Absil(ci_wf,
                     lin_sys_solution[0][slice_XC[i]],
                     U[i].shape, order=('C'
                                        if isinstance(ci_wf,
-                                                     Wave_Function_CISD) else
+                                                     CISD_WaveFunction) else
                                        'F')))
                 norm_eta_i = linalg.norm(eta[-1])
                 if norm_eta_i < zero_skip_linalg:

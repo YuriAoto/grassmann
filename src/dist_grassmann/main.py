@@ -96,11 +96,11 @@ def main(args, f_out):
                           'fci')))
     if args.at_ref:
         ext_wf.use_CISD_norm = False
-    if (isinstance(ext_wf, wave_functions.norm_ci.Wave_Function_Norm_CI)
+    if (isinstance(ext_wf, wave_functions.norm_ci.NormCI_WaveFunction)
         and 'Absil' in args.algorithm
             and not args.at_ref):
         raise Exception('algorithm CISD_Absil is not compatible with'
-                        + 'fci.Wave_Function_Norm_CI')
+                        + 'fci.NormCI_WaveFunction')
     logger.debug('External wave function:\n %r', ext_wf)
     toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':

@@ -23,9 +23,9 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
     def test_overlap(self):
         for cisd_sys in test.test_systems(has_method='CISD',
                                           molecule=molecules):
-            wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file(cisd_sys))
-            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
+            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
             U = test.construct_random_orbitals(wf_CISD.ref_occ,
                                                wf_CISD.orb_dim,
                                                wf_CISD.n_irrep,
@@ -43,9 +43,9 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
     def test_create_XC_matrices(self):
         for cisd_sys in test.test_systems(has_method='CISD',
                                           molecule=molecules):
-            wf_intN = int_norm.Wave_Function_Int_Norm.from_Molpro(
+            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file(cisd_sys))
-            wf_CISD = cisd.Wave_Function_CISD.from_int_norm(wf_intN)
+            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
             U = test.construct_random_orbitals(wf_CISD.ref_occ,
                                                wf_CISD.orb_dim,
                                                wf_CISD.n_irrep,

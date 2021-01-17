@@ -6,17 +6,17 @@ import unittest
 import numpy as np
 
 from wave_functions import int_norm
-from wave_functions.general import Orbitals_Sets
+from wave_functions.general import OrbitalsSets
 import test
-
+from util import int_dtype
 
 class He2StringIndicesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        self.He2_wf = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.He2_wf = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CISD_file('He2__1.5__631g__D2h'))
-        self.He2_CCwf = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.He2_CCwf = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CCSD_file('He2__1.5__631g__D2h'))
 
     def test_string_indices_singles_cisd_He2(self):
@@ -31,16 +31,16 @@ class He2StringIndicesTestCase(unittest.TestCase):
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[0].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
                         self.assertEqual(Index[8].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                 elif i == 1:
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[0].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                         self.assertEqual(Index[8].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
             else:
                 self.fail(msg='Too many indices!')
         irrep = 4
@@ -54,16 +54,16 @@ class He2StringIndicesTestCase(unittest.TestCase):
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[4].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
                         self.assertEqual(Index[12].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                 elif i == 1:
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[4].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                         self.assertEqual(Index[12].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
             else:
                 self.fail(msg='Too many indices!')
 
@@ -79,16 +79,16 @@ class He2StringIndicesTestCase(unittest.TestCase):
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[0].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
                         self.assertEqual(Index[8].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                 elif i == 1:
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[0].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                         self.assertEqual(Index[8].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
             else:
                 self.fail(msg='Too many indices!')
         irrep = 4
@@ -102,16 +102,16 @@ class He2StringIndicesTestCase(unittest.TestCase):
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[4].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
                         self.assertEqual(Index[12].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                 elif i == 1:
                     with self.subTest('He2, occ of singles',
                                       i=i, irrep=irrep):
                         self.assertEqual(Index[4].occ_orb,
-                                         np.array([0], dtype=np.intc))
+                                         np.array([0], dtype=int_dtype))
                         self.assertEqual(Index[12].occ_orb,
-                                         np.array([1], dtype=np.intc))
+                                         np.array([1], dtype=int_dtype))
             else:
                 self.fail(msg='Too many indices!')
 
@@ -127,9 +127,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                 self.assertAlmostEqual(Index.C, -0.02677499 / self.He2_wf.norm)
                 if i == 0:
                     self.assertEqual(Index[0].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
                     self.assertEqual(Index[8].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -144,9 +144,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                 self.assertAlmostEqual(Index.C, -0.02720985 / self.He2_wf.norm)
                 if i == 0:
                     self.assertEqual(Index[4].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
                     self.assertEqual(Index[12].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -161,9 +161,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                 self.assertAlmostEqual(Index.C, -0.03191829 / self.He2_wf.norm)
                 if i_Ind == 0:
                     self.assertEqual(Index[0].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
                     self.assertEqual(Index[8].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -178,9 +178,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                 self.assertAlmostEqual(Index.C, -0.05013654 / self.He2_wf.norm)
                 if i_Ind == 0:
                     self.assertEqual(Index[4].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
                     self.assertEqual(Index[12].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
 
@@ -198,9 +198,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                                        / self.He2_CCwf.norm)
                 if i == 0:
                     self.assertEqual(Index[0].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
                     self.assertEqual(Index[8].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -216,9 +216,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                                        -0.02730136 / self.He2_CCwf.norm)
                 if i == 0:
                     self.assertEqual(Index[4].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
                     self.assertEqual(Index[12].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -234,9 +234,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                                        -0.03210796 / self.He2_CCwf.norm)
                 if i_Ind == 0:
                     self.assertEqual(Index[0].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
                     self.assertEqual(Index[8].occ_orb,
-                                     np.array([0, 1], dtype=np.intc))
+                                     np.array([0, 1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         # ----------
@@ -253,9 +253,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
                                        / self.He2_CCwf.norm)
                 if i_Ind == 0:
                     self.assertEqual(Index[4].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
                     self.assertEqual(Index[12].occ_orb,
-                                     np.array([1], dtype=np.intc))
+                                     np.array([1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
 
@@ -350,14 +350,14 @@ class He2StringIndicesTestCase(unittest.TestCase):
                                        / self.He2_CCwf.norm)
 
     def test_make_occ_ind_doub_He2(self):
-        zero_arr_1 = np.array([0], dtype=np.intc)
-        one_arr_1 = np.array([1], dtype=np.intc)
+        zero_arr_1 = np.array([0], dtype=int_dtype)
+        one_arr_1 = np.array([1], dtype=int_dtype)
         i = j = 0
         irrep_i = irrep_j = 0
         irrep_a = irrep_b = 0
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
+        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -371,7 +371,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 4
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
+        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -385,7 +385,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 0
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
+        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -399,7 +399,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 4
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.String_Index_for_SD))
+        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -495,18 +495,18 @@ class He2StringIndicesTestCase(unittest.TestCase):
         for i_Ind, Index in enumerate(self.He2_wf._string_indices_spirrep(0)):
             if i_Ind == 0:
                 self.assertEqual(Index.occ_orb,
-                                 np.array([0], dtype=np.intc))
+                                 np.array([0], dtype=int_dtype))
             elif i_Ind == 1:
                 self.assertEqual(Index.occ_orb,
-                                 np.array([1], dtype=np.intc))
+                                 np.array([1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
         for i_Ind, Index in enumerate(self.He2_wf._string_indices_spirrep(
-                0, only_this_occ=Orbitals_Sets([2, 0, 0, 0, 0, 0, 0, 0],
-                                               occ_type='R'))):
+                0, only_this_occ=OrbitalsSets([2, 0, 0, 0, 0, 0, 0, 0],
+                                              occ_type='R'))):
             if i_Ind == 0:
                 self.assertEqual(Index.occ_orb,
-                                 np.array([0, 1], dtype=np.intc))
+                                 np.array([0, 1], dtype=int_dtype))
             else:
                 self.assertTrue(False, msg='Too many indices!')
 

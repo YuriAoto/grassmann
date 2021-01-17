@@ -17,7 +17,7 @@ import copy
 import math
 from collections import namedtuple
 
-from util import get_pos_from_rectangular, logtime
+from util import get_pos_from_rectangular, logtime, int_dtype
 from wave_functions import general
 import orbitals
 import molpro_util
@@ -83,7 +83,7 @@ def _str_excitation(x):
 
 def make_occ(x):
     """Return an orbital occupation from x"""
-    return np.array(x, dtype=np.intc)
+    return np.array(x, dtype=int_dtype)
 
 
 def _compare_strings(ref, exc):
@@ -286,11 +286,11 @@ def _get_slater_det_from_excitation(ref_det, c, alpha_hp, beta_hp):
                      alpha_occ=np.array(sorted(
                          [x for x in ref_det.alpha_occ
                           if x not in alpha_hp[0]] + alpha_hp[1]),
-                                        dtype=np.intc),
+                                        dtype=int_dtype),
                      beta_occ=np.array(sorted(
                          [x for x in ref_det.beta_occ
                           if x not in beta_hp[0]] + beta_hp[1]),
-                                       dtype=np.intc))
+                                       dtype=int_dtype))
 
 
 def _get_slater_det_from_fci_line(line, Ms, n_core,
@@ -379,7 +379,7 @@ def _get_slater_det_from_fci_line(line, Ms, n_core,
                      beta_occ=make_occ(occ[n_alpha:]))
 
 
-class WaveFunctionFCI(general.Wave_Function):
+class WaveFunctionFCI(general.WaveFunction):
     """A FCI-like wave function, based on alpha and beta strings
     
     The wave function is stored in a 2D np.array, whose rows and columns
@@ -650,10 +650,10 @@ class WaveFunctionFCI(general.Wave_Function):
         rank_b, holes_b, particles_b = _compare_strings(ref.beta_occ,
                                                         det.beta_occ)
         return (rank_a + rank_b,
-                (np.array(holes_a, dtype=np.intc),
-                 np.array(particles_a, dtype=np.intc)),
-                (np.array(holes_b, dtype=np.intc),
-                 np.array(particles_b, dtype=np.intc)))
+                (np.array(holes_a, dtype=int_dtype),
+                 np.array(particles_a, dtype=int_dtype)),
+                (np.array(holes_b, dtype=int_dtype),
+                 np.array(particles_b, dtype=int_dtype)))
     
     def normalise(self, mode='unit'):
         """Normalise the wave function
@@ -715,7 +715,7 @@ class WaveFunctionFCI(general.Wave_Function):
         
         Parameters:
         -----------
-        intN_wf (Wave_Function_Int_Norm)
+        intN_wf (IntermNormWaveFunction)
             wave function in intermediate normalisation
             are discarded.
         
@@ -820,7 +820,7 @@ class WaveFunctionFCI(general.Wave_Function):
                     # might not have the same ref_occ (per spirrep) as
                     # the True reference determinant... I think that this
                     # is not a real problem
-                    self.ref_occ = general.Orbitals_Sets(
+                    self.ref_occ = general.OrbitalsSets(
                         list(map(len, get_SD_old(
                             line, self.orb_dim, self.n_core,
                             self.n_irrep, self.Ms).occupation)))
@@ -874,7 +874,7 @@ class WaveFunctionFCI(general.Wave_Function):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
-        self.ref_occ = general.Orbitals_Sets(
+        self.ref_occ = general.OrbitalsSets(
             list(map(len, get_SD_old(
                 line_ref, self.orb_dim, self.n_core,
                 self.n_irrep, self.Ms).occupation)))
@@ -889,8 +889,8 @@ class WaveFunctionFCI(general.Wave_Function):
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.n_act = general.Orbitals_Sets(np.zeros(self.n_irrep),
-                                           occ_type='A')
+        self.n_act = general.OrbitalsSets(np.zeros(self.n_irrep),
+                                          occ_type='A')
         if active_el_in_out + len(self.n_core) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
                              + 'n core el = ' + str(self.n_core)
@@ -1224,7 +1224,7 @@ class WaveFunctionFCI(general.Wave_Function):
         
         Return:
         -------
-        The transformed wave function, as instace of Wave_Function_Norm_CI.
+        The transformed wave function, as instace of NormCI_WaveFunction.
         Optionally, only C0 is calculated, and the final wave function has
         only one determinant (associated to C0)
         """

@@ -10,6 +10,7 @@ from wave_functions import cisd, int_norm
 import orbitals
 from dist_grassmann import absil
 import test
+from util import int_dtype
 
 
 np.set_printoptions(formatter={'all': lambda x: '{0:>9.6f}'.format(x)})
@@ -32,37 +33,37 @@ class YieldExcitations523TestCase(unittest.TestCase):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 5],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 5],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 2)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             else:
                 self.fail('Too many indices')
 
@@ -77,7 +78,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 5, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
@@ -85,7 +86,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 5, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
@@ -93,7 +94,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 6, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             else:
                 self.fail('Too many indices')
 
@@ -115,55 +116,55 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 2)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 6:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 6],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 7:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 8:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 2)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             else:
                 self.fail('Too many indices')
 
@@ -178,7 +179,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
@@ -186,7 +187,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
@@ -194,7 +195,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 5, 7, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -202,7 +203,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -210,7 +211,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -218,7 +219,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 4, 7, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 6:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -226,7 +227,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 7],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 7:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -234,7 +235,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             elif i_Ind == 8:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
@@ -242,7 +243,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
                     self.assertEqual(Ind, np.array([0, 1, 2, 3, 7, 8],
-                                                   dtype=int))
+                                                   dtype=int_dtype))
             else:
                 self.fail('Too many indices')
 
@@ -252,16 +253,16 @@ class CalcOverlap(unittest.TestCase):
     def setUp(self):
         prng = np.random.RandomState(test.init_random_state)
         # H2:
-        self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file('H2__5__sto3g__D2h'))
-        self.wf_H2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_H2)
+        self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_occ,
                                                      self.wf_H2.orb_dim,
                                                      self.wf_H2.n_irrep)
         # Li2:
-        self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CISD_file('Li2__5__631g__C2v'))
-        self.wf_Li2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
             self.wf_Li2.ref_occ,
             self.wf_Li2.orb_dim,
@@ -348,17 +349,17 @@ class CalcXCmatrices(unittest.TestCase):
     def setUp(self):
         prng = np.random.RandomState(test.init_random_state)
         # H2:
-        self.intN_wf_H2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CISD_file('H2__5__sto3g__D2h'))
-        self.wf_H2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_H2)
+        self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
             self.wf_H2.ref_occ,
             self.wf_H2.orb_dim,
             self.wf_H2.n_irrep)
         # Li2:
-        self.intN_wf_Li2 = int_norm.Wave_Function_Int_Norm.from_Molpro(
+        self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
             test.CISD_file('Li2__5__631g__C2v'))
-        self.wf_Li2 = cisd.Wave_Function_CISD.from_int_norm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
             self.wf_Li2.ref_occ,
             self.wf_Li2.orb_dim,
