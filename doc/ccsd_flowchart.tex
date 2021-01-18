@@ -1,181 +1,122 @@
-\newcommand{\C}[1]{0.0+#1*4.0}
-\newcommand{\T}[1]{0.0-#1*2.5}
-\newcommand{\W}[1]{#1*3}
-
-\newcommand{\toBlue}{\color{blue}}
-\newcommand{\toBlack}{\color{black}}
-
-\newcommand{\pyVar}[1]{\textit{$\langle$#1$\rangle$}}
-
-
-\tikzset{
-  hyperlink node/.style={
-    alias=sourcenode,
-    append after command={
-      let     \p1 = (sourcenode.north west),
-      \p2=(sourcenode.south east),
-      \n1={\x2-\x1},
-      \n2={\y1-\y2} in
-      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)] {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
-      % xelatex needs \XeTeXLinkBox, won't create a link unless it
-      % finds text --- rules don't work without \XeTeXLinkBox.
-      % Still builds correctly with pdflatex and lualatex
-    }
-  }
-}
-
 \begin{center}
 \footnotesize
 \begin{tikzpicture}[
   ->,
   double,
-  very thick,
-  proj/.style={
-    align=center,
-    font=\bfseries,
-    color=red
-  },
-  projBox/.style={
-    thin
-  },
-  algstep/.style={
-    align=center,
-    anchor=north,
-    rectangle,
-    minimum size=6mm,
-    rounded corners=3mm,
-    very thick,
-    draw=black!50,
-    top color=white,
-    bottom color=black!20
-  },
-  algmultistep/.style={
-    align=center,
-    anchor=north,
-    rectangle,
-    minimum size=6mm,
-    rounded corners=3mm,
-    very thick,
-    draw=black!50,
-    top color=white,
-    bottom color=white
-  }
-  ]
+  very thick]
 
-  
-  \def\lwdB{0.2cm};
-  \def\lwd{0.1cm};
-  \def\lwdE{0.0cm}
-
+  \node (import) at (\X{-50}, \Y{-18}) [anchor=west]
+  {\texttt{from wave\_functions import interm\_norm}};
+  \node (import) at (\X{-50}, \Y{-15}) [anchor=west]
+  {\texttt{from coupled\_cluster import ccsd}};
 
   % ======
-  \node (init)  at (\C{0.3}, \T{-1.5})
-  [algstep, text width=\W{80}, hyperlink node=sec:]
+  \node (init)  at (\X{20}, \Y{-15})
+  [algstep, text width=\W{50}]
   {
-    \textbf{Initialisation}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.}}\\\vspace{\lwd}
-      
-    \end{minipage}
+    \textbf{Initialisation}\vspT
+    {$\Psi_{CC}$ as instance of \texttt{interm\_norm.IntermNormWF}}\vsp
   };
   % ------
 
-  
   % ======
-  \node (ener)  at (\C{-0.0}, \T{0.0})
-  [algstep, text width=\W{80}, hyperlink node=sec:ccsd_energy]
+  \node (ener)  at (\X{0}, \Y{0})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_energy]
   {
-    \textbf{Energy}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      {\footnotesize \texttt{ccsd.get\_energy}}\\\vspace{\lwd}
-      
-    \end{minipage}
+    \textbf{Energy}\vspT
+    ?? \texttt{interm\_norm.IntermNormWF.energy}\vsp
+    ?? \texttt{ccsd.energy}\vsp
+  };
+  % ------
+
+  % ======
+  \node (conv)  at (\X{0}, \Y{15})
+  [algcond, text width=\W{20}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{Converged?}\vspT
+    {$|\Omega| < \epsilon$}\vsp
+  };
+  % ------
+
+  % ======
+  \node (cc_version)  at (\X{-30}, \Y{30})
+  [algcond, text width=\W{20}]
+  {
+    \textbf{CC version?}\vspT
+  };
+  % ------
+
+  % ======
+  \node (transf_hg)  at (\X{20}, \Y{30})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{$T_1$ transformed Hamiltonian}\vspT
+    \texttt{coupled\_cluster.ccsd.get\_t1\_transf}\vsp
   };
   % ------
 
   
   % ================================================
-  \node (res) at (\C{0.0}, \T{1.0})
-  [algmultistep, text width=\W{150}, minimum height=4cm, hyperlink node=sec:ccsd_res]
+  \node (res) at (\X{0}, \Y{70})
+  [algmultistep, text width=\W{80}, hyperlink node=sec:ccsd_res]
   {
-    \textbf{Set residual}\\\vspace{\lwdB}
-    \begin{minipage}[t][9cm]{0.4\textwidth}
+    \begin{minipage}[t][7cm]{1.0\textwidth}
       \centering
-      {\footnotesize \texttt{ccsd.equation}}\\\vspace{\lwd}
+      \textbf{Set residual}\vspT
+      \texttt{coupled\_cluster.ccsd.equation}\vsp
     \end{minipage}
   };
 
 
   % ======
-  \node (resterm1) at (\C{-1.0}, \T{2.0})
-  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_sing]
+  \node (res_sing) at (\X{20}, \Y{70})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_sing]
   {
-    \textbf{Set res. singles ($\Omega_i^a$)}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.res\_singles}}\\\vspace{\lwd}
+    \textbf{Singles, $\Omega_i^a$}\vspT
+    \texttt{ccsd.equation.res\_singles}\vsp
   };
   % ------
 
   % ======
-  \node (resterm2) at (\C{1.0}, \T{2.0})
-  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_res_doub]
+  \node (res_doub) at (\X{-20}, \Y{80})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
   {
-    \textbf{Set res. doubles ($\Omega_{ij}^{ab}$)}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.res\_doubles}}\\\vspace{\lwd}
+    \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
+    \texttt{ccsd.equation.res\_doubles}\vsp
   };
   % ------
-
-  % ======
-  \node (resterm3) at (\C{0.0}, \T{3.5})
-  [algstep, text width=\W{30}, hyperlink node=sec:residual_eq3]
-  {
-    \textbf{Set term3}\\\vspace{\lwdB}
-    {\footnotesize \texttt{ccsd.equation.term3}}\\\vspace{\lwd}
-  };
-  % ------
-
-    \draw [->] (resterm1.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
-    \draw [->] (resterm2.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (resterm3.90);
-    
   
   % ------------------------------------------------
 
   
   % ======
-  \node (update) at (\C{0.0}, \T{6.0})
-  [algstep, text width=\W{90}, hyperlink node=sec:ccsd_update]
+  \node (update) at (\X{0}, \Y{100})
+  [algstep, text width=\W{50}, hyperlink node=sec:ccsd_update]
   {
-    \textbf{Update amplitudes}\\\vspace{\lwdB}
-    \begin{minipage}{0.4\textwidth}
-      \centering
-      {\footnotesize \texttt{ccsd.step}}\\\vspace{\lwd}
-    \end{minipage}
+    \textbf{Update amplitudes}\vspT
+    \texttt{interm\_norm.IntermNormWF.update\_amplitudes}\vsp
   };
   % ------
 
 
-
   \draw [->] (init.270) -- (ener.50);
+  \draw [->] (ener.270) -- (conv.90);
+  \draw [->, condFalse] (conv.180) .. controls +(left:2) and +(up:1) .. (cc_version.90);
+  \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{15});
+  \draw [->] (cc_version.0) -- (transf_hg.180)
+  node [midway, above, sloped] (cc) {CCSD};
+  \draw [->] (cc_version.270) .. controls +(down:1) and +(up:1) .. (res.110)
+  node [midway, above, sloped] (cc) {CCD};
+  \draw [->] (transf_hg.270) .. controls +(down:1) and +(up:1) .. (res.70);
+  \draw [->] (res.270) -- (update.90);
 
-  \draw [->] (ener.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (res.90);
-  \draw [->] (res.270) .. controls +(down:1.5cm) and +(up:1.5cm) .. (update.90);
+  \algloop{update.270}{110}{-10}{ener.130}
+  
 
-  \draw [->] (update.230) -- (\C{-0.3}, \T{7.0})  --  (\C{-2.0}, \T{7.0}) --
-  (\C{-2.0}, \T{-0.5}) -- (\C{-0.3}, \T{-0.5}) -- (ener.130);
-  % ======
-  \node at (\C{-0.5}, \T{6.8}) []
-  {$|\mathbf{\Omega}| > \epsilon$};
-  % ------
-
-  \draw [->] (update.310) -- (\C{0.3}, \T{7.0})  --  (\C{1.0}, \T{7.0});
-  % ======
-  \node at (\C{0.5}, \T{6.8}) []
-  {$|\mathbf{\Omega}| < \epsilon$};
   % ------
 
 \end{tikzpicture}
 \end{center}
-
- 	
 
 %%% Local Variables:
 %%% mode: latex

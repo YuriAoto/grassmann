@@ -43,12 +43,16 @@
 \usepackage[makeroom]{cancel}
 \usepackage[table]{xcolor}
 \usepackage{capt-of}
-\usepackage{hyperref}
+\usepackage[colorlinks=true]{hyperref}
 
 \usepackage{tikz}
 \usetikzlibrary{calc}
 \usetikzlibrary{positioning}
+\usetikzlibrary{decorations.text}
 \usetikzlibrary{arrows.meta}
+
+\newcommand{\toBlue}{\color{blue}}
+\newcommand{\toBlack}{\color{black}}
 
 \newcommand{\tikzmark}[1]{\tikz[baseline,remember picture] \coordinate (#1) {};}
 
@@ -151,7 +155,6 @@
 \newcommand*{\extAlg}{\ensuremath{\bigwedge \orbSp}}
 \newcommand*{\extProd}{\ensuremath{\bigwedge\nolimits^n \orbSp}}
 \newcommand*{\extProdTwo}{\ensuremath{\bigwedge\nolimits^2 \orbSp}}
-
 
 
 %%% Local Variables:

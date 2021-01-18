@@ -59,6 +59,30 @@ In section \ref{sec:ccsd_flowchart} we have a flowchart that show,
 as precisely as we could make,
 the connection between the equations and the code.
 
+\section{The wave function}
+
+The CCD and the CCSD wave functions are:
+\begin{equation}
+  \Psi_{CCSD} = e^{T_1 + T_2}\Phi_0
+\end{equation}
+\begin{equation}
+  \Psi_{CCD} = e^{T_2}\Phi_0
+\end{equation}
+The operators are defined as:
+\begin{equation}
+  T_1 = \sum_{i,a} t_i^a E_i^a = \sum_{i,a} t_i^a (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+\end{equation}
+\begin{equation}
+  \begin{split}
+    T_2 =& \frac{1}{2}\sum_{i,j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+    (a_{b\alpha}^\dagger a_{j\alpha} + a_{b\beta}^\dagger a_{j\beta})
+  \end{split}
+\end{equation}
+
+The wave function is stored in the class \texttt{wave\_functions.interm\_norm.IntermNormWF}
+
 
 \section{Equations}
 
@@ -74,6 +98,74 @@ the connection between the equations and the code.
   \end{split}
 \end{equation}
 
+\subsection{T1-Transformed Integrals}
+\hypertarget{sec:ccsd_t1_trans}{}
+\label{sec:ccsd_t1_trans}
+
+The T1-transformation depends on the $\mathbf{t}_1$ matrix defined as
+\begin{gather}
+  \mathbf{t}_1=
+  \begin{bmatrix}
+    0     & 0\\
+    t_i^a & 0
+  \end{bmatrix},
+\end{gather}
+where $t_i^a$ are the amplitudes associated to the single excitation.
+Be careful with the index, because $(\mathbf{t}_1)_{ai}=t_a^i$ (maybe we should change this).
+The one-electron T1-transformed integral can be writen as
+\begin{equation}
+  {\tilde h}_{pq}=h_{pq}-\sum_r(\mathbf{t}_1)_{pr}h_{rq}+\sum_sh_{ps}(\mathbf{t}_1^T)_{qs}-\sum_{rs}(\mathbf{t}_1)_{pr}h_{rs}(\mathbf{t}_1^T)_{qs}
+\end{equation}
+However, there is no need to construct the $\mathbf{t}_1$ matrix if we split the last equation in four cases:
+\begin{align}
+  {\tilde h}_{ij}&=h_{ij}+\sum_ch_{ic}t_{j}^{c}\\
+  {\tilde h}_{ai}&=h_{ai}-\sum_kt_{k}^{a}h_{ki}+\sum_ch_{ac}t_{i}^{c}-\sum_{ck}t_{k}^{a}h_{kc}t_{i}^{c}\\
+  {\tilde h}_{ia}&=h_{ia}\\
+  {\tilde h}_{ab}&=h_{ab}-\sum_kt_{k}^{b}h_{ka}
+\end{align}
+
+For the two-electron integral we have a similar expression:
+\begin{equation}
+  \begin{split}
+    {\tilde g}_{pqrs}=g_{pqrs}&-\sum_t(\mathbf{t}_1)_{pt}g_{tqrs}+\sum_ug_{purs}(\mathbf{t}_1^T)_{qu}-\sum_m(\mathbf{t}_1)_{rm}g_{pqms}+\sum_ng_{pqrn}(\mathbf{t}_1^T)_{sn}\\
+    &-\sum_{tu}(\mathbf{t}_1)_{pt}g_{turs}(\mathbf{t}_1^T)_{qu}+\sum_{tm}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqms}-\sum_{tn}(\mathbf{t}_1)_{pt}g_{tqrn}(\mathbf{t}_1^T)_{sn}\\
+    &-\sum_{um}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}+\sum_{un}g_{purn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}-\sum_{mn}(\mathbf{t}_1)_{rm}g_{pq}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tum}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}-\sum_{tun}(\mathbf{t}_1)_{pt}g_{turn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tmn}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqmn}(\mathbf{t}_1^T)_{sn}-\sum_{umn}(\mathbf{t}_1)_{rm}g_{pumn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tumn}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tumn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}
+  \end{split}
+\end{equation}
+
+This expression can be divided in 16 cases, that can be further simplified by symmetry.
+\begin{align}
+  {\tilde g}_{ijkl}=&g_{ijkl}+\sum_{e}(g_{iekl}t_i^e+g_{ijke}t_j^e)+\sum_{ef}g_{iekf}t_j^et_l^f\\
+%  &=g_{ijkl}+\sum_{e}\bigg[\bigg(g_{iekl}+\sum_fg_{iekf}t_l^f\bigg)t_i^e+g_{ijke}t_j^e\bigg]\\
+  {\tilde g}_{ijka}=&g_{ijka}+\sum_{e}g_{ieka}t_j^e\\ 
+  {\tilde g}_{ijak}=&g_{ijak}+\sum_{e}(g_{ieak}t_j^e+g_{ijae}t_k^e)-\sum_lt_l^ag_{ijlk}\nonumber\\
+  &+\sum_{ef}g_{ieaf}t_j^et_l^f-\sum_{el}t_l^a(g_{ielk}t_j^e+g_{ijle}t_k^e)-\sum_{efl}t_l^ag_{ielf}t_j^et_k^f\\
+  {\tilde g}_{iajk}=&{\tilde g}_{jkia}\\
+  {\tilde g}_{aijk}=&{\tilde g}_{jkai}\\
+  {\tilde g}_{ijab}=&g_{ijab}+\sum_{e}g_{ieab}t_j^e-\sum_{l}t_l^ag_{ijlb}-\sum_{el}t_l^ag_{ielb}t_j^e\\
+  {\tilde g}_{iajb}=&g_{iajb}\\
+  {\tilde g}_{aijb}=&g_{aijb}+\sum_{e}g_{aejb}t_i^e-\sum_{l}t_l^ag_{lijb}-\sum_{el}t_l^ag_{lejb}t_i^e\\
+  {\tilde g}_{iabj}=&{\tilde g}_{bjai}\\
+  {\tilde g}_{aibj}=&g_{aibj}+\sum_{e}(g_{aebj}t_i^e+g_{aibe}t_j^e)-\sum_{l}(t_l^ag_{libj}+t_l^bg_{ailj})\nonumber\\
+  &+\sum_{ef}g_{aebf}t_i^et_j^f-\sum_{el}(t_l^ag_{lebj}t_i^e+t_l^bg_{aelj}t_i^e+t_l^ag_{libe}t_j^e+t_l^bg_{aile}t_j^e)\nonumber\\
+  &+\sum_{lk}t_l^at_k^bg_{likj}+\sum_{ekl}(t_l^at_k^bg_{lekj}t_i^e+t_l^at_k^bg_{like}t_j^e)\nonumber\\
+  &-\sum_{efl}(t_l^ag_{lebf}t_i^et_j^f+t_l^bg_{aelf}t_i^et_j^f)+\sum_{lkef}t_l^at_k^bg_{lekf}t_i^et_j^f\\
+  {\tilde g}_{abij}=&{\tilde g}_{ijab}\\
+  {\tilde g}_{iabc}=&g_{iabc}-\sum_{l}t_l^bg_{ialc}\\
+  {\tilde g}_{aibc}=&g_{aibc}+\sum_{e}g_{aebc}t_i^e-\sum_l(t_l^ag_{libc}+t_l^bg_{ailc})\nonumber\\
+  &-\sum_{el}(t_l^ag_{lebc}t_i^e+t_l^bg_{aelc}t_i^e)+\sum_{lk}t_l^at_k^bg_{likc}+\sum_{elk}t_l^at_k^bg_{lekc}t_i^e\\
+  {\tilde g}_{abic}=&{\tilde g}_{icab}\\
+  {\tilde g}_{abci}=&{\tilde g}_{ciab}\\
+  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^aT_k^cg_{lbkc}
+\end{align}
+
+Note that, due to symmetry, only 9 cases must be computed.
+Moreover, only part of ${\tilde g}_{ijkl}$, ${\tilde g}_{aibj}$ and ${\tilde g}_{abcd}$ must be calculated.
+If we impose $i\ge k$, $a\ge b$ and $i\ge j$, and $a\ge c$, respectively, we generate all elements for theses three cases.
+
 
 \subsection{Residuals}
 \hypertarget{sec:ccsd_res}{}
@@ -83,12 +175,24 @@ the connection between the equations and the code.
 \hypertarget{sec:ccsd_res_sing}{}
 \label{sec:ccsd_res_sing}
 
+
 \begin{equation}
   \begin{split}
-%    \Omega_i^a &=\sum_{cd}\sum_k(2t_{ki}^{cd}{\tilde g}_{adkc}-t_{ik}^{cd}{\tilde g}_{adkc})\\
-%    &-\sum_c\sum_{kl}(2t_{kl}^{ac}{\tilde g}_{kilc}-t_{lk}^{ac}{\tilde g}_{kilc})\\
-%    &+\sum_c\sum_k(2t_{ik}^{ac}-t_{ki}^{ac})({\tilde h}_{kc}+\sum_l2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
-%    &+{\tilde h}_{ai}+\sum_k2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
+    \Omega_i^a=\Omega_i^{a(A1)}+\Omega_i^{a(B1)}+\Omega_i^{a(C1)}+\Omega_i^{a(D1)}
+  \end{split}
+\end{equation}
+where
+\begin{align}
+  \Omega_i^{a(A1)}&=\sum_{ckd}u_{ki}^{cd}{\tilde g}_{adkc}\\
+  \Omega_i^{a(B1)}&=-\sum_{ckl}u_{ki}^{ac}{\tilde g}_{kilc}\\
+  \Omega_i^{a(C1)}&=\sum_{ck}u_{ik}^{ac}{\tilde F}_{kc}^{I}\\
+  \Omega_i^{a(D1)}&={\tilde F}_{ai}^{I}
+\end{align}
+
+Other way to open this equation is
+
+\begin{equation}
+  \begin{split}
     \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
     &+\sum_c[(2t_{ik}^{ac}-t_{ki}^{ac}){\tilde h}_{kc}+(2t_{ik}^{ac}-t_{ki}^{ac})\sum_l(2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
     &+\sum_d(2t_{ki}^{cd}-t_{ik}^{cd}){\tilde g}_{adkc}-\sum_l(2t_{kl}^{ac}-t_{lk}^{ac}){\tilde g}_{kilc}]\}\\
@@ -100,6 +204,23 @@ the connection between the equations and the code.
 \subsubsection{Doubles}
 \hypertarget{sec:ccsd_res_doub}{}
 \label{sec:ccsd_res_doub}
+
+\begin{equation}
+  \begin{split}
+    \Omega_{ij}^{ab}=\Omega_{ij}^{ab(A2)}+\Omega_{ij}^{ab(B2)}+\Omega_{ij}^{ab(C2)}+\Omega_{ji}^{ba(C2)}+\Omega_{ij}^{ab(D2)}+\Omega_{ji}^{ba(D2)}+\Omega_{ij}^{ab(E2)}+\Omega_{ji}^{ba(E2)}
+  \end{split}
+\end{equation}
+where
+\begin{align}
+  \Omega_{ij}^{ab(A2)}&={\tilde g}_{aibj}+\sum_{cd}t_{ij}^{cd}{\tilde g}_{acbd}\\
+  \Omega_{ij}^{ab(B2)}&=\sum_{kl}t_{kl}^{ab}\bigg({\tilde g}_{kilj}+\sum_{cd}{\tilde g}_{kcld}\bigg)\\
+  \Omega_{ij}^{ab(C2)}&=-\frac{1}{2}\sum_{ck}t_{kj}^{bc}\bigg({\tilde g}_{kiac}-\frac{1}{2}\sum_{dl}t_{li}^{ad}{\tilde g}_{kdlc}\bigg)-\sum_{ck}t_{ki}^{bc}\bigg({\tilde g}_{kjac}-\frac{1}{2}\sum_{dl}t_{lj}^{ad}{\tilde g}_{kdlc}\bigg)\\
+  \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\sum_{ck}u_{jk}^{bc}\bigg({\tilde L}_{aikc}+\frac{1}{2}\sum_{dl}u_{il}^{ad}{\tilde L}_{ldkc}\bigg)\\
+  \Omega_{ij}^{ab(E2)}&=\sum_{c}t_{ij}^{ac}\bigg({\tilde F}_{bc}^{I}-\sum_{dkl}u_{ki}^{bd}{\tilde g}_{ldkc}\bigg)-\sum_{k}t_{ik}^{ab}\bigg({\tilde F}_{kj}^{I}+\sum_{cdl}u_{lj}^{cd}{\tilde g}_{kdlc}\bigg)
+\end{align}
+
+
+Other way to open this equation is
 
 \begin{equation}
   \begin{split}
@@ -136,7 +257,7 @@ the connection between the equations and the code.
 
 
 \newpage
-\section{Flowchart of the algorithm}
+\section{Flowchart}
 \label{sec:ccsd_flowchart}
 
 \input{ccsd_flowchart}

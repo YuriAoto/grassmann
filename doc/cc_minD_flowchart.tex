@@ -1,0 +1,137 @@
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick,
+  ]
+
+  \node (import) at (\X{-50}, \Y{-18}) [anchor=west]
+  {\texttt{from coupled\_cluster import manifold as cc\_manifold}};
+  \node (import) at (\X{-50}, \Y{-15}) [anchor=west]
+  {\texttt{from wave\_functions import fci, interm\_norm}};
+
+  % ======
+  \node (init)  at (\X{20}, \Y{-15})
+  [algstep, text width=\W{30}, hyperlink node=sec:]
+  {
+    \textbf{Input}\vspT
+    {The $\Psi_0$ wave function in the intermediate normalisation}\vsp
+    {Initial $\Psi_{CC}$ wave function}\vsp
+  };
+  % ------
+
+  % ======
+  \node (cc_wf)  at (\X{0}, \Y{0})
+  [algstep, text width=\W{55}, hyperlink node=sec:]
+  {
+    \textbf{$\Psi_{CC}$ as a FCI wave function}\vspT
+    \texttt{fci.WaveFunctionFCI.from\_int\_norm}\vsp
+  };
+  % ------
+
+  % ======
+  \node (dist)  at (\X{0}, \Y{15})
+  [algstep, text width=\W{50}]
+  {
+    \textbf{Distance between $\Psi_0$ and $\Psi_{CC}$}\vspT
+    \texttt{fci.WaveFunctionFCI.dist\_to}\vsp
+    {Eq.~\eqref{eq:dist_intem_norm}}\vsp
+  };
+  % ------
+
+  % ======
+  \node (conv)  at (\X{0}, \Y{30})
+  [algcond, text width=\W{35}]
+  {
+    \textbf{Converged?}\vspT
+    {$|\mathbf{J}| < \epsilon_J$ and $|\mathbf{H}^{-1}\mathbf{J}| < \epsilon_z$}\vsp
+  };
+  % ------
+
+  % ======
+  \node (app_hess)  at (\X{0}, \Y{40})
+  [algcond, text width=\W{40}, hyperlink node=sec:cc_man_appr_hess]
+  {
+    \textbf{Approximate Hessian?}\vspT
+  };
+  % ------
+
+  
+  % ================================================
+  \node (jachess) at (\X{25}, \Y{75})
+  [algmultistep, text width=\W{50}, hyperlink node=sec:dist_cc_man]
+  {
+    \textbf{Set Jacobian and Hessian}\vspT
+    \begin{minipage}[t][5cm]{1.0\textwidth}
+      \centering
+      \texttt{cc\_manifold.make\_min\_dist\_jac\_hess}
+    \end{minipage}
+  };
+
+  % ======
+  \node (jac) at (\X{20}, \Y{70})
+  [algstep, text width=\W{30}]
+  {
+    \textbf{Set Jacobian, $\mathbf{J}_{\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_jac}}\vsp
+  };
+  % ------
+
+  % ======
+  \node (hess) at (\X{30}, \Y{85})
+  [algstep, text width=\W{30}]
+  {
+    \textbf{Set Hessian, $\mathbf{H}_{\sigma\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_hess}}\vsp
+  };
+  % ------
+  
+  % ------------------------------------------------
+
+
+  % ================================================
+  \node (jachess_app) at (\X{-25}, \Y{75})
+  [algstep, text width=\W{40}, hyperlink node=sec:dist_cc_man]
+  {
+    \textbf{Set $\mathbf{J}_{\rho}$, $\mathbf{H}_{\rho\rho}$}\vspT
+    \texttt{cc\_manifold.min\_dist\_app\_hess}\vsp
+    {Eq.~\eqref{eq:cc_minD_jac}}\vsp
+    {Eq.~\eqref{eq:cc_minD_update}}\vsp
+  };
+  
+  % ------------------------------------------------
+
+  
+  % ======
+  \node (update) at (\X{0}, \Y{105})
+  [algstep, text width=\W{50}]
+  {
+    \textbf{Update amplitudes}\vspT
+    \texttt{interm\_norm.IntermNormWF.update\_amplitudes}\vsp
+    {Eq.~\eqref{eq:cc_minD_update}}
+  };
+  % ------
+
+  \draw [->] (init.270) -- (cc_wf.50);
+  \draw [->] (cc_wf.270) -- (dist.90);
+  \draw [->] (dist.270) -- (conv.90);
+  \draw [->, condFalse] (conv.270) -- (app_hess.90);
+  \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{30});
+  \draw [->, condFalse] (app_hess.0) .. controls +(right:1) and +(up:1) .. (jachess.90);
+  \draw [->, condTrue] (app_hess.180) .. controls +(left:1) and +(up:1) .. (jachess_app.90);
+  \draw [->] (jachess.south) .. controls +(down:1) and +(east:1) .. (update.east);
+  \draw [->] (jachess_app.south) .. controls +(down:1) and +(west:1) .. (update.west);
+
+  \algloop{update.270}{115}{-10}{cc_wf.130}
+
+
+\end{tikzpicture}
+\end{center}
+
+ 	
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
