@@ -13,7 +13,7 @@ import test
 from util import int_dtype
 
 
-np.set_printoptions(formatter={'all': lambda x: '{0:>9.6f}'.format(x)})
+np.set_printoptions(formatter={'float': lambda x: '{0:>9.6f}'.format(x)})
 
 
 class YieldExcitations523TestCase(unittest.TestCase):

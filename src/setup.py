@@ -3,7 +3,10 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 extensions = [
-    Extension("manifold", ["manifold.pyx"])
+    Extension("coupled_cluster.manifold",
+              ["coupled_cluster/manifold.pyx"]),
+    Extension("wave_functions.strings_rev_lexical_order",
+              ["wave_functions/strings_rev_lexical_order.pyx"])
 ]
 
 setup(ext_modules=cythonize(extensions,

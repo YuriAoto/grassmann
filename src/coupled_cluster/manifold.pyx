@@ -6,7 +6,8 @@ import cython
 import numpy as np
 
 
-from wave_functions.strings_rev_lexical_order import next_str, get_index
+from wave_functions.strings_rev_lexical_order import get_index
+from wave_functions.strings_rev_lexical_order cimport next_str
 from util import irrep_product, int_dtype
 
 cdef int EXC_TYPE_A = 0
@@ -16,26 +17,65 @@ cdef int EXC_TYPE_AB = 3
 cdef int EXC_TYPE_BB = 4
 
 
-def min_dist_app_hess(wf, wf_cc, int n_ampl, level='SD'):
+def min_dist_app_hess(double [:,:] wf,
+                      double [:,:] wf_cc,
+                      int n_ampl,
+                      int n_irrep,
+                      int [:] n_orb_before,
+                      int [:] n_corr_orb,
+                      int [:] n_ext,
+                      int [:, :] alpha_string_graph,
+                      int [:, :] beta_string_graph,
+                      level='SD'):
     """Calculate the Jacobian and approximate the Hessian
     
     Parameters:
     -----------
-    wf (WaveFunctionFCI)
-        The wave function
+    wf
+        The wave function, as a matrix of alpha and beta strings
     
-    wf_cc (2D np.array)
-        The coupled cluster wave function
+    wf_cc
+        The coupled cluster wave function, as a matrix of alpha
+        and beta strings
     
-    n_ampl (int)
+    n_ampl
         The total number of amplitudes
+    
+    n_irrep
+        The number of irreducible representations
+    
+    n_orb_before
+        The number of orbitals before each irreducible representation,
+        in the order "all orbitals of first irrep, then all orbitals of
+        second irrep, ...".
+        Thus, n_orb_before[0] = 0
+              n_orb_before[1] = total number of orbitals in irrep 0
+                                (occ and virt)
+              n_orb_before[2] = total number of orbitals in irrep 0 and 1
+                                (occ and virt)
+    
+    n_corr_orb
+        The number of correlatad orbitals in each irrep
+    
+    n_ext
+        The number of orbitals in the external space (number of virtuals)
+        for each irrep
+    
+    alpha_string_graph
+        The graph to obtain the alpha strings (associated to the first
+        index of wf and wf_cc) in the reverse lexical order
+    
+    beta_string_graph
+        The graph to obtain the beta strings (associated to the second
+        index of wf and wf_cc) in the reverse lexical order
     
     level (str, optional, default='SD')
         Coupled cluster level
     
     Return:
     -------
-    
+    The z vector (that updates the amplitudes),
+    and the norm of the Jacobian
     
     """
     cdef double normJac = 0.0
@@ -44,73 +84,73 @@ def min_dist_app_hess(wf, wf_cc, int n_ampl, level='SD'):
     cdef int spirrep, irrep, i_irrep, j_irrep, a_irrep, b_irrep, i, j, a, b
     cdef int [:] single_exc = np.zeros(2)
     cdef int [:] double_exc = np.zeros(4)
-    for spirrep in range(2 * wf.n_irrep):
-        irrep = spirrep % wf.n_irrep
-        exc_type = EXC_TYPE_A if spirrep < wf.n_irrep else EXC_TYPE_B
-        single_exc[0] = wf.n_orb_before[irrep]
-        for i in range(wf.n_corr_orb[spirrep]):
+    for spirrep in range(2 * n_irrep):
+        irrep = spirrep % n_irrep
+        exc_type = EXC_TYPE_A if spirrep < n_irrep else EXC_TYPE_B
+        single_exc[0] = n_orb_before[irrep]
+        for i in range(n_corr_orb[spirrep]):
             single_exc[0] += 1
-            single_exc[1] = wf.n_orb_before[irrep]
-            for a in range(wf.n_ext[spirrep]):
+            single_exc[1] = n_orb_before[irrep]
+            for a in range(n_ext[spirrep]):
                 single_exc[1] += 1
                 J = _term1(single_exc,
                            exc_type,
-                           wf._coeffients,
-                           wf_cc._coeffients,
-                           wf._alpha_string_graph,
-                           wf._beta_string_graph)
+                           wf,
+                           wf_cc,
+                           alpha_string_graph,
+                           beta_string_graph)
                 normJac += J**2
                 z[pos] = J/_term2(single_exc,
                                   exc_type,
-                                  wf_cc._coeffients,
-                                  wf._alpha_string_graph,
-                                  wf._beta_string_graph)
+                                  wf_cc,
+                                  alpha_string_graph,
+                                  beta_string_graph)
                 pos += 1
-    for i_irrep in range(2 * wf.n_irrep):
-        alpha_exc1 = i_irrep < wf.n_irrep
-        for j_irrep in range(i_irrep, 2 * wf.n_irrep):
-            alpha_exc2 = j_irrep < wf.n_irrep
+    for i_irrep in range(2 * n_irrep):
+        alpha_exc1 = i_irrep < n_irrep
+        for j_irrep in range(i_irrep, 2 * n_irrep):
+            alpha_exc2 = j_irrep < n_irrep
             exc_type = (EXC_TYPE_AA
                         if alpha_exc1 and alpha_exc2 else
                         (EXC_TYPE_AB
                          if alpha_exc1 or alpha_exc2 else
                          EXC_TYPE_BB))
-            double_exc[0] = wf.n_orb_before[i_irrep]
-            for i in range(wf.n_corr_orb[i_irrep]):
+            double_exc[0] = n_orb_before[i_irrep]
+            for i in range(n_corr_orb[i_irrep]):
                 double_exc[0] += 1
-                double_exc[1] = wf.n_orb_before[i_irrep]
-                for j in range(wf.n_corr_orb[j_irrep]):
+                double_exc[1] = n_orb_before[i_irrep]
+                for j in range(n_corr_orb[j_irrep]):
                     if j <= i:
                         continue
                     double_exc[1] += 1
-                    for a_irrep in range(wf.n_irrep):
-                        double_exc[2] = wf.n_orb_before[a_irrep]
-                        for a in range(wf.n_ext[a_irrep
+                    for a_irrep in range(n_irrep):
+                        double_exc[2] = n_orb_before[a_irrep]
+                        for a in range(n_ext[a_irrep
                                                 + (0
                                                    if alpha_exc1 else
-                                                   wf.n_irrep)]):
+                                                   n_irrep)]):
                             double_exc[2] += 1
                             b_irrep = (irrep_product[i_irrep]
                                        * irrep_product[j_irrep]
                                        * irrep_product[a_irrep])
-                            double_exc[3] = wf.n_orb_before[b_irrep]
-                            for b in range(wf.n_ext[b_irrep
+                            double_exc[3] = n_orb_before[b_irrep]
+                            for b in range(n_ext[b_irrep
                                                     + (0
                                                        if alpha_exc2 else
-                                                       wf.n_irrep)]):
+                                                       n_irrep)]):
                                 double_exc[3] += 1
                                 J = _term1(double_exc,
                                            exc_type,
-                                           wf._coeffients,
-                                           wf_cc._coeffients,
-                                           wf._alpha_string_graph,
-                                           wf._beta_string_graph)
+                                           wf,
+                                           wf_cc,
+                                           alpha_string_graph,
+                                           beta_string_graph)
                                 normJac += J**2
                                 z[pos] = J/_term2(double_exc,
                                                   exc_type,
-                                                  wf_cc._coeffients,
-                                                  wf._alpha_string_graph,
-                                                  wf._beta_string_graph)
+                                                  wf_cc,
+                                                  alpha_string_graph,
+                                                  beta_string_graph)
                 pos += 1
     if pos != n_ampl:
         raise Exception('pos != n_ampl')
@@ -211,8 +251,8 @@ cdef double _term2(int [:] exc,
                          beta_string_graph)
 
 
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_a(int [:] exc, # [i, a]
                      double [:, :] wf,
                      double [:, :] wf_cc,
@@ -606,6 +646,8 @@ cdef double _term2_ab(int [:] exc, # [i, a, j, b]
     return S
 
 
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int [:] _exc_on_string(int i, int a, int [:] I):
     """Obtain the string after the excitation i->a over I
     
@@ -631,30 +673,29 @@ cdef int [:] _exc_on_string(int i, int a, int [:] I):
     """
     cdef int n = I.shape[0]
     cdef int [:] new_I = np.empty(n+1, dtype=int_dtype)
-    cdef int pos, i_pos, a_pos, orb
+    cdef int pos, i_pos, a_pos
     i_pos = 0
     a_pos = 0
     new_I[:n] = I[:]
     pos = 0
     if i < a:
-        for orb in I:
-            if orb == i:
+        a_pos = n - 1
+        for pos in range(n):
+            if I[pos] == i:
                 i_pos = pos
-            if orb > a:
-                a_pos = pos-1
+            if I[pos] > a:
+                a_pos = pos - 1
                 break
-            pos += 1
         new_I[i_pos: a_pos] = I[i_pos+1: a_pos+1]
         new_I[a_pos] = a
     elif i > a:
-        for orb in I:
-            if orb == i:
+        for pos in range(n-1, -1, -1):
+            if I[pos] == i:
                 i_pos = pos
+            if I[pos] < a:
+                a_pos = pos + 1
                 break
-            if orb > a:
-                a_pos = pos
-            pos += 1
         new_I[a_pos+1: i_pos+1] = I[a_pos: i_pos]
         new_I[a_pos] = a
-    new_I[-1] = 1 - 2*(abs(a_pos - i_pos) % 2)
+    new_I[n] = 1 - 2*(abs(a_pos - i_pos) % 2)
     return new_I

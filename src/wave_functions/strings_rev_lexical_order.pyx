@@ -8,16 +8,18 @@ import numpy as np
 
 from util import int_dtype
 
-def next_str(cdef int [:] occ):
+cpdef void next_str(int [:] occ):
     """Change occ to the next occupation in reverse lexical order"""
     cdef int i_to_be_raised = 0
     cdef int len_occ_2 = len(occ) - 2
+    cdef int i
     while i_to_be_raised <= len_occ_2:
         if occ[i_to_be_raised] + 1 < occ[i_to_be_raised + 1]:
             break
         i_to_be_raised += 1
     occ[i_to_be_raised] += 1
-    occ[:i_to_be_raised] = np.arange(i_to_be_raised, dtype=int_dtype)
+    for i in range(i_to_be_raised):
+        occ[i] = i
 
 
 def generate_graph(int nel, int norb):
