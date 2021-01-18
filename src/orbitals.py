@@ -82,7 +82,7 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
         For each entry i, U[i] must have shape (orb_dim[i],n[i]),
         with  n[i] <= orb_dim[i] (in general strictly lower)
     
-    orb_dim (Orbitals_Sets)
+    orb_dim (OrbitalsSets)
         The dimension of the orbital space per irrep
     
     keep_direction (bool, optional, default=False)
@@ -422,12 +422,14 @@ class MolecularOrbitals():
         if molecule.attrib['method'] == 'UHF':
             new_orbitals.restricted = False
             n_orb_per_spirrep = np.zeros(2 * new_orbitals.n_irrep,
-                                         dtype=np.uint)
-            cur_orb = np.zeros(2 * new_orbitals.n_irrep, dtype=np.uint)
+                                         dtype=util.int_dtype)
+            cur_orb = np.zeros(2 * new_orbitals.n_irrep,
+                               dtype=util.int_dtype)
         else:
             new_orbitals.restricted = True
-            n_orb_per_spirrep = np.zeros(new_orbitals.n_irrep, dtype=np.uint)
-            cur_orb = np.zeros(new_orbitals.n_irrep, dtype=np.uint)
+            n_orb_per_spirrep = np.zeros(new_orbitals.n_irrep,
+                                         dtype=util.int_dtype)
+            cur_orb = np.zeros(new_orbitals.n_irrep, dtype=util.int_dtype)
         for orb_set in molecule.findall('molpro:orbitals', ns):
             try:
                 spin_shift = get_spin_shift(orb_set.attrib['type'],

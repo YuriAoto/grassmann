@@ -105,7 +105,7 @@ def get_orb_info(line, line_number, n_irrep, occ_type):
             re_orb = re_orb[:n_irrep]
         if occ_type == 'F':
             re_orb += re_orb
-        return general.Orbitals_Sets(re_orb, occ_type=occ_type)
+        return general.OrbitalsSets(re_orb, occ_type=occ_type)
     except Exception:
         raise MolproInputError('Problems reading orbital information.',
                                line=line, line_number=line_number)
@@ -177,7 +177,7 @@ def load_wave_function(molpro_output,
         normalisation
         Possible values are: 'int_norm', 'cisd', 'fci'.
     
-    wf (general.Wave_Function or None, optional, default=None)
+    wf (general.WaveFunction or None, optional, default=None)
         If given, this object is changed, and nothing is returned.
         Otherwise a new object is created and returned (needed??)
     
@@ -247,7 +247,7 @@ def load_wave_function(molpro_output,
                 wf_type = line[11:15]
                 if line == FCI_header:
                     if WF_templ is None:
-                        wf = norm_ci.Wave_Function_Norm_CI()
+                        wf = norm_ci.NormCI_WaveFunction()
                     wf.WF_type = 'FCI'
                     wf.point_group = point_group
                     wf.source = 'From file ' + molpro_output
@@ -260,7 +260,7 @@ def load_wave_function(molpro_output,
                         change_structure=_change_structure,
                         use_structure=_use_structure)
                 else:
-                    wf_int_norm = int_norm.Wave_Function_Int_Norm.from_Molpro(
+                    wf_int_norm = int_norm.IntermNormWaveFunction.from_Molpro(
                         f, start_line_number=line_number-1,
                         wf_type=wf_type,
                         point_group=point_group)
@@ -273,8 +273,8 @@ def load_wave_function(molpro_output,
                     else:
                         wf = wf_int_norm
                         if wf_obj_type == 'cisd':
-                            wf = cisd.Wave_Function_CISD.from_int_norm(wf)
+                            wf = cisd.CISD_WaveFunction.from_int_norm(wf)
                         elif wf_obj_type == 'fci':
-                            wf = norm_ci.Wave_Function_Norm_CI.from_int_norm(wf)
+                            wf = norm_ci.NormCI_WaveFunction.from_int_norm(wf)
                 break
     return wf

@@ -3,11 +3,11 @@
 Classes:
 --------
 
-Spirrep_String_Index
-String_Index
-Orbitals_Sets
-Spirrep_Index
-Wave_Function
+SpirrepStringIndex
+StringIndex
+OrbitalsSets
+SpirrepIndex
+WaveFunction
 """
 import logging
 from collections import namedtuple
@@ -16,13 +16,13 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from util import number_of_irreducible_repr
+from util import number_of_irreducible_repr, int_dtype
 import memory
 
 logger = logging.getLogger(__name__)
 
 
-class Spirrep_String_Index(Sized, Iterable, Container):
+class SpirrepStringIndex(Sized, Iterable, Container):
     """An string index for a single spirrep
     
     Behaviour:
@@ -42,11 +42,11 @@ class Spirrep_String_Index(Sized, Iterable, Container):
                      over the above case);
         [1 2 6 9]    Orbitals 0 and 3 are empty, 6 and 9 are occupied.
 
-    wf (Wave_Function)
-        The wave function of this Spirrep_String_Index
+    wf (WaveFunction)
+        The wave function of this SpirrepStringIndex
     
     spirrep (int)
-        The spirrep of this Spirrep_String_Index
+        The spirrep of this SpirrepStringIndex
     
     Data Model:
     -----------
@@ -67,12 +67,12 @@ class Spirrep_String_Index(Sized, Iterable, Container):
     int
         The position of this spirrep string in the wave function
         int(self) should be the the value index that one obtains self
-        when iterating over Wave_Function.string_indices(spirrep=spirrep).
+        when iterating over WaveFunction.string_indices(spirrep=spirrep).
         That is, the following code should not raise an exception:
         
         for i, I in wf.string_indices(spirrep=spirrep):
             if int(I) != i:
-                raise Exception('int of Spirrep_String_Index not consistent!')
+                raise Exception('int of SpirrepStringIndex not consistent!')
     
     += (int)
         increase int of the object by the given value:
@@ -85,7 +85,7 @@ class Spirrep_String_Index(Sized, Iterable, Container):
                  'spirrep')
     
     def __init__(self, n_elec):
-        self._occ_orb = np.arange(n_elec, dtype=np.intc)
+        self._occ_orb = np.arange(n_elec, dtype=int_dtype)
         self._std_pos = None
         self._clear_std_pos_in_setitem = True
         self.wf = None
@@ -163,7 +163,7 @@ class Spirrep_String_Index(Sized, Iterable, Container):
     
     @classmethod
     def make_hole(cls, n_elec, holes):
-        """Create a Spirrep_String_Index with hole(s) at holes"""
+        """Create a SpirrepStringIndex with hole(s) at holes"""
         if isinstance(holes, (np.integer, int)):
             holes = (holes,)
         holes = sorted(holes, reverse=True)
@@ -179,29 +179,29 @@ class Spirrep_String_Index(Sized, Iterable, Container):
         return new_I
 
 
-class String_Index(Mapping):
+class StringIndex(Mapping):
     """The string index for all spirreps
     
     Attributes:
     -----------
     
-    spirrep_indices (list of Spirrep_String_Index)
+    spirrep_indices (list of SpirrepStringIndex)
         The string index of each spirrep
     
     Data Model:
     -----------
     
     []
-        Get/set the Spirrep_String_Index of a spirrep
+        Get/set the SpirrepStringIndex of a spirrep
     
     len
-        The number of Spirrep_String_Index. It is the number of
+        The number of SpirrepStringIndex. It is the number of
         irreps for restricted case, or two times the number of
         irreps for the unrestricted case.
     
     iter
         Iterates over all spirreps, giving the corresponding
-        Spirrep_String_Index
+        SpirrepStringIndex
     
     """
     __slots__ = ('spirrep_indices')
@@ -234,7 +234,7 @@ class String_Index(Mapping):
     def make_reference(cls, ref_occ, n_irrep, wf=None):
         ref_indices = []
         for spirrep in range(2 * n_irrep):
-            ref_indices.append(Spirrep_String_Index(ref_occ[spirrep]))
+            ref_indices.append(SpirrepStringIndex(ref_occ[spirrep]))
             ref_indices[-1].spirrep = spirrep
             ref_indices[-1].wf = wf
         return cls(ref_indices)
@@ -245,23 +245,23 @@ class String_Index(Mapping):
     
     def append(self, value):
         """Append value to the spirrep indices."""
-        if not isinstance(value, Spirrep_String_Index):
+        if not isinstance(value, SpirrepStringIndex):
             raise ValueError(
-                'Only Spirrep_String_Index can be appended to a String_Index')
+                'Only SpirrepStringIndex can be appended to a StringIndex')
         self.spirrep_indices.append(value)
         self.spirrep_indices[-1].spirrep = len(self) - 1
 
     def swap_spirreps(self, i, j):
         """Swap the strings associated to spirreps i and j
         
-        After this, the attribute spirrep of both Spirrep_String_Index
+        After this, the attribute spirrep of both SpirrepStringIndex
         is still consistent with the order of self."""
         self[i], self[j] = self[j], self[i]
         self[i].spirrep = i
         self[j].spirrep = j
 
 
-class Orbitals_Sets(Sequence):
+class OrbitalsSets(Sequence):
     """The number of orbitals per spirrep
     
     Behaviour:
@@ -290,7 +290,7 @@ class Orbitals_Sets(Sequence):
         spirreps, even for different occ_type.
     
     +, -, +=
-        Return a new instance of Orbitals_Sets (or act on self),
+        Return a new instance of OrbitalsSets (or act on self),
         adding/subtracting the number of occupied orbitals of each spirrep.
         If occ_type is the same, preserves occ_type; otherwise the returned
         object has occ_type = 'F'.
@@ -314,10 +314,10 @@ class Orbitals_Sets(Sequence):
             self._occupation = np.zeros((2
                                          if self._type == 'F' else
                                          1) * self._n_irrep,
-                                        dtype=np.intc)
+                                        dtype=int_dtype)
         else:
             self._occupation = np.array(occ_or_n_irrep,
-                                        dtype=np.intc)
+                                        dtype=int_dtype)
             self._n_irrep = (len(self._occupation) // 2
                              if self._type == 'F' else
                              len(self._occupation))
@@ -383,7 +383,7 @@ class Orbitals_Sets(Sequence):
     def __eq__(self, other):
         if self._n_irrep != other._n_irrep:
             raise ValueError(
-                'Cannot compare Orbitals_Sets for different number of irreps')
+                'Cannot compare OrbitalsSets for different number of irreps')
         for i in range((1
                         if self._type == 'R' and other._type == 'R' else
                         2) * self._n_irrep):
@@ -392,19 +392,19 @@ class Orbitals_Sets(Sequence):
         return True
 
     def __add__(self, other):
-        if not isinstance(other, Orbitals_Sets):
+        if not isinstance(other, OrbitalsSets):
             raise ValueError(
-                'Orbitals_Sets adds only with another Orbitals_Sets.')
+                'OrbitalsSets adds only with another OrbitalsSets.')
         if self._n_irrep != other._n_irrep:
             raise ValueError(
-                'Both instances of Orbitals_Sets must have same len.')
+                'Both instances of OrbitalsSets must have same len.')
         if self._type == other._type:
             new_occupation = self._occupation + other._occupation
             new_occ_type = self._type
         else:
             new_occ_type = 'F'
             new_occupation = np.zeros(self._n_irrep * 2,
-                                      dtype=np.intc)
+                                      dtype=int_dtype)
             if self._type != 'B':
                 new_occupation[:self._n_irrep] += (
                     self._occupation[:self._n_irrep])
@@ -421,22 +421,22 @@ class Orbitals_Sets(Sequence):
                     other._occupation[other._n_irrep:]
                     if other._type == 'F' else
                     other._occupation)
-        return Orbitals_Sets(new_occupation,
-                             new_occ_type)
+        return OrbitalsSets(new_occupation,
+                            new_occ_type)
 
     def __iadd__(self, other):
-        if not isinstance(other, Orbitals_Sets):
+        if not isinstance(other, OrbitalsSets):
             raise ValueError(
-                'Orbitals_Sets adds only with another Orbitals_Sets.')
+                'OrbitalsSets adds only with another OrbitalsSets.')
         if self._n_irrep != other._n_irrep:
             raise ValueError(
-                'Both instances of Orbitals_Sets must have same len.')
+                'Both instances of OrbitalsSets must have same len.')
         if self._type == other._type:
             self._occupation += other._occupation
         else:
             self_occ = self._occupation
             self._occupation = np.zeros(self._n_irrep * 2,
-                                        dtype=np.intc)
+                                        dtype=int_dtype)
             if self._type != 'B':
                 self._occupation[:self._n_irrep] += self_occ[:self._n_irrep]
             if self._type != 'A':
@@ -455,19 +455,19 @@ class Orbitals_Sets(Sequence):
         return self
 
     def __sub__(self, other):
-        if not isinstance(other, Orbitals_Sets):
+        if not isinstance(other, OrbitalsSets):
             raise ValueError(
-                'Orbitals_Sets adds only with another Orbitals_Sets.')
+                'OrbitalsSets adds only with another OrbitalsSets.')
         if self._n_irrep != other._n_irrep:
             raise ValueError(
-                'Both instances of Orbitals_Sets must have same n_irrep.')
+                'Both instances of OrbitalsSets must have same n_irrep.')
         if self._type == other._type:
             new_occupation = self._occupation - other._occupation
             new_occ_type = self._type
         else:
             new_occ_type = 'F'
             new_occupation = np.zeros(self._n_irrep * 2,
-                                      dtype=np.intc)
+                                      dtype=int_dtype)
             if self._type != 'B':
                 new_occupation[:self._n_irrep] += (
                     self._occupation[:self._n_irrep])
@@ -484,8 +484,8 @@ class Orbitals_Sets(Sequence):
                     other._occupation[other._n_irrep:]
                     if other._type == 'F' else
                     other._occupation)
-        return Orbitals_Sets(new_occupation,
-                             new_occ_type)
+        return OrbitalsSets(new_occupation,
+                            new_occ_type)
     
     def restrict_it(self):
         """Transform occ_type to 'R' if possible, or raise ValueError."""
@@ -505,22 +505,22 @@ class Orbitals_Sets(Sequence):
         return self._type
 
 
-class Spirrep_Index(namedtuple('Spirrep_Index',
-                               ['spirrep',
-                                'Index'])):
-    """A namedtuple for a pair spirrep/Spirrep_String_Index
+class SpirrepIndex(namedtuple('SpirrepIndex',
+                              ['spirrep',
+                               'Index'])):
+    """A namedtuple for a pair spirrep/SpirrepStringIndex
     
     Attributes:
     -----------
     spirrep (int)
         The spirrep
-    Index (Spirrep_String_Index)
+    Index (SpirrepStringIndex)
         The index
     """
     __slots__ = ()
 
 
-class Wave_Function(ABC, Sequence):
+class WaveFunction(ABC, Sequence):
     """An abstract base class for electronic wave functions
     
     Atributes:
@@ -536,19 +536,19 @@ class Wave_Function(ABC, Sequence):
     n_irrep (int, property)
         The number of irreducible representations
     
-    n_core (Orbitals_Sets)
+    n_core (OrbitalsSets)
         Number of core orbitals per spirrep (restricted)
     
-    n_act (Orbitals_Sets)
+    n_act (OrbitalsSets)
         Number of active orbitals per spirrep (restricted)
     
-    orb_dim (Orbitals_Sets)
+    orb_dim (OrbitalsSets)
         Dimension of the orbital space of each irrep
     
-    ref_occ (Orbitals_Sets)
+    ref_occ (OrbitalsSets)
         Number of occupied orbitals per spirrep in reference determinant
     
-    n_ext, n_corr_orb (Orbitals_Sets)
+    n_ext, n_corr_orb (OrbitalsSets)
         n_ext = orb_dim - ref_occ
         n_corr_orb = ref_occ - n_core
     
@@ -569,7 +569,7 @@ class Wave_Function(ABC, Sequence):
     -----------
     Some rules about Sequence's abstract methods:
     
-    __getitem__ should accept an instance of String_Index and return
+    __getitem__ should accept an instance of StringIndex and return
     the corresponding CI coefficient
     
     __len__  should return the number of distinct determinants
@@ -651,14 +651,14 @@ class Wave_Function(ABC, Sequence):
     def initialize_data(self):
         if self.point_group is None:
             raise ValueError('I still do not know the point group!')
-        self.orb_dim = Orbitals_Sets(self.n_irrep,
-                                     occ_type='R')
-        self.ref_occ = Orbitals_Sets(self.n_irrep,
-                                     occ_type='F')
-        self.n_core = Orbitals_Sets(self.n_irrep,
+        self.orb_dim = OrbitalsSets(self.n_irrep,
                                     occ_type='R')
-        self.n_act = Orbitals_Sets(self.n_irrep,
-                                   occ_type='A')
+        self.ref_occ = OrbitalsSets(self.n_irrep,
+                                    occ_type='F')
+        self.n_core = OrbitalsSets(self.n_irrep,
+                                   occ_type='R')
+        self.n_act = OrbitalsSets(self.n_irrep,
+                                  occ_type='A')
     
     def spirrep_blocks(self, restricted=None):
         """Yield the possible spin and irreps, as a single integer."""
@@ -765,7 +765,7 @@ class Wave_Function(ABC, Sequence):
         ----------
         
         The indices that this generator yield should be an instance
-        of String_Index or of Spirrep_String_Index.
+        of StringIndex or of SpirrepStringIndex.
         The wave function should be indexable by the values
         that this function yield, returning the corresponding coefficient.
         That is, the following construction should print all
@@ -787,12 +787,12 @@ class Wave_Function(ABC, Sequence):
         -----------
         
         spirrep (int, default=None)
-            If passed, Spirrep_String_Index of this spirrep are yield
+            If passed, SpirrepStringIndex of this spirrep are yield
         
         coupled_to (tuple, default=None)
-            If passed, it should be a tuple of Spirrep_Index,
-            and the function should yield all String_Index that have the
-            .Index for .spirrep, or all Spirrep_String_Index of the
+            If passed, it should be a tuple of SpirrepIndex,
+            and the function should yield all StringIndex that have the
+            .Index for .spirrep, or all SpirrepStringIndex of the
             given spirrep that are coupled to spirrep for that wave function
         
         no_occ_orb (bool, default=False)
@@ -811,7 +811,7 @@ class Wave_Function(ABC, Sequence):
         Yield:
         ------
         
-        Instances of String_Index or of Spirrep_String_Index (if spirrep
+        Instances of StringIndex or of SpirrepStringIndex (if spirrep
         was given)
         """
         pass
@@ -864,7 +864,7 @@ class Wave_Function(ABC, Sequence):
         Return:
         -------
         
-        a tuple (new_wf, Ua, Ub) where new_wf is a Molpro_FCI_Wave_Function
+        a tuple (new_wf, Ua, Ub) where new_wf is a WaveFunction
         with the wave function in the new representation, and Ua and Ub
         are the transformations from the previous to the new orbital
         basis (alpha and beta, respectively).
@@ -894,7 +894,7 @@ class Wave_Function(ABC, Sequence):
         Parameters:
         -----------
         
-        wf   the initial wave function as Molpro_FCI_Wave_Function
+        wf   the initial wave function as WaveFunction
         U    the orbital transformation
         just_C0   If True, calculates the coefficients of
                   the initial determinant only (default False)

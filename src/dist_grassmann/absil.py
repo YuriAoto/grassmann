@@ -29,8 +29,8 @@ import numpy as np
 from scipy import linalg
 
 from wave_functions import general as gen_wf
-from wave_functions.cisd import Wave_Function_CISD
-from util import logtime, get_n_from_triang
+from wave_functions.cisd import CISD_WaveFunction
+from util import logtime, get_n_from_triang, int_dtype
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,8 @@ def _calc_G(U, det_indices, i, j):
     if U.shape[1] == 1:
         return 1.0
     sign = 1 if (j + np.where(det_indices == i)[0][0]) % 2 == 0 else -1
-    row_ind = np.array([x for x in det_indices if x != i], dtype=int)
-    col_ind = np.array([x for x in range(U.shape[1]) if x != j], dtype=int)
+    row_ind = np.array([x for x in det_indices if x != i], dtype=int_dtype)
+    col_ind = np.array([x for x in range(U.shape[1]) if x != j], dtype=int_dtype)
     return sign * linalg.det(U[row_ind[:, None], col_ind])
 
 
@@ -140,9 +140,9 @@ def _calc_H(U, det_indices, i, j, k, l):
             + l + np.where(det_indices == k)[0][0]) % 2 == 1:
         sign = -sign
     row_ind = np.array([x for x in det_indices if (x != i and x != k)],
-                       dtype=int)
+                       dtype=int_dtype)
     col_ind = np.array([x for x in range(U.shape[1]) if (x != j and x != l)],
-                       dtype=int)
+                       dtype=int_dtype)
     return sign * linalg.det(U[row_ind[:, None], col_ind])
 
 
@@ -157,7 +157,7 @@ def calc_all_F(wf, U):
     
     Parameters:
     -----------
-    wf (dGr_general_WF.Wave_Function)
+    wf (dGr_general_WF.WaveFunction)
     
     U (list of np.ndarray)
         See overlap_to_det for the details
@@ -196,7 +196,7 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     Parameters:
     -----------
     
-    wf (dGr_general_WF.Wave_Function)
+    wf (wave_functions.general.WaveFunction)
         The external wave function
     
     U (list of np.ndarray)
@@ -218,10 +218,10 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     
     The float <wf|U>
     """
-    if isinstance(wf, Wave_Function_CISD):
+    if isinstance(wf, CISD_WaveFunction):
         return _overlap_to_det_from_restricted_CISD(
             wf, U, assume_orth=assume_orth)
-    elif isinstance(wf, gen_wf.Wave_Function):
+    elif isinstance(wf, gen_wf.WaveFunction):
         return _overlap_to_det_from_genWF(
             wf, U, F=F, assume_orth=assume_orth)
     else:
@@ -280,7 +280,7 @@ def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
         F = calc_all_F(wf, U)
     f = 0.0
     for Index in wf.string_indices(no_occ_orb=True,
-                                   only_this_occ=gen_wf.Orbitals_Sets(
+                                   only_this_occ=gen_wf.OrbitalsSets(
                                        list(map(lambda Ui: Ui.shape[1], U)))):
         f_contr = 1.0
         for spirrep, I_spirrep in enumerate(Index):
@@ -340,14 +340,14 @@ def generate_lin_system(
     ------------
     
     Only for restricted calculations if wf is instance of
-    Wave_Function_CISD, and only for unrestricted otherwise.
+    CISD_WaveFunction, and only for unrestricted otherwise.
     
     Parameters:
     -----------
     
     U (list of np.ndarray)
     
-    wf (dGr_general_WF.Wave_Function)
+    wf (wave_functions.general.WaveFunction)
     
     F (list of np.ndarray, default=None)
     
@@ -367,10 +367,10 @@ def generate_lin_system(
     
     The tuple (X, C), such that eta satisfies X @ eta = C
     """
-    if isinstance(wf, Wave_Function_CISD):
+    if isinstance(wf, CISD_WaveFunction):
         return _generate_lin_system_from_restricted_CISD(
             wf, U, slice_XC)
-    elif isinstance(wf, gen_wf.Wave_Function):
+    elif isinstance(wf, gen_wf.WaveFunction):
         return _generate_lin_system_from_genWF(
             wf, U, slice_XC, F=F, with_full_H=with_full_H)
     else:
@@ -390,9 +390,9 @@ def _calc_Fprod(F0, indices, max_ind):
 def _all_singles(n_el, n_corr, n_ext):
     """Generator that yield all single excitations, as (i,a,I)"""
     n_core = n_el - n_corr
-    Index = np.zeros(n_el, dtype=int)
-    Index[:n_core] = np.arange(n_core, dtype=int)
-    Index[n_core:-1] = np.arange(n_core + 1, n_el, dtype=int)
+    Index = np.zeros(n_el, dtype=int_dtype)
+    Index[:n_core] = np.arange(n_core, dtype=int_dtype)
+    Index[n_core:-1] = np.arange(n_core + 1, n_el, dtype=int_dtype)
     for i in range(n_corr):
         for a in range(n_ext):
             Index[-1] = n_el + a
@@ -403,9 +403,9 @@ def _all_singles(n_el, n_corr, n_ext):
 def _all_doubles(n_el, n_corr, n_ext):
     """Generator that yield all double excitations, as (i,j,a,b,I)"""
     n_core = n_el - n_corr
-    Index = np.zeros(n_el, dtype=int)
-    Index[:n_core] = np.arange(n_core, dtype=int)
-    Index[n_core:-2] = np.arange(n_core + 2, n_el, dtype=int)
+    Index = np.zeros(n_el, dtype=int_dtype)
+    Index[:n_core] = np.arange(n_core, dtype=int_dtype)
+    Index[n_core:-2] = np.arange(n_core + 2, n_el, dtype=int_dtype)
     for j in range(n_corr):
         for i in range(j + 1, n_corr):
             for a in range(n_ext):
@@ -419,7 +419,7 @@ def _all_doubles(n_el, n_corr, n_ext):
         if j < n_corr:
             Index[n_core + j] = n_core + j
             Index[n_core + j + 1:-2] = np.arange(n_core + j + 3,
-                                                 n_el, dtype=int)
+                                                 n_el, dtype=int_dtype)
 
 
 def _generate_lin_system_from_restricted_CISD(
@@ -427,7 +427,7 @@ def _generate_lin_system_from_restricted_CISD(
     """Generate the linear system for Absil's method
     
     This is the specific implementation, for a restricted CISD
-    wave function (dGr_CISD_WF.Wave_Function_CISD), using
+    wave function (wave_functions.cisd.CISD_WaveFunction), using
     restricted orbitals, and for the component of the Grassmannian
     with same occupation as reference wave function
     
@@ -891,7 +891,7 @@ def _generate_lin_system_from_genWF(
     """Generate the linear system for Absil's method
     
     This is the general implementation, for a general wave function
-    (dGr_general_WF.Wave_Function)
+    (wave_functions.general.WaveFunction)
     
     It is actually slow.
     
@@ -944,8 +944,8 @@ def _generate_lin_system_from_genWF(
                 S = 0.0
                 logger.info('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
                 for I_full in wf.string_indices(
-                        coupled_to=(gen_wf.Spirrep_Index(spirrep=spirrep_1,
-                                                         Index=I_1),)):
+                        coupled_to=(gen_wf.SpirrepIndex(spirrep=spirrep_1,
+                                                        Index=I_1),)):
                     if list(map(len, I_full)) != list(
                             map(lambda x: x.shape[1], U)):
                         continue
@@ -977,8 +977,8 @@ def _generate_lin_system_from_genWF(
                     G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
                     for I_2 in wf.string_indices(
                             spirrep=spirrep_2,
-                            coupled_to=(gen_wf.Spirrep_Index(spirrep=spirrep_1,
-                                                             Index=I_1),)):
+                            coupled_to=(gen_wf.SpirrepIndex(spirrep=spirrep_1,
+                                                            Index=I_1),)):
                         if len(I_2) != n[spirrep_2]:
                             continue
                         logger.debug('I_2 = %s', I_2)
@@ -991,10 +991,10 @@ def _generate_lin_system_from_genWF(
                         S = 0.0
                         for I_full in wf.string_indices(
                                 coupled_to=(
-                                    gen_wf.Spirrep_Index(
+                                    gen_wf.SpirrepIndex(
                                         spirrep=spirrep_1,
                                         Index=I_1),
-                                    gen_wf.Spirrep_Index(
+                                    gen_wf.SpirrepIndex(
                                         spirrep=spirrep_2,
                                         Index=I_2))):
                             if list(map(len, I_full)) != list(
@@ -1073,7 +1073,7 @@ def check_Newton_eq(wf, U, eta, restricted, eps=0.001):
     Parameters:
     -----------
     
-    wf (dGr_general_WF.Wave_Function)
+    wf (wave_functions.general.WaveFunction)
     
     U (list of np.ndarray)
     

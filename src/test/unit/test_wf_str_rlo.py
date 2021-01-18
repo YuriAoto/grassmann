@@ -8,7 +8,7 @@ import numpy as np
 import test
 from wave_functions.fci import make_occ
 import wave_functions.strings_rev_lexical_order as str_order
-
+from util import int_dtype
 
 
 class StringGraphsTestCase(unittest.TestCase):
@@ -36,7 +36,7 @@ class StringGraphsTestCase(unittest.TestCase):
                          np.array([[0, 0, 0, 0],
                                    [1, 1, 1, 1],
                                    [2, 3, 4, 5]],
-                                  dtype=np.intc))
+                                  dtype=int_dtype))
     
     def test_gen_str_graph_2(self):
         nel = 3
@@ -46,7 +46,7 @@ class StringGraphsTestCase(unittest.TestCase):
                          np.array([[0, 0, 0],
                                    [1, 1, 1],
                                    [2, 3, 4]],
-                                  dtype=np.intc))
+                                  dtype=int_dtype))
     
     def test_gen_str_graph_3(self):
         nel = 4
@@ -60,7 +60,7 @@ class StringGraphsTestCase(unittest.TestCase):
                                    [4, 10, 20, 35],
                                    [5, 15, 35, 70],
                                    [6, 21, 56, 126]],
-                                  dtype=np.intc))
+                                  dtype=int_dtype))
     
     def test_gen_str_graph_5(self):
         nel = 5
@@ -74,7 +74,7 @@ class StringGraphsTestCase(unittest.TestCase):
                                    [4, 10, 20, 35, 56],
                                    [5, 15, 35, 70, 126],
                                    [6, 21, 56, 126, 252]],
-                                  dtype=np.intc))
+                                  dtype=int_dtype))
 
 
 class StringGraphsTestCase2(unittest.TestCase):

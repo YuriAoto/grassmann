@@ -8,7 +8,7 @@ import numpy as np
 from wave_functions import fci, general
 from wave_functions.fci import make_occ
 import test
-
+from util import int_dtype
 
 class ClusterDecTestCase(unittest.TestCase):
         
@@ -265,8 +265,8 @@ class SlaterDetTestCase(unittest.TestCase):
         
     def test_simple_construction_and_namedtuple(self):
         det = fci.SlaterDet(c=0.123,
-                            alpha_occ=np.array([0, 1, 2], dtype=np.int8),
-                            beta_occ=np.array([1], dtype=np.int8))
+                            alpha_occ=np.array([0, 1, 2], dtype=int_dtype),
+                            beta_occ=np.array([1], dtype=int_dtype))
         self.assertEqual(det.c, 0.123)
         self.assertEqual(det[0], 0.123)
         self.assertEqual(det.alpha_occ[1], 1)
@@ -278,7 +278,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_1(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)
@@ -288,7 +288,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_2(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)
@@ -298,7 +298,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_3(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core, zero_coefficient=True)
@@ -306,7 +306,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_4(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        n_core = general.Orbitals_Sets([0, 0, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)
@@ -316,7 +316,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_5(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)
@@ -326,7 +326,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_6(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)
@@ -336,7 +336,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_7(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core, zero_coefficient=True)
@@ -344,7 +344,7 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_8(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        n_core = general.Orbitals_Sets([1, 1, 0, 0], occ_type='R')
+        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
         Ms = 0.0
         det = fci._get_slater_det_from_fci_line(
             line, Ms, n_core)

@@ -3,7 +3,7 @@
 Classes:
 --------
 
-Wave_Function_CISD
+CISD_WaveFunction
 """
 import logging
 
@@ -17,7 +17,7 @@ from memory import mem_of_floats
 logger = logging.getLogger(__name__)
 
 
-class Wave_Function_CISD(general.Wave_Function):
+class CISD_WaveFunction(general.WaveFunction):
     """The CISD wave function
     
     For the moment, only restricted and including only
@@ -86,7 +86,7 @@ class Wave_Function_CISD(general.Wave_Function):
     
     Data Model:
     -----------
-    [(String_Index_for_SD)]
+    [(StringIndexfor_SD)]
         TODO: Only get the CI coefficient (of the normalised version!)
         of that determinant
     
@@ -104,11 +104,11 @@ class Wave_Function_CISD(general.Wave_Function):
     
     def __getitem__(self, Index):
         raise NotImplementedError(
-            '[] is not implemented for Wave_Function_CISD!')
+            '[] is not implemented for CISD_WaveFunction!')
 
     def __len__(self):
         raise NotImplementedError(
-            'len() is not implemented for Wave_Function_CISD!')
+            'len() is not implemented for CISD_WaveFunction!')
 
     def __repr__(self):
         x = ['C0 = {}'.format(self.C0)]
@@ -172,7 +172,7 @@ class Wave_Function_CISD(general.Wave_Function):
                        only_ref_occ=False,
                        only_this_occ=None):
         raise NotImplementedError(
-            'string_indices not implemented for Wave_Function_CISD!')
+            'string_indices not implemented for CISD_WaveFunction!')
     
     def make_Jac_Hess_overlap(self, restricted=None):
         """Construct the Jacobian and the Hessian of the function overlap.
@@ -249,15 +249,15 @@ class Wave_Function_CISD(general.Wave_Function):
     
     def calc_wf_from_z(self, z, just_C0=False):
         raise NotImplementedError(
-            'calc_wf_from_z not implemented for Wave_Function_CISD!')
+            'calc_wf_from_z not implemented for CISD_WaveFunction!')
     
     def change_orb_basis(self, U, just_C0=False):
         raise NotImplementedError(
-            'change_orb_basis not implemented for Wave_Function_CISD!')
+            'change_orb_basis not implemented for CISD_WaveFunction!')
         
     @classmethod
     def from_int_norm(cls, intN_wf):
-        """Load the wave function from a Wave_Function_Int_Norm."""
+        """Load the wave function from a IntermNormWaveFunction."""
         new_wf = cls()
         new_wf.source = 'From int. norm. WF> ' + intN_wf.source
         new_wf.restricted = intN_wf.restricted
