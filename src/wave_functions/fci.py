@@ -1466,7 +1466,8 @@ class WaveFunctionFCI(general.WaveFunction):
                 self.normalise(mode='unit')
                 other.normalise(mode='unit')
         if metric == 'IN':
-            return linalg.norm(self._coefficients - other.coefficients)
+            return str_order.eucl_distance(self._coefficients,
+                                           other.coefficients)
     
     def compare_to_cc_manifold(self,
                                level='D',
@@ -1694,6 +1695,9 @@ class WaveFunctionFCI(general.WaveFunction):
         else:
             raise ValueError('Unknown type of initial wave function')
         n_ampl = cc_wf.calc_n_ampl(True, False)
+        n_irrep = self.n_irrep
+        n_corr_orb = self.n_corr_orb.as_array()
+        n_ext = self.n_ext.as_array()
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
                 cc_wf_as_fci = WaveFunctionFCI.from_int_norm(cc_wf)
@@ -1705,16 +1709,30 @@ class WaveFunctionFCI(general.WaveFunction):
                     break
                 if approx_hess:
                     with logtime('Making Jacobian and approximate Hessian'):
-                        z, normJ = cc_manifold.min_dist_app_hess(self,
-                                                                 cc_wf_as_fci,
-                                                                 n_ampl,
-                                                                 level=level)
+                        z, normJ = cc_manifold.min_dist_app_hess(
+                            self._coefficients,
+                            cc_wf_as_fci._coefficients,
+                            n_ampl,
+                            self.n_irrep,
+                            self.n_orb_before,
+                            n_corr_orb,
+                            n_ext,
+                            self._alpha_string_graph,
+                            self._beta_string_graph,
+                            level=level)
                     logger.log(1, 'Update vector z:\n%r', z)
                 else:
                     with logtime('Making Jacobian and Hessian'):
-                        Jac, Hess = cc_manifold.min_dist_jac_hess(self,
-                                                                  cc_wf_as_fci,
-                                                                  n_ampl)
+                        Jac, Hess = cc_manifold.min_dist_jac_hess(
+                            self._coefficients,
+                            cc_wf_as_fci._coefficients,
+                            n_ampl,
+                            self.n_irrep,
+                            self.n_orb_before,
+                            n_corr_orb,
+                            n_ext,
+                            self._alpha_string_graph,
+                            self._beta_string_graph)
                     logger.log(1, 'Jacobian:\n%r', Jac)
                     logger.log(1, 'Hessian:\n%r', Hess)
                     with logtime('Calculating z: Solving linear system.'):

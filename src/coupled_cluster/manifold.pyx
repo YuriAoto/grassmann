@@ -82,64 +82,65 @@ def min_dist_app_hess(double [:, :] wf,
     cdef double [:] z = np.zeros(n_ampl)
     cdef int pos = 0, exc_type
     cdef int spirrep, irrep, i_irrep, j_irrep, a_irrep, b_irrep, i, j, a, b
-    cdef int [:] single_exc = np.zeros(2)
-    cdef int [:] double_exc = np.zeros(4)
-    for spirrep in range(2 * n_irrep):
-        irrep = spirrep % n_irrep
-        exc_type = EXC_TYPE_A if spirrep < n_irrep else EXC_TYPE_B
-        single_exc[0] = n_orb_before[irrep]
-        for i in range(n_corr_orb[spirrep]):
-            single_exc[0] += 1
-            single_exc[1] = n_orb_before[irrep]
-            for a in range(n_ext[spirrep]):
-                single_exc[1] += 1
-                J = _term1(single_exc,
-                           exc_type,
-                           wf,
-                           wf_cc,
-                           alpha_string_graph,
-                           beta_string_graph)
-                normJac += J**2
-                z[pos] = J/_term2_diag(
-                    single_exc,
-                    exc_type,
-                    wf_cc,
-                    alpha_string_graph.shape[1],
-                    beta_string_graph.shape[1])
-                pos += 1
-    for i_irrep in range(2 * n_irrep):
-        alpha_exc1 = i_irrep < n_irrep
-        for j_irrep in range(i_irrep, 2 * n_irrep):
-            alpha_exc2 = j_irrep < n_irrep
+    cdef int [:] single_exc = np.zeros(2)  # [i, a]
+    cdef int [:] double_exc = np.zeros(4)  # [i, a, j, b]
+    if level == 'SD':
+        for spirrep in range(2 * n_irrep):
+            irrep = spirrep % n_irrep
+            exc_type = EXC_TYPE_A if spirrep < n_irrep else EXC_TYPE_B
+            single_exc[0] = n_orb_before[irrep]
+            for i in range(n_corr_orb[spirrep]):
+                single_exc[1] = n_orb_before[irrep] + n_corr_orb[spirrep]
+                for a in range(n_ext[spirrep]):
+                    J = _term1(single_exc,
+                               exc_type,
+                               wf,
+                               wf_cc,
+                               alpha_string_graph,
+                               beta_string_graph)
+                    normJac += J**2
+                    z[pos] = J/_term2_diag(
+                        single_exc,
+                        exc_type,
+                        wf_cc,
+                        alpha_string_graph.shape[1],
+                        beta_string_graph.shape[1])
+                    pos += 1
+                    single_exc[1] += 1
+                single_exc[0] += 1
+    for i_spirrep in range(2 * n_irrep):
+        alpha_exc1 = i_spirrep < n_irrep
+        i_irrep = i_spirrep % n_irrep
+        for j_spirrep in range(i_spirrep, 2 * n_irrep):
+            alpha_exc2 = j_spirrep < n_irrep
+            j_irrep = j_spirrep % n_irrep
             exc_type = (EXC_TYPE_AA
-                        if alpha_exc1 and alpha_exc2 else
+                        if alpha_exc2 else
                         (EXC_TYPE_AB
-                         if alpha_exc1 or alpha_exc2 else
+                         if alpha_exc1 else
                          EXC_TYPE_BB))
             double_exc[0] = n_orb_before[i_irrep]
-            for i in range(n_corr_orb[i_irrep]):
-                double_exc[0] += 1
-                double_exc[1] = n_orb_before[i_irrep]
-                for j in range(n_corr_orb[j_irrep]):
-                    if j <= i:
+            for i in range(n_corr_orb[i_spirrep]):
+                double_exc[2] = n_orb_before[j_irrep]
+                for j in range(n_corr_orb[j_spirrep]):
+                    if i_spirrep == j_spirrep and j <= i :
                         continue
-                    double_exc[1] += 1
                     for a_irrep in range(n_irrep):
-                        double_exc[2] = n_orb_before[a_irrep]
-                        for a in range(n_ext[a_irrep
-                                             + (0
-                                                if alpha_exc1 else
-                                                n_irrep)]):
-                            double_exc[2] += 1
+                        a_spirrep = a_irrep
+                        if not alpha_exc1:
+                            a_spirrep + n_irrep
+                        double_exc[1] = (n_orb_before[a_irrep]
+                                         + n_corr_orb[a_spirrep])
+                        for a in range(n_ext[a_spirrep]):
                             b_irrep = (irrep_product[i_irrep]
                                        * irrep_product[j_irrep]
                                        * irrep_product[a_irrep])
-                            double_exc[3] = n_orb_before[b_irrep]
-                            for b in range(n_ext[b_irrep
-                                                 + (0
-                                                    if alpha_exc2 else
-                                                    n_irrep)]):
-                                double_exc[3] += 1
+                            b_spirrep = b_irrep
+                            if not alpha_exc2:
+                                b_spirrep + n_irrep
+                            double_exc[3] = (n_orb_before[b_irrep]
+                                             + n_corr_orb[b_spirrep])
+                            for b in range(n_ext[b_spirrep]):
                                 J = _term1(double_exc,
                                            exc_type,
                                            wf,
@@ -153,7 +154,11 @@ def min_dist_app_hess(double [:, :] wf,
                                     wf_cc,
                                     alpha_string_graph.shape[1],
                                     beta_string_graph.shape[1])
-                pos += 1
+                                pos += 1
+                                double_exc[3] += 1  # b++
+                            double_exc[1] += 1  # a++
+                    double_exc[2] += 1  # j++
+                double_exc[0] += 1  # i++
     if pos != n_ampl:
         raise Exception('pos != n_ampl')
     return z, np.sqrt(normJac)
@@ -248,7 +253,7 @@ cdef double _term1_a(int [:] exc,  # [i, a]
     for I_i in range(nstr_alpha):
         if (exc[0] in I) and (exc[1] not in I):
             I_exc = _exc_on_string(exc[0], exc[1], I)
-            I_exc_i = get_i(I_exc[:nel], string_graph)
+            I_exc_i = get_index(I_exc[:nel], string_graph)
             with nogil:
                 for i in range(nstr_beta):
                     S += (I_exc[nel]
@@ -288,7 +293,7 @@ cdef double _term1_b(int [:] exc,  # [i, a]
     for I_i in range(nstr_beta):
         if (exc[0] in I) and (exc[1] not in I):
             I_exc = _exc_on_string(exc[0], exc[1], I)
-            I_exc_i = get_i(I_exc[:nel], string_graph)
+            I_exc_i = get_index(I_exc[:nel], string_graph)
             for i in range(nstr_alpha):
                 S += (I_exc[nel]
                       * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
@@ -330,7 +335,7 @@ cdef double _term1_aa(int [:] exc,  # [i, a, j, b]
             I_exc = _exc_on_string(exc[0], exc[1], I)
             sign = I_exc[nel]
             I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-            I_exc_i = get_i(I_exc[:nel], string_graph)
+            I_exc_i = get_index(I_exc[:nel], string_graph)
             for i in range(nstr_beta):
                 S += (I_exc[nel] * sign
                       * (wf[I_exc_i, i] - wf_cc[I_exc_i, i])
@@ -372,7 +377,7 @@ cdef double _term1_bb(int [:] exc,  # [i, a, j, b]
             I_exc = _exc_on_string(exc[0], exc[1], I)
             sign = I_exc[nel]
             I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-            I_exc_i = get_i(I_exc[:nel], string_graph)
+            I_exc_i = get_index(I_exc[:nel], string_graph)
             for i in range(nstr_alpha):
                 S += (I_exc[nel]
                       * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
@@ -413,13 +418,13 @@ cdef double _term1_ab(int [:] exc,  # [i, a, j, b]
     for Ia_i in range(nstr_alpha):
         if (exc[0] in Ia) and (exc[1] not in Ia):
             Ia_exc = _exc_on_string(exc[0], exc[1], Ia)
-            Ia_exc_i = get_i(Ia_exc[:nalpha],
+            Ia_exc_i = get_index(Ia_exc[:nalpha],
                              alpha_string_graph)
             Ib = np.arange(nbeta, dtype=int_dtype)
             for Ib_i in range(nstr_beta):
                 if (exc[2] in Ib) and (exc[3] not in Ib):
                     Ib_exc = _exc_on_string(exc[2], exc[3], Ib)
-                    Ib_exc_i = get_i(Ib_exc[:nbeta],
+                    Ib_exc_i = get_index(Ib_exc[:nbeta],
                                      beta_string_graph)
                     S += (Ia_exc[nalpha] * Ib_exc[nbeta]
                           * (wf[Ia_exc_i, Ib_exc_i]

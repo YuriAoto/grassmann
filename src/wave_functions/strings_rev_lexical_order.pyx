@@ -4,6 +4,7 @@
 
 """
 import cython
+from libc.math cimport sqrt
 import numpy as np
 
 from util import int_dtype
@@ -21,6 +22,18 @@ cpdef void next_str(int [:] occ):
     for i in range(i_to_be_raised):
         occ[i] = i
 
+
+def eucl_distance(double [:, :] wf1, double [:, :] wf2):
+    """Calculate the euclidean distance between wf1 and wf2"""
+    cdef int i, j
+    cdef int n1 = wf1.shape[0]
+    cdef int n2 = wf1.shape[1]
+    cdef double S = 0.0
+    with nogil:
+        for i in range(n1):
+            for j in range(n2):
+                S += (wf1[i, j] - wf2[i, j])*(wf1[i, j] - wf2[i, j])
+    return sqrt(S)
 
 def generate_graph(int nel, int norb):
     """Generate the string graph matrix to set the reverse lexical order
