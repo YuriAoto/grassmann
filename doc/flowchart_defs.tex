@@ -10,6 +10,28 @@
 %
 
 \tikzset{
+  startend/.style={
+    align=center,
+    circle,
+    minimum size=3mm,
+    rounded corners=1mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=red!70
+  },
+  algtest/.style={
+    align=center,
+    diamond,
+    aspect=1,
+    minimum size=6mm,
+    rounded corners=0mm,
+    very thick,
+    text badly centered,
+    draw=black!50,
+    top color=white,
+    bottom color=green!30
+  },
   algcond/.style={
     align=center,
     rectangle,
@@ -20,7 +42,7 @@
     top color=white,
     bottom color=blue!20
   },
-  condTrue/.style={
+  condYes/.style={
     very thick,
     draw=green,
     postaction={decoration={
@@ -30,12 +52,32 @@
         raise=0.1cm},
       decorate}
   },
-  condFalse/.style={
+  condTrue/.style={
+    very thick,
+    draw=green,
+    postaction={decoration={
+        text along path,
+        text={True},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  condNo/.style={
     very thick,
     draw=red,
     postaction={decoration={
         text along path,
         text={No},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  condFalse/.style={
+    very thick,
+    draw=red,
+    postaction={decoration={
+        text along path,
+        text={False},
         text align={center},
         raise=0.1cm},
       decorate}
@@ -97,7 +139,7 @@
 
 \newcommand{\algloop}[4]{
   \draw [->, rounded corners=5mm] (#1) -- ( #1 |- \X{-100},\Y{#2})  --  (\X{-50}, \Y{#2}) --
-  (\X{-50}, \Y{#3}) -- (\X{-15}, \Y{#3}) -- (#4);
+  (\X{-50}, \Y{#3}) -- ( #4 |- \X{-15}, \Y{#3}) -- (#4);
 }
 
 %%% Local Variables:
