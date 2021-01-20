@@ -17,8 +17,8 @@ cdef int EXC_TYPE_AB = 3
 cdef int EXC_TYPE_BB = 4
 
 
-def min_dist_app_hess(double [:,:] wf,
-                      double [:,:] wf_cc,
+def min_dist_app_hess(double [:, :] wf,
+                      double [:, :] wf_cc,
                       int n_ampl,
                       int n_irrep,
                       int [:] n_orb_before,
@@ -100,11 +100,12 @@ def min_dist_app_hess(double [:,:] wf,
                            alpha_string_graph,
                            beta_string_graph)
                 normJac += J**2
-                z[pos] = J/_term2(single_exc,
-                                  exc_type,
-                                  wf_cc,
-                                  alpha_string_graph,
-                                  beta_string_graph)
+                z[pos] = J/_term2_diag(
+                    single_exc,
+                    exc_type,
+                    wf_cc,
+                    alpha_string_graph.shape[1],
+                    beta_string_graph.shape[1])
                 pos += 1
     for i_irrep in range(2 * n_irrep):
         alpha_exc1 = i_irrep < n_irrep
@@ -126,18 +127,18 @@ def min_dist_app_hess(double [:,:] wf,
                     for a_irrep in range(n_irrep):
                         double_exc[2] = n_orb_before[a_irrep]
                         for a in range(n_ext[a_irrep
-                                                + (0
-                                                   if alpha_exc1 else
-                                                   n_irrep)]):
+                                             + (0
+                                                if alpha_exc1 else
+                                                n_irrep)]):
                             double_exc[2] += 1
                             b_irrep = (irrep_product[i_irrep]
                                        * irrep_product[j_irrep]
                                        * irrep_product[a_irrep])
                             double_exc[3] = n_orb_before[b_irrep]
                             for b in range(n_ext[b_irrep
-                                                    + (0
-                                                       if alpha_exc2 else
-                                                       n_irrep)]):
+                                                 + (0
+                                                    if alpha_exc2 else
+                                                    n_irrep)]):
                                 double_exc[3] += 1
                                 J = _term1(double_exc,
                                            exc_type,
@@ -146,11 +147,12 @@ def min_dist_app_hess(double [:,:] wf,
                                            alpha_string_graph,
                                            beta_string_graph)
                                 normJac += J**2
-                                z[pos] = J/_term2(double_exc,
-                                                  exc_type,
-                                                  wf_cc,
-                                                  alpha_string_graph,
-                                                  beta_string_graph)
+                                z[pos] = J/_term2_diag(
+                                    double_exc,
+                                    exc_type,
+                                    wf_cc,
+                                    alpha_string_graph.shape[1],
+                                    beta_string_graph.shape[1])
                 pos += 1
     if pos != n_ampl:
         raise Exception('pos != n_ampl')
@@ -160,7 +162,6 @@ def min_dist_app_hess(double [:,:] wf,
 def min_dist_jac_hess():
     raise NotImplementedError('do it')
     
-
 
 cdef double _term1(int [:] exc,
                    int exc_type,
@@ -217,16 +218,228 @@ cdef double _term1(int [:] exc,
                          beta_string_graph)
 
 
-cdef double _term2(int [:] exc,
-                   int exc_type,
-                   double [:, :] wf_cc,
-                   int [:, :] alpha_string_graph,
-                   int [:, :] beta_string_graph):
-    """The term <\Psi_cc | \tau_\rho | \Psi_cc>
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term1_a(int [:] exc,  # [i, a]
+                     double [:, :] wf,
+                     double [:, :] wf_cc,
+                     int [:, :] string_graph):
+    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha}^{\alpha}
     
     Parameters:
     -----------
     See _term1
+    
+    string_graph should be associated to the first dimension of wf and wf_cc
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nel = string_graph.shape[1]
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] I = np.arange(nel, dtype=int_dtype)
+    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int I_i, I_exc_i, i
+    cdef double S = 0.0
+    for I_i in range(nstr_alpha):
+        if (exc[0] in I) and (exc[1] not in I):
+            I_exc = _exc_on_string(exc[0], exc[1], I)
+            I_exc_i = get_i(I_exc[:nel], string_graph)
+            with nogil:
+                for i in range(nstr_beta):
+                    S += (I_exc[nel]
+                          * (wf[I_exc_i, i] - wf_cc[I_exc_i, i])
+                          * wf_cc[I_i, i])
+        next_str(I)
+    return S
+
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term1_b(int [:] exc,  # [i, a]
+                     double [:, :] wf,
+                     double [:, :] wf_cc,
+                     int [:, :] string_graph):
+    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\beta}^{\beta}
+    
+    Parameters:
+    -----------
+    See _term1
+    
+    string_graph should be associated to the second dimension of wf and wf_cc
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nel = string_graph.shape[1]
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] I = np.arange(nel, dtype=int_dtype)
+    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int I_i, I_exc_i, i
+    cdef double S = 0.0
+    for I_i in range(nstr_beta):
+        if (exc[0] in I) and (exc[1] not in I):
+            I_exc = _exc_on_string(exc[0], exc[1], I)
+            I_exc_i = get_i(I_exc[:nel], string_graph)
+            for i in range(nstr_alpha):
+                S += (I_exc[nel]
+                      * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
+                      * wf_cc[i, I_i])
+        next_str(I)
+    return S
+
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term1_aa(int [:] exc,  # [i, a, j, b]
+                      double [:, :] wf,
+                      double [:, :] wf_cc,
+                      int [:, :] string_graph):
+    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha\alpha}^{\alpha\alpha}
+    
+    Parameters:
+    -----------
+    See _term1
+    
+    string_graph should be associated to the first dimension of wf and wf_cc
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nel = string_graph.shape[1]
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] I = np.arange(nel, dtype=int_dtype)
+    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int I_i, I_exc_i, sign, i
+    cdef double S = 0.0
+    for I_i in range(nstr_alpha):
+        if ((exc[0] in I) and (exc[1] not in I)
+                and (exc[2] in I) and (exc[3] not in I)):
+            I_exc = _exc_on_string(exc[0], exc[1], I)
+            sign = I_exc[nel]
+            I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
+            I_exc_i = get_i(I_exc[:nel], string_graph)
+            for i in range(nstr_beta):
+                S += (I_exc[nel] * sign
+                      * (wf[I_exc_i, i] - wf_cc[I_exc_i, i])
+                      * wf_cc[I_i, i])
+        next_str(I)
+    return S
+
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term1_bb(int [:] exc,  # [i, a, j, b]
+                      double [:, :] wf,
+                      double [:, :] wf_cc,
+                      int [:, :] string_graph):
+    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\beta\beta}^{\beta\beta}
+    
+    Parameters:
+    -----------
+    See _term1
+    
+    string_graph should be associated to the second dimension of wf and wf_cc
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nel = string_graph.shape[1]
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] I = np.arange(nel, dtype=int_dtype)
+    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int I_i, I_exc_i, sign, i
+    cdef double S = 0.0
+    for I_i in range(nstr_beta):
+        if ((exc[0] in I) and (exc[1] not in I)
+                and (exc[2] in I) and (exc[3] not in I)):
+            I_exc = _exc_on_string(exc[0], exc[1], I)
+            sign = I_exc[nel]
+            I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
+            I_exc_i = get_i(I_exc[:nel], string_graph)
+            for i in range(nstr_alpha):
+                S += (I_exc[nel]
+                      * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
+                      * wf_cc[i, I_i])
+        next_str(I)
+    return S
+
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term1_ab(int [:] exc,  # [i, a, j, b]
+                      double [:, :] wf,
+                      double [:, :] wf_cc,
+                      int [:, :] alpha_string_graph,
+                      int [:, :] beta_string_graph):
+    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha\beta}^{\alpha\beta}
+    
+    Parameters:
+    -----------
+    See _term1
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nalpha = alpha_string_graph.shape[1]
+    cdef int nbeta = beta_string_graph.shape[1]
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] Ia = np.arange(nalpha, dtype=int_dtype)
+    cdef int [:] Ib = np.arange(nbeta, dtype=int_dtype)
+    cdef int [:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
+    cdef int [:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
+    cdef int Ia_i, Ib_i, Ia_exc_i, Ib_exc_i
+    cdef double S = 0.0
+    for Ia_i in range(nstr_alpha):
+        if (exc[0] in Ia) and (exc[1] not in Ia):
+            Ia_exc = _exc_on_string(exc[0], exc[1], Ia)
+            Ia_exc_i = get_i(Ia_exc[:nalpha],
+                             alpha_string_graph)
+            Ib = np.arange(nbeta, dtype=int_dtype)
+            for Ib_i in range(nstr_beta):
+                if (exc[2] in Ib) and (exc[3] not in Ib):
+                    Ib_exc = _exc_on_string(exc[2], exc[3], Ib)
+                    Ib_exc_i = get_i(Ib_exc[:nbeta],
+                                     beta_string_graph)
+                    S += (Ia_exc[nalpha] * Ib_exc[nbeta]
+                          * (wf[Ia_exc_i, Ib_exc_i]
+                             - wf_cc[Ia_exc_i, Ib_exc_i])
+                          * wf_cc[Ia_i, Ib_i])
+                next_str(Ib)
+        next_str(Ia)
+    return S
+
+
+cdef double _term2_diag(int [:] exc,
+                        int exc_type,
+                        double [:, :] wf,
+                        int alpha_nel,
+                        int beta_nel):
+    """The term <\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    Parameters:
+    -----------
+    See _term1 (here wf is \Psi_cc)
     
     Return:
     -------
@@ -234,414 +447,172 @@ cdef double _term2(int [:] exc,
     
     """
     if exc_type == EXC_TYPE_A:
-        return _term2_a(exc, wf_cc,
-                        alpha_string_graph)
+        return _term2_diag_a(exc, wf, alpha_nel)
     if exc_type == EXC_TYPE_AA:
-        return _term2_aa(exc, wf_cc,
-                         alpha_string_graph)
+        return _term2_diag_aa(exc, wf, alpha_nel)
     if exc_type == EXC_TYPE_B:
-        return _term2_b(exc, wf_cc,
-                        beta_string_graph)
+        return _term2_diag_b(exc, wf, beta_nel)
     if exc_type == EXC_TYPE_BB:
-        return _term2_bb(exc, wf_cc,
-                         beta_string_graph)
+        return _term2_diag_bb(exc, wf, beta_nel)
     if exc_type == EXC_TYPE_AB:
-        return _term2_ab(exc, wf_cc,
-                         alpha_string_graph,
-                         beta_string_graph)
+        return _term2_diag_ab(exc, wf, alpha_nel, beta_nel)
 
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_a(int [:] exc, # [i, a]
-                     double [:, :] wf,
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha}^{\alpha}
+cdef double _term2_diag_a(int [:] exc,  # [i, a]
+                          double [:, :] wf,
+                          int nel):
+    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha}^{\alpha}
     
     Parameters:
     -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
+    See _term2_diag
     
     Return:
     -------
     A float (C double)
     """
-    cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, i
+    cdef int [:] Ia = np.arange(nel, dtype=int_dtype)
     cdef double S = 0.0
-    for I_index in range(nstr_alpha):
-        if (exc[0] not in I) or (exc[1] in I):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        with nogil:
-            for i in range(nstr_beta):
-                S += (I_exc[nel]
-                      * (wf[I_exc_index, i] - wf_cc[I_exc_index, i])
-                      * wf_cc[I_index, i])
-        next_str(I)
+    cdef int Ia_i, Ib_i
+    for Ia_i in range(nstr_alpha):
+        if (exc[0] in Ia) and (exc[1] not in Ia):
+            with nogil:
+                for Ib_i in range(nstr_beta):
+                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
+        next_str(Ia)
+    return S
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cdef double _term2_diag_b(int [:] exc,  # [i, a]
+                          double [:, :] wf,
+                          int nel):
+    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\beta}^{\beta}
+    
+    Parameters:
+    -----------
+    See _term2_diag
+    
+    Return:
+    -------
+    A float (C double)
+    """
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] Ib = np.arange(nel, dtype=int_dtype)
+    cdef double S = 0.0
+    for Ib_i in range(nstr_beta):
+        if (exc[0] in Ib) and (exc[1] not in Ib):
+            with nogil:
+                for Ia_i in range(nstr_alpha):
+                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
+        next_str(Ib)
     return S
 
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_b(int [:] exc, # [i, a]
-                     double [:, :] wf,
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\beta}^{\beta}
+cdef double _term2_diag_aa(int [:] exc,  # [i, a, j, b]
+                           double [:, :] wf,
+                           int nel):
+    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha\alpha}^{\alpha\alpha}
     
     Parameters:
     -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
+    See _term2_diag
     
     Return:
     -------
     A float (C double)
     """
-    cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, i
+    cdef int [:] Ia = np.arange(nel, dtype=int_dtype)
     cdef double S = 0.0
-    for I_index in range(nstr_beta):
-        if (exc[0] not in I) or (exc[1] in I):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        for i in range(nstr_alpha):
-            S += (I_exc[nel]
-                  * (wf[i, I_exc_index] - wf_cc[i, I_exc_index])
-                  * wf_cc[i, I_index])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_aa(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha\alpha}^{\alpha\alpha}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, sign, i
-    cdef double S = 0.0
-    for I_index in range(nstr_alpha):
-        if ((exc[0] not in I) or (exc[1] in I)
-                or (exc[2] not in I) or (exc[3] in I)):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        sign = I_exc[nel]
-        I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        for i in range(nstr_beta):
-            S += (I_exc[nel] * sign
-                  * (wf[I_exc_index, i] - wf_cc[I_exc_index, i])
-                  * wf_cc[I_index, i])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_bb(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\beta\beta}^{\beta\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, sign, i
-    cdef double S = 0.0
-    for I_index in range(nstr_beta):
-        if ((exc[0] not in I) or (exc[1] in I)
-                or (exc[2] not in I) or (exc[3] in I)):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        sign = I_exc[nel]
-        I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        for i in range(nstr_alpha):
-            S += (I_exc[nel]
-                  * (wf[i, I_exc_index] - wf_cc[i, I_exc_index])
-                  * wf_cc[i, I_index])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_ab(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] alpha_string_graph,
-                      int [:, :] beta_string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha\beta}^{\alpha\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nalpha = alpha_string_graph.shape[1]
-    cdef int nbeta = beta_string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ia = np.arange(nalpha, dtype=int_dtype)
-    cdef int [:] Ib = np.arange(nbeta, dtype=int_dtype)
-    cdef int [:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
-    cdef int [:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
-    cdef int Ia_index, Ib_index, Ia_exc_index, Ib_exc_index
-    cdef double S = 0.0
-    for Ia_index in range(nstr_alpha):
-        if (exc[0] not in Ia) or (exc[1] in Ia):
-            continue
-        Ia_exc = _exc_on_string(exc[0], exc[1], Ia)
-        Ia_exc_index = get_index(Ia_exc[:nalpha], alpha_string_graph)
-        for Ib_index in range(nstr_beta):
-            if (exc[2] not in Ib) or (exc[3] in Ib):
-                continue
-            Ib_exc = _exc_on_string(exc[2], exc[3], Ib)
-            Ib_exc_index = get_index(Ib_exc[:nbeta], beta_string_graph)
-            S += (Ia_exc[nalpha] * Ib_exc[nbeta]
-                  * (wf[Ia_exc_index, Ib_exc_index]
-                     - wf_cc[Ia_exc_index, Ib_exc_index])
-                  * wf_cc[Ia_index, Ib_index])
-            next_str(Ib)
+    cdef int Ia_i, Ib_i
+    for Ia_i in range(nstr_alpha):
+        if ((exc[0] in Ia) and (exc[1] not in Ia)
+                and (exc[2] in Ia) and (exc[3] not in Ia)):
+            with nogil:
+                for Ib_i in range(nstr_beta):
+                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
         next_str(Ia)
     return S
 
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_a(int [:] exc, # [i, a]
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha}^{\alpha}
+cdef double _term2_diag_bb(int [:] exc,  # [i, a, j, b]
+                           double [:, :] wf,
+                           int nel):
+    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\beta\beta}^{\beta\beta}
     
     Parameters:
     -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
+    See _term2_diag
     
     Return:
     -------
     A float (C double)
     """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr = wf_cc.shape[0]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] Ib = np.arange(nel, dtype=int_dtype)
+    cdef int Ia_i, Ib_i
     cdef double S = 0.0
-    for I_index in range(nstr):
-        if (exc[0] not in I) or (exc[1] in I):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        S += (I_exc[nel]
-              * np.dot(wf_cc[I_exc_index, :],
-                       wf_cc[I_index, :]))
-        next_str(I)
+    for Ib_i in range(nstr_beta):
+        if ((exc[0] in Ib) and (exc[1] not in Ib)
+                and (exc[2] in Ib) and (exc[3] not in Ib)):
+            with nogil:
+                for Ia_i in range(nstr_alpha):
+                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
+        next_str(Ib)
     return S
 
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_b(int [:] exc, # [i, a]
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\beta}^{\beta}
+cdef double _term2_diag_ab(int [:] exc,  # [i, a, j, b]
+                           double [:, :] wf,
+                           int alpha_nel,
+                           int beta_nel):
+    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    
+    for \rho=a_{\alpha\beta}^{\alpha\beta}
     
     Parameters:
     -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
+    See _term2_diag
     
     Return:
     -------
     A float (C double)
     """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr = wf_cc.shape[0]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index
+    cdef int nstr_alpha = wf.shape[0]
+    cdef int nstr_beta = wf.shape[1]
+    cdef int [:] Ia = np.arange(alpha_nel, dtype=int_dtype)
+    cdef int [:] Ib
+    cdef int Ia_i, Ib_i
     cdef double S = 0.0
-    for I_index in range(nstr):
-        if (exc[0] not in I) or (exc[1] in I):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        S += (I_exc[nel]
-              * np.dot(wf_cc[:, I_exc_index],
-                       wf_cc[:, I_index]))
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_aa(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha\alpha}^{\alpha\alpha}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr = wf_cc.shape[0]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, sign
-    cdef double S = 0.0
-    for I_index in range(nstr):
-        if ((exc[0] not in I) or (exc[1] in I)
-                or (exc[2] not in I) or (exc[3] in I)):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        sign = I_exc[nel]
-        I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        S += (I_exc[nel] * sign
-              * np.dot(wf_cc[I_exc_index, :],
-                       wf_cc[I_index, :]))
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_bb(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\beta\beta}^{\beta\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr = wf_cc.shape[0]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_index, I_exc_index, sign
-    cdef double S = 0.0
-    for I_index in range(nstr):
-        if ((exc[0] not in I) or (exc[1] in I)
-                or (exc[2] not in I) or (exc[3] in I)):
-            continue
-        I_exc = _exc_on_string(exc[0], exc[1], I)
-        sign = I_exc[nel]
-        I_exc = _exc_on_string(exc[2], exc[3], I_exc[:nel])
-        I_exc_index = get_index(I_exc[:nel], string_graph)
-        S += (I_exc[nel] * sign
-              * np.dot(wf_cc[:, I_exc_index],
-                       wf_cc[:, I_index]))
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_ab(int [:] exc, # [i, a, j, b]
-                      double [:, :] wf_cc,
-                      int [:, :] alpha_string_graph,
-                      int [:, :] beta_string_graph):
-    """<\Psi_cc | \tau_\rho | \Psi_cc> for \rho=a_{\alpha\beta}^{\alpha\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nalpha = alpha_string_graph.shape[1]
-    cdef int nbeta = beta_string_graph.shape[1]
-    cdef int nstr_alpha = wf_cc.shape[0]
-    cdef int nstr_beta = wf_cc.shape[1]
-    cdef int [:] Ia = np.arange(nalpha, dtype=int_dtype)
-    cdef int [:] Ib = np.arange(nbeta, dtype=int_dtype)
-    cdef int [:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
-    cdef int [:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
-    cdef int Ia_index, Ib_index, Ia_exc_index, Ib_exc_index
-    cdef double S = 0.0
-    for Ia_index in range(nstr_alpha):
-        if (exc[0] not in Ia) or (exc[1] in Ia):
-            continue
-        Ia_exc = _exc_on_string(exc[0], exc[1], Ia)
-        Ia_exc_index = get_index(Ia_exc[:nalpha], alpha_string_graph)
-        for Ib_index in range(nstr_beta):
-            if (exc[2] not in Ib) or (exc[3] in Ib):
-                continue
-            Ib_exc = _exc_on_string(exc[2], exc[3], Ib)
-            Ib_exc_index = get_index(Ib_exc[:nbeta], beta_string_graph)
-            S += (Ia_exc[nalpha] * Ib_exc[nbeta]
-                  * wf_cc[Ia_exc_index, Ib_exc_index]
-                  * wf_cc[Ia_index, Ib_index])
-            next_str(Ib)
+    for Ia_i in range(nstr_alpha):
+        if (exc[0] in Ia) and (exc[1] not in Ia):
+            Ib = np.arange(beta_nel, dtype=int_dtype)
+            for Ib_i in range(nstr_beta):
+                if (exc[2] in Ib) and (exc[3] not in Ib):
+                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
+                next_str(Ib)
         next_str(Ia)
     return S
 
