@@ -116,10 +116,10 @@
   \draw [->] (init.270) -- (cc_wf.50);
   \draw [->] (cc_wf.270) -- (dist.90);
   \draw [->] (dist.270) -- (conv.90);
-  \draw [->, condFalse] (conv.270) -- (app_hess.90);
-  \draw [->, condTrue] (conv.0) -- (\X{30}, \Y{30});
-  \draw [->, condFalse] (app_hess.0) .. controls +(right:1) and +(up:1) .. (jachess.90);
-  \draw [->, condTrue] (app_hess.180) .. controls +(left:1) and +(up:1) .. (jachess_app.90);
+  \draw [->, condNo] (conv.270) -- (app_hess.90);
+  \draw [->, condYes] (conv.0) -- (\X{30}, \Y{30});
+  \draw [->, condNo] (app_hess.0) .. controls +(right:1) and +(up:1) .. (jachess.90);
+  \draw [->, condYes] (app_hess.180) .. controls +(left:1) and +(up:1) .. (jachess_app.90);
   \draw [->] (jachess.south) .. controls +(down:1) and +(east:1) .. (update.east);
   \draw [->] (jachess_app.south) .. controls +(down:1) and +(west:1) .. (update.west);
 

@@ -86,6 +86,20 @@ The wave function is stored in the class \texttt{wave\_functions.interm\_norm.In
 
 \section{Equations}
 
+\subsection{Intermediary Matrices}
+\hypertarget{sec:ccsd_inter_matrix}{}
+\label{sec:ccsd_inter_matix}
+We can define three matrices that speed up calculations at the cost of memory.
+They are:
+\begin{equation}
+  \begin{split}
+    u_{ij}^{ab}&=2t_{ij}^{ab}-t_{ji}^{ab}\\
+    L_{pqrs}&=2g_{pqrs}-g_{psrq}\\
+    F_{mn}^I&=h_{mn}+\sum_l(2g_{mnll}-g_{mlln})=h_{mn}+\sum_lL_{mnll}
+  \end{split}
+\end{equation}
+
+
 \subsection{Energy}
 \hypertarget{sec:ccsd_energy}{}
 \label{sec:ccsd_energy}
@@ -111,7 +125,7 @@ The T1-transformation depends on the $\mathbf{t}_1$ matrix defined as
   \end{bmatrix},
 \end{gather}
 where $t_i^a$ are the amplitudes associated to the single excitation.
-Be careful with the index, because $(\mathbf{t}_1)_{ai}=t_a^i$ (maybe we should change this).
+Be careful with the index, because $(\mathbf{t}_1)_{ai}=t_i^a$ (maybe we should change this).
 The one-electron T1-transformed integral can be writen as
 \begin{equation}
   {\tilde h}_{pq}=h_{pq}-\sum_r(\mathbf{t}_1)_{pr}h_{rq}+\sum_sh_{ps}(\mathbf{t}_1^T)_{qs}-\sum_{rs}(\mathbf{t}_1)_{pr}h_{rs}(\mathbf{t}_1^T)_{qs}
@@ -159,7 +173,7 @@ This expression can be divided in 16 cases, that can be further simplified by sy
   &-\sum_{el}(t_l^ag_{lebc}t_i^e+t_l^bg_{aelc}t_i^e)+\sum_{lk}t_l^at_k^bg_{likc}+\sum_{elk}t_l^at_k^bg_{lekc}t_i^e\\
   {\tilde g}_{abic}=&{\tilde g}_{icab}\\
   {\tilde g}_{abci}=&{\tilde g}_{ciab}\\
-  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^aT_k^cg_{lbkc}
+  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^at_k^cg_{lbkc}
 \end{align}
 
 Note that, due to symmetry, only 9 cases must be computed.
