@@ -1,21 +1,41 @@
 """
 """
+import copy
 
-from wave_function import int_norm
+from wave_function.int_norm import IntermNormWaveFunction
+from wave_functions.general import OrbitalsSets
 from coupled_cluster import ccsd
 
 def cc_closed_shell(hf_energy,
-                    h,
-                    g,
+                    mol_geom,
                     wf_ini = None,
-                    level = 'SD'
-                    maxit = 30,
-                    inter_matrix = True):
+                    preserve_wf_ini=False,
+                    level='SD',
+                    maxit=30,
+                    inter_matrix=True):
+    """
+    
+    Parameters:
+    -----------
+
+    
+
+    """
     if cc_ini == None:
-        cc_wf = int_norm.IntermNormWaveFunction()
-        cc_wf.level = level
+        point_group = 'C1'
+        orb_dim = OrbitalsSets([mol_geom.integrals.n_func],
+                               occ_type='R')
+        ref_occ = OrbitalsSets([mol_geom.n_elec],
+                               occ_type='R')
+        core_orb = OrbitalsSets([0],
+                                occ_type='R')
+        cc_wf = IntermNormWaveFunction.from_zero_amplitudes(
+            point_group, ref_occ, orb_dim, core_orb, level=level)
     elif isinstance(wf_ini, IntermNormWaveFunction):
-        cc_wf = wf_ini
+        if preserve_wf_ini:
+            cc_wf = copy.deepcopy(wf_ini)
+        else:
+            cc_wf = wf_ini
     else:
         raise ValueError(
             'wf_ini must be an instance of IntermNormWaveFunction.')

@@ -10,6 +10,60 @@ from wave_functions.general import OrbitalsSets
 import test
 from util import int_dtype
 
+class ConstructorTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+
+    def test_from_zero_1(self):
+        point_group = 'C1'
+        orb_dim = OrbitalsSets([3],
+                               occ_type='R')
+        ref_occ = OrbitalsSets([1],
+                               occ_type='R')
+        core_orb = OrbitalsSets([0],
+                                occ_type='R')
+        wf = int_norm.IntermNormWaveFunction.from_zero_amplitudes(
+            point_group, ref_occ, orb_dim, core_orb, level='SD')
+        self.assertEqual(wf.n_elec, 2)
+        self.assertEqual(wf.n_alpha, 1)
+        self.assertEqual(wf.n_beta, 1)
+        self.assertEqual(len(wf.singles), 1)
+        self.assertEqual(len(wf.doubles), 1)
+        self.assertEqual(wf.singles[0], np.array([[0.0, 0.0]]))
+        self.assertEqual(wf.doubles[0][0], np.array([[0.0, 0.0],
+                                                     [0.0, 0.0]]))
+
+
+    def test_from_zero_2(self):
+        point_group = 'C1'
+        orb_dim = OrbitalsSets([5],
+                               occ_type='R')
+        ref_occ = OrbitalsSets([2],
+                               occ_type='R')
+        core_orb = OrbitalsSets([0],
+                                occ_type='R')
+        wf = int_norm.IntermNormWaveFunction.from_zero_amplitudes(
+            point_group, ref_occ, orb_dim, core_orb, level='SD')
+        self.assertEqual(wf.n_elec, 4)
+        self.assertEqual(wf.n_alpha, 2)
+        self.assertEqual(wf.n_beta, 2)
+        self.assertEqual(len(wf.singles), 1)
+        self.assertEqual(len(wf.doubles), 3)
+        self.assertEqual(wf.singles[0], np.array([[0.0, 0.0, 0.0],
+                                                  [0.0, 0.0, 0.0]]))
+        self.assertEqual(wf.doubles[0][0], np.array([[0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0]]))
+        self.assertEqual(wf.doubles[1][0], np.array([[0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0]]))
+        self.assertEqual(wf.doubles[2][0], np.array([[0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0],
+                                                     [0.0, 0.0, 0.0]]))
+
+
+
 class He2StringIndicesTestCase(unittest.TestCase):
 
     def setUp(self):

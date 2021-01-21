@@ -1612,6 +1612,50 @@ class IntermNormWaveFunction(gen_wf.WaveFunction):
         raise NotImplementedError('Not implemented yet: make_Jac_Hess')
 
     @classmethod
+    def from_zero_amplitudes(cls, point_group,
+                             ref_occ, orb_dim, n_core,
+                             level='SD', wf_type='CC'):
+        """Construct a new wave function with all amplitudes set to zero
+        
+        Parameters:
+        -----------
+        ref_occ (OrbitalsSets)
+            The reference occupation
+        
+        orb_dim (OrbitalsSets)
+            The dimension of orbital spaces
+        
+        core_orb (OrbitalsSets)
+            The core orbitals
+        
+        Limitations:
+        ------------
+        Only for restricted wave functions. Thus, ref_occ must be of 'R' type
+        
+        """
+        new_wf = cls()
+        new_wf.restricted = ref_occ.occ_type == 'R'
+        new_wf.WF_type = wf_type + level
+        new_wf.point_group = point_group
+        new_wf.initialize_data()
+        new_wf.ref_occ += ref_occ
+        new_wf.orb_dim += orb_dim
+        new_wf.n_core += n_core
+        if new_wf.restricted:
+            new_wf.Ms = 0.0
+        else:
+            new_wf.Ms = 0
+            for i_irrep in range(self.n_irrep):
+                new_wf.Ms += (new_wf.ref_occ[i_irrep]
+                              - new_wf.ref_occ[i_irrep + self.n_irrep])
+            new_wf.Ms /= 2
+        new_wf.initialize_SD_lists(
+            with_singles='SD' in new_wf.WF_type,
+            with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+        return new_wf
+
+
+    @classmethod
     def from_Molpro(cls, molpro_output,
                     start_line_number=1,
                     wf_type=None,
