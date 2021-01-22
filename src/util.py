@@ -326,3 +326,40 @@ def get_pos_from_rectangular(i, a, n):
 def get_ia_from_rectangular(pos, n):
     """Returns (i,a). Inverse of get_pos_from_rectangular"""
     return pos // n, pos % n
+
+
+class Results:
+    """ Class to store results
+    """
+    
+    def __init__(self, kind):
+        self.kind = kind
+        self.success = None
+        self.error = None
+        self.warning = None
+
+    def __str__(self):
+        x = 'Results for ' + self.kind + ':\n'
+        x += 'Success = ' + str(self.success) + '\n'
+        if self.error is not None:
+            x += 'error = ' + str(self.error) + '\n'
+        if self.warning is not None:
+            x += 'warning = ' + str(self.error) + '\n'
+        return x
+
+
+class OptResults(Results):
+    """ Class to store results of a optimisations
+    """
+    
+    def __init__(self, kind):
+        super().__init__(kind)
+        self.energy = None
+        self.wave_functions = None
+        self.orbitals = None
+        self.n_iter = None
+
+    def __str__(self):
+        x = super().__str__()
+        x += 'Energy = ' + str(self.energy) + '\n'
+        return x

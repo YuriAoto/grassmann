@@ -6,7 +6,7 @@ import logging
 
 import numpy as np
 
-from util import logtime
+from util import logtime, OptResults
 from . import util
 from .iteration_step import HartreeFockStep
 from orbitals import MolecularOrbitals
@@ -128,9 +128,11 @@ def Restricted_Closed_Shell_SCF(mol_geom,
             break
     
     hf_step.orb.name = 'RHF'
-    res = util.HFResult(mol_geom.nucl_rep + hf_step.energy,
-                        hf_step.orb, converged, i_SCF)
-    res.kind = kind_of_calc
+    res = OptResults(kind_of_calc)
+    res.energy = mol_geom.nucl_rep + hf_step.energy
+    res.orbitals = hf_step.orb
+    res.success = converged
+    res.n_iter = i_SCF
     if not converged:
         res.warning = 'No convergence was obtained'
     logger.info('End of Closed-Shell Restricted Hartree-Fock calculation')
