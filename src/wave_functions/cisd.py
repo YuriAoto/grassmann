@@ -38,7 +38,7 @@ class CISD_WaveFunction(general.WaveFunction):
         There are n_irrep entries (only restricted wave functions).
         Each entry is a 2D np.ndarray with shape
         
-        (self.n_corr_orb[irrep], self.n_ext[irrep])
+        (self.corr_orb[irrep], self.virt_orb[irrep])
         
         storing the coefficients of the excitations from orbital i to a
     
@@ -51,8 +51,8 @@ class CISD_WaveFunction(general.WaveFunction):
         There are n_irrep entries (only restricted wave functions).
         Each entry is a 2D np.ndarray with shape
         
-        (triangular(self.n_corr_orb[irrep] - 1),
-         triangular(self.n_ext[irrep] - 1))
+        (triangular(self.corr_orb[irrep] - 1),
+         triangular(self.virt_orb[irrep] - 1))
         
         and store the coefficients for the excitation i,j to a,b.
         Indices for the pairs i,j and a,b are stored in triangular order:
@@ -71,8 +71,8 @@ class CISD_WaveFunction(general.WaveFunction):
         
         Each entry is a 4D np.ndarray with shape
         
-        (self.n_corr_orb[irrep], self.n_ext[irrep],
-         self.n_corr_orb[irrep2], self.n_ext[irrep2])
+        (self.corr_orb[irrep], self.virt_orb[irrep],
+         self.corr_orb[irrep2], self.virt_orb[irrep2])
         
         storing the coefficients of the excitations from orbital i to a
         (that is within irrep) and from j to b (that is within irrep2).
@@ -134,14 +134,14 @@ class CISD_WaveFunction(general.WaveFunction):
         """Calculate memory used by the wave function"""
         n_floats = 0.0
         for irrep in self.spirrep_blocks(restricted=True):
-            n_floats += self.n_corr_orb[irrep] * self.n_ext[irrep]
-            n_floats += (triangular(self.n_corr_orb[irrep] - 1)
-                         * triangular(self.n_ext[irrep] - 1))
+            n_floats += self.corr_orb[irrep] * self.virt_orb[irrep]
+            n_floats += (triangular(self.corr_orb[irrep] - 1)
+                         * triangular(self.virt_orb[irrep] - 1))
             for irrep2 in range(irrep + 1):
-                n_floats += (self.n_corr_orb[irrep]
-                             * self.n_ext[irrep]
-                             * self.n_corr_orb[irrep2]
-                             * self.n_ext[irrep2])
+                n_floats += (self.corr_orb[irrep]
+                             * self.virt_orb[irrep]
+                             * self.corr_orb[irrep2]
+                             * self.virt_orb[irrep2])
         return mem_of_floats(n_floats)
 
     def initialize_SD_lists(self):
@@ -154,16 +154,16 @@ class CISD_WaveFunction(general.WaveFunction):
         self.Cd = []
         self.Csd = []
         for irrep in self.spirrep_blocks(restricted=True):
-            self.Cs.append(np.zeros((self.n_corr_orb[irrep],
-                                     self.n_ext[irrep])))
-            self.Cd.append(np.zeros((triangular(self.n_corr_orb[irrep] - 1),
-                                     triangular(self.n_ext[irrep] - 1))))
+            self.Cs.append(np.zeros((self.corr_orb[irrep],
+                                     self.virt_orb[irrep])))
+            self.Cd.append(np.zeros((triangular(self.corr_orb[irrep] - 1),
+                                     triangular(self.virt_orb[irrep] - 1))))
             self.Csd.append([])
             for irrep2 in range(irrep + 1):
-                self.Csd[irrep].append(np.zeros((self.n_corr_orb[irrep],
-                                                 self.n_ext[irrep],
-                                                 self.n_corr_orb[irrep2],
-                                                 self.n_ext[irrep2])))
+                self.Csd[irrep].append(np.zeros((self.corr_orb[irrep],
+                                                 self.virt_orb[irrep],
+                                                 self.corr_orb[irrep2],
+                                                 self.virt_orb[irrep2])))
     
     def string_indices(self,
                        spirrep=None,
@@ -192,7 +192,7 @@ class CISD_WaveFunction(general.WaveFunction):
         slices_HJ = []
         nK = []
         for irp in self.spirrep_blocks(restricted=restricted):
-            nK.append(self.n_corr_orb[irp] * self.n_ext[irp])
+            nK.append(self.corr_orb[irp] * self.virt_orb[irp])
             slice_start = 0 if irp == 0 else slices_HJ[-1].stop
             slices_HJ.append(slice(slice_start, slice_start + nK[-1]))
         Jac = np.zeros(sum(nK))
@@ -206,16 +206,16 @@ class CISD_WaveFunction(general.WaveFunction):
                     a, b = get_ij_from_triang(ab, with_diag=False)
                     ia = (slices_HJ[irp].start
                           + get_pos_from_rectangular(i, a,
-                                                     self.n_ext[irp]))
+                                                     self.virt_orb[irp]))
                     jb = (slices_HJ[irp].start
                           + get_pos_from_rectangular(j, b,
-                                                     self.n_ext[irp]))
+                                                     self.virt_orb[irp]))
                     ib = (slices_HJ[irp].start
                           + get_pos_from_rectangular(i, b,
-                                                     self.n_ext[irp]))
+                                                     self.virt_orb[irp]))
                     ja = (slices_HJ[irp].start
                           + get_pos_from_rectangular(j, a,
-                                                     self.n_ext[irp]))
+                                                     self.virt_orb[irp]))
                     Hess[ia, jb] -= self.Cd[irp][ij, ab]
                     Hess[jb, ia] -= self.Cd[irp][ij, ab]
                     Hess[ib, ja] += self.Cd[irp][ij, ab]
@@ -224,19 +224,19 @@ class CISD_WaveFunction(general.WaveFunction):
                 Hess[slices_HJ[irp],
                      slices_HJ[irp2]] += np.reshape(self.Csd[irp][irp2],
                                                     (nK[irp], nK[irp2]))
-                for i in range(self.n_corr_orb[irp]):
+                for i in range(self.corr_orb[irp]):
                     slice_i = slice(
-                        slices_HJ[irp].start + i * self.n_ext[irp],
-                        slices_HJ[irp].start + (i + 1) * self.n_ext[irp])
-                    if irp == irp2 and (i + self.n_corr_orb[irp]) % 2 == 0:
+                        slices_HJ[irp].start + i * self.virt_orb[irp],
+                        slices_HJ[irp].start + (i + 1) * self.virt_orb[irp])
+                    if irp == irp2 and (i + self.corr_orb[irp]) % 2 == 0:
                         Jac[slice_i] *= -1
-                    for j in range(self.n_corr_orb[irp2]):
-                        if (i + self.n_corr_orb[irp]
-                                + j + self.n_corr_orb[irp2]) % 2 == 0:
+                    for j in range(self.corr_orb[irp2]):
+                        if (i + self.corr_orb[irp]
+                                + j + self.corr_orb[irp2]) % 2 == 0:
                             continue
                         slice_j = slice(
-                            slices_HJ[irp2].start + j * self.n_ext[irp2],
-                            slices_HJ[irp2].start + (j + 1) * self.n_ext[irp2])
+                            slices_HJ[irp2].start + j * self.virt_orb[irp2],
+                            slices_HJ[irp2].start + (j + 1) * self.virt_orb[irp2])
                         Hess[slice_i, slice_j] *= -1
                 if irp2 < irp:
                     Hess[slices_HJ[irp2],
@@ -262,10 +262,10 @@ class CISD_WaveFunction(general.WaveFunction):
         new_wf.source = 'From int. norm. WF> ' + intN_wf.source
         new_wf.restricted = intN_wf.restricted
         new_wf.point_group = intN_wf.point_group
-        new_wf.n_core = intN_wf.n_core
-        new_wf.n_act = intN_wf.n_act
+        new_wf.froz_orb = intN_wf.froz_orb
+        new_wf.act_orb = intN_wf.act_orb
         new_wf.orb_dim = intN_wf.orb_dim
-        new_wf.ref_occ = intN_wf.ref_occ
+        new_wf.ref_orb = intN_wf.ref_orb
         if intN_wf.WF_type == 'CISD':
             new_wf.WF_type = intN_wf.WF_type
         elif intN_wf.WF_type == 'CCSD':
@@ -290,8 +290,8 @@ class CISD_WaveFunction(general.WaveFunction):
         if intN_wf.singles is not None:
             for irrep in new_wf.spirrep_blocks(restricted=True):
                 new_wf.Cs[irrep] += intN_wf.singles[irrep]
-                for i in range(new_wf.n_corr_orb[irrep]):
-                    if (new_wf.n_corr_orb[irrep] + i) % 2 == 0:
+                for i in range(new_wf.corr_orb[irrep]):
+                    if (new_wf.corr_orb[irrep] + i) % 2 == 0:
                         new_wf.Cs[irrep][i, :] *= -1
         for N, doubles in enumerate(intN_wf.doubles):
             i, j, i_irrep, j_irrep, exc_type = intN_wf.ij_from_N(N)
@@ -302,8 +302,8 @@ class CISD_WaveFunction(general.WaveFunction):
                     new_wf.Csd[i_irrep][j_irrep][i, :, j, :] += (
                         2 * np.outer(intN_wf.singles[i_irrep][i, :],
                                      intN_wf.singles[j_irrep][j, :]))
-                if (i + new_wf.ref_occ[i_irrep]
-                      + j + new_wf.ref_occ[j_irrep]) % 2 == 1:
+                if (i + new_wf.ref_orb[i_irrep]
+                      + j + new_wf.ref_orb[j_irrep]) % 2 == 1:
                     new_wf.Csd[i_irrep][j_irrep][i, :, j, :] *= -1
             else:
                 # i_irrep == j_irrep
@@ -324,7 +324,7 @@ class CISD_WaveFunction(general.WaveFunction):
                 if i == j:
                     new_wf.Csd[irp][irp][i, :, i, :] /= 2
                 if i != j:
-                    for a in range(new_wf.n_ext[irp]):
+                    for a in range(new_wf.virt_orb[irp]):
                         for b in range(a):
                             # Increment ab instead?? Check the order
                             ab = get_n_from_triang(a, b, with_diag=False)

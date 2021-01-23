@@ -139,7 +139,7 @@ def optimise_overlap_orbRot(wf,
         (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
         This should be consistent to the spin and symmetry of the external
         wave function.
-        If None is given, uses wf.ref_occ.
+        If None is given, uses wf.ref_orb.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
         ATTENTION! Currently not implemented!
@@ -198,7 +198,7 @@ def optimise_overlap_orbRot(wf,
     TODO:
     -----
     
-    Implement calculation for occupation other than ref_occ. See
+    Implement calculation for occupation other than ref_orb. See
     commented line below
 
     """
@@ -211,7 +211,7 @@ def optimise_overlap_orbRot(wf,
         max_iter = 1
     if ini_U is None:
         U = []
-        # ini_occ = occupation if occupation is not None else wf.ref_occ
+        # ini_occ = occupation if occupation is not None else wf.ref_orb
         for i in wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(wf.orb_dim[i % wf.n_irrep]))
         cur_wf = copy.copy(wf)
@@ -425,7 +425,7 @@ def optimise_overlap_Absil(ci_wf,
         (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
         This should be consistent to the spin and symmetry of the external
         wave function.
-        If None is given, uses ci_wf.ref_occ.
+        If None is given, uses ci_wf.ref_orb.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
         Currently: not implemented!
@@ -484,7 +484,7 @@ def optimise_overlap_Absil(ci_wf,
     restricted = isinstance(ci_wf, CISD_WaveFunction)
     if ini_U is None:
         U = []
-        ini_occ = occupation if occupation is not None else ci_wf.ref_occ
+        ini_occ = occupation if occupation is not None else ci_wf.ref_orb
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(
                 ci_wf.orb_dim[i % ci_wf.n_irrep])[:, :(ini_occ[i])])

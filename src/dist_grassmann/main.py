@@ -129,7 +129,7 @@ def main(args, f_out):
         else:
             print_ovlp_D('minE', 'WFref',
                          ovlp_Slater_dets(HF_in_basis_of_refWF,
-                                          ext_wf.ref_occ))
+                                          ext_wf.ref_orb))
     else:
         toout('Using |WFref> (the reference of |extWF>) as |minE>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
@@ -149,7 +149,7 @@ def main(args, f_out):
             U = orb.MolecularOrbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.MolecularOrbitals.from_file(args.WF_orb))
     else:
-        U = orb.construct_Id_orbitals(ext_wf.ref_occ,
+        U = orb.construct_Id_orbitals(ext_wf.ref_orb,
                                       ext_wf.orb_dim,
                                       (1
                                        if restricted else
@@ -161,9 +161,9 @@ def main(args, f_out):
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
     toout('Dim. of core orb. space:  {0:}'.
-          format(ext_wf.n_core))
+          format(ext_wf.froz_orb))
     toout('Dim. of ref. determinant: {0:}'.
-          format(ext_wf.ref_occ))
+          format(ext_wf.ref_orb))
     toout('Dim. of orbital space:    {0:}'.
           format(ext_wf.orb_dim))
     toout()
@@ -190,7 +190,7 @@ def main(args, f_out):
         ovlp_with_1st_it = ovlp_Slater_dets((2 * res.U)
                                             if restricted else
                                             res.U,
-                                            ext_wf.ref_occ)
+                                            ext_wf.ref_orb)
         print_ovlp_D('refWF', '1st it',
                      ovlp_with_1st_it,
                      with_dist=False)
@@ -282,7 +282,7 @@ def main(args, f_out):
                          ovlp_Slater_dets((2 * res.U)
                                           if restricted else
                                           res.U,
-                                          ext_wf.ref_occ))
+                                          ext_wf.ref_orb))
             for spirrep, Ui in enumerate(U):
                 if Ui.shape[1] > 0:
                     res.U[spirrep] = np.matmul(
@@ -291,5 +291,5 @@ def main(args, f_out):
                      ovlp_Slater_dets((2 * res.U)
                                       if restricted else
                                       res.U,
-                                      ext_wf.ref_occ))
+                                      ext_wf.ref_orb))
     toout()

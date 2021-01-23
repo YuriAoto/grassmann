@@ -22,11 +22,11 @@ class YieldExcitations523TestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.n_el = 5
         self.n_corr = 2
-        self.n_ext = 3
+        self.n_virt = 3
 
     def test_all_singles(self):
         for i_Ind, ia_Ind in enumerate(
-                absil._all_singles(self.n_el, self.n_corr, self.n_ext)):
+                absil._all_singles(self.n_el, self.n_corr, self.n_virt)):
             i, a, Ind = ia_Ind
             if i_Ind == 0:
                 with self.subTest(i_Ind=i_Ind):
@@ -69,7 +69,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
 
     def test_all_doubles(self):
         for i_Ind, ijab_Ind in enumerate(
-                absil._all_doubles(self.n_el, self.n_corr, self.n_ext)):
+                absil._all_doubles(self.n_el, self.n_corr, self.n_virt)):
             i, j, a, b, Ind = ijab_Ind
             if i_Ind == 0:
                 with self.subTest(i_Ind=i_Ind):
@@ -105,11 +105,11 @@ class YieldExcitations633TestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.n_el = 6
         self.n_corr = 3
-        self.n_ext = 3
+        self.n_virt = 3
 
     def test_all_singles(self):
         for i_Ind, ia_Ind in enumerate(
-                absil._all_singles(self.n_el, self.n_corr, self.n_ext)):
+                absil._all_singles(self.n_el, self.n_corr, self.n_virt)):
             i, a, Ind = ia_Ind
             if i_Ind == 0:
                 with self.subTest(i_Ind=i_Ind):
@@ -170,7 +170,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
 
     def test_all_doubles(self):
         for i_Ind, ijab_Ind in enumerate(
-                absil._all_doubles(self.n_el, self.n_corr, self.n_ext)):
+                absil._all_doubles(self.n_el, self.n_corr, self.n_virt)):
             i, j, a, b, Ind = ijab_Ind
             if i_Ind == 0:
                 with self.subTest(i_Ind=i_Ind):
@@ -256,7 +256,7 @@ class CalcOverlap(unittest.TestCase):
         self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
                 test.CISD_file('H2__5__sto3g__D2h'))
         self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
-        self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_occ,
+        self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_orb,
                                                      self.wf_H2.orb_dim,
                                                      self.wf_H2.n_irrep)
         # Li2:
@@ -264,18 +264,18 @@ class CalcOverlap(unittest.TestCase):
             test.CISD_file('Li2__5__631g__C2v'))
         self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
-            self.wf_Li2.ref_occ,
+            self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
             prng)
         self.U_Li2_non_orth = test.construct_random_orbitals(
-            self.wf_Li2.ref_occ,
+            self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
             prng,
             orthogonalise=False)
         self.Uid_Li2 = orbitals.construct_Id_orbitals(
-            self.wf_Li2.ref_occ,
+            self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep)
 
@@ -353,7 +353,7 @@ class CalcXCmatrices(unittest.TestCase):
             test.CISD_file('H2__5__sto3g__D2h'))
         self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
-            self.wf_H2.ref_occ,
+            self.wf_H2.ref_orb,
             self.wf_H2.orb_dim,
             self.wf_H2.n_irrep)
         # Li2:
@@ -361,12 +361,12 @@ class CalcXCmatrices(unittest.TestCase):
             test.CISD_file('Li2__5__631g__C2v'))
         self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
         self.U_Li2 = test.construct_random_orbitals(
-            self.wf_Li2.ref_occ,
+            self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
             prng)
         self.Uid_Li2 = orbitals.construct_Id_orbitals(
-            self.wf_Li2.ref_occ,
+            self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep)
 
