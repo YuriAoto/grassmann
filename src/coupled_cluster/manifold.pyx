@@ -82,8 +82,8 @@ def min_dist_app_hess(double [:, :] wf,
     cdef double [:] z = np.zeros(n_ampl)
     cdef int pos = 0, exc_type
     cdef int spirrep, irrep, i_irrep, j_irrep, a_irrep, b_irrep, i, j, a, b
-    cdef int [:] single_exc = np.zeros(2)  # [i, a]
-    cdef int [:] double_exc = np.zeros(4)  # [i, a, j, b]
+    cdef int [:] single_exc = np.zeros(2, dtype=int_dtype)  # [i, a]
+    cdef int [:] double_exc = np.zeros(4, dtype=int_dtype)  # [i, a, j, b]
     if level == 'SD':
         for spirrep in range(2 * n_irrep):
             irrep = spirrep % n_irrep
@@ -123,44 +123,49 @@ def min_dist_app_hess(double [:, :] wf,
             for i in range(n_corr_orb[i_spirrep]):
                 double_exc[2] = n_orb_before[j_irrep]
                 for j in range(n_corr_orb[j_spirrep]):
-                    if i_spirrep == j_spirrep and j <= i :
-                        continue
-                    for a_irrep in range(n_irrep):
-                        a_spirrep = a_irrep
-                        if not alpha_exc1:
-                            a_spirrep + n_irrep
-                        double_exc[1] = (n_orb_before[a_irrep]
-                                         + n_corr_orb[a_spirrep])
-                        for a in range(n_ext[a_spirrep]):
-                            b_irrep = (irrep_product[i_irrep]
-                                       * irrep_product[j_irrep]
-                                       * irrep_product[a_irrep])
+                    if i_spirrep < j_spirrep or i < j:
+                        for a_irrep in range(n_irrep):
+                            a_spirrep = a_irrep
+                            if not alpha_exc1:
+                                a_spirrep + n_irrep
+                            b_irrep = irrep_product[
+                                irrep_product[i_irrep, j_irrep],a_irrep]
                             b_spirrep = b_irrep
                             if not alpha_exc2:
                                 b_spirrep + n_irrep
-                            double_exc[3] = (n_orb_before[b_irrep]
-                                             + n_corr_orb[b_spirrep])
-                            for b in range(n_ext[b_spirrep]):
-                                J = _term1(double_exc,
-                                           exc_type,
-                                           wf,
-                                           wf_cc,
-                                           alpha_string_graph,
-                                           beta_string_graph)
-                                normJac += J**2
-                                z[pos] = J/_term2_diag(
-                                    double_exc,
-                                    exc_type,
-                                    wf_cc,
-                                    alpha_string_graph.shape[1],
-                                    beta_string_graph.shape[1])
-                                pos += 1
-                                double_exc[3] += 1  # b++
-                            double_exc[1] += 1  # a++
+                            if b_spirrep < a_spirrep:
+                                pos += n_ext[b_spirrep] * n_ext[a_spirrep]
+                                continue
+                            double_exc[1] = (n_orb_before[a_irrep]
+                                             + n_corr_orb[a_spirrep])
+                            for a in range(n_ext[a_spirrep]):
+                                if a_irrep == b_irrep:
+                                    double_exc[3] = double_exc[1]
+                                else:
+                                    double_exc[3] = (n_orb_before[b_irrep]
+                                                     + n_corr_orb[b_spirrep])
+                                for b in range(n_ext[b_spirrep]):
+                                    if a_spirrep < b_spirrep or a < b:
+                                        J = _term1(double_exc,
+                                                   exc_type,
+                                                   wf,
+                                                   wf_cc,
+                                                   alpha_string_graph,
+                                                   beta_string_graph)
+                                        normJac += J**2
+                                        z[pos] = J/_term2_diag(
+                                            double_exc,
+                                            exc_type,
+                                            wf_cc,
+                                            alpha_string_graph.shape[1],
+                                            beta_string_graph.shape[1])
+                                    pos += 1
+                                    double_exc[3] += 1  # b++
+                                double_exc[1] += 1  # a++
                     double_exc[2] += 1  # j++
                 double_exc[0] += 1  # i++
     if pos != n_ampl:
-        raise Exception('pos != n_ampl')
+        raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
     return z, np.sqrt(normJac)
 
 
@@ -622,8 +627,8 @@ cdef double _term2_diag_ab(int [:] exc,  # [i, a, j, b]
     return S
 
 
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
+#@cython.boundscheck(False)  # Deactivate bounds checking
+#@cython.wraparound(False)   # Deactivate negative indexing
 cdef int [:] _exc_on_string(int i, int a, int [:] I):
     """Obtain the string after the excitation i->a over I
     

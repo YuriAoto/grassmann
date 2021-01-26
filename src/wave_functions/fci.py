@@ -17,7 +17,8 @@ import copy
 import math
 from collections import namedtuple
 
-from util import get_pos_from_rectangular, logtime, int_dtype
+from util import (irrep_product, get_pos_from_rectangular, logtime,
+                  int_dtype, Results, OptResults)
 from wave_functions import general
 import orbitals
 import molpro_util
@@ -31,43 +32,6 @@ logger = logging.getLogger(__name__)
 
 default_recipe_files = (
     '/home/yuriaoto/Documents/Codes/grassmann/src/wave_functions/recipes')
-
-
-class Results(namedtuple('Results',
-                         ['distance',
-                          'wf',
-                          'norm',
-                          'last_iteration',
-                          'converged',
-                          'right_dir',
-                          'n_pos_H_eigVal'])):
-    """A namedtuple for the results of optimisation
-    
-    Attributes:
-    -----------
-    distance (float)
-        The value of the distance in the end of the procedure
-    
-    wf (list of 2d np.arrays)
-        The coupled cluster wave function
-    
-    norm (float or tuple of floats)
-        norm of vectors that should vanish at convergence
-    
-    last_iteration (int)
-        number of iterations
-    
-    converged (bool)
-        Indicates convergence
-    
-    right_dir (dict)
-        Indicates the number of directions where the manifold curves
-        towards the wave function
-    
-    n_pos_HeigVal (int)
-        number of positive eigenvalues of the Hessian
-    """
-    __slots__ = ()
 
 
 _str_excitation_list = ['R',
@@ -417,9 +381,9 @@ class WaveFunctionFCI(general.WaveFunction):
     
     def __iter__(self):
         """Generator for determinants"""
-        aocc = np.array(np.arange(self.n_corr_alpha))
+        aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
         for ia in range(self._coefficients.shape[0]):
-            bocc = np.array(np.arange(self.n_corr_beta))
+            bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
             for ib in range(self._coefficients.shape[1]):
                 yield SlaterDet(c=self._coefficients[ia, ib],
                                 alpha_occ=aocc, beta_occ=bocc)
@@ -457,9 +421,9 @@ class WaveFunctionFCI(general.WaveFunction):
             print(ia, ib, det)
             print((ia, ib) == wf.index(det)) # Should be always True
         """
-        aocc = np.array(np.arange(self.n_corr_alpha))
+        aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
         for ia in range(self._coefficients.shape[0]):
-            bocc = np.array(np.arange(self.n_corr_beta))
+            bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
             for ib in range(self._coefficients.shape[1]):
                 yield ia, ib, SlaterDet(c=self._coefficients[ia, ib],
                                         alpha_occ=aocc, beta_occ=bocc)
@@ -673,13 +637,40 @@ class WaveFunctionFCI(general.WaveFunction):
             S = math.sqrt(S)
         elif mode == 'intermediate':
             S = self.C0
-        self.ref_det = SlaterDet(c=self.ref_det.c/S,
-                                 alpha_occ=self.ref_det.alpha_occ,
-                                 beta_occ=self.ref_det.beta_occ)
         self._coefficients /= S
+        self.set_coeff_ref_det()
+    
+    def set_ref_det_from_corr_orb(self):
+        ref_alpha = []
+        ref_beta = []
+        for irrep in self.spirrep_blocks(restricted=True):
+            for i in range(self.corr_orb[irrep]):
+                ref_alpha.append(i + self.orbs_before[irrep])
+            for i in range(self.corr_orb[irrep + self.n_irrep]):
+                ref_beta.append(i + self.orbs_before[irrep])
+        self.ref_det = SlaterDet(
+            c=0.0,
+            alpha_occ=np.array(ref_alpha, dtype=int_dtype),
+            beta_occ=np.array(ref_beta, dtype=int_dtype))
+        self.set_coeff_ref_det()
+    
+    def set_coeff_ref_det(self):
+        ia, ib = self.index(self.ref_det)
+        self.ref_det = SlaterDet(
+            c=self[ia, ib],
+            alpha_occ=self.ref_det.alpha_occ,
+            beta_occ=self.ref_det.beta_occ)
     
     @classmethod
-    def from_int_norm(cls, wf):
+    def similar_to(cls, wf, restricted=None):
+        """Construct a WaveFunctionFCI with same basic attributes as wf"""
+        new_wf = super().similar_to(wf, restricted=restricted)
+        new_wf.initialise_coeff_matrix()
+        new_wf.set_ref_det_from_corr_orb()
+        return new_wf
+
+    @classmethod
+    def from_int_norm(cls, wf, restricted=None):
         """Construct the wave function from wf in intermediate normalisation
         
         This constructor returns an instance of cls that represents
@@ -690,9 +681,14 @@ class WaveFunctionFCI(general.WaveFunction):
         wf (IntermNormWaveFunction)
             The input wave function
         
+        restricted (bool or None, optional, default=None)
+            See general.WaveFunction.get_parameters_from
+        
         """
-        new_wf = cls()
-        new_wf.get_parameters_from_int_norm_wf(wf)
+        new_wf = cls.similar_to(wf, restricted=restricted)
+        new_wf.WF_type = wf.WF_type + ' as FCI'
+        new_wf.source = wf.source
+        new_wf.get_coefficients_from_int_norm_wf(wf)
         return new_wf
     
     @classmethod
@@ -714,28 +710,24 @@ class WaveFunctionFCI(general.WaveFunction):
                                      zero_coefficients=zero_coefficients)
         return new_wf
     
-    def get_parameters_from_int_norm_wf(self, wf):
-        """Get parameters from a wave function in the int. normalisation
+    def get_coefficients_from_int_norm_wf(self, wf):
+        """Get coefficients from a wave function in the int. normalisation
         
         Parameters:
         -----------
         wf (IntermNormWaveFunction)
             wave function in intermediate normalisation
-                
+        
+        TODO:
+        -----
+        If self.restricted, the code can be improved to explit the
+        fact that _coefficients is symmetric (right??)
         """
-        self.restricted = wf.restricted
-        self.point_group = wf.point_group
-        self.Ms = wf.Ms
-        self.froz_orb = wf.froz_orb
-        self.act_orb = wf.act_orb
-        self.orb_dim = wf.orb_dim
-        self.ref_orb = wf.ref_orb
-        self.WF_type = wf.WF_type + ' as FCI'
-        self.source = wf.source
-        self.initialise_coeff_matrix()
         level = 'D' if wf.singles is None else 'SD'
         wf_type = 'CC' if 'CC' in wf.WF_type else 'CI'
-        for ia, ib, det in self:
+        for ia, ib, det in self.enumerate():
+            if not self.symmetry_allowed(det):
+                continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
                 self._coefficients[ia, ib] = 1.0
@@ -746,16 +738,23 @@ class WaveFunctionFCI(general.WaveFunction):
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
-                    mode=level, recipes_f=default_recipe_files)
+                    mode=level, recipes_f=None)
+                self._coefficients[ia, ib] = 0.0
                 for d in decomposition:
                     new_contribution = d[0]
+                    add_contr = True
                     for cluster_det in d[1:]:
+                        if not self.symmetry_allowed(cluster_det):
+                            add_contr = False
+                            break
                         rank, alpha_hp, beta_hp = self.get_exc_info(
                             cluster_det)
                         new_contribution *= wf.get_amplitude(
                             rank, alpha_hp, beta_hp)
-                    self._coefficients[ia, ib] -= new_contribution
-
+                    if add_contr:
+                        self._coefficients[ia, ib] -= new_contribution
+        self.set_coeff_ref_det()
+    
     def get_coeff_from_molpro(self, molpro_output,
                               start_line_number=1,
                               point_group=None,
@@ -1486,30 +1485,45 @@ class WaveFunctionFCI(general.WaveFunction):
                 other.normalise(mode='unit')
         if metric == 'IN':
             return str_order.eucl_distance(self._coefficients,
-                                           other.coefficients)
+                                           other._coefficients)
     
-    def compare_to_cc_manifold(self,
-                               level='D',
-                               recipes_f=None,
-                               coeff_thr=1.0E-10,
-                               restore_wf=True):
-        """Analyse how the wave function relates to the CCD manifold
+    def symmetry_allowed(self, det):
+        """Return True if this determinant is symmetry allowed"""
+        total_irrep = 0
+        for p in det.alpha_occ:
+            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+        for p in det.beta_occ:
+            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+        return total_irrep == self.irrep
+    
+    def vertical_proj_to_cc_manifold(self,
+                                     level='D',
+                                     recipes_f=None,
+                                     coeff_thr=1.0E-10,
+                                     restore_wf=True):
+        """Analyse how the wave function relates to the CC manifold
         
         This function is intended to compare the wave function to the
-        CCD manifold, and writes several information to the logfile
-        (at info level). These are:
-
-        For every quadruple, ..., and octuple excitation,
+        CCD manifold by a "vertical "projection". It writes several
+        information to the logfile (at info level). These are:
+        
+        For every triple, quadruple, ..., and octuple excitation,
         compares the coefficient of the excitation to the sum of product of
         the coefficients given by the cluster decomposition of that excitation.
         It checks if the coefficient has the "correct" sign to be in the
-        "right direction" to which the CCD manifold curves to.
+        "right direction" to which the CC manifold curves to.
         A general information is printed to log in the end of the function
         
         Behaviour:
         ----------
         It will print to the logs all tests, if loglevel is larger or equal
         20 (INFO)
+        
+        Limitation:
+        -----------
+        It can handle only up to n-fold excitation, where n is the largest
+        case that has a file with the cluster decomposition, as given through
+        recipes_f.
         
         Attention:
         ----------
@@ -1536,7 +1550,7 @@ class WaveFunctionFCI(general.WaveFunction):
         level (str, optional, default='D'; possible values: 'D', 'SD')
             The level of CC theory to compare.
         
-        recipes_f (str, a file name, optional, default None)
+        recipes_f (str, a file name, optional, default=None)
             The files that describe the cluster decomposition.
             See decompose for the details
         
@@ -1544,9 +1558,6 @@ class WaveFunctionFCI(general.WaveFunction):
             Slater determinants with coefficients lower than this
             threshold value are ignored in the analysis
         
-        change_wf_back (bool, optional, default=True)
-            During this analysis the coefficients of the function is changed
-            
         restore_wf (bool, optional, default=True)
             Restore all changes made to the wave function during
             this function, such that it can be further used.
@@ -1555,12 +1566,25 @@ class WaveFunctionFCI(general.WaveFunction):
         
         Return:
         -------
-        The "vertical" distance between self and the CCD manifold,
-        in the metric induced by intermediate normalisation.
+        An instance of Results.
+        Some attributes:
+        distance: the "vertical" distance between self and the CC manifold,
+                  in the metric induced by intermediate normalisation.
+        wave_function: the wave function at the CC manifold, as an instace
+                       of IntermNormWaveFunction
+        right_dir: a dictionary, with keys as ranks, and values as 2-tuples,
+                   that show [0] how many directions are curved towards self
+                   and [1] the total number of such directions. Example:
+                   {'T': (10,12),
+                    'Q': (5,5), 
+                    '5': (1,1)}
+                    10 out of 12 triples are in the right direction
+                    5 out of 5 quadruples are in the right direction
+                    1 out of 1 quintuples are in the right direction
         
         TODO:
         -----
-        Change back the doubles. See _extract_S_from_D.
+        Change back the doubles, implementing _restore_S_from_D.
         
         """
         logfmt = '\n'.join(['det = %s',
@@ -1577,14 +1601,18 @@ class WaveFunctionFCI(general.WaveFunction):
             self._coeff_as_order_relative_to_ref()
         norm = 0.0
         right_dir = {}
-        cc_wf = IntermNormWaveFunction.similar_to(self)
-        # Another possibility: run over holes and particles directly:
-        # for `all_Q_6_8_...` in self:
+        cc_wf = IntermNormWaveFunction.similar_to(
+            self, 'CC' + level, restricted=False)
         for det in self:
+            if not self.symmetry_allowed(det):
+                continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             do_decomposition = (abs(det.c) > coeff_thr
                                 and rank > 2
                                 and (level == 'SD' or rank % 2 == 0))
+            if (rank == 2
+                or (level == 'SD' and rank == 1)):
+                cc_wf.set_amplitude(det.c, rank, alpha_hp, beta_hp)
             if do_decomposition:
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
@@ -1622,14 +1650,12 @@ class WaveFunctionFCI(general.WaveFunction):
             if level == 'SD':
                 self._restore_S_to_D()
             self._coeff_as_order_relative_to_ref()
-        return Results(distance=math.sqrt(norm),
-                       wf=cc_wf,
-                       norm=None,
-                       last_iteration=None,
-                       converged=None,
-                       right_dir=right_dir,
-                       n_pos_H_eigVal=None)
-
+        res = Results('Vertical distance to CC manifold')
+        res.distance = math.sqrt(norm)
+        res.wave_function = cc_wf
+        res.right_dir = right_dir
+        return res
+    
     def calc_dist_to_cc_manifold(self,
                                  level='SD',
                                  maxiter=10,
@@ -1638,6 +1664,7 @@ class WaveFunctionFCI(general.WaveFunction):
                                  thrsh_Z=1.0E-8,
                                  thrsh_J=1.0E-8,
                                  ini_wf=None,
+                                 use_FCI_directly=False,
                                  recipes_f=None,
                                  coeff_thr=1.0E-10,
                                  restore_wf=True):
@@ -1660,8 +1687,12 @@ class WaveFunctionFCI(general.WaveFunction):
         maxiter (int, optional, default=10)
             The maximum number of iterations
         
+        f_out (File object, optional, default=None)
+            The output to print the iterations.
+            If None the iterations are not printed.
+        
         approx_hess (bool, optional, default=True)
-            Use approximate hessian (only diagonal elements)
+            Use approximate Hessian (only diagonal elements)
         
         thrsh_Z (float, optional, default=1.0E-8)
             Convergence threshold for z
@@ -1671,19 +1702,26 @@ class WaveFunctionFCI(general.WaveFunction):
         
         ini_wf (None or an instance of WaveFunction)
             The initial wave function.
-            If None or and intance of WaveFunctionFCI,
+            If None or an instance of WaveFunctionFCI,
             the "vertical" projection of self or of ini_wf is used.
         
-        recipes_f (str, a file name, optional, default None)
+        use_FCI_directly (bool, optional, default=False)
+            It is meaningful only if ini_wf is passed and is an instance
+            of WaveFunctionFCI.
+            If True, uses this wave function directly in the optimisation
+            procedure, instead getting the vertical projection to the CC
+            manifold first. In this case, the first step of the optimisation
+            procedure use a "CC wave function" that does not belong to the
+            CC manifold.
+            If False, uses the vertical projection to the CC manifold.
+        
+        recipes_f (str, a file name, optional, default=None)
             The files that describe the cluster decomposition.
             See decompose for the details
         
         coeff_thr (float, optional, default=1.0E-10)
             Slater determinants with coefficients lower than this
             threshold value are ignored in the analysis
-        
-        change_wf_back (bool, optional, default=True)
-            During this analysis the coefficients of the function is changed
             
         restore_wf (bool, optional, default=True)
             Restore all changes made to the wave function during
@@ -1693,35 +1731,47 @@ class WaveFunctionFCI(general.WaveFunction):
         
         Return:
         -------
-        The distance between self and the CC manifold,
-        in the metric induced by intermediate normalisation.
+        An instance of OptResults.
         
         """
         converged = False
         normZ = normJ = 1.0
         if ini_wf is None:
-            cc_wf = self.compare_to_cc_manifold(level=level,
-                                                recipes_f=recipes_f,
-                                                coeff_thr=coeff_thr,
-                                                restore_wf=True).wf
-        elif isinstance(ini_wf, WaveFunctionFCI):
-            cc_wf = ini_wf.compare_to_cc_manifold(level=level,
-                                                  recipes_f=recipes_f,
-                                                  coeff_thr=coeff_thr,
-                                                  restore_wf=True).wf
+            cc_wf = self.vertical_proj_to_cc_manifold(
+                level=level,
+                recipes_f=recipes_f,
+                coeff_thr=coeff_thr,
+                restore_wf=True).wave_function
+        elif isinstance(ini_wf, WaveFunctionFCI) and not use_FCI_directly:
+            cc_wf = ini_wf.vertical_proj_to_cc_manifold(
+                level=level,
+                recipes_f=recipes_f,
+                coeff_thr=coeff_thr,
+                restore_wf=True).wave_function
+        elif isinstance(ini_wf, WaveFunctionFCI) and not use_FCI_directly:
+            cc_wf = IntermNormWaveFunction.similar_to(
+                self, 'CC' + level, restricted=False)
         elif isinstance(ini_wf, IntermNormWaveFunction):
-            pass
+            cc_wf = copy.deepcopy(ini_wf)
         else:
             raise ValueError('Unknown type of initial wave function')
-        n_ampl = cc_wf.calc_n_ampl(True, False)
+        n_ampl = cc_wf.calc_n_ampl(level=='SD', False)
         corr_orb = self.corr_orb.as_array()
         virt_orb = self.virt_orb.as_array()
+        cc_wf_as_fci = WaveFunctionFCI.similar_to(self, restricted=False)
+        if f_out is not None:
+            f_out.write('it.   dist      |Z|       |J|        time in iteration\n')
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
-                with logtime('Transforming CC wave function to FCI-like'):
-                    cc_wf_as_fci = WaveFunctionFCI.from_int_norm(cc_wf)
+                if (i_iteration == 0
+                    and isinstance(ini_wf, WaveFunctionFCI)
+                        and use_FCI_directly):
+                    cc_wf_as_fci._coefficients[:] = ini_wf._coefficients
+                else:
+                    with logtime('Transforming CC wave function to FCI-like'):
+                        cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
                 with logtime('Distance to current CC wave function'):
-                    dist = self.dist_to(cc_wf_as_fci, mode='IN')
+                    dist = self.dist_to(cc_wf_as_fci, metric='IN')
                 if (i_iteration > 0
                     and normJ < thrsh_J
                         and normZ < thrsh_Z):
@@ -1734,7 +1784,7 @@ class WaveFunctionFCI(general.WaveFunction):
                             cc_wf_as_fci._coefficients,
                             n_ampl,
                             self.n_irrep,
-                            self.n_orb_before,
+                            self.orbs_before,
                             corr_orb,
                             virt_orb,
                             self._alpha_string_graph,
@@ -1748,7 +1798,7 @@ class WaveFunctionFCI(general.WaveFunction):
                             cc_wf_as_fci._coefficients,
                             n_ampl,
                             self.n_irrep,
-                            self.n_orb_before,
+                            self.orbs_before,
                             corr_orb,
                             virt_orb,
                             self._alpha_string_graph,
@@ -1761,13 +1811,15 @@ class WaveFunctionFCI(general.WaveFunction):
                 normZ = linalg.norm(z)
                 cc_wf.update_amplitudes(z)
             if f_out is not None:
-                f_out.write(f'{i_iteration}  {dist}  {normZ}'
-                            f'  {normJ}   {T_iter.elapsed_time}')
+                f_out.write(f' {i_iteration:<4} {dist:7.5}  {normZ:6.4}'
+                            f'  {normJ:6.4}   {T_iter.elapsed_time}\n')
                 f_out.flush()
-        return Results(distance=dist,
-                       wf=cc_wf,
-                       norm=(normZ, normJ),
-                       last_iteration=i_iteration,
-                       converged=converged,
-                       right_dir=None,
-                       n_pos_H_eigVal=None)
+        res = Results('Minimun distance to CC manifold')
+        res.success = converged
+        if not converged:
+            res.error = 'Optimisation did not converge'
+        res.distance = dist
+        res.wave_function = cc_wf
+        res.norm = (normZ, normJ)
+        res.n_iter = i_iteration
+        return res

@@ -63,6 +63,7 @@ with open(args.output, 'w') as f_out:
         error_msg = ('Error in Molpro file ' + str(e.file_name)
                      + ', line number ' + str(e.line_number) + ':\n'
                      + str(e.line) + '\n' + e.msg)
+        stdout_error_msg = error_msg
     except memory.MemoryExceededError as e:
         with_error = True
         error_msg = ('The memory limit of {0} {1} has been exceeded:'
@@ -73,13 +74,15 @@ with open(args.output, 'w') as f_out:
                          e.action,
                          e.mem_required,
                          e.mem_remaining)
+        stdout_error_msg = error_msg
     except Exception as e:
         with_error = True
         error_msg = ('Error: ' + str(e)
                      + '\nHere is the traceback:\n' + traceback.format_exc())
+        stdout_error_msg = 'Error: ' + str(e)
     finally:
         if with_error and f_out is not None:
             f_out.write('\n' + error_msg)
         if with_error:
-            sys.exit(error_msg)
+            sys.exit(stdout_error_msg)
 exit()

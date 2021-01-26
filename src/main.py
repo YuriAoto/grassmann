@@ -53,7 +53,8 @@ def main_grassmann(args, f_out):
             dist_grassmann.main(args, f_out)
         elif args.method == 'Hartree_Fock':
             hartree_fock.main(args, f_out)
-        elif args.method in ('CCD_manifold', 'CCSD_manifold'):
+        elif args.method in ('CCD_mani_vert', 'CCSD_mani_vert',
+                             'CCD_mani_minD', 'CCSD_mani_minD'):
             coupled_cluster.main(args, f_out)
         else:
             raise ValueError('Unknown method: ' + args.method)

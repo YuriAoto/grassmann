@@ -254,7 +254,15 @@ class CISD_WaveFunction(general.WaveFunction):
     def change_orb_basis(self, U, just_C0=False):
         raise NotImplementedError(
             'change_orb_basis not implemented for CISD_WaveFunction!')
-        
+    
+    @classmethod
+    def similar_to(cls, wf, wf_type):
+        """Construct a WaveFunctionFCI with same basic attributes as wf"""
+        new_wf = super().similar_to(wf)
+        new_wf.WF_type = wf_type
+        new_wf.initialize_SD_lists()
+        return new_wf
+    
     @classmethod
     def from_int_norm(cls, intN_wf):
         """Load the wave function from a IntermNormWaveFunction."""

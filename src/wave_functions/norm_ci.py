@@ -277,6 +277,13 @@ class NormCI_WaveFunction(general.WaveFunction):
                               'B', memory.unit())
     
     @classmethod
+    def similar_to(self, wf):
+        """Construct a NormCI_WaveFunction with same basic attributes as wf"""
+        new_wf = super().similar_to(wf)
+        return new_wf
+
+    
+    @classmethod
     def from_int_norm(cls, wf_intN):
         """Construct the wave function from wf_intN
         
