@@ -5,8 +5,8 @@ import unittest
 
 import numpy as np
 
-import absil
-import orbitals
+from dist_grassmann import absil
+from orbitals import orbitals
 from wave_functions import int_norm, cisd
 import test
 

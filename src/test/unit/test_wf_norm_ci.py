@@ -6,10 +6,13 @@ import unittest
 from scipy import linalg
 import numpy as np
 
+import test
+from util.variables import int_dtype
 from wave_functions import general, norm_ci, int_norm
 from wave_functions.fci import make_occ
-import test
-from util import int_dtype
+from string_indices.string_indices import SpirrepStringIndex, SD_StringIndex
+from orbitals.symmetry import OrbitalsSets
+
 
 class WFConstructorsTestCase(unittest.TestCase):
     
@@ -40,35 +43,35 @@ class SlaterDetTestCase(unittest.TestCase):
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
         self.n_irrep = 4
-        self.string_index = int_norm.SD_StringIndex()
+        self.string_index = SD_StringIndex()
         self.string_index.C = 0.12345
         self.string_index.append(
-            general.SpirrepStringIndex.make_hole(3, 1))
+            SpirrepStringIndex.make_hole(3, 1))
         self.string_index[-1][2] = 4
-        self.string_index.append(general.SpirrepStringIndex(1))
-        self.string_index.append(general.SpirrepStringIndex(0))
-        self.string_index.append(general.SpirrepStringIndex(1))
-        self.string_index.append(general.SpirrepStringIndex(3))
+        self.string_index.append(SpirrepStringIndex(1))
+        self.string_index.append(SpirrepStringIndex(0))
+        self.string_index.append(SpirrepStringIndex(1))
+        self.string_index.append(SpirrepStringIndex(3))
         self.string_index.append(
-            general.SpirrepStringIndex.make_hole(2, 0))
+            SpirrepStringIndex.make_hole(2, 0))
         self.string_index[-1][1] = 3
-        self.string_index.append(general.SpirrepStringIndex(0))
-        self.string_index.append(general.SpirrepStringIndex(1))
+        self.string_index.append(SpirrepStringIndex(0))
+        self.string_index.append(SpirrepStringIndex(1))
         # ------
-        self.string_index_2 = int_norm.SD_StringIndex()
+        self.string_index_2 = SD_StringIndex()
         self.string_index_2.C = 0.6789
         self.string_index_2.append(
-            general.SpirrepStringIndex.make_hole(3, 1))
+            SpirrepStringIndex.make_hole(3, 1))
         self.string_index_2[-1][2] = 4
-        self.string_index_2.append(general.SpirrepStringIndex(1))
-        self.string_index_2.append(general.SpirrepStringIndex(0))
-        self.string_index_2.append(general.SpirrepStringIndex(1))
-        self.string_index_2.append(general.SpirrepStringIndex(3))
+        self.string_index_2.append(SpirrepStringIndex(1))
+        self.string_index_2.append(SpirrepStringIndex(0))
+        self.string_index_2.append(SpirrepStringIndex(1))
+        self.string_index_2.append(SpirrepStringIndex(3))
         self.string_index_2.append(
-            general.SpirrepStringIndex.make_hole(2, 0))
+            SpirrepStringIndex.make_hole(2, 0))
         self.string_index_2[-1][1] = 3
-        self.string_index_2.append(general.SpirrepStringIndex(0))
-        self.string_index_2.append(general.SpirrepStringIndex(1))
+        self.string_index_2.append(SpirrepStringIndex(0))
+        self.string_index_2.append(SpirrepStringIndex(1))
     
     def test_simple_construction(self):
         det = norm_ci.SlaterDet(c=0.123,
@@ -83,8 +86,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_1(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -101,8 +104,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_2(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -119,8 +122,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_3(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -129,8 +132,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_4(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([0, 0, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([0, 0, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -147,8 +150,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_5(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -165,8 +168,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_6(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -183,8 +186,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_7(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(
@@ -193,8 +196,8 @@ class SlaterDetTestCase(unittest.TestCase):
 
     def test_get_from_FCI_line_8(self):
         line = '0.000000000000  1  2  9  1  2 10'
-        orb_dim = general.OrbitalsSets([6, 2, 2, 0], occ_type='R')
-        n_core = general.OrbitalsSets([1, 1, 0, 0], occ_type='R')
+        orb_dim = OrbitalsSets([6, 2, 2, 0], occ_type='R')
+        n_core = OrbitalsSets([1, 1, 0, 0], occ_type='R')
         n_irrep = 4
         Ms = 0.0
         det = norm_ci._get_Slater_Det_from_FCI_line(

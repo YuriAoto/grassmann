@@ -6,8 +6,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
-import parser
 import test
+from input_output import parser
 
 
 class InternalsTestCase(unittest.TestCase):

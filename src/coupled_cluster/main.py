@@ -3,7 +3,7 @@
 
 Yuri Aoto, 2021
 """
-from util import logtime, logger
+from input_output.log import logtime, logger
 from wave_functions import fci
 
 
@@ -17,9 +17,11 @@ def main(args, f_out):
         fci_wf.normalise(mode='intermediate')
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
         with logtime('Running CC_manifold analysis'):
-            resCC = fci_wf.vertical_proj_to_cc_manifold(level=level, restore_wf=False)
+            resCC = fci_wf.vertical_proj_to_cc_manifold(level=level,
+                                                        restore_wf=False)
         logger.info(resCC.wave_function)
-        f_out.write(f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
+        f_out.write(
+            f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
         f_out.write('Number of excitations where the CC manifold\n'
                     + '   curves towards the wave function:\n')
         for rank, n in resCC.right_dir.items():
@@ -35,6 +37,8 @@ def main(args, f_out):
                                                     f_out=f_out,
                                                     restore_wf=False)
         logger.info(resCC.wave_function)
-        f_out.write(f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
+        f_out.write(
+            f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
     else:
-        raise ValueError('Only CC method so far implemented is for CC_manifold!')
+        raise ValueError(
+            'Only CC method so far implemented is for CC_manifold!')

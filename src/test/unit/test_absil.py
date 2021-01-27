@@ -6,11 +6,11 @@ import unittest
 import numpy as np
 from scipy import linalg
 
-from wave_functions import cisd, int_norm
-import orbitals
-from dist_grassmann import absil
 import test
-from util import int_dtype
+from wave_functions import cisd, int_norm
+from orbitals import orbitals
+from dist_grassmann import absil
+from util.variables import int_dtype
 
 
 np.set_printoptions(formatter={'float': lambda x: '{0:>9.6f}'.format(x)})

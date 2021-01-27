@@ -6,17 +6,16 @@ import unittest
 import numpy as np
 
 import test
+from util.variables import int_dtype
 from wave_functions.fci import make_occ
 import wave_functions.strings_rev_lexical_order as str_order
-from util import int_dtype
 
 
 class StringGraphsTestCase(unittest.TestCase):
         
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-
-
+    
     def test_gen_str_graph_0(self):
         with self.assertRaises(ValueError):
             str_order.generate_graph(-1, 2)
@@ -26,7 +25,6 @@ class StringGraphsTestCase(unittest.TestCase):
             str_order.generate_graph(-1, -3)
         with self.assertRaises(ValueError):
             str_order.generate_graph(5, 2)
-
         
     def test_gen_str_graph_1(self):
         nel = 4
@@ -85,49 +83,48 @@ class StringGraphsTestCase2(unittest.TestCase):
         self.string_gr_3 = str_order.generate_graph(5, 11)
     
     def test_get_str_index1(self):
-        self.assertEqual(str_order.get_index(make_occ([0,1,2,3]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2, 3]),
                                              self.string_gr_1),
                          0)
-        self.assertEqual(str_order.get_index(make_occ([0,1,2,4]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2, 4]),
                                              self.string_gr_1),
                          1)
-        self.assertEqual(str_order.get_index(make_occ([1,2,3,4]),
+        self.assertEqual(str_order.get_index(make_occ([1, 2, 3, 4]),
                                              self.string_gr_1),
                          4)
-        self.assertEqual(str_order.get_index(make_occ([1,2,4,5]),
+        self.assertEqual(str_order.get_index(make_occ([1, 2, 4, 5]),
                                              self.string_gr_1),
                          11)
 
     def test_get_str_index2(self):
-        self.assertEqual(str_order.get_index(make_occ([0,1,2]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2]),
                                              self.string_gr_2),
                          0)
-        self.assertEqual(str_order.get_index(make_occ([1,2,3]),
+        self.assertEqual(str_order.get_index(make_occ([1, 2, 3]),
                                              self.string_gr_2),
                          3)
-        self.assertEqual(str_order.get_index(make_occ([0,3,4]),
+        self.assertEqual(str_order.get_index(make_occ([0, 3, 4]),
                                              self.string_gr_2),
                          7)
-        self.assertEqual(str_order.get_index(make_occ([2,3,4]),
+        self.assertEqual(str_order.get_index(make_occ([2, 3, 4]),
                                              self.string_gr_2),
                          9)
 
-
     def test_get_str_index3(self):
-        self.assertEqual(str_order.get_index(make_occ([0,1,2,3,4]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2, 3, 4]),
                                              self.string_gr_3),
                          0)
-        self.assertEqual(str_order.get_index(make_occ([1,2,3,4,5]),
+        self.assertEqual(str_order.get_index(make_occ([1, 2, 3, 4, 5]),
                                              self.string_gr_3),
                          5)
-        self.assertEqual(str_order.get_index(make_occ([0,1,2,3,6]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2, 3, 6]),
                                              self.string_gr_3),
                          6)
-        self.assertEqual(str_order.get_index(make_occ([0,1,4,5,6]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 4, 5, 6]),
                                              self.string_gr_3),
                          15)
         
-        self.assertEqual(str_order.get_index(make_occ([0,1,2,4,7]),
+        self.assertEqual(str_order.get_index(make_occ([0, 1, 2, 4, 7]),
                                              self.string_gr_3),
                          22)
 
@@ -143,44 +140,44 @@ class StringGraphsTestCase3(unittest.TestCase):
     def test_occ_from_str_ind(self):
         self.assertEqual(
             str_order.occ_from_pos(0, self.string_gr_1),
-            make_occ([0,1,2,3]))
+            make_occ([0, 1, 2, 3]))
         self.assertEqual(
             str_order.occ_from_pos(1, self.string_gr_1),
-            make_occ([0,1,2,4]))
+            make_occ([0, 1, 2, 4]))
         self.assertEqual(
             str_order.occ_from_pos(4, self.string_gr_1),
-            make_occ([1,2,3,4]))
+            make_occ([1, 2, 3, 4]))
         self.assertEqual(
             str_order.occ_from_pos(11, self.string_gr_1),
-                         make_occ([1,2,4,5]))
+            make_occ([1, 2, 4, 5]))
 
     def test_occ_from_str_ind2(self):
         self.assertEqual(
             str_order.occ_from_pos(0, self.string_gr_2),
-            make_occ([0,1,2]))
+            make_occ([0, 1, 2]))
         self.assertEqual(
             str_order.occ_from_pos(3, self.string_gr_2),
-            make_occ([1,2,3]))
+            make_occ([1, 2, 3]))
         self.assertEqual(
             str_order.occ_from_pos(7, self.string_gr_2),
-            make_occ([0,3,4]))
+            make_occ([0, 3, 4]))
         self.assertEqual(
-            str_order.occ_from_pos(9,self.string_gr_2),
-            make_occ([2,3,4]))
+            str_order.occ_from_pos(9, self.string_gr_2),
+            make_occ([2, 3, 4]))
 
     def test_occ_from_str_ind3(self):
         self.assertEqual(
             str_order.occ_from_pos(0, self.string_gr_3),
-            make_occ([0,1,2,3,4]))
+            make_occ([0, 1, 2, 3, 4]))
         self.assertEqual(
             str_order.occ_from_pos(6, self.string_gr_3),
-            make_occ([0,1,2,3,6]))
+            make_occ([0, 1, 2, 3, 6]))
         self.assertEqual(
             str_order.occ_from_pos(17, self.string_gr_3),
-            make_occ([1,2,4,5,6]))
+            make_occ([1, 2, 4, 5, 6]))
         self.assertEqual(
             str_order.occ_from_pos(26, self.string_gr_3),
-            make_occ([0,1,2,5,7]))
+            make_occ([0, 1, 2, 5, 7]))
 
 
 class RevLexOrdTestCase3(unittest.TestCase):
@@ -191,7 +188,7 @@ class RevLexOrdTestCase3(unittest.TestCase):
     def test_next_3el(self):
         occ = make_occ([0, 1, 2])
         str_order.next_str(occ)
-        self.assertEqual(occ, make_occ([0, 1 ,3]))
+        self.assertEqual(occ, make_occ([0, 1, 3]))
         str_order.next_str(occ)
         self.assertEqual(occ, make_occ([0, 2, 3]))
         str_order.next_str(occ)
@@ -221,6 +218,7 @@ class RevLexOrdTestCase3(unittest.TestCase):
         occ = make_occ([4, 5, 6, 7])
         str_order.next_str(occ)
         self.assertEqual(occ, make_occ([0, 1, 2, 8]))
+
 
 class SignRelRefTestCase(unittest.TestCase):
 

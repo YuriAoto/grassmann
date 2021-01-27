@@ -17,8 +17,8 @@ import logging
 import numpy as np
 from scipy import linalg
 
-from util import logtime
-from orbitals import MolecularOrbitals
+from input_output.log import logtime
+from orbitals.orbitals import MolecularOrbitals
 from . import util
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from scipy.linalg import inv, expm, eigh
 
-import util
+from util.variables import int_dtype
+from molecular_geometry.symmetry import number_of_irreducible_repr
 
 logger = logging.getLogger(__name__)
 
@@ -416,20 +417,20 @@ class MolecularOrbitals():
         point_group = molecule.find(
             'cml:molecule', ns).find(
                 'cml:symmetry', ns).attrib['pointGroup']
-        new_orbitals.n_irrep = util.number_of_irreducible_repr[point_group]
+        new_orbitals.n_irrep = number_of_irreducible_repr[point_group]
         new_orbitals._basis_len = int(molecule.find(
             'molpro:basisSet', ns).attrib['length'])
         if molecule.attrib['method'] == 'UHF':
             new_orbitals.restricted = False
             n_orb_per_spirrep = np.zeros(2 * new_orbitals.n_irrep,
-                                         dtype=util.int_dtype)
+                                         dtype=int_dtype)
             cur_orb = np.zeros(2 * new_orbitals.n_irrep,
-                               dtype=util.int_dtype)
+                               dtype=int_dtype)
         else:
             new_orbitals.restricted = True
             n_orb_per_spirrep = np.zeros(new_orbitals.n_irrep,
-                                         dtype=util.int_dtype)
-            cur_orb = np.zeros(new_orbitals.n_irrep, dtype=util.int_dtype)
+                                         dtype=int_dtype)
+            cur_orb = np.zeros(new_orbitals.n_irrep, dtype=int_dtype)
         for orb_set in molecule.findall('molpro:orbitals', ns):
             try:
                 spin_shift = get_spin_shift(orb_set.attrib['type'],

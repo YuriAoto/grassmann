@@ -3,8 +3,8 @@
 import copy
 
 from wave_function.int_norm import IntermNormWaveFunction
-from wave_functions.general import OrbitalsSets
-from coupled_cluster import ccsd
+from orbitals.symmetry import OrbitalsSets
+import .ccsd
 
 def cc_closed_shell(hf_energy,
                     mol_geom,

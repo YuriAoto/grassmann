@@ -8,7 +8,8 @@ import numpy as np
 
 from wave_functions.strings_rev_lexical_order import get_index
 from wave_functions.strings_rev_lexical_order cimport next_str
-from util import irrep_product, int_dtype
+from util.variables import int_dtype
+from molecular_geometry.symmetry import irrep_product
 
 cdef int EXC_TYPE_A = 0
 cdef int EXC_TYPE_B = 1

@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 import test
-from util import logtime
+from input_output.log import logtime
 
 
 class CheckCsdInCCSDwf(unittest.TestCase):

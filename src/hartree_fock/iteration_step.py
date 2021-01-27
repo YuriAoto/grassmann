@@ -7,13 +7,12 @@ import logging
 import numpy as np
 from scipy import linalg
 
-from util import logtime
+from util.variables import sqrt2
+from input_output.log import logtime
 from . import util
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
-
-sqrt2 = np.sqrt(2.0)
 
 
 class HartreeFockStep():

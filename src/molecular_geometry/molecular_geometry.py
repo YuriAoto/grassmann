@@ -11,7 +11,8 @@ import re
 import math
 
 import integrals
-from util import ANG_to_a0, ATOMS
+from util.variables import ANG_to_a0
+from molecular_geometry.periodic_table import ATOMS
 
 re_get_number = re.compile(r'\d+$')
 

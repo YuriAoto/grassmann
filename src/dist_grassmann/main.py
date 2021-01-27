@@ -3,20 +3,19 @@
 
 """
 import os
-import datetime
-import time
 import logging
 
 import numpy as np
 from scipy import linalg
 
-from util import dist_from_ovlp, ovlp_Slater_dets, logtime
-import orbitals as orb
+from input_output.log import logger, logtime
+from input_output import molpro
+from .metric import dist_from_ovlp, ovlp_Slater_dets
+from orbitals import orbitals as orb
 from . import optimiser
-import molpro_util
 import wave_functions
 
-logger = logging.getLogger(__name__)
+
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
@@ -85,7 +84,7 @@ def main(args, f_out):
     toout()
     # ----- loading wave function
     with logtime('Reading wave function'):
-        ext_wf = molpro_util.load_wave_function(
+        ext_wf = molpro.load_wave_function(
             args.molpro_output,
             WF_templ=args.WF_templ,
             use_CISD_norm=not args.at_ref,
@@ -105,8 +104,8 @@ def main(args, f_out):
     toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
         x = []
-        for I in ext_wf.string_indices():
-            x.append(str(I) + ': ' + str(ext_wf[I]))
+        for Index in ext_wf.string_indices():
+            x.append(str(Index) + ': ' + str(ext_wf[Index]))
         logger.debug('The determinants:\n' + '\n'.join(x))
     if args.HF_orb != args.WF_orb:
         toout('Using as |minE> a Slater determinant different than |WFref>')

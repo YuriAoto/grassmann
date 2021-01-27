@@ -1,3 +1,12 @@
+"""Setup to compile all cython modules
+
+Usage:
+------
+python3 setup.py build_ext --inplace
+
+
+"""
+
 from setuptools import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension

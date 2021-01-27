@@ -9,8 +9,8 @@ from datetime import datetime as dt
 
 import git
 
-from util import logtime
-import memory
+from input_output.log import logtime
+from util import memory
 import dist_grassmann
 import hartree_fock
 import coupled_cluster

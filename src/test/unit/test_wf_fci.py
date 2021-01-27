@@ -5,10 +5,10 @@ import unittest
 
 import numpy as np
 
+import test
+from util.variables import int_dtype
 from wave_functions import fci, general
 from wave_functions.fci import make_occ
-import test
-from util import int_dtype
 
 class ClusterDecTestCase(unittest.TestCase):
         

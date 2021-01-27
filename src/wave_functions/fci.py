@@ -17,15 +17,19 @@ import copy
 import math
 from collections import namedtuple
 
-from util import (irrep_product, get_pos_from_rectangular, logtime,
-                  int_dtype, Results, OptResults)
-from wave_functions import general
-import orbitals
-import molpro_util
-from memory import mem_of_floats
+from input_output.log import logtime
+from input_output import molpro
+from util.array_indices import get_pos_from_rectangular
+from util.results import Results, OptResults
+from util.variables import int_dtype
+from util.memory import mem_of_floats
+from molecular_geometry.symmetry import irrep_product
+from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.int_norm import IntermNormWaveFunction
 import wave_functions.strings_rev_lexical_order as str_order
+from orbitals.orbitals import calc_U_from_z
+from orbitals.symmetry import OrbitalsSets
 from coupled_cluster import manifold as cc_manifold
 
 logger = logging.getLogger(__name__)
@@ -284,13 +288,13 @@ def _get_slater_det_from_fci_line(line, Ms, froz_orb,
     Return:
     --------
     An instance of SlaterDet containing only active orbitals.
-    That is, all core electrons are discarded and the first
-    non-core orbital is indexed by 0.
+    That is, all frozen electrons are discarded and the first
+    non-frozen orbital is indexed by 0.
     All irreps are merged in a single array
     
     Raise:
     ------
-    molpro_util.MolproInputError
+    molpro.MolproInputError
     
     Examples:
     ---------
@@ -320,14 +324,14 @@ def _get_slater_det_from_fci_line(line, Ms, froz_orb,
     c=-0.000000000000; alpha_occ=[6]; beta_occ=[7]
     """
     lspl = line.split()
-    n_total_core = len(froz_orb) // 2
+    n_total_frozen = len(froz_orb) // 2
     try:
         coeff = float(lspl[0])
-        occ = [int(x) - 1 - n_total_core
+        occ = [int(x) - 1 - n_total_frozen
                for x in lspl[1:]
-               if int(x) > n_total_core]
+               if int(x) > n_total_frozen]
     except Exception as e:
-        raise molpro_util.MolproInputError(
+        raise molpro.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
             + str(e),
             line=line,
@@ -343,7 +347,7 @@ def _get_slater_det_from_fci_line(line, Ms, froz_orb,
                      beta_occ=make_occ(occ[n_alpha:]))
 
 
-class WaveFunctionFCI(general.WaveFunction):
+class WaveFunctionFCI(WaveFunction):
     """A FCI-like wave function, based on alpha and beta strings
     
     The wave function is stored in a 2D np.array, whose rows and columns
@@ -361,7 +365,7 @@ class WaveFunctionFCI(general.WaveFunction):
     atol = 1E-8
     
     def __init__(self):
-        """Initialise the wave function"""
+        """Initialize the wave function"""
         super().__init__()
         self._coefficients = None
         self._alpha_string_graph = None
@@ -433,14 +437,14 @@ class WaveFunctionFCI(general.WaveFunction):
     @property
     def n_alpha_str(self):
         if self._n_alpha_str is None:
-            self._n_alpha_str = comb(self.n_orb_nocore, self.n_corr_alpha,
+            self._n_alpha_str = comb(self.n_orb_nofrozen, self.n_corr_alpha,
                                      exact=True)
         return self._n_alpha_str
     
     @property
     def n_beta_str(self):
         if self._n_beta_str is None:
-            self._n_beta_str = comb(self.n_orb_nocore, self.n_corr_beta,
+            self._n_beta_str = comb(self.n_orb_nofrozen, self.n_corr_beta,
                                     exact=True)
         return self._n_beta_str
     
@@ -448,12 +452,12 @@ class WaveFunctionFCI(general.WaveFunction):
         """Calculate memory of current determinants in wave function"""
         return mem_of_floats(self.n_alpha_str * self.n_beta_str)
     
-    def initialise_coeff_matrix(self):
-        """Initialise the matrix with the coefficients"""
-        self._alpha_string_graph = str_order.generate_graph(self.n_corr_alpha,
-                                                            self.n_orb_nocore)
-        self._beta_string_graph = str_order.generate_graph(self.n_corr_beta,
-                                                           self.n_orb_nocore)
+    def initialize_coeff_matrix(self):
+        """Initialize the matrix with the coefficients"""
+        self._alpha_string_graph = str_order.generate_graph(
+            self.n_corr_alpha, self.n_orb_nofrozen)
+        self._beta_string_graph = str_order.generate_graph(
+            self.n_corr_beta, self.n_orb_nofrozen)
         self._set_memory()
         self._coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
 
@@ -528,7 +532,7 @@ class WaveFunctionFCI(general.WaveFunction):
         Return:
         -------
         A 1D np.array with the occupied alpha orbitals (without considering
-        core orbitals)
+        frozen orbitals)
         """
         return str_order.occ_from_pos(i, self._alpha_string_graph)
 
@@ -544,7 +548,7 @@ class WaveFunctionFCI(general.WaveFunction):
         Return:
         -------
         A 1D np.array with the occupied beta orbitals (without considering
-        core orbitals)
+        frozen orbitals)
         """
         return str_order.occ_from_pos(i, self._beta_string_graph)
     
@@ -559,7 +563,7 @@ class WaveFunctionFCI(general.WaveFunction):
         Return:
         -------
         An instance of SlaterDet with the coefficient associated to ii
-        and the alpha and beta occupation, without considering core orbitals
+        and the alpha and beta occupation, without considering frozen orbitals
         """
         return SlaterDet(c=self[ii],
                          alpha_occ=self.alpha_orb_occupation(ii[0]),
@@ -574,8 +578,8 @@ class WaveFunctionFCI(general.WaveFunction):
         viewed as a excitation over self.ref_orb.
         Particles and holes are returned as lists of Orbital_Info.
         These lists have len = rank.
-        If consider_core == False, core orbitals are not considered,
-        and the first correlated orbitals is 0; Otherwise core orbitals
+        If consider_frozen == False, frozen orbitals are not considered,
+        and the first correlated orbitals is 0; Otherwise frozen orbitals
         are taken into account and the first correlated orbital is
         froz_orb[spirrep]
         The order that the holes/particles are put in the lists is the
@@ -598,9 +602,9 @@ class WaveFunctionFCI(general.WaveFunction):
         
         TODO:
         -----
-        consider_core (bool, optional, default=True)
-            Not implemented yet! Currently it does not consider core orbitals
-            Whether or not core orbitals are considered when
+        consider_frozen (bool, optional, default=True)
+            Not implemented yet! Currently it does not consider frozen orbitals
+            Whether or not frozen orbitals are considered when
             assigning holes
         
         Returns:
@@ -665,7 +669,7 @@ class WaveFunctionFCI(general.WaveFunction):
     def similar_to(cls, wf, restricted=None):
         """Construct a WaveFunctionFCI with same basic attributes as wf"""
         new_wf = super().similar_to(wf, restricted=restricted)
-        new_wf.initialise_coeff_matrix()
+        new_wf.initialize_coeff_matrix()
         new_wf.set_ref_det_from_corr_orb()
         return new_wf
 
@@ -682,7 +686,7 @@ class WaveFunctionFCI(general.WaveFunction):
             The input wave function
         
         restricted (bool or None, optional, default=None)
-            See general.WaveFunction.get_parameters_from
+            See WaveFunction.get_parameters_from
         
         """
         new_wf = cls.similar_to(wf, restricted=restricted)
@@ -815,10 +819,10 @@ class WaveFunctionFCI(general.WaveFunction):
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
-                    self.point_group = molpro_util.get_point_group_from_line(
+                    self.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
-                except molpro_util.MolproLineHasNoPointGroup:
-                    if molpro_util.FCI_header == line:
+                except molpro.MolproLineHasNoPointGroup:
+                    if molpro.FCI_header == line:
                         FCI_prog_found = True
                 continue
             if FCI_coefficients_found:
@@ -838,11 +842,11 @@ class WaveFunctionFCI(general.WaveFunction):
                     # might not have the same ref_orb (per spirrep) as
                     # the True reference determinant... I think that this
                     # is not a real problem
-                    self.ref_orb = general.OrbitalsSets(
+                    self.ref_orb = OrbitalsSets(
                         list(map(len, get_SD_old(
                             line, self.orb_dim, self.froz_orb,
                             self.n_irrep, self.Ms).occupation)))
-                    self.initialise_coeff_matrix()
+                    self.initialize_coeff_matrix()
                 S += det.c**2
                 self.set_slater_det(det)
                 if self.ref_det is None or abs(det.c) > abs(self.ref_det.c):
@@ -853,12 +857,12 @@ class WaveFunctionFCI(general.WaveFunction):
                         and 'Energy' in line):
                     FCI_coefficients_found = True
                 elif 'Frozen orbitals:' in line:
-                    self.froz_orb = molpro_util.get_orb_info(line, line_number,
-                                                           self.n_irrep,
-                                                           'R')
+                    self.froz_orb = molpro.get_orb_info(line, line_number,
+                                                        self.n_irrep,
+                                                        'R')
                 elif 'Active orbitals:' in line:
                     self.orb_dim = (self.froz_orb
-                                    + molpro_util.get_orb_info(
+                                    + molpro.get_orb_info(
                                         line,
                                         line_number,
                                         self.n_irrep,
@@ -876,7 +880,7 @@ class WaveFunctionFCI(general.WaveFunction):
                         uhf_alpha_was_read = True
                     elif 'UHF/BETA' in line:
                         if not uhf_alpha_was_read:
-                            raise molpro_util.MolproInputError(
+                            raise molpro.MolproInputError(
                                 "Not sure what to do...\n"
                                 + "UHF/BETA orbitals but no UHF/ORBITALS!!",
                                 line=line,
@@ -884,7 +888,7 @@ class WaveFunctionFCI(general.WaveFunction):
                                 file_name=molpro_output)
                         found_orbital_source = True
                     else:
-                        raise molpro_util.MolproInputError(
+                        raise molpro.MolproInputError(
                             "Not sure how to treat a wf with these orbitals!\n"
                             + "Neither RHF nor UHF!",
                             line=line,
@@ -892,7 +896,7 @@ class WaveFunctionFCI(general.WaveFunction):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
-        self.ref_orb = general.OrbitalsSets(
+        self.ref_orb = OrbitalsSets(
             list(map(len, get_SD_old(
                 line_ref, self.orb_dim, self.froz_orb,
                 self.n_irrep, self.Ms).occupation)))
@@ -902,16 +906,16 @@ class WaveFunctionFCI(general.WaveFunction):
                                      alpha_occ=self.ref_det.alpha_occ,
                                      beta_occ=self.ref_det.beta_occ)
         if not found_orbital_source:
-            raise molpro_util.MolproInputError(
+            raise molpro.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.act_orb = general.OrbitalsSets(np.zeros(self.n_irrep),
-                                          occ_type='A')
+        self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
+                                    occ_type='A')
         if active_el_in_out + len(self.froz_orb) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
-                             + 'n core el = ' + str(self.froz_orb)
+                             + 'n frozen el = ' + str(self.froz_orb)
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
@@ -1086,7 +1090,8 @@ class WaveFunctionFCI(general.WaveFunction):
             return Jac, Hess
         # --- Analytic
         for det in self:
-            holes, particles, rank = self.get_exc_info(det, consider_core=True)
+            holes, particles, rank = self.get_exc_info(det,
+                                                       consider_frozen=True)
             logger.debug('new det: %s', det)
             if rank > 2:
                 continue
@@ -1194,7 +1199,7 @@ class WaveFunctionFCI(general.WaveFunction):
         The tuple (new_wf, U) where new_wf the wave function in the new basis
         and U is the transformation from the previous to the new orbital basis.
         """
-        U = orbitals.calc_U_from_z(z, self)
+        U = calc_U_from_z(z, self)
         logger.info('Matrices U have been calculated.'
                     + ' Calculating transformed wf now.')
         return self.change_orb_basis(U, just_C0=just_C0), U
@@ -1576,7 +1581,7 @@ class WaveFunctionFCI(general.WaveFunction):
                    that show [0] how many directions are curved towards self
                    and [1] the total number of such directions. Example:
                    {'T': (10,12),
-                    'Q': (5,5), 
+                    'Q': (5,5),
                     '5': (1,1)}
                     10 out of 12 triples are in the right direction
                     5 out of 5 quadruples are in the right direction
@@ -1611,7 +1616,7 @@ class WaveFunctionFCI(general.WaveFunction):
                                 and rank > 2
                                 and (level == 'SD' or rank % 2 == 0))
             if (rank == 2
-                or (level == 'SD' and rank == 1)):
+                    or (level == 'SD' and rank == 1)):
                 cc_wf.set_amplitude(det.c, rank, alpha_hp, beta_hp)
             if do_decomposition:
                 decomposition = cluster_decompose(
@@ -1755,12 +1760,13 @@ class WaveFunctionFCI(general.WaveFunction):
             cc_wf = copy.deepcopy(ini_wf)
         else:
             raise ValueError('Unknown type of initial wave function')
-        n_ampl = cc_wf.calc_n_ampl(level=='SD', False)
+        n_ampl = cc_wf.calc_n_ampl(level == 'SD', False)
         corr_orb = self.corr_orb.as_array()
         virt_orb = self.virt_orb.as_array()
         cc_wf_as_fci = WaveFunctionFCI.similar_to(self, restricted=False)
         if f_out is not None:
-            f_out.write('it.   dist      |Z|       |J|        time in iteration\n')
+            f_out.write(
+                'it.   dist      |Z|       |J|        time in iteration\n')
         for i_iteration in range(maxiter):
             with logtime(f'Starting iteration {i_iteration}') as T_iter:
                 if (i_iteration == 0
@@ -1814,7 +1820,7 @@ class WaveFunctionFCI(general.WaveFunction):
                 f_out.write(f' {i_iteration:<4} {dist:7.5}  {normZ:6.4}'
                             f'  {normJ:6.4}   {T_iter.elapsed_time}\n')
                 f_out.flush()
-        res = Results('Minimun distance to CC manifold')
+        res = OptResults('Minimun distance to CC manifold')
         res.success = converged
         if not converged:
             res.error = 'Optimisation did not converge'
