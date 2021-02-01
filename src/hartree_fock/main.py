@@ -7,8 +7,8 @@ Yuri Aoto, 2020
 """
 
 from . import optimiser
-from molecular_geometry import MolecularGeometry
-from util import logtime
+from molecular_geometry.molecular_geometry import MolecularGeometry
+from input_output.log import logtime
 
 
 def main(args, f_out):

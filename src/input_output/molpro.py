@@ -4,8 +4,9 @@
 """
 import re
 
-from wave_functions import general, norm_ci, int_norm, cisd
-import util
+from wave_functions import norm_ci, int_norm, cisd
+from orbitals.symmetry import OrbitalsSets
+from molecular_geometry.symmetry import number_of_irreducible_repr
 
 CISD_header = (
     ' PROGRAM * CISD (Closed-shell CI(SD))     '
@@ -80,7 +81,7 @@ def get_point_group_from_line(line, line_number, molpro_output):
     if 'Point group' in line:
         point_group = line.split()[2]
         try:
-            util.number_of_irreducible_repr[point_group]
+            number_of_irreducible_repr[point_group]
         except KeyError:
             raise MolproInputError(
                 'Unknown point group!',
@@ -105,7 +106,7 @@ def get_orb_info(line, line_number, n_irrep, occ_type):
             re_orb = re_orb[:n_irrep]
         if occ_type == 'F':
             re_orb += re_orb
-        return general.OrbitalsSets(re_orb, occ_type=occ_type)
+        return OrbitalsSets(re_orb, occ_type=occ_type)
     except Exception:
         raise MolproInputError('Problems reading orbital information.',
                                line=line, line_number=line_number)
@@ -177,7 +178,7 @@ def load_wave_function(molpro_output,
         normalisation
         Possible values are: 'int_norm', 'cisd', 'fci'.
     
-    wf (general.WaveFunction or None, optional, default=None)
+    wf (wave_function.general.WaveFunction or None, optional, default=None)
         If given, this object is changed, and nothing is returned.
         Otherwise a new object is created and returned (needed??)
     

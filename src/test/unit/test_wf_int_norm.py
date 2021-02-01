@@ -5,10 +5,11 @@ import unittest
 
 import numpy as np
 
-from wave_functions import int_norm
-from wave_functions.general import OrbitalsSets
 import test
-from util import int_dtype
+from util.variables import int_dtype
+from wave_functions import int_norm
+from orbitals.symmetry import OrbitalsSets
+from string_indices.string_indices import SD_StringIndex
 
 class ConstructorTestCase(unittest.TestCase):
 
@@ -411,7 +412,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 0
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
+        self.assertTrue(isinstance(Index, SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -425,7 +426,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 4
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
+        self.assertTrue(isinstance(Index, SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -439,7 +440,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 0
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
+        self.assertTrue(isinstance(Index, SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
@@ -453,7 +454,7 @@ class He2StringIndicesTestCase(unittest.TestCase):
         irrep_a = irrep_b = 4
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
-        self.assertTrue(isinstance(Index, int_norm.SD_StringIndex))
+        self.assertTrue(isinstance(Index, SD_StringIndex))
         test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
                          + ' irrep_a = %d; irrep_b = %d:\n%s',
                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)

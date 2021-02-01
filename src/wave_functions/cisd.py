@@ -9,15 +9,15 @@ import logging
 
 import numpy as np
 
-from util import (triangular, get_n_from_triang, get_ij_from_triang,
-                  get_pos_from_rectangular)
-from wave_functions import general
-from memory import mem_of_floats
+from util.array_indices import (triangular, get_n_from_triang, get_ij_from_triang,
+                                get_pos_from_rectangular)
+from wave_functions.general import WaveFunction
+from util.memory import mem_of_floats
 
 logger = logging.getLogger(__name__)
 
 
-class CISD_WaveFunction(general.WaveFunction):
+class CISD_WaveFunction(WaveFunction):
     """The CISD wave function
     
     For the moment, only restricted and including only
@@ -145,8 +145,7 @@ class CISD_WaveFunction(general.WaveFunction):
         return mem_of_floats(n_floats)
 
     def initialize_SD_lists(self):
-        """
-        Initialise lists of coefficients for singles and doubles with zeros.
+        """Initialize lists of coefficients for singles and doubles with zeros.
         """
         self._set_memory()
         self.C0 = 0.0
@@ -254,7 +253,15 @@ class CISD_WaveFunction(general.WaveFunction):
     def change_orb_basis(self, U, just_C0=False):
         raise NotImplementedError(
             'change_orb_basis not implemented for CISD_WaveFunction!')
-        
+    
+    @classmethod
+    def similar_to(cls, wf, wf_type):
+        """Construct a WaveFunctionFCI with same basic attributes as wf"""
+        new_wf = super().similar_to(wf)
+        new_wf.WF_type = wf_type
+        new_wf.initialize_SD_lists()
+        return new_wf
+    
     @classmethod
     def from_int_norm(cls, intN_wf):
         """Load the wave function from a IntermNormWaveFunction."""

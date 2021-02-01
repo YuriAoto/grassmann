@@ -1,6 +1,6 @@
 import logging
 
-import memory
+from util import memory
 
 
 init_random_state = 1234

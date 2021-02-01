@@ -18,11 +18,13 @@ import copy
 import math
 from collections import namedtuple
 
-from util import get_pos_from_rectangular, int_dtype
-from wave_functions import general
-import orbitals
-import molpro_util
-import memory
+from util.array_indices import get_pos_from_rectangular
+from util.variables import int_dtype
+from util import memory
+from input_output import molpro
+from wave_functions.general import WaveFunction
+from orbitals.symmetry import OrbitalsSets
+from orbitals.orbitals import calc_U_from_z
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +32,8 @@ lehtola_files = '/Documents/Codes/clusterdec-master/source/recipes'
 
 
 class SlaterDet(namedtuple('SlaterDet',
-                            ['c',
-                             'occupation'])):
+                           ['c',
+                            'occupation'])):
     """A namedtuple for a generic SlaterDet of the wave function
     
     Attributes:
@@ -66,7 +68,7 @@ def _get_Slater_Det_from_String_Index(Index, n_irrep,
                 'spirrep of spirrep_I is not consistent with position in list')
         final_occ[spirrep_I.spirrep] = np.array(spirrep_I.occ_orb)
     return SlaterDet(c=0.0 if zero_coefficients else coeff,
-                      occupation=final_occ)
+                     occupation=final_occ)
 
 
 def _get_Slater_Det_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
@@ -106,7 +108,7 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
     A SlaterDet
     
     Raises:
-    molpro_util.MolproInputError
+    molpro.MolproInputError
     
     Examples:
     ---------
@@ -138,20 +140,20 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
     """
     lspl = l.split()
     final_occ = [list(range(froz_orb[irp])) for irp in range(2 * n_irrep)]
-    n_tot_core = sum(map(len, final_occ)) // 2
+    n_tot_frozen = sum(map(len, final_occ)) // 2
     try:
         coeff = float(lspl[0])
-        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_core]
+        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_frozen]
     except Exception as e:
-        raise molpro_util.MolproInputError(
+        raise molpro.MolproInputError(
             "Error when reading FCI configuration. Exception was:\n"
             + str(e),
             line=l,
             line_number=line_number,
             file_name=molpro_output)
-    if len(occ) + 2 * n_tot_core + 1 != len(lspl):
-        raise molpro_util.MolproInputError(
-            "Inconsistency in number of core orbitals for FCI. froz_orb:\n"
+    if len(occ) + 2 * n_tot_frozen + 1 != len(lspl):
+        raise molpro.MolproInputError(
+            "Inconsistency in number of frozen orbitals for FCI. froz_orb:\n"
             + str(froz_orb),
             line=l,
             line_number=line_number,
@@ -168,7 +170,7 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
             irrep = 0
         while True:
             if irrep == n_irrep:
-                raise molpro_util.MolproInputError(
+                raise molpro.MolproInputError(
                     'Configuration is not consistent with orb_dim = '
                     + str(orb_dim),
                     line=l,
@@ -199,7 +201,7 @@ class ExcitedSlaterDet(namedtuple('ExcitedSlaterDet',
     __slots__ = ()
 
 
-class NormCI_WaveFunction(general.WaveFunction):
+class NormCI_WaveFunction(WaveFunction):
     """A normalised CI-like wave function, with explicit determinants
     
     The wave function is stored explicitly, with all Slater determinants
@@ -227,7 +229,7 @@ class NormCI_WaveFunction(general.WaveFunction):
     tol_eq = 1E-8
     
     def __init__(self):
-        """Initialise the wave function"""
+        """Initialize the wave function"""
         super().__init__()
         self._all_determinants = []
         self.has_FCI_structure = False
@@ -275,6 +277,12 @@ class NormCI_WaveFunction(general.WaveFunction):
         """Calculate memory of current determinants in wave function"""
         return memory.convert((self.n_elec + 8) * len(self),
                               'B', memory.unit())
+    
+    @classmethod
+    def similar_to(self, wf):
+        """Construct a NormCI_WaveFunction with same basic attributes as wf"""
+        new_wf = super().similar_to(wf)
+        return new_wf
     
     @classmethod
     def from_int_norm(cls, wf_intN):
@@ -474,10 +482,10 @@ class NormCI_WaveFunction(general.WaveFunction):
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
-                    self.point_group = molpro_util.get_point_group_from_line(
+                    self.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
-                except molpro_util.MolproLineHasNoPointGroup:
-                    if molpro_util.FCI_header == line:
+                except molpro.MolproLineHasNoPointGroup:
+                    if molpro.FCI_header == line:
                         FCI_prog_found = True
                 continue
             if FCI_coefficients_found:
@@ -513,12 +521,12 @@ class NormCI_WaveFunction(general.WaveFunction):
                         and 'Energy' in line):
                     FCI_coefficients_found = True
                 elif 'Frozen orbitals:' in line:
-                    self.froz_orb = molpro_util.get_orb_info(line, line_number,
-                                                           self.n_irrep,
-                                                           'R')
+                    self.froz_orb = molpro.get_orb_info(line, line_number,
+                                                        self.n_irrep,
+                                                        'R')
                 elif 'Active orbitals:' in line:
                     self.orb_dim = (self.froz_orb
-                                    + molpro_util.get_orb_info(
+                                    + molpro.get_orb_info(
                                         line,
                                         line_number,
                                         self.n_irrep,
@@ -536,7 +544,7 @@ class NormCI_WaveFunction(general.WaveFunction):
                         uhf_alpha_was_read = True
                     elif 'UHF/BETA' in line:
                         if not uhf_alpha_was_read:
-                            raise molpro_util.MolproInputError(
+                            raise molpro.MolproInputError(
                                 "Not sure what to do...\n"
                                 + "UHF/BETA orbitals but no UHF/ORBITALS!!",
                                 line=line,
@@ -544,7 +552,7 @@ class NormCI_WaveFunction(general.WaveFunction):
                                 file_name=molpro_output)
                         found_orbital_source = True
                     else:
-                        raise molpro_util.MolproInputError(
+                        raise molpro.MolproInputError(
                             "Not sure how to treat a wf with these orbitals!\n"
                             + "Neither RHF nor UHF!",
                             line=line,
@@ -553,19 +561,19 @@ class NormCI_WaveFunction(general.WaveFunction):
         if isinstance(molpro_output, str):
             f.close()
         self.get_i_max_coef(set_i_ref=True)
-        self.ref_orb = general.OrbitalsSets(
+        self.ref_orb = OrbitalsSets(
             list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
-            raise molpro_util.MolproInputError(
+            raise molpro.MolproInputError(
                 'I didnt find the source of molecular orbitals!')
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.act_orb = general.OrbitalsSets(np.zeros(self.n_irrep),
-                                           occ_type='A')
+        self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
+                                    occ_type='A')
         if active_el_in_out + len(self.froz_orb) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
-                             + 'n core el = ' + str(self.froz_orb)
+                             + 'n frozen el = ' + str(self.froz_orb)
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
@@ -600,15 +608,15 @@ class NormCI_WaveFunction(general.WaveFunction):
     def C0(self):
         return self[self.i_ref].c
     
-    def get_exc_info(self, det, only_rank=False, consider_core=True):
+    def get_exc_info(self, det, only_rank=False, consider_frozen=True):
         """Return some info about the excitation that lead from ref to det
         
         This will return the holes, the particles, and the rank of det,
         viewed as a excitation over self.ref_orb.
         Particles and holes are returned as lists of Orbital_Info.
         These lists have len = rank.
-        If consider_core == False, core orbitals are not considered,
-        and the first correlated orbitals is 0; Otherwise core orbitals
+        If consider_frozen == False, frozen orbitals are not considered,
+        and the first correlated orbitals is 0; Otherwise frozen orbitals
         are taken into account and the first correlated orbital is
         froz_orb[spirrep]
         The order that the holes/particles are put in the lists is the
@@ -625,8 +633,8 @@ class NormCI_WaveFunction(general.WaveFunction):
         only_rank (bool, optional, default=False
             If True, calculates and return only the rank
         
-        consider_core (bool, optional, default=True)
-            Whether or not core orbitals are considered when
+        consider_frozen (bool, optional, default=True)
+            Whether or not frozen orbitals are considered when
             assigning holes
         
         Returns:
@@ -637,14 +645,14 @@ class NormCI_WaveFunction(general.WaveFunction):
         holes = []
         particles = []
         for spirrep in self.spirrep_blocks(restricted=False):
-            ncore = (0
-                     if consider_core else
-                     self.froz_orb[spirrep])
+            nfrozen = (0
+                       if consider_frozen else
+                       self.froz_orb[spirrep])
             if not only_rank:
                 for orb in range(self.ref_orb[spirrep]):
                     if orb not in det.occupation[spirrep]:
                         holes.append(Orbital_Info(
-                            orb=orb - ncore,
+                            orb=orb - nfrozen,
                             spirrep=spirrep))
             for orb in det.occupation[spirrep]:
                 if orb >= self.ref_orb[spirrep]:
@@ -836,7 +844,8 @@ class NormCI_WaveFunction(general.WaveFunction):
             return Jac, Hess
         # --- Analytic
         for det in self:
-            holes, particles, rank = self.get_exc_info(det, consider_core=True)
+            holes, particles, rank = self.get_exc_info(det,
+                                                       consider_frozen=True)
             logger.debug('new det: %s', det)
             if rank > 2:
                 continue
@@ -944,7 +953,7 @@ class NormCI_WaveFunction(general.WaveFunction):
         The tuple (new_wf, U) where new_wf the wave function in the new basis
         and U is the transformation from the previous to the new orbital basis.
         """
-        U = orbitals.calc_U_from_z(z, self)
+        U = calc_U_from_z(z, self)
         logger.info('Matrices U have been calculated.'
                     + ' Calculating transformed wf now.')
         return self.change_orb_basis(U, just_C0=just_C0), U

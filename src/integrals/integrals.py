@@ -12,10 +12,10 @@ import logging
 import numpy as np
 from scipy import linalg
 
+from util.variables import wmmeDir
+
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
-
-wmmeDir = '/home/yuriaoto/Documents/Codes/ir-wmme.20141030/ir-wmme.20141030/'
 
 
 class Integrals():

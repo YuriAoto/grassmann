@@ -6,10 +6,11 @@ import logging
 
 import numpy as np
 
-from util import logtime, OptResults
+from util.results import OptResults
+from input_output.log import logtime
 from . import util
 from .iteration_step import HartreeFockStep
-from orbitals import MolecularOrbitals
+from orbitals.orbitals import MolecularOrbitals
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()

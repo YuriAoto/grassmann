@@ -5,13 +5,12 @@ import unittest
 
 import numpy as np
 
+import test
 from coupled_cluster.manifold cimport (
     EXC_TYPE_A, EXC_TYPE_B, EXC_TYPE_AA, EXC_TYPE_AB, EXC_TYPE_BB,
     _term1, _term2_diag, _exc_on_string)
 from wave_functions.fci import make_occ
-from util import int_dtype
-
-import test
+from util.variables import int_dtype
 
 
 class ExcOnStringTestCase(unittest.TestCase):

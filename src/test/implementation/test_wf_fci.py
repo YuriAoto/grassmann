@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from scipy.special import comb
 
-from wave_functions import fci, general
+from wave_functions import fci
 from wave_functions.fci import make_occ
 import test
 

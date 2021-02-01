@@ -10,11 +10,11 @@ import sys
 import logging
 import traceback
 
-import util
-import memory
-import parser
+from input_output.log import LogFilter
+from util.memory import MemoryExceededError
+from input_output import parser
 from main import main_grassmann
-from molpro_util import MolproInputError
+from input_output.molpro import MolproInputError
 
 try:
     assert sys.version_info >= (3, 6)
@@ -52,7 +52,7 @@ logging.logThreads = 0
 logging.logProcesses = 0
 logger = logging.getLogger(__name__)
 for handler in logging.root.handlers:
-    handler.addFilter(util.LogFilter(args.logfilter))
+    handler.addFilter(LogFilter(args.logfilter))
 
 with_error = False
 with open(args.output, 'w') as f_out:
@@ -63,7 +63,8 @@ with open(args.output, 'w') as f_out:
         error_msg = ('Error in Molpro file ' + str(e.file_name)
                      + ', line number ' + str(e.line_number) + ':\n'
                      + str(e.line) + '\n' + e.msg)
-    except memory.MemoryExceededError as e:
+        stdout_error_msg = error_msg
+    except MemoryExceededError as e:
         with_error = True
         error_msg = ('The memory limit of {0} {1} has been exceeded:'
                      + '\nAt "{2}" we needed {3} {1},'
@@ -73,13 +74,15 @@ with open(args.output, 'w') as f_out:
                          e.action,
                          e.mem_required,
                          e.mem_remaining)
+        stdout_error_msg = error_msg
     except Exception as e:
         with_error = True
         error_msg = ('Error: ' + str(e)
                      + '\nHere is the traceback:\n' + traceback.format_exc())
+        stdout_error_msg = 'Error: ' + str(e)
     finally:
         if with_error and f_out is not None:
             f_out.write('\n' + error_msg)
         if with_error:
-            sys.exit(error_msg)
+            sys.exit(stdout_error_msg)
 exit()

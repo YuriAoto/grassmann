@@ -28,9 +28,13 @@ import copy
 import numpy as np
 from scipy import linalg
 
-from wave_functions import general as gen_wf
+from wave_functions.general import WaveFunction
 from wave_functions.cisd import CISD_WaveFunction
-from util import logtime, get_n_from_triang, int_dtype
+from orbitals.symmetry import OrbitalsSets
+from string_indices.string_indices import SpirrepIndex
+from util.variables import int_dtype
+from util.array_indices import get_n_from_triang
+from input_output.log import logtime
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +94,8 @@ def _calc_G(U, det_indices, i, j):
         return 1.0
     sign = 1 if (j + np.where(det_indices == i)[0][0]) % 2 == 0 else -1
     row_ind = np.array([x for x in det_indices if x != i], dtype=int_dtype)
-    col_ind = np.array([x for x in range(U.shape[1]) if x != j], dtype=int_dtype)
+    col_ind = np.array([x for x in range(U.shape[1]) if x != j],
+                       dtype=int_dtype)
     return sign * linalg.det(U[row_ind[:, None], col_ind])
 
 
@@ -221,7 +226,7 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     if isinstance(wf, CISD_WaveFunction):
         return _overlap_to_det_from_restricted_CISD(
             wf, U, assume_orth=assume_orth)
-    elif isinstance(wf, gen_wf.WaveFunction):
+    elif isinstance(wf, WaveFunction):
         return _overlap_to_det_from_genWF(
             wf, U, F=F, assume_orth=assume_orth)
     else:
@@ -280,7 +285,7 @@ def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
         F = calc_all_F(wf, U)
     f = 0.0
     for Index in wf.string_indices(no_occ_orb=True,
-                                   only_this_occ=gen_wf.OrbitalsSets(
+                                   only_this_occ=OrbitalsSets(
                                        list(map(lambda Ui: Ui.shape[1], U)))):
         f_contr = 1.0
         for spirrep, I_spirrep in enumerate(Index):
@@ -370,7 +375,7 @@ def generate_lin_system(
     if isinstance(wf, CISD_WaveFunction):
         return _generate_lin_system_from_restricted_CISD(
             wf, U, slice_XC)
-    elif isinstance(wf, gen_wf.WaveFunction):
+    elif isinstance(wf, WaveFunction):
         return _generate_lin_system_from_genWF(
             wf, U, slice_XC, F=F, with_full_H=with_full_H)
     else:
@@ -545,7 +550,9 @@ def _generate_lin_system_from_restricted_CISD(
                                 wf.Csd[irrep2][irrep], Fs[irrep2]) / F0[irrep2]
         for i in range(wf.corr_orb[irrep]):
             # Here, b<a always
-            sign = 1 if (wf.froz_orb[irrep] + i + n[irrep] + 1) % 2 == 1 else -1
+            sign = (1
+                    if (wf.froz_orb[irrep] + i + n[irrep] + 1) % 2 == 1 else
+                    -1)
             for a in range(wf.virt_orb[irrep]):
                 for j in range(i):
                     ij = get_n_from_triang(i, j, with_diag=False)
@@ -944,8 +951,8 @@ def _generate_lin_system_from_genWF(
                 S = 0.0
                 logger.info('spirrep_1 = %d; I_1 = %s', spirrep_1, I_1)
                 for I_full in wf.string_indices(
-                        coupled_to=(gen_wf.SpirrepIndex(spirrep=spirrep_1,
-                                                        Index=I_1),)):
+                        coupled_to=(SpirrepIndex(spirrep=spirrep_1,
+                                                 Index=I_1),)):
                     if list(map(len, I_full)) != list(
                             map(lambda x: x.shape[1], U)):
                         continue
@@ -977,8 +984,8 @@ def _generate_lin_system_from_genWF(
                     G_2 = np.zeros((K[spirrep_2], n[spirrep_2]))
                     for I_2 in wf.string_indices(
                             spirrep=spirrep_2,
-                            coupled_to=(gen_wf.SpirrepIndex(spirrep=spirrep_1,
-                                                            Index=I_1),)):
+                            coupled_to=(SpirrepIndex(spirrep=spirrep_1,
+                                                     Index=I_1),)):
                         if len(I_2) != n[spirrep_2]:
                             continue
                         logger.debug('I_2 = %s', I_2)
@@ -991,10 +998,10 @@ def _generate_lin_system_from_genWF(
                         S = 0.0
                         for I_full in wf.string_indices(
                                 coupled_to=(
-                                    gen_wf.SpirrepIndex(
+                                    SpirrepIndex(
                                         spirrep=spirrep_1,
                                         Index=I_1),
-                                    gen_wf.SpirrepIndex(
+                                    SpirrepIndex(
                                         spirrep=spirrep_2,
                                         Index=I_2))):
                             if list(map(len, I_full)) != list(

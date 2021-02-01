@@ -7,7 +7,7 @@ import cython
 from libc.math cimport sqrt
 import numpy as np
 
-from util import int_dtype
+from util.variables import int_dtype
 
 cpdef void next_str(int [:] occ):
     """Change occ to the next occupation in reverse lexical order"""

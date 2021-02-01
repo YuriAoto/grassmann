@@ -25,11 +25,11 @@ from collections import namedtuple
 import numpy as np
 from scipy import linalg
 
-from util import logtime
+from input_output.log import logtime
 from wave_functions.general import WaveFunction
 from wave_functions.cisd import CISD_WaveFunction
 from . import absil
-import orbitals as orb
+from orbitals import orbitals
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -216,7 +216,7 @@ def optimise_overlap_orbRot(wf,
             U.append(np.identity(wf.orb_dim[i % wf.n_irrep]))
         cur_wf = copy.copy(wf)
     else:
-        U = orb.complete_orb_space(ini_U, wf.orb_dim)
+        U = orbitals.complete_orb_space(ini_U, wf.orb_dim)
         cur_wf = wf.change_orb_basis(U)
     if f_out is not None:
         fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -308,7 +308,7 @@ def optimise_overlap_orbRot(wf,
         with logtime('Calculating norm of ΔK') as T_norm_Z:
             normZ = linalg.norm(z)
         if at_reference:
-            U = orb.calc_U_from_z(z, cur_wf)
+            U = orbitals.calc_U_from_z(z, cur_wf)
         elapsed_time = T_norm_Z.relative_to(T_start)
         if f_out is not None:
             f_out.write(fmt_full.
@@ -473,7 +473,7 @@ def optimise_overlap_Absil(ci_wf,
     """
     if not isinstance(ci_wf, WaveFunction):
         raise ValueError(
-            'ci_wf should be an instance of wave_functions.general.WaveFunction.')
+            'ci_wf should be an instance of WaveFunction.')
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
@@ -498,10 +498,11 @@ def optimise_overlap_Absil(ci_wf,
                                  + ' (for restricted calculations).')
         else:
             if len(ini_U) != 2 * ci_wf.n_irrep:
-                raise ValueError('ini_U must be a list,'
-                                 + ' of lenght 2 * ci_wf.n_irrep of numpy.array'
-                                 + ' (for unrestricted calculations).'
-                                 + ' Current value: ' + str(len(ini_U)))
+                raise ValueError(
+                    'ini_U must be a list,'
+                    ' of lenght 2 * ci_wf.n_irrep of numpy.array'
+                    ' (for unrestricted calculations).'
+                    ' Current value: ' + str(len(ini_U)))
         sum_n_a = sum_n_b = 0
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             i_irrep = i % ci_wf.n_irrep
