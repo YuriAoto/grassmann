@@ -690,7 +690,7 @@ class WaveFunctionFCI(WaveFunction):
         
         """
         new_wf = cls.similar_to(wf, restricted=restricted)
-        new_wf.WF_type = wf.WF_type + ' as FCI'
+        new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
         new_wf.get_coefficients_from_int_norm_wf(wf)
         return new_wf
@@ -728,7 +728,7 @@ class WaveFunctionFCI(WaveFunction):
         fact that _coefficients is symmetric (right??)
         """
         level = 'D' if wf.singles is None else 'SD'
-        wf_type = 'CC' if 'CC' in wf.WF_type else 'CI'
+        wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed(det):
                 continue
@@ -799,7 +799,7 @@ class WaveFunctionFCI(WaveFunction):
         FCI_coefficients_found = False
         uhf_alpha_was_read = False
         found_orbital_source = False
-        self.WF_type = 'FCI'
+        self.wf_type = 'FCI'
         if isinstance(molpro_output, str):
             f = open(molpro_output, 'r')
             f_name = molpro_output
@@ -1269,7 +1269,7 @@ class WaveFunctionFCI(WaveFunction):
         new_wf.act_orb = self.act_orb
         new_wf.orb_dim = self.orb_dim
         new_wf.ref_orb = self.ref_orb
-        new_wf.WF_type = self.WF_type
+        new_wf.wf_type = self.wf_type
         new_wf.source = (self.source.replace(' (another basis)', '')
                          + ' (another basis)')
         n_calcs = 0

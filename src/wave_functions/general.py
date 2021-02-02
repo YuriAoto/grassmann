@@ -253,7 +253,7 @@ class WaveFunction(ABC):
     n_orb n_orb_nofrozen (int)
         Number of spatial orbitals (with and without frozen orbitals
     
-    WF_type (str)
+    wf_type (str)
        Type of wave function
     
     source (str)
@@ -271,7 +271,7 @@ class WaveFunction(ABC):
         self.act_orb = None
         self._orbs_before = None
         self._corr_orbs_before = None
-        self.WF_type = None
+        self.wf_type = None
         self.source = None
         self.mem = 0.0
     
@@ -291,7 +291,7 @@ class WaveFunction(ABC):
         x.append('n electrons: {}'.format(self.n_elec))
         x.append('n alpha: {}'.format(self.n_alpha))
         x.append('n beta: {}'.format(self.n_beta))
-        x.append('WF type: {}'.format(self.WF_type))
+        x.append('WF type: {}'.format(self.wf_type))
         x.append('source: {}'.format(self.source))
         x.append('-' * 50)
         return '\n'.join(x)
@@ -326,7 +326,7 @@ class WaveFunction(ABC):
         """
         if destination is None:
             destination = "For wave function {} from {}".format(
-                self.WF_type, self.source)
+                self.wf_type, self.source)
         new_mem = self.calc_memory(*calc_args)
         memory.allocate(new_mem, destination)
         self.mem = new_mem

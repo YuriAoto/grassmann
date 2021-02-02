@@ -237,25 +237,25 @@ class IntermNormWaveFunction(WaveFunction):
     @property
     def norm(self):
         if self._norm is None:
-            if (self.WF_type == 'CISD'
-                    or self.WF_type in ('CCSD', 'BCCD', 'CCD')
+            if (self.wf_type == 'CISD'
+                    or self.wf_type in ('CCSD', 'BCCD', 'CCD')
                     and self.use_CISD_norm):
                 self._norm = 1.0
                 S = 0.0
                 for I in self.string_indices():
                     S += self[I]**2
                 self._norm = math.sqrt(S)
-                if self.WF_type != 'CISD':
+                if self.wf_type != 'CISD':
                     logger.warning(
                         'We are calculating the CCSD norm'
                         + ' considering only SD determinants!!')
-            elif self.WF_type in ('CCSD', 'BCCD', 'CCD'):
+            elif self.wf_type in ('CCSD', 'BCCD', 'CCD'):
                 self._norm = 1.0
                 logger.warning('CCSD norm set to 1.0!!')
             else:
                 raise ValueError(
                     'We do not know how to calculate the norm for '
-                    + self.WF_type + '!')
+                    + self.wf_type + '!')
         return self._norm
         
     @property
@@ -996,9 +996,9 @@ class IntermNormWaveFunction(WaveFunction):
         with too many inedentation levels
         """
         print_info_to_log = print_info_to_log and logger.level <= logging.DEBUG
-        if self.WF_type not in ('CISD', 'CCSD', 'CCD', 'BCCD'):
+        if self.wf_type not in ('CISD', 'CCSD', 'CCD', 'BCCD'):
             raise NotImplementedError('Currently works only for CISD and CCSD')
-        if self.WF_type == 'CCSD':
+        if self.wf_type == 'CCSD':
             logger.warning(
                 'string_indices yields only singly and doubly'
                 + ' excited determinants for CCSD!!')
@@ -1152,7 +1152,7 @@ class IntermNormWaveFunction(WaveFunction):
         """
         if print_info_to_log:
             to_log = []
-        add_CC_term = self.WF_type == 'CCSD' and irp_a == irp_i
+        add_CC_term = self.wf_type == 'CCSD' and irp_a == irp_i
         Index = self._make_occ_indices_for_doubles(
             i + self.froz_orb[irp_i], i + self.froz_orb[irp_i],
             irp_i, irp_i,
@@ -1200,9 +1200,9 @@ class IntermNormWaveFunction(WaveFunction):
         """
         if print_info_to_log:
             to_log = []
-        add_CC_term_ia = (self.WF_type == 'CCSD'
+        add_CC_term_ia = (self.wf_type == 'CCSD'
                           and irrep_a == irrep_i)
-        add_CC_term_ib = (self.WF_type == 'CCSD'
+        add_CC_term_ib = (self.wf_type == 'CCSD'
                           and irrep_b == irrep_i)
         # ----- sign determination:
         ij_nab_sign = (1
@@ -1917,10 +1917,10 @@ class IntermNormWaveFunction(WaveFunction):
     @classmethod
     def similar_to(cls, wf, wf_type, restricted):
         new_wf = super().similar_to(wf, restricted=restricted)
-        new_wf.WF_type = wf_type
+        new_wf.wf_type = wf_type
         new_wf.initialize_SD_lists(
-            with_singles=('SD' in new_wf.WF_type),
-            with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+            with_singles=('SD' in new_wf.wf_type),
+            with_BCC_orb_gen=new_wf.wf_type == 'BCCD')
         return new_wf
 
     @classmethod
@@ -1947,7 +1947,7 @@ class IntermNormWaveFunction(WaveFunction):
         """
         new_wf = cls()
         new_wf.restricted = ref_orb.occ_type == 'R'
-        new_wf.WF_type = wf_type + level
+        new_wf.wf_type = wf_type + level
         new_wf.point_group = point_group
         new_wf.initialize_orbitals_sets()
         new_wf.ref_orb += ref_orb
@@ -1962,8 +1962,8 @@ class IntermNormWaveFunction(WaveFunction):
                               - new_wf.ref_orb[i_irrep + new_wf.n_irrep])
             new_wf.Ms /= 2
         new_wf.initialize_SD_lists(
-            with_singles='SD' in new_wf.WF_type,
-            with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+            with_singles='SD' in new_wf.wf_type,
+            with_BCC_orb_gen=new_wf.wf_type == 'BCCD')
         return new_wf
     
     @classmethod
@@ -2001,12 +2001,12 @@ class IntermNormWaveFunction(WaveFunction):
                 raise ValueError(
                     'point_group is mandatory when molpro_output'
                     + ' is a file object')
-            new_wf.WF_type = wf_type
+            new_wf.wf_type = wf_type
             new_wf.point_group = point_group
             new_wf.initialize_orbitals_sets()
         new_wf.source = 'From file ' + f_name
         for line_number, line in enumerate(f, start=start_line_number):
-            if new_wf.WF_type is None:
+            if new_wf.wf_type is None:
                 try:
                     new_wf.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
@@ -2018,7 +2018,7 @@ class IntermNormWaveFunction(WaveFunction):
                                 molpro.RCISD_header,
                                 molpro.UCCSD_header,
                                 molpro.RCCSD_header):
-                        new_wf.WF_type = line[11:15]
+                        new_wf.wf_type = line[11:15]
                         new_wf.initialize_orbitals_sets()
                 continue
             if ('Number of closed-shell orbitals' in line
@@ -2053,9 +2053,9 @@ class IntermNormWaveFunction(WaveFunction):
                                          or 'Beta-Beta' in line)
                 if new_wf.singles is None:
                     new_wf.initialize_SD_lists(
-                        with_singles=new_wf.WF_type in ('CISD',
+                        with_singles=new_wf.wf_type in ('CISD',
                                                         'CCSD'),
-                        with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+                        with_BCC_orb_gen=new_wf.wf_type == 'BCCD')
                 exc_type = 'b' if 'Beta-Beta' in line else 'a'
             elif molpro.CC_dbl_str in line and MP2_step_passed:
                 dbl_found = True
@@ -2075,13 +2075,13 @@ class IntermNormWaveFunction(WaveFunction):
                 else:
                     new_wf.restricted = restricted
                 if new_wf.singles is None and new_wf.doubles is None:
-                    if new_wf.WF_type == 'CCSD':
-                        new_wf.WF_type = 'CCD'
-                    elif new_wf.WF_type == 'CCSD':
-                        new_wf.WF_type = 'CID'
+                    if new_wf.wf_type == 'CCSD':
+                        new_wf.wf_type = 'CCD'
+                    elif new_wf.wf_type == 'CCSD':
+                        new_wf.wf_type = 'CID'
                     new_wf.initialize_SD_lists(
                         with_singles=False,
-                        with_BCC_orb_gen=new_wf.WF_type == 'BCCD')
+                        with_BCC_orb_gen=new_wf.wf_type == 'BCCD')
                 if new_wf.restricted or 'Alpha-Alpha' in line:
                     exc_type = 'aa'
                 elif 'Beta-Beta' in line:
@@ -2173,7 +2173,7 @@ class IntermNormWaveFunction(WaveFunction):
                                 line_number=line_number,
                                 file_name=f_name)
                         continue
-                    if new_wf.WF_type == 'BCCD':
+                    if new_wf.wf_type == 'BCCD':
                         new_wf.BCC_orb_gen[spirrep][i, a] = C
                     else:
                         new_wf.singles[spirrep][i, a] = C
