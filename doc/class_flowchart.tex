@@ -1,0 +1,47 @@
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick]
+
+\node (test) at (0,0) [class, text width=\W{27}]{\textbf{IntermNormWaveFunction}
+\nodepart{second}
++ norm : float\\
++ singles : list[np.array]\\
++ doubles : list[np.array]
+\nodepart{third}
++ get\_irrep ( i : int, alpha\_orb : int )\\
++ ij\_from\_N ( N : int )\\
++ N\_from\_ij ( i : int, j : int, i\_irrep : int, j\_irrep : int, exc\_type : str)};
+
+\node (test2) at (\X{40},\Y{0}) [class, text width=\W{27}]{\textbf{WaveFunction}
+\nodepart{second}
++ restricted : bool\\
++ point\_group : str\\
++ n\_irre : int\\
++ n\_core : OrbitalsSets\\
++ n\_act : OrbitalsSets\\
++ orb\_dim : OrbitalsSets\\
++ ref\_occ : OrbitalsSets\\
++ n\_ext : OrbitalsSets\\
++ n\_corr\_orb : OrbitalsSets\\
++ n\_alpha, n\_beta, n\_elec, n\_corr\_alpha, n\_corr\_beta, n\_corr\_elec, n\_orb, n\_orb\_nocore: int\\
++ WF\_type : str\\
++ source : str};
+
+\node (test3) at (\X{80},\Y{0}) [class, text width=\W{15}]{\textbf{OrbitalSets}
+\nodepart{second}
++ occ\_type : str
+};
+
+\draw [-{Triangle[open]}] (test) -- (test2);
+\draw [-{Turned Square}] (test3) -- (test2);
+
+\end{tikzpicture}
+\end{center}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

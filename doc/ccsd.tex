@@ -91,14 +91,15 @@ The wave function is stored in the class \texttt{wave\_functions.interm\_norm.In
 \label{sec:ccsd_inter_matix}
 We can define three matrices that speed up calculations at the cost of memory.
 They are:
-\begin{equation}
-  \begin{split}
+\begin{align}
     u_{ij}^{ab}&=2t_{ij}^{ab}-t_{ji}^{ab}\\
     L_{pqrs}&=2g_{pqrs}-g_{psrq}\\
     F_{mn}^I&=h_{mn}+\sum_l(2g_{mnll}-g_{mlln})=h_{mn}+\sum_lL_{mnll}
-  \end{split}
-\end{equation}
+\end{align}
 
+The T1-transformed $L$ and $F^I$ matrices (${\tilde L}$ and ${\tilde F}^I$) can be obtained using the T1-transformed $h$ and $g$ elements or transforming these matrices.
+The $F^I$ is transformed as the $h$ matrix, eq.~\ref{eq:h_transformation}, and $L$ as the $g$ matrix, eq.~\ref{eq:g_transformation}.
+((Which is the fastest way? Probably use the $h$ and $g$ transformed elements, this way we don't need matrices multiplication.))
 
 \subsection{Energy}
 \hypertarget{sec:ccsd_energy}{}
@@ -112,7 +113,9 @@ They are:
   \end{split}
 \end{equation}
 
-\subsection{T1-Transformed Integrals}
+Note that $L_{iajb}={\tilde L}_{iajb}$, so in the implementation both matrices can be used. 
+
+\subsection{T1-Transformed MO Integrals}
 \hypertarget{sec:ccsd_t1_trans}{}
 \label{sec:ccsd_t1_trans}
 
@@ -126,8 +129,9 @@ The T1-transformation depends on the $\mathbf{t}_1$ matrix defined as
 \end{gather}
 where $t_i^a$ are the amplitudes associated to the single excitation.
 Be careful with the index, because $(\mathbf{t}_1)_{ai}=t_i^a$ (maybe we should change this).
-The one-electron T1-transformed integral can be writen as
+The one-electron T1-transformed molecular orbital integral can be writen as
 \begin{equation}
+  \label{eq:h_transformation}
   {\tilde h}_{pq}=h_{pq}-\sum_r(\mathbf{t}_1)_{pr}h_{rq}+\sum_sh_{ps}(\mathbf{t}_1^T)_{qs}-\sum_{rs}(\mathbf{t}_1)_{pr}h_{rs}(\mathbf{t}_1^T)_{qs}
 \end{equation}
 However, there is no need to construct the $\mathbf{t}_1$ matrix if we split the last equation in four cases:
@@ -135,11 +139,12 @@ However, there is no need to construct the $\mathbf{t}_1$ matrix if we split the
   {\tilde h}_{ij}&=h_{ij}+\sum_ch_{ic}t_{j}^{c}\\
   {\tilde h}_{ai}&=h_{ai}-\sum_kt_{k}^{a}h_{ki}+\sum_ch_{ac}t_{i}^{c}-\sum_{ck}t_{k}^{a}h_{kc}t_{i}^{c}\\
   {\tilde h}_{ia}&=h_{ia}\\
-  {\tilde h}_{ab}&=h_{ab}-\sum_kt_{k}^{b}h_{ka}
+  {\tilde h}_{ab}&=h_{ab}-\sum_kt_{k}^{a}h_{kb}
 \end{align}
 
-For the two-electron integral we have a similar expression:
+For the two-electron molecular orbital integral we have a similar expression:
 \begin{equation}
+    \label{eq:g_transformation}
   \begin{split}
     {\tilde g}_{pqrs}=g_{pqrs}&-\sum_t(\mathbf{t}_1)_{pt}g_{tqrs}+\sum_ug_{purs}(\mathbf{t}_1^T)_{qu}-\sum_m(\mathbf{t}_1)_{rm}g_{pqms}+\sum_ng_{pqrn}(\mathbf{t}_1^T)_{sn}\\
     &-\sum_{tu}(\mathbf{t}_1)_{pt}g_{turs}(\mathbf{t}_1^T)_{qu}+\sum_{tm}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqms}-\sum_{tn}(\mathbf{t}_1)_{pt}g_{tqrn}(\mathbf{t}_1^T)_{sn}\\
@@ -152,33 +157,34 @@ For the two-electron integral we have a similar expression:
 
 This expression can be divided in 16 cases, that can be further simplified by symmetry.
 \begin{align}
-  {\tilde g}_{ijkl}=&g_{ijkl}+\sum_{e}(g_{iekl}t_i^e+g_{ijke}t_j^e)+\sum_{ef}g_{iekf}t_j^et_l^f\\
+  {\tilde g}_{ijkl}=&g_{ijkl}+\sum_{e}(g_{iekl}t_j^e+g_{ijke}t_l^e)+\sum_{ef}g_{iekf}t_j^et_l^f\label{eq:t1g_ijkl}\\
 %  &=g_{ijkl}+\sum_{e}\bigg[\bigg(g_{iekl}+\sum_fg_{iekf}t_l^f\bigg)t_i^e+g_{ijke}t_j^e\bigg]\\
-  {\tilde g}_{ijka}=&g_{ijka}+\sum_{e}g_{ieka}t_j^e\\ 
+  {\tilde g}_{ijka}=&g_{ijka}+\sum_{e}g_{ieka}t_j^e\label{eq:t1g_ijka}\\ 
   {\tilde g}_{ijak}=&g_{ijak}+\sum_{e}(g_{ieak}t_j^e+g_{ijae}t_k^e)-\sum_lt_l^ag_{ijlk}\nonumber\\
-  &+\sum_{ef}g_{ieaf}t_j^et_l^f-\sum_{el}t_l^a(g_{ielk}t_j^e+g_{ijle}t_k^e)-\sum_{efl}t_l^ag_{ielf}t_j^et_k^f\\
-  {\tilde g}_{iajk}=&{\tilde g}_{jkia}\\
-  {\tilde g}_{aijk}=&{\tilde g}_{jkai}\\
-  {\tilde g}_{ijab}=&g_{ijab}+\sum_{e}g_{ieab}t_j^e-\sum_{l}t_l^ag_{ijlb}-\sum_{el}t_l^ag_{ielb}t_j^e\\
-  {\tilde g}_{iajb}=&g_{iajb}\\
-  {\tilde g}_{aijb}=&g_{aijb}+\sum_{e}g_{aejb}t_i^e-\sum_{l}t_l^ag_{lijb}-\sum_{el}t_l^ag_{lejb}t_i^e\\
-  {\tilde g}_{iabj}=&{\tilde g}_{bjai}\\
+  &+\sum_{ef}g_{ieaf}t_j^et_l^f-\sum_{el}t_l^a(g_{ielk}t_j^e+g_{ijle}t_k^e)-\sum_{efl}t_l^ag_{ielf}t_j^et_k^f\label{eq:t1g_ijak}\\
+  {\tilde g}_{iajk}=&{\tilde g}_{jkia}\label{eq:t1g_iajk}\\
+  {\tilde g}_{aijk}=&{\tilde g}_{jkai}\label{eq:t1g_aijk}\\
+  {\tilde g}_{ijab}=&g_{ijab}+\sum_{e}g_{ieab}t_j^e-\sum_{l}t_l^ag_{ijlb}-\sum_{el}t_l^ag_{ielb}t_j^e\label{eq:t1g_ijab}\\
+  {\tilde g}_{iajb}=&g_{iajb}\label{eq:t1g_iajb}\\
+  {\tilde g}_{aijb}=&g_{aijb}+\sum_{e}g_{aejb}t_i^e-\sum_{l}t_l^ag_{lijb}-\sum_{el}t_l^ag_{lejb}t_i^e\label{eq:t1g_aijb}\\
+  {\tilde g}_{iabj}=&{\tilde g}_{bjia}\label{eq:t1g_iabj}\\
   {\tilde g}_{aibj}=&g_{aibj}+\sum_{e}(g_{aebj}t_i^e+g_{aibe}t_j^e)-\sum_{l}(t_l^ag_{libj}+t_l^bg_{ailj})\nonumber\\
   &+\sum_{ef}g_{aebf}t_i^et_j^f-\sum_{el}(t_l^ag_{lebj}t_i^e+t_l^bg_{aelj}t_i^e+t_l^ag_{libe}t_j^e+t_l^bg_{aile}t_j^e)\nonumber\\
   &+\sum_{lk}t_l^at_k^bg_{likj}+\sum_{ekl}(t_l^at_k^bg_{lekj}t_i^e+t_l^at_k^bg_{like}t_j^e)\nonumber\\
-  &-\sum_{efl}(t_l^ag_{lebf}t_i^et_j^f+t_l^bg_{aelf}t_i^et_j^f)+\sum_{lkef}t_l^at_k^bg_{lekf}t_i^et_j^f\\
-  {\tilde g}_{abij}=&{\tilde g}_{ijab}\\
-  {\tilde g}_{iabc}=&g_{iabc}-\sum_{l}t_l^bg_{ialc}\\
+  &-\sum_{efl}(t_l^ag_{lebf}t_i^et_j^f+t_l^bg_{aelf}t_i^et_j^f)+\sum_{lkef}t_l^at_k^bg_{lekf}t_i^et_j^f\label{eq:t1g_aibj}\\
+  {\tilde g}_{abij}=&{\tilde g}_{ijab}\label{eq:t1g_abij}\\
+  {\tilde g}_{iabc}=&g_{iabc}-\sum_{l}t_l^bg_{ialc}\label{eq:t1g_iabc}\\
   {\tilde g}_{aibc}=&g_{aibc}+\sum_{e}g_{aebc}t_i^e-\sum_l(t_l^ag_{libc}+t_l^bg_{ailc})\nonumber\\
-  &-\sum_{el}(t_l^ag_{lebc}t_i^e+t_l^bg_{aelc}t_i^e)+\sum_{lk}t_l^at_k^bg_{likc}+\sum_{elk}t_l^at_k^bg_{lekc}t_i^e\\
-  {\tilde g}_{abic}=&{\tilde g}_{icab}\\
-  {\tilde g}_{abci}=&{\tilde g}_{ciab}\\
-  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^at_k^cg_{lbkc}
+  &-\sum_{el}(t_l^ag_{lebc}t_i^e+t_l^bg_{aelc}t_i^e)+\sum_{lk}t_l^at_k^bg_{likc}+\sum_{elk}t_l^at_k^bg_{lekc}t_i^e\label{eq:t1g_aibc}\\
+  {\tilde g}_{abic}=&{\tilde g}_{icab}\label{eq:t1g_abic}\\
+  {\tilde g}_{abci}=&{\tilde g}_{ciab}\label{eq:t1g_abci}\\
+  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^at_k^cg_{lbkc}\label{eq:t1g_abcd}
 \end{align}
 
-Note that, due to symmetry, only 9 cases must be computed.
-Moreover, only part of ${\tilde g}_{ijkl}$, ${\tilde g}_{aibj}$ and ${\tilde g}_{abcd}$ must be calculated.
+Note that, due to symmetry, only 9 cases must be computed ( equations \ref{eq:t1g_ijkl}, \ref{eq:t1g_ijka}, \ref{eq:t1g_ijak}, \ref{eq:t1g_ijab}, \ref{eq:t1g_aijb}, \ref{eq:t1g_aibj}, \ref{eq:t1g_iabc}, \ref{eq:t1g_aibc} and \ref{eq:t1g_abcd}).
+Moreover, only part of the equations \ref{eq:t1g_ijkl}, \ref{eq:t1g_aibj} and \ref{eq:t1g_abcd} must be calculated.
 If we impose $i\ge k$, $a\ge b$ and $i\ge j$, and $a\ge c$, respectively, we generate all elements for theses three cases.
+Last, for the equation \ref{eq:t1g_iajb} there is no transformation and the values can be copied from the original matrix.
 
 
 \subsection{Residuals}
@@ -276,6 +282,10 @@ Other way to open this equation is
 
 \input{ccsd_flowchart}
 
+\newpage
+\section{Test: Class Diagram}
+Trying to organize the Classes (https://en.wikipedia.org/wiki/Class\_diagram)
+\input{class_flowchart}
 
 
 %%% Local Variables:
