@@ -39,6 +39,8 @@ def main(args, f_out):
         logger.info(resCC.wave_function)
         f_out.write(
             f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
+    elif args.method in ('CCD', 'CCSD'):
+        level = 'SD' if 'SD' in args.method else 'D'
     else:
         raise ValueError(
             'Only CC method so far implemented is for CC_manifold!')

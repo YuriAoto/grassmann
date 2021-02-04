@@ -2,6 +2,7 @@
 """
 import copy
 
+from util.results import OptResults
 from wave_function.int_norm import IntermNormWaveFunction
 from orbitals.symmetry import OrbitalsSets
 import .ccsd
@@ -51,13 +52,13 @@ def cc_closed_shell(hf_energy,
                                occ_type='R')
         core_orb = OrbitalsSets([0],
                                 occ_type='R')
-        cc_wf = IntermNormWaveFunction.from_zero_amplitudes(
+        wave_function = IntermNormWaveFunction.from_zero_amplitudes(
             point_group, ref_occ, orb_dim, core_orb, level=level)
     elif isinstance(wf_ini, IntermNormWaveFunction):
         if preserve_wf_ini:
-            cc_wf = copy.deepcopy(wf_ini)
+            wave_function = copy.deepcopy(wf_ini)
         else:
-            cc_wf = wf_ini
+            wave_function = wf_ini
     else:
         raise ValueError(
             'wf_ini must be an instance of IntermNormWaveFunction.')
@@ -75,13 +76,22 @@ def cc_closed_shell(hf_energy,
     
     omega1 = None
 
-    i=0
+    n_iter = 0
     while True:
-        i+=1
-        CC_E = ccsd.energy(cc_wf,hf_energy)
+        n_iter+=1
+        energy = ccsd.energy(wave_function,hf_energy)
         conv_status = ccsd.test_conv(omega1,omega2) 
-        if conv_status or i == max_iter:
+        if conv_status or n_iter == max_iter:
             break
  
-        omega1,omega2=ccsd.equation(wf_cc,h,g,F,L)
-        cc_wf.update_amplitudes(omega1,omega2)
+        omega1,omega2=ccsd.equation(wave_function,h,g,F,L)
+        wave_function.update_amplitudes(omega0,omega2)
+
+    results = OptResults('CC'+level)
+    results.wave_function=wave_function
+    results.energy=energy
+    results.n_inter=n_inter
+    if conv_status:
+        results.sucess = True
+    else:
+        results.warning = True ##((Or error?))
