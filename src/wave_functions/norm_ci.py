@@ -389,7 +389,7 @@ class NormCI_WaveFunction(WaveFunction):
         self.act_orb = intN_wf.act_orb
         self.orb_dim = intN_wf.orb_dim
         self.ref_orb = intN_wf.ref_orb
-        self.WF_type = intN_wf.WF_type
+        self.wf_type = intN_wf.wf_type
         self.source = intN_wf.source
         self._i_ref = None
         if not use_structure:
@@ -461,7 +461,7 @@ class NormCI_WaveFunction(WaveFunction):
         uhf_alpha_was_read = False
         found_orbital_source = False
         self.has_FCI_structure = True
-        self.WF_type = 'FCI'
+        self.wf_type = 'FCI'
         if not use_structure:
             self._all_determinants = []
         if isinstance(molpro_output, str):
@@ -1022,7 +1022,7 @@ class NormCI_WaveFunction(WaveFunction):
         new_wf.act_orb = self.act_orb
         new_wf.orb_dim = self.orb_dim
         new_wf.ref_orb = self.ref_orb
-        new_wf.WF_type = self.WF_type
+        new_wf.wf_type = self.wf_type
         new_wf.source = (self.source.replace(' (another basis)', '')
                          + ' (another basis)')
         n_calcs = 0

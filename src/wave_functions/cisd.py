@@ -258,7 +258,7 @@ class CISD_WaveFunction(WaveFunction):
     def similar_to(cls, wf, wf_type):
         """Construct a WaveFunctionFCI with same basic attributes as wf"""
         new_wf = super().similar_to(wf)
-        new_wf.WF_type = wf_type
+        new_wf.wf_type = wf_type
         new_wf.initialize_SD_lists()
         return new_wf
     
@@ -273,19 +273,19 @@ class CISD_WaveFunction(WaveFunction):
         new_wf.act_orb = intN_wf.act_orb
         new_wf.orb_dim = intN_wf.orb_dim
         new_wf.ref_orb = intN_wf.ref_orb
-        if intN_wf.WF_type == 'CISD':
-            new_wf.WF_type = intN_wf.WF_type
-        elif intN_wf.WF_type == 'CCSD':
-            new_wf.WF_type = (
+        if intN_wf.wf_type == 'CISD':
+            new_wf.wf_type = intN_wf.wf_type
+        elif intN_wf.wf_type == 'CCSD':
+            new_wf.wf_type = (
                 'CISD (with C_ij^ab = t_ij^ab + t_i^a t_j^b from CCSD)')
-        elif intN_wf.WF_type in ('CCD', 'BCCD'):
-            new_wf.WF_type = (
-                'CISD (with C_ij^ab = t_ij^ab from ' + intN_wf.WF_type + ')')
+        elif intN_wf.wf_type in ('CCD', 'BCCD'):
+            new_wf.wf_type = (
+                'CISD (with C_ij^ab = t_ij^ab from ' + intN_wf.wf_type + ')')
         else:
             raise ValueError(
                 'This is to be used for CISD, CCSD, CCD, and BCCD'
                 + ' wave functions only!')
-        if intN_wf.WF_type in ('CCSD', 'CCD', 'BCCD'):
+        if intN_wf.wf_type in ('CCSD', 'CCD', 'BCCD'):
             logger.warning(
                 'This is actually a CISD wave function using coefficients'
                 + ' from coupled-cluster amplitudes!!')
@@ -305,7 +305,7 @@ class CISD_WaveFunction(WaveFunction):
             if i_irrep != j_irrep:
                 new_wf.Csd[i_irrep][j_irrep][i, :, j, :] = \
                     2 * doubles[i_irrep][:, :] - doubles[j_irrep][:, :].T
-                if intN_wf.WF_type == 'CCSD':
+                if intN_wf.wf_type == 'CCSD':
                     new_wf.Csd[i_irrep][j_irrep][i, :, j, :] += (
                         2 * np.outer(intN_wf.singles[i_irrep][i, :],
                                      intN_wf.singles[j_irrep][j, :]))
@@ -323,7 +323,7 @@ class CISD_WaveFunction(WaveFunction):
                     ij = get_n_from_triang(i, j, with_diag=False)
                 new_wf.Csd[irp][irp][i, :, j, :] += doubles[irp][:, :]
                 new_wf.Csd[irp][irp][j, :, i, :] += doubles[irp][:, :].T
-                if intN_wf.WF_type == 'CCSD':
+                if intN_wf.wf_type == 'CCSD':
                     new_wf.Csd[irp][irp][i, :, j, :] += np.outer(singles[i, :],
                                                                  singles[j, :])
                     new_wf.Csd[irp][irp][j, :, i, :] += np.outer(singles[j, :],
@@ -338,7 +338,7 @@ class CISD_WaveFunction(WaveFunction):
                             new_wf.Cd[irp][ij, ab] = (
                                 doubles[irp][b, a]
                                 - doubles[irp][a, b])
-                            if intN_wf.WF_type == 'CCSD':
+                            if intN_wf.wf_type == 'CCSD':
                                 new_wf.Cd[irp][ij, ab] += (
                                     intN_wf.singles[irp][i, b]
                                     * intN_wf.singles[irp][j, a]
