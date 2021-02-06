@@ -101,7 +101,7 @@ def main(args, f_out):
         raise Exception('algorithm CISD_Absil is not compatible with'
                         + 'fci.NormCI_WaveFunction')
     logger.debug('External wave function:\n %r', ext_wf)
-    toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
+    toout('External wave function (|extWF>) is: ' + ext_wf.wf_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
         x = []
         for Index in ext_wf.string_indices():

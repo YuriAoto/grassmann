@@ -15,7 +15,9 @@ extensions = [
     Extension("coupled_cluster.manifold",
               ["coupled_cluster/manifold.pyx"]),
     Extension("wave_functions.strings_rev_lexical_order",
-              ["wave_functions/strings_rev_lexical_order.pyx"])
+              ["wave_functions/strings_rev_lexical_order.pyx"]),
+    Extension("util.array_indices",
+              ["util/array_indices.pyx"])
 ]
 
 setup(ext_modules=cythonize(extensions,
