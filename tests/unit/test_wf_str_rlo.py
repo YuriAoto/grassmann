@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-import test
+import tests
 from util.variables import int_dtype
 from wave_functions.fci import make_occ
 import wave_functions.strings_rev_lexical_order as str_order
@@ -14,7 +14,7 @@ import wave_functions.strings_rev_lexical_order as str_order
 class StringGraphsTestCase(unittest.TestCase):
         
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
     
     def test_gen_str_graph_0(self):
         with self.assertRaises(ValueError):
@@ -132,7 +132,7 @@ class StringGraphsTestCase2(unittest.TestCase):
 class StringGraphsTestCase3(unittest.TestCase):
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.string_gr_1 = str_order.generate_graph(4, 6)
         self.string_gr_2 = str_order.generate_graph(3, 5)
         self.string_gr_3 = str_order.generate_graph(5, 11)
@@ -183,7 +183,7 @@ class StringGraphsTestCase3(unittest.TestCase):
 class RevLexOrdTestCase3(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test_next_3el(self):
         occ = make_occ([0, 1, 2])

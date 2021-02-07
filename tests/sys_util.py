@@ -1,7 +1,7 @@
 """Functions and variables related to (electronic) systems for testing
 
 This supplies functions to access and iterate over directories
-in grassmann/test/inputs_outputs/, where tests can take place.
+in grassmann/tests/inputs_outputs/, where tests can take place.
 
 In particular:
 
@@ -18,8 +18,8 @@ results
 """
 import os
 
-main_files_dir = ('/home/yuriaoto/Documents/Codes/'
-                  + 'grassmann/src/test/inputs_outputs/')
+main_files_dir = (os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                               'inputs_outputs/')))
 
 _all_test_systems = [
     'H2__5__sto3g__C1',
@@ -83,7 +83,7 @@ def _get_inpout_file(file_name, only_exist=True, only_check=False):
 
     
     """
-    full_fname = main_files_dir + file_name
+    full_fname = os.path.join(main_files_dir, file_name)
     if only_check:
         return os.path.isfile(full_fname)
     if (not only_exist or os.path.isfile(full_fname)):
@@ -164,7 +164,7 @@ def test_systems(has_method=None,
     
     Yield:
     ------
-    str for the directories in grassmann/test/inputs_outputs/, that represent
+    str for the directories in tests/inputs_outputs/, that represent
     test_systems systems with molpro outputs where tests can take place.
     
     """

@@ -6,7 +6,7 @@ import unittest
 from scipy import linalg
 import numpy as np
 
-import test
+import tests
 from util.variables import int_dtype
 from wave_functions import general, norm_ci, int_norm
 from wave_functions.fci import make_occ
@@ -18,12 +18,12 @@ class WFConstructorsTestCase(unittest.TestCase):
     
     def setUp(self):
         self.int_N_WF = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CISD_file('H2__5__sto3g__D2h'))
-        test.logger.info('end of WFConstructorsTestCase.SetUp')
+            tests.CISD_file('H2__5__sto3g__D2h'))
+        tests.logger.info('end of WFConstructorsTestCase.SetUp')
     
     def test_int_norm_contructor(self):
         wf = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
-            test.FCI_file('H2__5__sto3g__D2h'),
+            tests.FCI_file('H2__5__sto3g__D2h'),
             zero_coefficients=True)
         wf.get_coeff_from_int_norm_WF(self.int_N_WF,
                                       change_structure=False,
@@ -35,13 +35,13 @@ class WFConstructorsTestCase(unittest.TestCase):
         self.assertAlmostEqual(wf[1].c, -0.6535848273569357, places=10)
         self.assertEqual(wf[1].occupation[4], make_occ([0]))
         self.assertEqual(wf[1].occupation[12], make_occ([0]))
-        test.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
+        tests.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
 
 
 class SlaterDetTestCase(unittest.TestCase):
         
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.n_irrep = 4
         self.string_index = SD_StringIndex()
         self.string_index.C = 0.12345
@@ -247,12 +247,12 @@ class SlaterDetTestCase(unittest.TestCase):
 class JacHess_H2_TestCase(unittest.TestCase):
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.WF = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
-            test.FCI_file('H2__5__sto3g__D2h'))
+            tests.FCI_file('H2__5__sto3g__D2h'))
         Ures = []
         Uunres = []
-        prng = np.random.RandomState(test.init_random_state)
+        prng = np.random.RandomState(tests.init_random_state)
         for spirrep in self.WF.spirrep_blocks(restricted=True):
             K = self.WF.orb_dim[spirrep]
             newU = prng.random_sample(size=(K, K))
@@ -274,11 +274,11 @@ class JacHess_H2_TestCase(unittest.TestCase):
                                                         restricted=True)
         Jnum, Hnum = self.WFres.make_Jac_Hess_overlap(analytic=False,
                                                       restricted=True)
-        test.logger.info('Wave function:\n%r', self.WF)
-        test.logger.info('Analytic Jacobian:\n%r', Janal)
-        test.logger.info('Numeric Jacobian:\n%r', Jnum)
-        test.logger.info('Analytic Hessian:\n%r', Hanal)
-        test.logger.info('Numeric Hessian:\n%r', Hnum)
+        tests.logger.info('Wave function:\n%r', self.WF)
+        tests.logger.info('Analytic Jacobian:\n%r', Janal)
+        tests.logger.info('Numeric Jacobian:\n%r', Jnum)
+        tests.logger.info('Analytic Hessian:\n%r', Hanal)
+        tests.logger.info('Numeric Hessian:\n%r', Hnum)
         self.assertEqual(Janal, Jnum)
         self.assertEqual(Hanal, Hnum)
     
@@ -287,11 +287,11 @@ class JacHess_H2_TestCase(unittest.TestCase):
                                                         restricted=True)
         Jnum, Hnum = self.WFres.make_Jac_Hess_overlap(analytic=False,
                                                       restricted=True)
-        test.logger.info('Wave function:\n%r', self.WFres)
-        test.logger.info('Analytic Jacobian:\n%r', Janal)
-        test.logger.info('Numeric Jacobian:\n%r', Jnum)
-        test.logger.info('Analytic Hessian:\n%r', Hanal)
-        test.logger.info('Numeric Hessian:\n%r', Hnum)
+        tests.logger.info('Wave function:\n%r', self.WFres)
+        tests.logger.info('Analytic Jacobian:\n%r', Janal)
+        tests.logger.info('Numeric Jacobian:\n%r', Jnum)
+        tests.logger.info('Analytic Hessian:\n%r', Hanal)
+        tests.logger.info('Numeric Hessian:\n%r', Hnum)
         self.assertEqual(Janal, Jnum)
         self.assertEqual(Hanal, Hnum)
     
@@ -300,11 +300,11 @@ class JacHess_H2_TestCase(unittest.TestCase):
                                                           restricted=False)
         Jnum, Hnum = self.WFunres.make_Jac_Hess_overlap(analytic=False,
                                                         restricted=False)
-        test.logger.info('Wave function:\n%r', self.WFunres)
-        test.logger.info('Analytic Jacobian:\n%r', Janal)
-        test.logger.info('Numeric Jacobian:\n%r', Jnum)
-        test.logger.info('Analytic Hessian:\n%r', Hanal)
-        test.logger.info('Numeric Hessian:\n%r', Hnum)
+        tests.logger.info('Wave function:\n%r', self.WFunres)
+        tests.logger.info('Analytic Jacobian:\n%r', Janal)
+        tests.logger.info('Numeric Jacobian:\n%r', Jnum)
+        tests.logger.info('Analytic Hessian:\n%r', Hanal)
+        tests.logger.info('Numeric Hessian:\n%r', Hnum)
         self.assertEqual(Janal, Jnum)
         self.assertEqual(Hanal, Hnum)
 
@@ -313,7 +313,7 @@ class WForbChangeTestCase(unittest.TestCase):
     
     def setUp(self):
         self.WF = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
-            test.FCI_file('H2__5__sto3g__D2h'))
+            tests.FCI_file('H2__5__sto3g__D2h'))
         self.U1 = []
         self.U2 = []
         self.U3 = []

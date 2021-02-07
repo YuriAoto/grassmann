@@ -8,6 +8,7 @@ History:
 
 Yuri
 """
+import os
 import logging
 import numpy as np
 from numpy import linalg
@@ -34,8 +35,8 @@ from coupled_cluster import manifold as cc_manifold
 
 logger = logging.getLogger(__name__)
 
-default_recipe_files = (
-    '/home/yuriaoto/Documents/Codes/grassmann/src/wave_functions/recipes')
+default_recipe_files = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
 
 
 _str_excitation_list = ['R',

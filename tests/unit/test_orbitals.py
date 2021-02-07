@@ -6,7 +6,7 @@ import unittest
 from scipy import linalg
 import numpy as np
 
-import test
+import tests
 from orbitals import orbitals
 from orbitals.symmetry import OrbitalsSets
 
@@ -14,8 +14,8 @@ from orbitals.symmetry import OrbitalsSets
 class ContructExtSpaceTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        self.prng = np.random.RandomState(test.init_random_state)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.prng = np.random.RandomState(tests.init_random_state)
 
     def test_constr_1(self):
         orb_dim = OrbitalsSets([2], occ_type='R')
@@ -104,9 +104,9 @@ class ContructExtSpaceTestCase(unittest.TestCase):
         newU[3, 0] = 1.0
         newU[5, 1] = 1.0
         U = [newU]
-        test.logger.info('U, before completing it:\n%s', U)
+        tests.logger.info('U, before completing it:\n%s', U)
         full_U = orbitals.complete_orb_space(U, orb_dim)
-        test.logger.info('U, after completing it:\n%s', full_U)
+        tests.logger.info('U, after completing it:\n%s', full_U)
         self.assertEqual(U[0][:, 0], U[0][:, 0])
         self.assertEqual(U[0][:, 1], U[0][:, 1])
         self.assertEqual(np.matmul(full_U[0], full_U[0].T),

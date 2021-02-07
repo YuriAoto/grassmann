@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-import test
+import tests
 from util.variables import int_dtype
 from wave_functions import fci, general
 from wave_functions.fci import make_occ
@@ -13,7 +13,7 @@ from wave_functions.fci import make_occ
 class ClusterDecTestCase(unittest.TestCase):
         
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.ref_det = fci.SlaterDet(
             c=0.0,
             alpha_occ=make_occ([0,1,2,3,4,5,6]),
@@ -261,7 +261,7 @@ class ClusterDecTestCase(unittest.TestCase):
 class SlaterDetTestCase(unittest.TestCase):
         
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         
     def test_simple_construction_and_namedtuple(self):
         det = fci.SlaterDet(c=0.123,
@@ -356,9 +356,9 @@ class SlaterDetTestCase(unittest.TestCase):
 class ExcInfoTestCase(unittest.TestCase):
         
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.wf = fci.WaveFunctionFCI.from_Molpro_FCI(
-            'test/inputs_outputs/h2o__Req__sto3g__C2v/FCI_allE.out')
+            'tests/inputs_outputs/h2o__Req__sto3g__C2v/FCI_allE.out')
 
     def test_get_exc_1(self):
         rank, alpha_hp, beta_hp = self.wf.get_exc_info(

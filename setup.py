@@ -20,17 +20,19 @@ extensions = [
               ["src/util/array_indices.pyx"])
 ]
 
+requires=['numpy',
+          'scipy',
+          'gitpython']
+
 setup(name='grassmann',
       version='0.0',
       description=(
           'Exploring the geometry of the electronic wave functions space'),
       author='Yuri Alexandre Aoto',
       author_email='yurikungfu@gmail.com',
-      install_requires=['numpy',
-                        'scipy',
-                        'gitpython'],
+      tests_require=requires,
       scripts=['src/Grassmann'],
-      test_suite="src.test",
+      test_suite="tests",
       ext_modules=cythonize(extensions,
                             language_level = "3",
                             annotate=True)

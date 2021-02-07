@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-import test
+import tests
 from util.variables import int_dtype
 from wave_functions import int_norm
 from orbitals.symmetry import OrbitalsSets
@@ -14,7 +14,7 @@ from string_indices.string_indices import SD_StringIndex
 class ConstructorTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test_from_zero_1(self):
         point_group = 'C1'
@@ -68,11 +68,11 @@ class ConstructorTestCase(unittest.TestCase):
 class He2StringIndicesTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.He2_wf = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CISD_file('He2__1.5__631g__D2h'))
+            tests.CISD_file('He2__1.5__631g__D2h'))
         self.He2_CCwf = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CCSD_file('He2__1.5__631g__D2h'))
+            tests.CCSD_file('He2__1.5__631g__D2h'))
 
     def test_string_indices_singles_cisd_He2(self):
         irrep = 0
@@ -413,9 +413,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, SD_StringIndex))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n%s',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n%s',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(len(Index[0]), 1)
         self.assertEqual(Index[4], zero_arr_1)
         self.assertEqual(len(Index[8]), 1)
@@ -427,9 +427,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, SD_StringIndex))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n%s',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n%s',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(len(Index[0]), 0)
         self.assertEqual(Index[4][:1], zero_arr_1)
         self.assertEqual(len(Index[8]), 0)
@@ -441,9 +441,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, SD_StringIndex))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n%s',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n%s',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(Index[0][:1], zero_arr_1)
         self.assertEqual(len(Index[4]), 0)
         self.assertEqual(Index[8][:1], zero_arr_1)
@@ -455,9 +455,9 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, SD_StringIndex))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n%s',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n%s',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b, Index)
         self.assertEqual(Index[0], zero_arr_1)
         self.assertEqual(len(Index[4]), 1)
         self.assertEqual(Index[8], zero_arr_1)
@@ -472,15 +472,15 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.DoublesTypes))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n'
-                         + 'baba: %s\nabab: %s\n'
-                         + 'abba: %s\nbaab: %s\n'
-                         + 'aaaa: %s\nbbbb: %s\n',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b,
-                         Index.baba, Index.abab,
-                         Index.abba, Index.baab,
-                         Index.aaaa, Index.bbbb)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n'
+                          + 'baba: %s\nabab: %s\n'
+                          + 'abba: %s\nbaab: %s\n'
+                          + 'aaaa: %s\nbbbb: %s\n',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b,
+                          Index.baba, Index.abab,
+                          Index.abba, Index.baab,
+                          Index.aaaa, Index.bbbb)
         # ----
         self.assertEqual(Index.baba[irrep_b + n_irrep], one_arr_1)
         self.assertEqual(Index.baba[irrep_a], one_arr_1)
@@ -513,15 +513,15 @@ class He2StringIndicesTestCase(unittest.TestCase):
         Index = self.He2_wf._make_occ_indices_for_doubles(
             i, j, irrep_i, irrep_j, irrep_a, irrep_b)
         self.assertTrue(isinstance(Index, int_norm.DoublesTypes))
-        test.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
-                         + ' irrep_a = %d; irrep_b = %d:\n'
-                         + 'baba: %s\nabab: %s\n'
-                         + 'abba: %s\nbaab: %s\n'
-                         + 'aaaa: %s\nbbbb: %s\n',
-                         i, irrep_i, j, irrep_j, irrep_a, irrep_b,
-                         Index.baba, Index.abab,
-                         Index.abba, Index.baab,
-                         Index.aaaa, Index.bbbb)
+        tests.logger.info('(i, irrep_i) = (%d, %d); (j, irrep_j) = (%d, %d);'
+                          + ' irrep_a = %d; irrep_b = %d:\n'
+                          + 'baba: %s\nabab: %s\n'
+                          + 'abba: %s\nbaab: %s\n'
+                          + 'aaaa: %s\nbbbb: %s\n',
+                          i, irrep_i, j, irrep_j, irrep_a, irrep_b,
+                          Index.baba, Index.abab,
+                          Index.abba, Index.baab,
+                          Index.aaaa, Index.bbbb)
         # ----
         self.assertEqual(len(Index.baba[irrep_j + n_irrep]), 0)
         self.assertEqual(len(Index.baba[irrep_i]), 0)

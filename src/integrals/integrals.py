@@ -5,14 +5,14 @@ import math
 from subprocess import check_output, CalledProcessError
 from tempfile import mkdtemp
 from shutil import rmtree
-from os import path
+import os
 from sys import version_info
 import logging
 
 import numpy as np
 from scipy import linalg
 
-from util.variables import wmmeDir
+from input_output.parser import ParseError
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -40,25 +40,30 @@ class Integrals():
 
     def set_wmme_integrals(self):
         """Set integrals from Knizia's ir-wmme program"""
+        try:
+            wmmeDir = os.environ['GR_IR_WMME_DIR']
+        except KeyError:
+            raise ParseError(
+                'Please set the environment variable GR_IR_WMME_DIR')
         wmmeBasePath = mkdtemp(prefix="bf-int.", dir=None)
-        wmme_xyz_file = path.join(wmmeBasePath, 'coord.xyz')
-        wmme_overlap_file = path.join(wmmeBasePath, 'overlap.int')
-        wmme_coreh_file = path.join(wmmeBasePath, 'coreh.int')
-        wmme_fint2e_file = path.join(wmmeBasePath, 'fint.int')
-        basis_files = {'sto-3g': path.join(wmmeDir
-                                           + '/bases/emsl_sto3g.libmol'),
-                       'sto-6g': path.join(wmmeDir
-                                           + '/bases/emsl_sto6g.libmol'),
-                       'cc-pVDZ': path.join(wmmeDir
-                                            + '/bases/emsl_cc-pVDZ.libmol'),
-                       'cc-pVTZ': path.join(wmmeDir
-                                            + '/bases/emsl_cc-pVTZ.libmol')}
-        cmd = [path.join(wmmeDir + 'wmme')]
+        wmme_xyz_file = os.path.join(wmmeBasePath, 'coord.xyz')
+        wmme_overlap_file = os.path.join(wmmeBasePath, 'overlap.int')
+        wmme_coreh_file = os.path.join(wmmeBasePath, 'coreh.int')
+        wmme_fint2e_file = os.path.join(wmmeBasePath, 'fint.int')
+        basis_files = {'sto-3g': os.path.join(wmmeDir
+                                              + '/bases/emsl_sto3g.libmol'),
+                       'sto-6g': os.path.join(wmmeDir
+                                              + '/bases/emsl_sto6g.libmol'),
+                       'cc-pVDZ': os.path.join(wmmeDir
+                                               + '/bases/emsl_cc-pVDZ.libmol'),
+                       'cc-pVTZ': os.path.join(wmmeDir
+                                               + '/bases/emsl_cc-pVTZ.libmol')}
+        cmd = [os.path.join(wmmeDir + 'wmme')]
         cmd.extend(['--basis-fit', "univ-JKFIT"])
         cmd.extend(['--basis-orb', self.basis_set])
         cmd.extend(['--basis-lib', basis_files[self.basis_set]])
         cmd.extend(['--basis-lib',
-                    path.join(wmmeDir + '/bases/def2-nzvpp-jkfit.libmol')])
+                    os.path.join(wmmeDir + '/bases/def2-nzvpp-jkfit.libmol')])
         cmd.extend(['--atoms-au', wmme_xyz_file])
         cmd.extend(['--save-coreh', wmme_coreh_file])
         cmd.extend(['--save-overlap', wmme_overlap_file])

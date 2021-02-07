@@ -1,11 +1,12 @@
+grassmann.egg-info
 build
 *.pyc
+testing.log
 doc/*.aux
 doc/*.log
 doc/*.out
 doc/grassmann_doc.toc
 doc/grassmann_doc.pdf
-grassmann/testing.log
 grassmann/test/inputs_outputs/*/*min_dist*
 src/*/*.c
 src/*/*.so
