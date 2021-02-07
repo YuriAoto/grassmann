@@ -148,7 +148,7 @@ def calc_U_from_z(z, wf):
         if spirrep == wf.n_irrep and n_param == len(z):
             restricted = True
             break
-        nK = wf.ref_occ[spirrep] * wf.n_ext[spirrep]
+        nK = wf.ref_orb[spirrep] * wf.virt_orb[spirrep]
         spirrep_start.append(spirrep_start[-1] + nK)
         n_param += nK
     if n_param != len(z):
@@ -157,8 +157,8 @@ def calc_U_from_z(z, wf):
             + 'len(z) = ' + str(len(z))
             + '\nz:\n' + str(z)
             + '\nn_param = ' + str(n_param)
-            + '; n_corr_orb = ' + str(wf.n_corr_orb)
-            + '; n_ext = ' + str(wf.n_ext))
+            + '; corr_orb = ' + str(wf.corr_orb)
+            + '; virt_orb = ' + str(wf.virt_orb))
     U = []
     for spirrep in wf.spirrep_blocks(restricted=restricted):
         if wf.orb_dim[spirrep] == 0:
@@ -172,16 +172,16 @@ def calc_U_from_z(z, wf):
         else:
             K = np.zeros((wf.orb_dim[spirrep],
                           wf.orb_dim[spirrep]))
-            K[:wf.ref_occ[spirrep],  # K[i,a]
-              wf.ref_occ[spirrep]:] = (
+            K[:wf.ref_orb[spirrep],  # K[i,a]
+              wf.ref_orb[spirrep]:] = (
                   np.reshape(z[spirrep_start[spirrep]:
                                spirrep_start[spirrep + 1]],
-                             (wf.ref_occ[spirrep],
-                              wf.n_ext[spirrep])))
-            K[wf.ref_occ[spirrep]:,  # K[a,i] = -K[i,a]
-              :wf.ref_occ[spirrep]] = -(
-                  K[:wf.ref_occ[spirrep],
-                    wf.ref_occ[spirrep]:].T)
+                             (wf.ref_orb[spirrep],
+                              wf.virt_orb[spirrep])))
+            K[wf.ref_orb[spirrep]:,  # K[a,i] = -K[i,a]
+              :wf.ref_orb[spirrep]] = -(
+                  K[:wf.ref_orb[spirrep],
+                    wf.ref_orb[spirrep]:].T)
             logger.info('Current K[spirrep=%d] matrix:\n%s',
                         spirrep, K)
         U.append(expm(K))

@@ -1,0 +1,45 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: 63424b9751f0803af38a82879cdf33fe377b764d
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/grassmann/test/inputs_outputs/Li2__5__sto3g__D2h
+
+Command:
+../../../dGr \
+--at_ref \
+--output CISD.ref2 \
+CISD.out 
+
+From command line and environment:
+External wave function, |extWF>: CISD.out
+Orbital basis of |extWF>: CISD.out
+Hartree-Fock orbitals, |min E>: CISD.out
+Performing analysis at the reference wave function.
+State: 
+Log level: WARNING
+qpy job ID: not in qpy
+
+Starting at 10 Jun 2020 - 15:21
+
+External wave function (|extWF>) is: CISD
+Using |WFref> (the reference of |extWF>) as |min E>.
+|<WFref|extWF>| =   0.95340577 ; D(WFref, extWF) =   0.30526786
+Number of alpha and beta electrons: 3 3
+Dim. of core orb. space:  alpha/beta: [ 1 0 0 0 1 0 0 0 ]
+Dim. of ref. determinant: alpha/beta: [ 2 0 0 0 1 0 0 0 ]
+Dim. of orbital space:    alpha/beta: [ 3 1 1 0 3 1 1 0 ]
+
+Calculation at the reference wave function (elapsed time: 0:00:00.020015)
+------------------------------
+|J|  = |t_i^a|    = 0.0598016
+|ΔK| = |H^-1 @ J| = 0.0403299
+|ΔK|/√(n_corr_el) = 0.0285176
+|<refWF|1st it>| =   0.99837438
+|<refWF|1st it>|^(1/n_el) =   0.99972888
+Hessian (H) has 0 positive eigenvalues
+------------------------------
+
+Ending at 10 Jun 2020 - 15:21
+Total time: 0:00:00.024966

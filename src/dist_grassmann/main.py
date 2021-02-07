@@ -166,6 +166,11 @@ def main(args, f_out):
     toout('Dim. of orbital space:    {0:}'.
           format(ext_wf.orb_dim))
     toout()
+    if args.save_all_orb or args.save_final_orb:
+        try:
+            os.mkdir(args.outdir)
+        except FileExistsError:
+            pass
     if args.at_ref:
         toout('Calculation at the reference wave function',
               add_new_line=False)
@@ -178,9 +183,9 @@ def main(args, f_out):
                 f_out=None,
                 at_reference=True)
         toout('-' * 30)
-        if not ('CCD' in ext_wf.WF_type or 'BCCD' in ext_wf.WF_type):
+        if not ('CCD' in ext_wf.wf_type or 'BCCD' in ext_wf.wf_type):
             toout('|J|  = |t_i^a|    = {0:.7f}'.format(res.norm[1]))
-            if 'CCSD' in ext_wf.WF_type:
+            if 'CCSD' in ext_wf.wf_type:
                 toout('T1 diagnostic     = {0:.7f}'.format(
                     res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
             toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
@@ -212,8 +217,8 @@ def main(args, f_out):
                 ini_U=U,
                 max_iter=args.maxiter,
                 enable_uphill=False,
-                save_all_U_dir=(args.output + '_all_U/'
-                                if args.save_all_U else
+                save_all_U_dir=(args.outdir + '/'
+                                if args.save_all_orb else
                                 None))
         else:
             res = optimiser.optimise_overlap_Absil(
@@ -221,8 +226,8 @@ def main(args, f_out):
                 f_out=f_out,
                 max_iter=args.maxiter,
                 ini_U=U,
-                save_all_U_dir=(args.output + '_all_U/'
-                                if args.save_all_U else
+                save_all_U_dir=(args.outdir + '/'
+                                if args.save_all_orb else
                                 None))
         toout('-' * 30)
         logger.info('Optimisation completed')
@@ -273,9 +278,10 @@ def main(args, f_out):
  external wave function (|extWF>) to the one that makes |minD>
  the first determinant.""")
         final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
-                   if args.save_full_U else
+                   if args.save_full_orb else
                    res.U)
-        np.savez(args.output + '_U', *final_U)
+        if args.save_final_orb:
+            np.savez(args.outdir + '/U_minD', *final_U)
         if args.HF_orb != args.WF_orb:
             print_ovlp_D('refWF', 'minD',
                          ovlp_Slater_dets((2 * res.U)

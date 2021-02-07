@@ -60,70 +60,73 @@ def _parser():
         and it is what is passed to Grassmann after --ini_orb, for example.
         ''')))
     parser.add_argument('--molpro_output',
-                         help='Molpro output with the correlated wave function')
+                        help='Molpro output with the correlated wave function')
     parser.add_argument('--geometry',
-                         help='A xyz geometry file')
+                        help='A xyz geometry file')
     parser.add_argument('--memory', default='100.0kB',
-                         help='memory')
+                        help='memory')
     parser.add_argument('--basis', default='cc-pVDZ',
-                         help='basis set')
+                        help='basis set')
     parser.add_argument('--ini_orb',
-                         help='initial guess for orbitals'
-                         + ' or transformation matrices,'
-                         + ' as Molpro\'s "put" xml file or'
-                         + ' npz file')
+                        help='initial guess for orbitals'
+                        + ' or transformation matrices,'
+                        + ' as Molpro\'s "put" xml file or'
+                        + ' npz file')
     parser.add_argument('--HF_orb',
-                         help='Hartree-Fock orbitals'
-                         + ' (as Molpro\'s "put" xml file)')
+                        help='Hartree-Fock orbitals'
+                        + ' (as Molpro\'s "put" xml file)')
     parser.add_argument('--method',
-                         help='The method.')
+                        help='The method.')
     parser.add_argument('--WF_orb',
-                         help='orbital basis of the wave function'
-                         + ' (as Molpro\'s "put" xml file).'
-                         + ' If not given, assume  to be the same as'
-                         + '  molpro_output')
+                        help='orbital basis of the wave function'
+                        + ' (as Molpro\'s "put" xml file).'
+                        + ' If not given, assume  to be the same as'
+                        + '  molpro_output')
     parser.add_argument('--WF_templ',
-                         help='a Molpro output with a Full CI wave function,'
-                         + ' to be used as template')
+                        help='a Molpro output with a Full CI wave function,'
+                        + ' to be used as template')
     parser.add_argument('--maxiter',
-                         help='Maximum number of iterations',
-                         type=int)
+                        help='Maximum number of iterations',
+                        type=int)
     parser.add_argument('--at_ref',
-                         help='Do only one iteration at reference.',
-                         action='store_true')
+                        help='Do only one iteration at reference.',
+                        action='store_true')
     parser.add_argument('--algorithm',
-                         help='the algorithm to be used in the optimisation.'
-                         + ' Possible values are: "orb_rotations",'
-                         + ' "general_Absil",  and "CISD_Absil".'
-                         + ' Default is "CISD_Absil".')
-    parser.add_argument('--save_full_U',
-                         help='If set, the saved matrix U will contain'
-                         + ' also the virtual orbitals of the optimised'
-                         + ' point.',
-                         action='store_true')
-    parser.add_argument('--save_all_U',
-                         help='If set, the matrix U is saved in every'
-                         + ' iteration of the optimisation, in the files'
-                         + '<output_name>_all_U/orb_it_<i_it>.npz',
-                         action='store_true')
+                        help='the algorithm to be used in the optimisation.'
+                        + ' Possible values are: "orb_rotations",'
+                        + ' "general_Absil",  and "CISD_Absil".'
+                        + ' Default is "CISD_Absil".')
+    parser.add_argument('--save_final_orb',
+                        help='If set, save final orbitals.',
+                        action='store_true')
+    parser.add_argument('--save_full_orb',
+                        help='If set, the saved orbitals will contain'
+                        + ' also the virtual orbitals of the optimised'
+                        + ' point.',
+                        action='store_true')
+    parser.add_argument('--save_all_orb',
+                        help='If set, the orbitals are saved in every'
+                        + ' iteration of the optimisation, in the files'
+                        + 'orb_it_<i_it>.npz',
+                        action='store_true')
     parser.add_argument('--state',
-                         help='desired state, in Molpro notation')
+                        help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
-                         help='set log level (integer)')
+                        help='set log level (integer)')
     parser.add_argument('--logfilter',
-                         help='regular expression to filter function names'
-                         + ' for logging (for debug)')
+                        help='regular expression to filter function names'
+                        + ' for logging (for debug)')
     parser.add_argument('--out_extension',
-                         help='The extension for output file',
+                        help='The extension for output file',
                         default='.gr')
     parser.add_argument('--log_extension',
-                         help='The extension for the log file',
+                        help='The extension for the log file',
                         default='.grlog')
     parser.add_argument('--dir_extension',
-                         help='The extension for directory with extra files',
+                        help='The extension for directory with extra files',
                         default='.grdir')
     parser.add_argument('--output',
-                         help='Output file name. Passing this option overwrites'
+                        help='Output file name. Passing this option overwrites'
                         + '--out_extension.')
     return parser
 
@@ -316,20 +319,25 @@ def _argvise_file(filename, files_content, indentation):
     return args
 
 
-def _parse_files_in_sys_argv():
-    """Changes sys.argv to include "argvised" files
+def _parse_files_in_sys_argv(sysargv=None):
+    """Changes sysargv to include "argvised" files
     
-    To each element of sys.argv that is for not a pair
+    To each element of sysargv that is for not a pair
     --key value, say filename, change it by the content
     of the file with that name, after applying _argvise_file
     on it.
+    
+    Parameters:
+    -----------
+    sysargv (list of str or None)
+        Is None, use sys.argv. Otherwise use this to extrac the arguments
     
     Return:
     -------
     The tuple with the following:
     
     orig_sysargv (list of str)
-        The original sys.argv
+        The original sysargv
     
     files_content (list of str)
         The content of all files
@@ -340,35 +348,41 @@ def _parse_files_in_sys_argv():
     
     Side Effect:
     ------------
-    The sys.argv is changed
+    The sysargv is changed
     """
+    sysargv = sys.argv if sysargv is None else sysargv
     files_content = []
-    orig_sysargv = sys.argv[:]
+    orig_sysargv = sysargv[:]
     main_input = None
     i = 1
-    while i < len(sys.argv):
-        if sys.argv[i][:2] != '--' and sys.argv[i-1][:2] != '--':
+    while i < len(sysargv):
+        if sysargv[i][:2] != '--' and sysargv[i-1][:2] != '--':
             if main_input is None:
-                main_input = sys.argv[i]
-            argvfile = _argvise_file(sys.argv[i], files_content, '')
-            sys.argv[i:i] = argvfile
+                main_input = sysargv[i]
+            argvfile = _argvise_file(sysargv[i], files_content, '')
+            sysargv[i:i] = argvfile
             i += len(argvfile)
-            del sys.argv[i]
+            del sysargv[i]
         else:
             i += 2
     return orig_sysargv, files_content, main_input
 
 
-def parse():
+def parse(sysargv=None):
     """Parse the command line and possible input files
-        
+    
+    Parameters:
+    -----------
+    sysargv (list of str or None)
+        Is None, use sys.argv. Otherwise use this to extrac the arguments
+    
     Return:
     --------
     An instance of argparse.Namespace, holding all the arguments
     and some other attributes, see module docstring
     """
-    orig_sysargv, files_content, main_input = _parse_files_in_sys_argv()
-    args = _parser().parse_args()
+    orig_sysargv, files_content, main_input = _parse_files_in_sys_argv(sysargv)
+    args = _parser().parse_args(sysargv)
     args.sys_argv = orig_sysargv
     args.files_content = files_content
     args.main_input = main_input
