@@ -21,7 +21,30 @@ loglevel = logging.getLogger().getEffectiveLevel()
 class Integrals():
     """All molecular integrals
     
+    Parameters:
+    -----------
     
+    basis_set (int)
+        Name of the basis set to be used (This info is contained in mol_geo, why use?)
+
+    mol_geo (MolecularGeometry)
+        A MolecuarGeometry object conatining all molecular data
+
+    n_func (int)
+        Number of contarcted functions in the basis set ((??check))
+
+    S (np.ndarray ((??check)))
+        The overlap matrix
+    
+    h (np.ndarray ((??check)))
+        one-electron integral matxix
+
+    g (np.ndarray ((??check)))
+        two-electron integral matxix
+
+    X (??)
+        ??
+
     """
     def __init__(self, mol_geo, basis_set,
                  method='ir-wmme',

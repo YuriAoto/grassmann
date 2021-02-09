@@ -22,7 +22,7 @@ class Results:
         for the lack of success
     
     warning (str)
-        Eventual aarning
+        Eventual warning
     
     """
     

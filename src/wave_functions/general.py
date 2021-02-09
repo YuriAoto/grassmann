@@ -7,7 +7,7 @@ All wave functions should inherit from this class.
 
 Consider a multideterminantal wave function that:
 1) is symmetry adapted: It is presented in a basis of symmetry adapted
-   (spin-)orbitals, such that tach orbital belongs to one of g possible
+   (spin-)orbitals, such that each orbital belongs to one of g possible
    irreducible representations (irrep).
 2) is based on excitations on top of a Slater determinant,
    that is the reference determinant.
@@ -201,6 +201,7 @@ from util import memory
 from molecular_geometry.symmetry import (number_of_irreducible_repr,
                                          irrep_product)
 from orbitals.symmetry import OrbitalsSets
+
 
 
 class WaveFunction(ABC):
@@ -397,7 +398,7 @@ class WaveFunction(ABC):
             self.act_orb = wf.act_orb
         elif restricted:
             self.restricted = True
-            if np.any(self.act_orb.as_array):
+            if np.any(wf.act_orb.as_array()):
                 raise ValueError(
                     'act_orb is not empty, cannot be of restricted type!')
             self.act_orb = wf.act_orb

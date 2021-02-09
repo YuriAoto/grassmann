@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 default_recipe_files = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
 
-
 _str_excitation_list = ['R',
                         'S',
                         'D',
