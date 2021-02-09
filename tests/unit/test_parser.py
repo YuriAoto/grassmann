@@ -116,6 +116,10 @@ class ParserTestCase(unittest.TestCase):
             f.write(self.filename + ' # a file name\n')
             f.write('memory = 10GB\n')
     
+    def tearDown(self):
+        os.remove(self.filename)
+        os.remove(self.filename2)
+    
     def test_parse_cmd1(self):
         testargs = [__name__, self.filename]
         with patch.object(sys, 'argv', testargs):

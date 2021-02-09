@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-import test
+import tests
 from coupled_cluster.manifold cimport (
     EXC_TYPE_A, EXC_TYPE_B, EXC_TYPE_AA, EXC_TYPE_AB, EXC_TYPE_BB,
     _term1, _term2_diag, _exc_on_string)
@@ -16,7 +16,7 @@ from util.variables import int_dtype
 class ExcOnStringTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test1(self):
         self.assertEqual(make_occ([1, 2, 3, 4, 5, 6, -1]),
@@ -182,7 +182,7 @@ class ExcOnStringTestCase(unittest.TestCase):
 class Terms2el6orbTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.nel = 1
         self.norb = 3
         self.wf = np.array([[1.0,  0.7, -0.5],
@@ -303,7 +303,7 @@ class Terms2el6orbTestCase(unittest.TestCase):
 class Terms3el7orbTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.beta_nel = 1
         self.beta_norb = 3
         self.alpha_nel = 2

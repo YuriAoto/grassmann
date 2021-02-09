@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from scipy import linalg
 
-import test
+import tests
 from wave_functions import cisd, int_norm
 from orbitals import orbitals
 from dist_grassmann import absil
@@ -19,7 +19,7 @@ np.set_printoptions(formatter={'float': lambda x: '{0:>9.6f}'.format(x)})
 class YieldExcitations523TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.n_el = 5
         self.n_corr = 2
         self.n_virt = 3
@@ -102,7 +102,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
 class YieldExcitations633TestCase(unittest.TestCase):
 
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.n_el = 6
         self.n_corr = 3
         self.n_virt = 3
@@ -251,24 +251,24 @@ class YieldExcitations633TestCase(unittest.TestCase):
 class CalcOverlap(unittest.TestCase):
 
     def setUp(self):
-        prng = np.random.RandomState(test.init_random_state)
+        prng = np.random.RandomState(tests.init_random_state)
         # H2:
         self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CISD_file('H2__5__sto3g__D2h'))
+                tests.CISD_file('H2__5__sto3g__D2h'))
         self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_orb,
                                                      self.wf_H2.orb_dim,
                                                      self.wf_H2.n_irrep)
         # Li2:
         self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CISD_file('Li2__5__631g__C2v'))
+            tests.CISD_file('Li2__5__631g__C2v'))
         self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
-        self.U_Li2 = test.construct_random_orbitals(
+        self.U_Li2 = tests.construct_random_orbitals(
             self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
             prng)
-        self.U_Li2_non_orth = test.construct_random_orbitals(
+        self.U_Li2_non_orth = tests.construct_random_orbitals(
             self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
@@ -313,13 +313,13 @@ class CalcOverlap(unittest.TestCase):
     def test_non_orth(self):
         f_non_orth = absil.overlap_to_det(self.wf_Li2,
                                           self.U_Li2_non_orth)
-        test.logger.info('U before orth:\n%s',
-                         self.U_Li2_non_orth)
+        tests.logger.info('U before orth:\n%s',
+                          self.U_Li2_non_orth)
         for irrep, Ui in enumerate(self.U_Li2_non_orth):
             if Ui.shape[0] * Ui.shape[1] != 0:
                 self.U_Li2_non_orth[irrep] = linalg.orth(Ui)
-        test.logger.info('U after orth:\n%s',
-                         self.U_Li2_non_orth)
+        tests.logger.info('U after orth:\n%s',
+                          self.U_Li2_non_orth)
         f_orth = absil.overlap_to_det(self.wf_Li2,
                                       self.U_Li2_non_orth)
         f_non_orth = absil.overlap_to_det(self.wf_Li2,
@@ -329,13 +329,13 @@ class CalcOverlap(unittest.TestCase):
         orbitals.extend_to_unrestricted(self.U_Li2_non_orth)
         f_non_orth = absil.overlap_to_det(self.intN_wf_Li2,
                                           self.U_Li2_non_orth)
-        test.logger.info('U before orth:\n%s',
+        tests.logger.info('U before orth:\n%s',
                          self.U_Li2_non_orth)
         for irrep, Ui in enumerate(self.U_Li2_non_orth):
             if Ui.shape[0] * Ui.shape[1] != 0:
                 self.U_Li2_non_orth[irrep] = linalg.orth(Ui)
-        test.logger.info('U after orth:\n%s',
-                         self.U_Li2_non_orth)
+        tests.logger.info('U after orth:\n%s',
+                          self.U_Li2_non_orth)
         f_orth = absil.overlap_to_det(self.intN_wf_Li2,
                                       self.U_Li2_non_orth)
         f_non_orth = absil.overlap_to_det(self.intN_wf_Li2,
@@ -347,10 +347,10 @@ class CalcOverlap(unittest.TestCase):
 class CalcXCmatrices(unittest.TestCase):
 
     def setUp(self):
-        prng = np.random.RandomState(test.init_random_state)
+        prng = np.random.RandomState(tests.init_random_state)
         # H2:
         self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CISD_file('H2__5__sto3g__D2h'))
+            tests.CISD_file('H2__5__sto3g__D2h'))
         self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
             self.wf_H2.ref_orb,
@@ -358,9 +358,9 @@ class CalcXCmatrices(unittest.TestCase):
             self.wf_H2.n_irrep)
         # Li2:
         self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
-            test.CISD_file('Li2__5__631g__C2v'))
+            tests.CISD_file('Li2__5__631g__C2v'))
         self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
-        self.U_Li2 = test.construct_random_orbitals(
+        self.U_Li2 = tests.construct_random_orbitals(
             self.wf_Li2.ref_orb,
             self.wf_Li2.orb_dim,
             self.wf_Li2.n_irrep,
@@ -407,8 +407,8 @@ class CalcXCmatrices(unittest.TestCase):
         for i, Ui in enumerate(self.U_Li2):
             eta.append(np.reshape(lin_sys_solution[0][slice_XC[i]],
                                   Ui.shape))
-        test.logger.info('2C:\n%r', 2*C)
-        test.logger.info('2X @ eta:\n%r', np.matmul(2*X, lin_sys_solution[0]))
+        tests.logger.info('2C:\n%r', 2*C)
+        tests.logger.info('2X @ eta:\n%r', np.matmul(2*X, lin_sys_solution[0]))
         self.assertTrue(absil.check_Newton_eq(self.wf_Li2,
                                               self.U_Li2,
                                               eta,
@@ -458,8 +458,8 @@ class CalcXCmatrices(unittest.TestCase):
             eta.append(np.reshape(lin_sys_solution[0][slice_XC[i]],
                                   Ui.shape,
                                   order='F'))
-        test.logger.info('C:\n%r', C)
-        test.logger.info('X @ eta:\n%r', np.matmul(X, lin_sys_solution[0]))
+        tests.logger.info('C:\n%r', C)
+        tests.logger.info('X @ eta:\n%r', np.matmul(X, lin_sys_solution[0]))
         self.assertTrue(absil.check_Newton_eq(self.intN_wf_Li2,
                                               self.U_Li2,
                                               eta,

@@ -4,10 +4,12 @@ Keep it short and only to the essential!
 We want to avoid global variables 
 
 """
-import numpy as np
+import os
 import math
 
-wmmeDir = '/home/yuriaoto/Documents/Codes/ir-wmme.20141030/ir-wmme.20141030/'
+import numpy as np
+
+from input_output.parser import ParseError
 
 zero = 1.0E-10
 sqrt2 = math.sqrt(2.0)

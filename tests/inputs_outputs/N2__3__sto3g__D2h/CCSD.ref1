@@ -1,0 +1,49 @@
+dGr - optimise the distance in the Grassmannian
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: 63424b9751f0803af38a82879cdf33fe377b764d
+
+Directory:
+/home/yuriaoto/Documents/Codes/min_dist_Gr/grassmann/test/inputs_outputs/N2__3__sto3g__D2h
+
+Command:
+../../../dGr \
+--output CCSD.ref1 \
+CCSD.out 
+
+From command line and environment:
+External wave function, |extWF>: CCSD.out
+Orbital basis of |extWF>: CCSD.out
+Hartree-Fock orbitals, |min E>: CCSD.out
+Using the optimiser based on the geometry of the Grassmannian.
+ See: P-A Absil et. al,
+      Acta Applicandae Mathematicae 80, 199-220, 2004.
+   Algorithm specific for CISD wave function.
+State: 
+Log level: WARNING
+qpy job ID: not in qpy
+
+Starting at 10 Jun 2020 - 15:23
+
+External wave function (|extWF>) is: CISD (with C_ij^ab = t_ij^ab + t_i^a t_j^b from CCSD)
+Using |WFref> (the reference of |extWF>) as |min E>.
+|<WFref|extWF>| =   0.83513888 ; D(WFref, extWF) =   0.57421445
+Number of alpha and beta electrons: 7 7
+Dim. of core orb. space:  alpha/beta: [ 1 0 0 0 1 0 0 0 ]
+Dim. of ref. determinant: alpha/beta: [ 3 1 1 0 2 0 0 0 ]
+Dim. of orbital space:    alpha/beta: [ 3 1 1 0 3 1 1 0 ]
+
+Starting optimisation
+------------------------------
+it.    f            |η|          |C|          time in iteration
+0      0.83513888   0.02334049   0.02838721   0:00:00.017819
+1      0.83560714   0.00001693   0.00002062   0:00:00.009723
+2      0.83560714   0.00000000   0.00000000   0:00:00.009065
+------------------------------
+Iterations converged!
+WARNING: Unknown number of positive eigenvalue(s) of Hessian.
+|<minD|extWF>| =   0.83560714 ; D(min D, extWF) =   0.57339840
+|<minE|minD>| =   0.99945611 ; D(min E, min D) =   0.03298151
+
+Ending at 10 Jun 2020 - 15:23
+Total time: 0:00:00.063509
