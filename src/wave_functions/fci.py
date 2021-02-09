@@ -725,10 +725,10 @@ class WaveFunctionFCI(WaveFunction):
         
         TODO:
         -----
-        If self.restricted, the code can be improved to explit the
+        If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
-        level = 'D' if wf.singles is None else 'SD'
+        level = 'SD' if 'SD' in wf.wf_type else 'SD'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed(det):
@@ -738,8 +738,7 @@ class WaveFunctionFCI(WaveFunction):
                 self._coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                self._coefficients[ia, ib] = wf.get_amplitude(
-                    rank, alpha_hp, beta_hp)
+                self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
@@ -754,8 +753,7 @@ class WaveFunctionFCI(WaveFunction):
                             break
                         rank, alpha_hp, beta_hp = self.get_exc_info(
                             cluster_det)
-                        new_contribution *= wf.get_amplitude(
-                            rank, alpha_hp, beta_hp)
+                        new_contribution *= wf[rank, alpha_hp,beta_hp]
                     if add_contr:
                         self._coefficients[ia, ib] -= new_contribution
         self.set_coeff_ref_det()
@@ -1616,9 +1614,8 @@ class WaveFunctionFCI(WaveFunction):
             do_decomposition = (abs(det.c) > coeff_thr
                                 and rank > 2
                                 and (level == 'SD' or rank % 2 == 0))
-            if (rank == 2
-                    or (level == 'SD' and rank == 1)):
-                cc_wf.set_amplitude(det.c, rank, alpha_hp, beta_hp)
+            if rank == 2 or (level == 'SD' and rank == 1):
+                cc_wf[rank, alpha_hp, beta_hp] = det.c
             if do_decomposition:
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
@@ -1761,7 +1758,7 @@ class WaveFunctionFCI(WaveFunction):
             cc_wf = copy.deepcopy(ini_wf)
         else:
             raise ValueError('Unknown type of initial wave function')
-        n_ampl = cc_wf.calc_n_ampl(level == 'SD', False)
+        n_ampl = len(cc_wf)
         corr_orb = self.corr_orb.as_array()
         virt_orb = self.virt_orb.as_array()
         cc_wf_as_fci = WaveFunctionFCI.similar_to(self, restricted=False)
