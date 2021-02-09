@@ -18,7 +18,7 @@ results
 """
 import os
 
-main_files_dir = ('/home/yuriaoto/Documents/Codes/'
+main_files_dir = ('/home/matheus/Dropbox/'
                   + 'grassmann/src/test/inputs_outputs/')
 
 _all_test_systems = [

@@ -14,8 +14,8 @@ from util.array_indices import (triangular,
                                 get_ij_from_triang,
                                 get_n_from_triang)
 from util.variables import int_dtype
-from util import molpro
 from util.memory import mem_of_floats
+from input_output import molpro
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 
@@ -222,7 +222,7 @@ class IntermNormWaveFunction(WaveFunction):
                 for j in range(self.corr_orb[j_irrep]):
                     for i_irrep in range(j_irrep + 1):
                         for i in range(j + 1
-                                       if i_irrep == j_irrep else:
+                                       if i_irrep == j_irrep else
                                        self.corr_orb[i_irrep]):
                             for a_irrep in range(self.n_irrep):
                                 b_irrep = irrep_product[
@@ -235,7 +235,7 @@ class IntermNormWaveFunction(WaveFunction):
                 for j in range(self.corr_orb[j_irrep]):
                     for i_irrep in range(j_irrep):
                         for i in range(j
-                                       if i_irrep == j_irrep else:
+                                       if i_irrep == j_irrep else
                                        self.corr_orb[i_irrep]):
                             for a_irrep in range(self.n_irrep):
                                 b_irrep = irrep_product[
@@ -247,7 +247,7 @@ class IntermNormWaveFunction(WaveFunction):
                 for j in range(self.corr_orb[j_irrep + self.n_irrep]):
                     for i_irrep in range(j_irrep):
                         for i in range(j
-                                       if i_irrep == j_irrep else:
+                                       if i_irrep == j_irrep else
                                        self.corr_orb[i_irrep + self.n_irrep]):
                             for a_irrep in range(self.n_irrep):
                                 b_irrep = irrep_product[
@@ -318,10 +318,6 @@ class IntermNormWaveFunction(WaveFunction):
         
         Parameters:
         -----------
-        with_singles and with_BCC_orb_gen are booleans,
-        similar to the arguments of initialize_SD_lists,
-        and if True the memory needed to store singles and the
-        BCC orbital generators are also taken into account
         
         Return:
         -------
@@ -818,9 +814,7 @@ class IntermNormWaveFunction(WaveFunction):
     def similar_to(cls, wf, wf_type, restricted):
         new_wf = super().similar_to(wf, restricted=restricted)
         new_wf.wf_type = wf_type
-        new_wf.initialize_SD_lists(
-            with_singles=('SD' in new_wf.wf_type),
-            with_BCC_orb_gen=new_wf.wf_type == 'BCCD')
+        new_wf.initialize_amplitudes()
         return new_wf
 
     @classmethod
@@ -861,8 +855,7 @@ class IntermNormWaveFunction(WaveFunction):
                 new_wf.Ms += (new_wf.ref_orb[i_irrep]
                               - new_wf.ref_orb[i_irrep + self.n_irrep])
             new_wf.Ms /= 2
-        new_wf.initialize_SD_lists(
-            with_singles='SD' in new_wf.wf_type)
+        new_wf.initialize_amplitudes()
         return new_wf
     
     @classmethod
@@ -950,9 +943,7 @@ class IntermNormWaveFunction(WaveFunction):
                 new_wf.restricted = not ('Alpha-Alpha' in line
                                          or 'Beta-Beta' in line)
                 if new_wf.singles is None:
-                    new_wf.initialize_SD_lists(
-                        with_singles=new_wf.wf_type in ('CISD',
-                                                        'CCSD'))
+                    new_wf.initialize_amplitudes()
                 exc_type = 'b' if 'Beta-Beta' in line else 'a'
             elif molpro.CC_dbl_str in line and MP2_step_passed:
                 dbl_found = True
@@ -976,8 +967,7 @@ class IntermNormWaveFunction(WaveFunction):
                         new_wf.wf_type = 'CCD'
                     elif new_wf.wf_type == 'CCSD':
                         new_wf.wf_type = 'CID'
-                    new_wf.initialize_SD_lists(
-                        with_singles=False)
+                    new_wf.initialize_amplitudes()
                 if new_wf.restricted or 'Alpha-Alpha' in line:
                     exc_type = 'aa'
                 elif 'Beta-Beta' in line:

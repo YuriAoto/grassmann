@@ -15,7 +15,11 @@ extensions = [
     Extension("coupled_cluster.manifold",
               ["coupled_cluster/manifold.pyx"]),
     Extension("wave_functions.strings_rev_lexical_order",
-              ["wave_functions/strings_rev_lexical_order.pyx"])
+              ["wave_functions/strings_rev_lexical_order.pyx"]),
+    Extension("test.implementation.residual_cy",
+              ["test/implementation/residual_cy.pyx"],
+              extra_compile_args=['-fopenmp'],
+              extra_link_args=['-fopenmp'])
 ]
 
 setup(ext_modules=cythonize(extensions,

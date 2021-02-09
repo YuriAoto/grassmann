@@ -35,7 +35,7 @@ from coupled_cluster import manifold as cc_manifold
 logger = logging.getLogger(__name__)
 
 default_recipe_files = (
-    '/home/yuriaoto/Documents/Codes/grassmann/src/wave_functions/recipes')
+    '/home/matheus/Dropbox/grassmann/src/wave_functions/recipes')
 
 
 _str_excitation_list = ['R',

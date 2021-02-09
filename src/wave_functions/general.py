@@ -398,7 +398,7 @@ class WaveFunction(ABC):
             self.act_orb = wf.act_orb
         elif restricted:
             self.restricted = True
-            if np.any(self.act_orb.as_array):
+            if np.any(wf.act_orb.as_array()):
                 raise ValueError(
                     'act_orb is not empty, cannot be of restricted type!')
             self.act_orb = wf.act_orb
