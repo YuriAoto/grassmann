@@ -146,7 +146,7 @@ For the two-electron molecular orbital integral we have a similar expression:
 \begin{equation}
     \label{eq:g_transformation}
   \begin{split}
-    {\tilde g}_{pqrs}=g_{pqrs}&-\sum_t(\mathbf{t}_1)_{pt}g_{tqrs}+\sum_ug_{purs}(\mathbf{t}_1^T)_{qu}-\sum_m(\mathbf{t}_1)_{rm}g_{pqms}+\sum_ng_{pqrn}(\mathbf{t}_1^T)_{sn}\\
+    \gtil{pqrs}=g_{pqrs}&-\sum_t(\mathbf{t}_1)_{pt}g_{tqrs}+\sum_ug_{purs}(\mathbf{t}_1^T)_{qu}-\sum_m(\mathbf{t}_1)_{rm}g_{pqms}+\sum_ng_{pqrn}(\mathbf{t}_1^T)_{sn}\\
     &-\sum_{tu}(\mathbf{t}_1)_{pt}g_{turs}(\mathbf{t}_1^T)_{qu}+\sum_{tm}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqms}-\sum_{tn}(\mathbf{t}_1)_{pt}g_{tqrn}(\mathbf{t}_1^T)_{sn}\\
     &-\sum_{um}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}+\sum_{un}g_{purn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}-\sum_{mn}(\mathbf{t}_1)_{rm}g_{pq}(\mathbf{t}_1^T)_{sn}\\
     &+\sum_{tum}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}-\sum_{tun}(\mathbf{t}_1)_{pt}g_{turn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}\\
@@ -157,28 +157,28 @@ For the two-electron molecular orbital integral we have a similar expression:
 
 This expression can be divided in 16 cases, that can be further simplified by symmetry.
 \begin{align}
-  {\tilde g}_{ijkl}=&g_{ijkl}+\sum_{e}(g_{iekl}t_j^e+g_{ijke}t_l^e)+\sum_{ef}g_{iekf}t_j^et_l^f\label{eq:t1g_ijkl}\\
-%  &=g_{ijkl}+\sum_{e}\bigg[\bigg(g_{iekl}+\sum_fg_{iekf}t_l^f\bigg)t_i^e+g_{ijke}t_j^e\bigg]\\
-  {\tilde g}_{ijka}=&g_{ijka}+\sum_{e}g_{ieka}t_j^e\label{eq:t1g_ijka}\\ 
-  {\tilde g}_{ijak}=&g_{ijak}+\sum_{e}(g_{ieak}t_j^e+g_{ijae}t_k^e)-\sum_lt_l^ag_{ijlk}\nonumber\\
-  &+\sum_{ef}g_{ieaf}t_j^et_l^f-\sum_{el}t_l^a(g_{ielk}t_j^e+g_{ijle}t_k^e)-\sum_{efl}t_l^ag_{ielf}t_j^et_k^f\label{eq:t1g_ijak}\\
-  {\tilde g}_{iajk}=&{\tilde g}_{jkia}\label{eq:t1g_iajk}\\
-  {\tilde g}_{aijk}=&{\tilde g}_{jkai}\label{eq:t1g_aijk}\\
-  {\tilde g}_{ijab}=&g_{ijab}+\sum_{e}g_{ieab}t_j^e-\sum_{l}t_l^ag_{ijlb}-\sum_{el}t_l^ag_{ielb}t_j^e\label{eq:t1g_ijab}\\
-  {\tilde g}_{iajb}=&g_{iajb}\label{eq:t1g_iajb}\\
-  {\tilde g}_{aijb}=&g_{aijb}+\sum_{e}g_{aejb}t_i^e-\sum_{l}t_l^ag_{lijb}-\sum_{el}t_l^ag_{lejb}t_i^e\label{eq:t1g_aijb}\\
-  {\tilde g}_{iabj}=&{\tilde g}_{bjia}\label{eq:t1g_iabj}\\
-  {\tilde g}_{aibj}=&g_{aibj}+\sum_{e}(g_{aebj}t_i^e+g_{aibe}t_j^e)-\sum_{l}(t_l^ag_{libj}+t_l^bg_{ailj})\nonumber\\
-  &+\sum_{ef}g_{aebf}t_i^et_j^f-\sum_{el}(t_l^ag_{lebj}t_i^e+t_l^bg_{aelj}t_i^e+t_l^ag_{libe}t_j^e+t_l^bg_{aile}t_j^e)\nonumber\\
-  &+\sum_{lk}t_l^at_k^bg_{likj}+\sum_{ekl}(t_l^at_k^bg_{lekj}t_i^e+t_l^at_k^bg_{like}t_j^e)\nonumber\\
-  &-\sum_{efl}(t_l^ag_{lebf}t_i^et_j^f+t_l^bg_{aelf}t_i^et_j^f)+\sum_{lkef}t_l^at_k^bg_{lekf}t_i^et_j^f\label{eq:t1g_aibj}\\
-  {\tilde g}_{abij}=&{\tilde g}_{ijab}\label{eq:t1g_abij}\\
-  {\tilde g}_{iabc}=&g_{iabc}-\sum_{l}t_l^bg_{ialc}\label{eq:t1g_iabc}\\
-  {\tilde g}_{aibc}=&g_{aibc}+\sum_{e}g_{aebc}t_i^e-\sum_l(t_l^ag_{libc}+t_l^bg_{ailc})\nonumber\\
-  &-\sum_{el}(t_l^ag_{lebc}t_i^e+t_l^bg_{aelc}t_i^e)+\sum_{lk}t_l^at_k^bg_{likc}+\sum_{elk}t_l^at_k^bg_{lekc}t_i^e\label{eq:t1g_aibc}\\
-  {\tilde g}_{abic}=&{\tilde g}_{icab}\label{eq:t1g_abic}\\
-  {\tilde g}_{abci}=&{\tilde g}_{ciab}\label{eq:t1g_abci}\\
-  {\tilde g}_{abcd}=&g_{abcd}-\sum_l(t_l^ag_{lbcd}+t_l^cg_{abld})+\sum_{kl}t_l^at_k^cg_{lbkc}\label{eq:t1g_abcd}
+  \gtil{ijkl}=&\g{ijkl}+\orbsum{e}(\g{iekl}\ampl{j}{e}+\g{ijke}\ampl{l}{e})+\orbsum{ef}\g{iekf}\ampl{j}{e}\ampl{l}{f}\label{eq:t1g_ijkl}\\
+%  &=\g{ijkl}+\orbsum{e}\bigg[\bigg(\g{iekl}+\orbsum{f}\g{iekf}\ampl{l}{f}\bigg)\ampl{i}{e}+\g{ijke}\ampl{j}{e}\bigg]\\
+  \gtil{ijka}=&\g{ijka}+\orbsum{e}\g{ieka}\ampl{j}{e}\label{eq:t1g_ijka}\\ 
+  \gtil{ijak}=&\g{ijak}+\orbsum{e}(\g{ieak}\ampl{j}{e}+\g{ijae}\ampl{k}{e})-\orbsum{l}\ampl{l}{a}\g{ijlk}\nonumber\\
+  &+\orbsum{ef}\g{ieaf}\ampl{j}{e}\ampl{l}{f}-\orbsum{el}\ampl{l}{a}(\g{ielk}\ampl{j}{e}+\g{ijle}\ampl{k}{e})-\orbsum{efl}\ampl{l}{a}\g{ielf}\ampl{j}{e}\ampl{k}{f}\label{eq:t1g_ijak}\\
+  \gtil{iajk}=&\gtil{jkia}\label{eq:t1g_iajk}\\
+  \gtil{aijk}=&\gtil{jkai}\label{eq:t1g_aijk}\\
+  \gtil{ijab}=&\g{ijab}+\orbsum{e}\g{ieab}\ampl{j}{e}-\orbsum{l}\ampl{l}{a}\g{ijlb}-\orbsum{el}\ampl{l}{a}\g{ielb}\ampl{j}{e}\label{eq:t1g_ijab}\\
+  \gtil{iajb}=&\g{iajb}\label{eq:t1g_iajb}\\
+  \gtil{aijb}=&\g{aijb}+\orbsum{e}\g{aejb}\ampl{i}{e}-\orbsum{l}\ampl{l}{a}\g{lijb}-\orbsum{el}\ampl{l}{a}\g{lejb}\ampl{i}{e}\label{eq:t1g_aijb}\\
+  \gtil{iabj}=&\gtil{bjia}\label{eq:t1g_iabj}\\
+  \gtil{aibj}=&\g{aibj}+\orbsum{e}(\g{aebj}\ampl{i}{e}+\g{aibe}\ampl{j}{e})-\orbsum{l}(\ampl{l}{a}\g{libj}+\ampl{l}{b}\g{ailj})\nonumber\\
+  &+\orbsum{ef}\g{aebf}\ampl{i}{e}\ampl{j}{f}-\orbsum{el}(\ampl{l}{a}\g{lebj}\ampl{i}{e}+\ampl{l}{b}\g{aelj}\ampl{i}{e}+\ampl{l}{a}\g{libe}\ampl{j}{e}+\ampl{l}{b}\g{aile}\ampl{j}{e})\nonumber\\
+  &+\orbsum{lk}\ampl{l}{a}\ampl{k}{b}\g{likj}+\orbsum{ekl}(\ampl{l}{a}\ampl{k}{b}\g{lekj}\ampl{i}{e}+\ampl{l}{a}\ampl{k}{b}\g{like}\ampl{j}{e})\nonumber\\
+  &-\orbsum{efl}(\ampl{l}{a}\g{lebf}\ampl{i}{e}\ampl{j}{f}+\ampl{l}{b}\g{aelf}\ampl{i}{e}\ampl{j}{f})+\orbsum{lkef}\ampl{l}{a}\ampl{k}{b}\g{lekf}\ampl{i}{e}\ampl{j}{f}\label{eq:t1g_aibj}\\
+  \gtil{abij}=&\gtil{ijab}\label{eq:t1g_abij}\\
+  \gtil{iabc}=&\g{iabc}-\orbsum{l}\ampl{l}{b}\g{ialc}\label{eq:t1g_iabc}\\
+  \gtil{aibc}=&\g{aibc}+\orbsum{e}\g{aebc}\ampl{i}{e}-\orbsum{l}(\ampl{l}{a}\g{libc}+\ampl{l}{b}\g{ailc})\nonumber\\
+  &-\orbsum{el}(\ampl{l}{a}\g{lebc}\ampl{i}{e}+\ampl{l}{b}\g{aelc}\ampl{i}{e})+\orbsum{lk}\ampl{l}{a}\ampl{k}{b}\g{likc}+\orbsum{elk}\ampl{l}{a}\ampl{k}{b}\g{lekc}\ampl{i}{e}\label{eq:t1g_aibc}\\
+  \gtil{abic}=&\gtil{icab}\label{eq:t1g_abic}\\
+  \gtil{abci}=&\gtil{ciab}\label{eq:t1g_abci}\\
+  \gtil{abcd}=&\g{abcd}-\orbsum{l}(\ampl{l}{a}\g{lbcd}+\ampl{l}{c}\g{abld})+\orbsum{kl}\ampl{l}{a}\ampl{k}{c}\g{lbkc}\label{eq:t1g_abcd}
 \end{align}
 
 Note that, due to symmetry, only 9 cases must be computed ( equations \ref{eq:t1g_ijkl}, \ref{eq:t1g_ijka}, \ref{eq:t1g_ijak}, \ref{eq:t1g_ijab}, \ref{eq:t1g_aijb}, \ref{eq:t1g_aibj}, \ref{eq:t1g_iabc}, \ref{eq:t1g_aibc} and \ref{eq:t1g_abcd}).
@@ -203,9 +203,9 @@ Last, for the equation \ref{eq:t1g_iajb} there is no transformation and the valu
 \end{equation}
 where
 \begin{align}
-  \Omega_i^{a(A1)}&=\sum_{ckd}u_{ki}^{cd}{\tilde g}_{adkc}\\
-  \Omega_i^{a(B1)}&=-\sum_{ckl}u_{ki}^{ac}{\tilde g}_{kilc}\\
-  \Omega_i^{a(C1)}&=\sum_{ck}u_{ik}^{ac}{\tilde F}_{kc}^{I}\\
+  \Omega_i^{a(A1)}&=\orbsum{ckd}u_{ki}^{cd}\gtil{adkc}\\
+  \Omega_i^{a(B1)}&=-\orbsum{ckl}u_{ki}^{ac}\gtil{kilc}\\
+  \Omega_i^{a(C1)}&=\orbsum{ck}u_{ik}^{ac}{\tilde F}_{kc}^{I}\\
   \Omega_i^{a(D1)}&={\tilde F}_{ai}^{I}
 \end{align}
 
@@ -213,11 +213,11 @@ Other way to open this equation is
 
 \begin{equation}
   \begin{split}
-    \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2{\tilde g}_{aikk}-{\tilde g}_{akki}\\
-    &+\sum_c[(2t_{ik}^{ac}-t_{ki}^{ac}){\tilde h}_{kc}+(2t_{ik}^{ac}-t_{ki}^{ac})\sum_l(2{\tilde g}_{kcll}-{\tilde g}_{kllc})\\
-    &+\sum_d(2t_{ki}^{cd}-t_{ik}^{cd}){\tilde g}_{adkc}-\sum_l(2t_{kl}^{ac}-t_{lk}^{ac}){\tilde g}_{kilc}]\}\\
-    &={\tilde h}_{ai}+\sum_{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+u_{ik}^{ac}\sum_l({\tilde L}_{kcll})+\sum_d(u_{ki}^{cd}{\tilde g}_{adkc})\\
-      &-\sum_l(u_{kl}^{ac}{\tilde g}_{kilc})]\}
+    \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2\gtil{aikk}-\gtil{akki}\\
+    &+\sum_c[(2\ampl{ik}{ac}-\ampl{ki}{ac}){\tilde h}_{kc}+(2\ampl{ik}{ac}-\ampl{ki}{ac})\sum_l(2\gtil{kcll}-\gtil{kllc})\\
+    &+\sum_d(2\ampl{ki}{cd}-\ampl{ik}{cd})\gtil{adkc}-\sum_l(2\ampl{kl}{ac}-\ampl{lk}{ac})\gtil{kilc}]\}\\
+    &={\tilde h}_{ai}+\orbsum{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+u_{ik}^{ac}\sum_l({\tilde L}_{kcll})+\sum_d(u_{ki}^{cd}\gtil{adkc})\\
+      &-\sum_l(u_{kl}^{ac}\gtil{kilc})]\}
    \end{split}
 \end{equation}
 
@@ -232,11 +232,11 @@ Other way to open this equation is
 \end{equation}
 where
 \begin{align}
-  \Omega_{ij}^{ab(A2)}&={\tilde g}_{aibj}+\sum_{cd}t_{ij}^{cd}{\tilde g}_{acbd}\\
-  \Omega_{ij}^{ab(B2)}&=\sum_{kl}t_{kl}^{ab}\bigg({\tilde g}_{kilj}+\sum_{cd}t_{ij}^{cd}{\tilde g}_{kcld}\bigg)\\
-  \Omega_{ij}^{ab(C2)}&=-\frac{1}{2}\sum_{ck}t_{kj}^{bc}\bigg({\tilde g}_{kiac}-\frac{1}{2}\sum_{dl}t_{li}^{ad}{\tilde g}_{kdlc}\bigg)-\sum_{ck}t_{ki}^{bc}\bigg({\tilde g}_{kjac}-\frac{1}{2}\sum_{dl}t_{lj}^{ad}{\tilde g}_{kdlc}\bigg)\\
-  \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\sum_{ck}u_{jk}^{bc}\bigg({\tilde L}_{aikc}+\frac{1}{2}\sum_{dl}u_{il}^{ad}{\tilde L}_{ldkc}\bigg)\\
-  \Omega_{ij}^{ab(E2)}&=\sum_{c}t_{ij}^{ac}\bigg({\tilde F}_{bc}^{I}-\sum_{dkl}u_{ki}^{bd}{\tilde g}_{ldkc}\bigg)-\sum_{k}t_{ik}^{ab}\bigg({\tilde F}_{kj}^{I}+\sum_{cdl}u_{lj}^{cd}{\tilde g}_{kdlc}\bigg)
+  \Omega_{ij}^{ab(A2)}&=\gtil{aibj}+\orbsum{cd}\ampl{ij}{cd}\gtil{acbd}\\
+  \Omega_{ij}^{ab(B2)}&=\orbsum{kl}\ampl{kl}{ab}\bigg(\gtil{kilj}+\orbsum{cd}\ampl{ij}{cd}\gtil{kcld}\bigg)\\
+  \Omega_{ij}^{ab(C2)}&=-\frac{1}{2}\orbsum{ck}\ampl{kj}{bc}\bigg(\gtil{kiac}-\frac{1}{2}\orbsum{dl}\ampl{li}{ad}\gtil{kdlc}\bigg)-\orbsum{ck}\ampl{ki}{bc}\bigg(\gtil{kjac}-\frac{1}{2}\orbsum{dl}\ampl{lj}{ad}\gtil{kdlc}\bigg)\\
+  \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\orbsum{ck}u_{jk}^{bc}\bigg({\tilde L}_{aikc}+\frac{1}{2}\orbsum{dl}u_{il}^{ad}{\tilde L}_{ldkc}\bigg)\\
+  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg({\tilde F}_{bc}^{I}-\orbsum{dkl}u_{ki}^{bd}\gtil{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg({\tilde F}_{kj}^{I}+\orbsum{cdl}u_{lj}^{cd}\gtil{kdlc}\bigg)
 \end{align}
 
 
@@ -244,15 +244,15 @@ Other way to open this equation is
 
 \begin{equation}
   \begin{split}
-    \Omega_{ij}^{ab}&={\tilde g}_{aibj}\\
-    &+\sum_{c}[t_{ij}^{ac}({\tilde h}_{bc}+\sum_{k}2{\tilde g}_{bckk}-{\tilde g}_{bkkc})+t_{ji}^{bc}({\tilde h}_{ac}+\sum_{k}2{\tilde g}_{ackk}-{\tilde g}_{akkc})+\sum_dt_{ij}^{cd}{\tilde g}_{acbd}]\\
-    &+\sum_{k}[t_{ik}^{ab}({\tilde h}_{kj}+\sum_{l}2{\tilde g}_{kjll}-{\tilde g}_{kllj})+t_{jk}^{ba}({\tilde h}_{ki}+\sum_{l}2{\tilde g}_{kill}-{\tilde g}_{klli})+\sum_lt_{kl}^{ab}{\tilde g}_{kilj}]\\
-    &+\sum_{c}\sum_{k}\{-2^{-1}t_{kj}^{bc}{\tilde g}_{kiac}-t_{ki}^{bc}{\tilde g}_{kjac}-2^{-1}t_{ki}^{ac}{\tilde g}_{kjbc}-t_{kj}^{ac}{\tilde g}_{kibc}\\
-    &+(t_{jk}^{bc}-2^{-1}t_{kj}^{bc})(2{\tilde g}_{aikc}-{\tilde g}_{acki})+(t_{ik}^{ac}-2^{-1}t_{ki}^{ac})(2{\tilde g}_{bjkc}-{\tilde g}_{bckj})\\
-    &+\sum_{d}\sum_{l}[t_{kl}^{ab}t_{ij}^{cd}+t_{kj}^{bd}t_{li}^{ac}+2^{-1}t_{ki}^{bd}t_{lj}^{ac}+t_{ki}^{ad}t_{lj}^{bc}+2^{-1}t_{kj}^{ad}t_{li}^{bc}\\
-    &+2t_{jl}^{bd}t_{ik}^{ac}-t_{jl}^{bc}t_{ik}^{ad}-t_{jl}^{bd}t_{ki}^{ac}-t_{lj}^{bd}t_{ik}^{ac}+2^{-1}t_{jl}^{bc}t_{ki}^{ad}+2^{-1}t_{lj}^{bc}t_{ik}^{ad}+2^{-1}t_{lj}^{bd}t_{ki}^{ac}-4^{-1}t_{lj}^{bc}t_{ki}^{ad}\\
-    &+2t_{il}^{ad}t_{jk}^{bc}-t_{il}^{ac}t_{jk}^{bd}-t_{il}^{ad}t_{kj}^{bc}-t_{li}^{ad}t_{jk}^{bc}+2^{-1}t_{il}^{ac}t_{kj}^{bd}+2^{-1}t_{li}^{ac}t_{jk}^{bd}+2^{-1}t_{li}^{ad}t_{kj}^{bc}-4^{-1}t_{li}^{ac}t_{kj}^{bd}\\
-    &-t_{ij}^{ad}(2t_{lk}^{bc}-t_{kl}^{bc})-t_{ik}^{ab}(2t_{lj}^{dc}-t_{jl}^{dc}))-t_{ji}^{bd}(2t_{lk}^{ac}-t_{kl}^{ac})-t_{jk}^{ba}(2t_{li}^{dc}-t_{il}^{dc})]{\tilde g}_{kcld}\}
+    \Omega_{ij}^{ab}&=\gtil{aibj}\\
+    &+\orbsum{c}[\ampl{ij}{ac}({\tilde h}_{bc}+\orbsum{k}2\gtil{bckk}-\gtil{bkkc})+\ampl{ji}{bc}({\tilde h}_{ac}+\orbsum{k}2\gtil{ackk}-\gtil{akkc})+\sum_d\ampl{ij}{cd}\gtil{acbd}]\\
+    &+\orbsum{k}[\ampl{ik}{ab}({\tilde h}_{kj}+\orbsum{l}2\gtil{kjll}-\gtil{kllj})+\ampl{jk}{ba}({\tilde h}_{ki}+\orbsum{l}2\gtil{kill}-\gtil{klli})+\sum_l\ampl{kl}{ab}\gtil{kilj}]\\
+    &+\orbsum{c}\orbsum{k}\{-2^{-1}\ampl{kj}{bc}\gtil{kiac}-\ampl{ki}{bc}\gtil{kjac}-2^{-1}\ampl{ki}{ac}\gtil{kjbc}-\ampl{kj}{ac}\gtil{kibc}\\
+    &+(\ampl{jk}{bc}-2^{-1}\ampl{kj}{bc})(2\gtil{aikc}-\gtil{acki})+(\ampl{ik}{ac}-2^{-1}\ampl{ki}{ac})(2\gtil{bjkc}-\gtil{bckj})\\
+    &+\orbsum{d}\orbsum{l}[\ampl{kl}{ab}\ampl{ij}{cd}+\ampl{kj}{bd}\ampl{li}{ac}+2^{-1}\ampl{ki}{bd}\ampl{lj}{ac}+\ampl{ki}{ad}\ampl{lj}{bc}+2^{-1}\ampl{kj}{ad}\ampl{li}{bc}\\
+    &+2\ampl{jl}{bd}\ampl{ik}{ac}-\ampl{jl}{bc}\ampl{ik}{ad}-\ampl{jl}{bd}\ampl{ki}{ac}-\ampl{lj}{bd}\ampl{ik}{ac}+2^{-1}\ampl{jl}{bc}\ampl{ki}{ad}+2^{-1}\ampl{lj}{bc}\ampl{ik}{ad}+2^{-1}\ampl{lj}{bd}\ampl{ki}{ac}-4^{-1}\ampl{lj}{bc}\ampl{ki}{ad}\\
+    &+2\ampl{il}{ad}\ampl{jk}{bc}-\ampl{il}{ac}\ampl{jk}{bd}-\ampl{il}{ad}\ampl{kj}{bc}-\ampl{li}{ad}\ampl{jk}{bc}+2^{-1}\ampl{il}{ac}\ampl{kj}{bd}+2^{-1}\ampl{li}{ac}\ampl{jk}{bd}+2^{-1}\ampl{li}{ad}\ampl{kj}{bc}-4^{-1}\ampl{li}{ac}\ampl{kj}{bd}\\
+    &-\ampl{ij}{ad}(2\ampl{lk}{bc}-\ampl{kl}{bc})-\ampl{ik}{ab}(2\ampl{lj}{dc}-\ampl{jl}{dc}))-\ampl{ji}{bd}(2\ampl{lk}{ac}-\ampl{kl}{ac})-\ampl{jk}{ba}(2\ampl{li}{dc}-\ampl{il}{dc})]\gtil{kcld}\}
   \end{split}
 \end{equation}
 

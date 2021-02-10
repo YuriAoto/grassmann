@@ -159,6 +159,54 @@
 \newcommand*{\extProdTwo}{\ensuremath{\bigwedge\nolimits^2 \orbSp}}
 
 
+% --------------------------------
+% print occupied indices (defined in \orccorb) in \occorbcolor, with \printoccorb
+% print virtual indices (defined in \virtcorb) in \virtorbcolor, with \printvirtorb
+\newcommand*{\occorb}{ijklmn}
+\newcommand*{\virtorb}{abcdef}
+\newcommand*{\occorbcolor}{blue}
+\newcommand*{\virtorbcolor}{red}
+\newcommand*\printoccorb[1] {\textcolor{\occorbcolor} {#1}}
+\newcommand*\printvirtorb[1]{\textcolor{\virtorbcolor}{#1}}
+\makeatletter
+\def\instring#1#2{TT\fi\begingroup
+  \edef\x{\endgroup\noexpand\in@{#1}{#2}}\x\ifin@}
+\newcommand\printorbcolor[1]{
+  \if\instring{#1}{\occorb}
+  \printoccorb{#1}
+  \else
+  \printvirtorb{#1}
+  \fi
+  }
+\def\parseorbitals#1#2|{%
+    \ifx\relax#1\relax%
+    \else%
+        \printorbcolor{#1}%
+        \edef\@orbitaltmp{#2|}%
+            \ifx\relax#2\relax%
+            \else%
+            \expandafter\parseorbitals\@orbitaltmp%
+        \fi%        
+    \fi%
+}
+\newcommand\colororbindices[1]{% Takes in one strings
+    % <begin loop>
+    % Extracts out one character from both strings
+    \edef\@orbitaltmp{#1|}%
+    \expandafter\parseorbitals\@orbitaltmp%
+    %\printchar{#1}%
+    % Continue loop until strings run out of characters
+    % <end loop>
+}
+\makeatother
+\newcommand*{\gtil}[1]{\ensuremath{\tilde{g}_{\colororbindices{#1}}}}
+\newcommand*{\g}[1]{\ensuremath{g_{\colororbindices{#1}}}}
+\newcommand*{\orbsum}[1]{\ensuremath{\sum_{\colororbindices{#1}}}}
+\newcommand*{\ampl}[2]{\ensuremath{t_{\colororbindices{#1}}^{\colororbindices{#2}}}}
+
+
+
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "grassmann_doc.tex"
