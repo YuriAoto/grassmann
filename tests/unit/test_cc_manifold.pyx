@@ -8,7 +8,8 @@ import numpy as np
 import tests
 from coupled_cluster.manifold cimport (
     EXC_TYPE_A, EXC_TYPE_B, EXC_TYPE_AA, EXC_TYPE_AB, EXC_TYPE_BB,
-    _term1, _term2_diag, _exc_on_string)
+    _term1, _term2_diag, _exc_on_string, OccOrbital)
+from coupled_cluster.manifold import OccOrbital
 from wave_functions.fci import make_occ
 from util.variables import int_dtype
 
@@ -514,3 +515,86 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.49)
+
+
+class OccOrbitalTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.corr_orb = np.array([5, 2, 2, 0, 4, 2, 2, 0], int_dtype)
+        self.n_orb_before = np.array([0,10,15,20], int_dtype)
+
+    def test_alpha(self):
+        cdef OccOrbital i
+        i = OccOrbital(self.corr_orb, self.n_orb_before, True)
+        self.assertEqual(i.pos_in_occ, 0)
+        self.assertEqual(i.orb, 0)
+        self.assertEqual(i.spirrep, 0)
+        self.assertTrue(i.alive)
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 1)
+        self.assertEqual(i.orb, 1)
+        self.assertEqual(i.spirrep, 0)
+        self.assertTrue(i.alive)
+        i.next_()
+        i.next_()
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 4)
+        self.assertEqual(i.orb, 4)
+        self.assertEqual(i.spirrep, 0)
+        self.assertTrue(i.alive)
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 5)
+        self.assertEqual(i.orb, 10)
+        self.assertEqual(i.spirrep, 1)
+        self.assertTrue(i.alive)
+        i.next_()
+        i.next_()
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 8)
+        self.assertEqual(i.orb, 16)
+        self.assertEqual(i.spirrep, 2)
+        self.assertTrue(i.alive)
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 9)
+        self.assertFalse(i.alive)
+        i.rewind()
+        self.assertEqual(i.pos_in_occ, 0)
+        self.assertEqual(i.orb, 0)
+        self.assertEqual(i.spirrep, 0)
+        self.assertTrue(i.alive)
+
+    def test_beta(self):
+        cdef OccOrbital i
+        i = OccOrbital(self.corr_orb, self.n_orb_before, False)
+        self.assertEqual(i.pos_in_occ, 0)
+        self.assertEqual(i.orb, 0)
+        self.assertEqual(i.spirrep, 4)
+        self.assertTrue(i.alive)
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 1)
+        self.assertEqual(i.orb, 1)
+        self.assertEqual(i.spirrep, 4)
+        self.assertTrue(i.alive)
+        i.next_()
+        i.next_()
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 4)
+        self.assertEqual(i.orb, 10)
+        self.assertEqual(i.spirrep, 5)
+        self.assertTrue(i.alive)
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 5)
+        self.assertEqual(i.orb, 11)
+        self.assertEqual(i.spirrep, 5)
+        self.assertTrue(i.alive)
+        i.next_()
+        i.next_()
+        i.next_()
+        self.assertEqual(i.pos_in_occ, 8)
+        self.assertFalse(i.alive)
+        i.rewind()
+        self.assertEqual(i.pos_in_occ, 0)
+        self.assertEqual(i.orb, 0)
+        self.assertEqual(i.spirrep, 4)
+        self.assertTrue(i.alive)
+

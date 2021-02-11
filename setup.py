@@ -35,5 +35,6 @@ setup(name='grassmann',
       test_suite="tests",
       ext_modules=cythonize(extensions,
                             language_level = "3",
+                            include_path=['src/'],
                             annotate=True)
 )

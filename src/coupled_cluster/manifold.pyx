@@ -1,4 +1,4 @@
-"""Core functions to optimise distance to the CC manifold
+""" Core functions to optimise distance to the CC manifold
 
 
 """
@@ -20,39 +20,107 @@ cdef int EXC_TYPE_BB = 4
 
 
 cdef class OccOrbital:
+    """Class to run over occupied orbitals
 
-    cdef int pos_in_occ, orb, spirrep
-    cdef int n_irrep
-    cdef int [:] corr_orb, n_orb_before
-    cdef bint alive
+    Usage:
+    ------
+    # alpha and beta correlated orbitals
+    corr_orb = np.array([5,2,2,0, 4,2,2,0], dtype=int_dtype)
+    # number of orbitals before that irrep
+    n_orb_before = np.array([0,10,15,20])
 
-    def __init__(self, corr_orb, n_irrep, n_orb_before):
-        cdef int irrep
-        self.corr_orb = corr_orb
-        self.n_orb_before = n_orb_before
-        self.n_irrep = n_irrep
-        self.pos_in_occ = 0
+    i = OccOrbital(corr_orb, n_orb_before, True)
+    i.pos_in_occ  # 0
+    i.orb  # 0
+    i.spirrep  # 0
+    i.alive  # True
+
+    i.next_()
+
+    i.pos_in_occ  # 1
+    i.orb  # 1
+    i.spirrep  # 0
+
+    for k in range(3):
+       i.next_()
+
+    i.pos_in_occ  # 4
+    i.orb  # 4
+    i.spirrep  # 0
+
+    i.next_()
+
+    i.pos_in_occ  # 5
+    i.orb  # 0
+    i.spirrep  # 1
+
+    for k in range(4):
+       i.next_()
+
+    i.pos_in_occ   # 9 > n of occupied orb
+    i.alive  # False
+
+    i.rewind()
+    i.pos_in_occ  # 0
+    i.orb  # 0
+    i.spirrep  # 0
+    i.alive  # True
+
+
+    """
+    def __init__(self,
+                  int[:] corr_orb,
+                  int[:] n_orb_before,
+                  bint is_alpha):
+        cdef int irrep, spirrep
+        cdef int n_irrep = n_orb_before.shape[0]
+        self.is_alpha = is_alpha
+        self._corr_orb = corr_orb
+        self._n_orb_before = n_orb_before
+        self._n_occ = 0
+        self.spirrep = 0 if is_alpha else n_irrep
+        spirrep = self.spirrep
+        self.orb = -1
         for irrep in range(n_irrep):
-            if self.corr_orb[irrep] > 0:
-                break
-            self.spirrep = irrep
-        self.orb = self.n_orb_before[self.spirrep]
-        self.alive = True
-
-    def next_(self):
-        cdef int irrep
-        self.pos_in_occ += 1
-        self.orb += 1
-        if self.orb == (self.n_orb_before[self.spirrep]
-                        + self.corr_orb[self.spirrep]):
+            self._n_occ += self._corr_orb[spirrep]
+            if self.orb == -1 and self._corr_orb[spirrep] > 0:
+                self.orb = self._n_orb_before[irrep]
+                self.spirrep = spirrep
+            spirrep += 1
+        if self._n_occ == 0:
             self.alive = False
-            for irrep in range(self.spirrep + 1, n_irrep):
-                if self.corr_orb[irrep] > 0:
-                    self.alive = True
-                    break
-            if self.alive:
-                self.spirrep = irrep
-                self.orb = self.n_orb_before[self.spirrep]
+            return
+        self.alive = True
+        self.pos_in_occ = 0
+
+    cdef rewind(self):
+        cdef int irrep = 0
+        if self._n_occ == 0:
+            self.alive = False
+            return
+        self.alive = True
+        self.spirrep = 0 if self.is_alpha else self._n_orb_before.shape[0]
+        while self._corr_orb[self.spirrep] == 0:
+            self.spirrep += 1
+            irrep += 1
+        self.orb = self._n_orb_before[irrep]
+        self.pos_in_occ = 0
+
+    cdef next_(self):
+        self.pos_in_occ += 1
+        if self.pos_in_occ < self._n_occ:
+            self.orb += 1
+            if self.orb < (self._n_orb_before[self.spirrep
+                                              % self._n_orb_before.size]
+                           + self._corr_orb[self.spirrep]):
+                return
+            self.spirrep += 1
+            while self._corr_orb[self.spirrep] == 0:
+                self.spirrep += 1
+            self.orb = self._n_orb_before[self.spirrep
+                                          % self._n_orb_before.size]
+        else:
+            self.alive = False
 
 
 cdef struct SingleExc:
@@ -62,15 +130,14 @@ cdef struct DoubleExc:
     int i, j, a, b
 
 
-def min_dist_app_hess(double [:, :] wf,
-                      double [:, :] wf_cc,
+def min_dist_app_hess(double[:, :] wf,
+                      double[:, :] wf_cc,
                       int n_ampl,
-                      int n_irrep,
-                      int [:] n_orb_before,
-                      int [:] n_corr_orb,
-                      int [:] n_ext,
-                      int [:, :] alpha_string_graph,
-                      int [:, :] beta_string_graph,
+                      int[:] n_orb_before,
+                      int[:] corr_orb,
+                      int[:] virt_orb,
+                      int[:, :] alpha_string_graph,
+                      int[:, :] beta_string_graph,
                       level='SD'):
     """Calculate the Jacobian and approximate the Hessian
     
@@ -86,25 +153,30 @@ def min_dist_app_hess(double [:, :] wf,
     n_ampl
         The total number of amplitudes
     
-    n_irrep
-        The number of irreducible representations
-    
     n_orb_before
         The number of orbitals before each irreducible representation,
         in the order "all orbitals of first irrep, then all orbitals of
         second irrep, ...".
+        
+        It must have the same number of elements as n_irrep: its size
+        is used to get the n_irrep!
+        
         Thus, n_orb_before[0] = 0
               n_orb_before[1] = total number of orbitals in irrep 0
                                 (occ and virt)
               n_orb_before[2] = total number of orbitals in irrep 0 and 1
                                 (occ and virt)
     
-    n_corr_orb
-        The number of correlatad orbitals in each irrep
+    corr_orb
+        The number of correlatad orbitals in each spirrep.
+        Its size must be twice n_irrep = n_orb_before.size
+        Currently, the wave function is assumed to be of unrestricted type
     
-    n_ext
+    virt_orb
         The number of orbitals in the external space (number of virtuals)
-        for each irrep
+        for each spirrep
+        Its size must be twice n_irrep = n_orb_before.size
+        Currently, the wave function is assumed to be of unrestricted type
     
     alpha_string_graph
         The graph to obtain the alpha strings (associated to the first
@@ -124,19 +196,22 @@ def min_dist_app_hess(double [:, :] wf,
     
     """
     cdef double normJac = 0.0
-    cdef double [:] z = np.zeros(n_ampl)
+    cdef double[:] z = np.zeros(n_ampl)
     cdef int pos = 0, n_alpha, n_beta
-    cdef int spirrep, irrep, i_irrep, j_irrep, a_irrep, b_irrep, i, j, a, b
+    cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, i, j, a, b
     cdef SingleExc single_exc
-    cdef DoubleExc single_exc
+    cdef DoubleExc double_exc
+    cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
     n_alpha = alpha_string_graph.shape[1]
     n_beta = beta_string_graph.shape[1]
+    n_irrep = n_orb_before.size
     if level == 'SD':
         # --- alpha -> alpha
         for irrep in range(n_irrep):
+            spirrep = irrep
             single_exc.i = n_orb_before[irrep]
-            for i in range(n_corr_orb[irrep]):
-                single_exc.a = n_orb_before[irrep] + corr_orb[irrep]
+            for i in range(corr_orb[spirrep]):
+                single_exc.a = n_orb_before[irrep] + corr_orb[spirrep]
                 for a in range(virt_orb[spirrep]):
                     J = _term1_a(single_exc,
                                  wf,
@@ -168,27 +243,29 @@ def min_dist_app_hess(double [:, :] wf,
                     single_exc.a += 1
                 single_exc.i += 1
     # --- alpha, alpha -> alpha, alpha
-    i = OccOrbital(corr_orb, n_irrep, n_orb_before)
-    j = OccOrbital(corr_orb, n_irrep, n_orb_before)
-    SET TO ALPHA
+    i = OccOrbital(corr_orb, n_orb_before, True)
+    j = OccOrbital(corr_orb, n_orb_before, True)
     j.next_()
     while j.alive:
         double_exc.i = i.orb
         double_exc.j = j.orb
         for a_irrep in range(n_irrep):
+            pos_ini[a_irrep] = pos
             b_irrep = irrep_product[
-                irrep_product[i_irrep, j_irrep], a_irrep]
+                irrep_product[i.irrep, j.irrep], a_irrep]
+            a_spirrep = a_irrep
+            b_spirrep = b_irrep
             double_exc.a = (n_orb_before[a_irrep]
-                            + n_corr_orb[a_irrep])
+                            + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
-                for a in range(virt_orb[a_irrep]):
+                for a in range(virt_orb[a_spirrep]):
                     if a_irrep == b_irrep:
-                        nvirt_1 = virt_orb[a_irrep] - 1
+                        nvirt_1 = virt_orb[a_spirrep] - 1
                         double_exc.b = double_exc.a
                     else:
                         double_exc.b = (n_orb_before[b_irrep]
-                                        + corr_orb[b_irrep])
-                    for b in range(virt_orb[b_irrep]):
+                                        + corr_orb[b_spirrep])
+                    for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
                             J = _term1_aa(double_exc,
                                           wf,
@@ -198,45 +275,46 @@ def min_dist_app_hess(double [:, :] wf,
                             z[pos] = J/_term2_diag_aa(double_exc,
                                                       wf_cc,
                                                       n_alpha)
-                        elif a_irrep == b_irrep and a > b:
+                        elif a > b:
                             z[pos] = -z[pos - (a-b)*nvirt_1]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
             else:  # and a_irrep > b_irrep
-                for a in range(virt_orb[a_irrep]):
-                    for b in range(virt_orb[b_irrep]):
-                        z[pos] = -z[pos_ini[ij, irrep_b]
+                for a in range(virt_orb[a_spirrep]):
+                    for b in range(virt_orb[b_spirrep]):
+                        z[pos] = -z[pos_ini[b_irrep]
                                     + get_pos_from_rectangular(
-                                        b, a, virt_orb[a_irrep])]
+                                        b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
-            i.to_first()
+            i.rewind()
             double_exc.j = j.orb
         else:
             i.next_()
         double_exc.i = i.orb
     # --- beta, beta -> beta, beta
-    i = OccOrbital(corr_orb, n_irrep, n_orb_before)
-    j = OccOrbital(corr_orb, n_irrep, n_orb_before)
-    SET TO BETA
+    i = OccOrbital(corr_orb, n_orb_before, False)
+    j = OccOrbital(corr_orb, n_orb_before, False)
     j.next_()
     while j.alive:
         double_exc.i = i.orb
         double_exc.j = j.orb
         for a_irrep in range(n_irrep):
+            pos_ini[a_irrep] = pos
             b_irrep = irrep_product[
-                irrep_product[i_irrep, j_irrep], a_irrep]
+                irrep_product[i.spirrep - n_irrep,
+                              j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep + n_irrep
-            b_spirrep = b_irrep + n_irrep)
+            b_spirrep = b_irrep + n_irrep
             double_exc.a = (n_orb_before[a_irrep]
                             + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
                     if a_irrep == b_irrep:
                         nvirt_1 = virt_orb[a_spirrep] - 1
-                        double_exc.b = double_exc[1]
+                        double_exc.b = double_exc.a
                     else:
                         double_exc.b = (n_orb_before[b_irrep]
                                         + corr_orb[b_spirrep])
@@ -250,7 +328,7 @@ def min_dist_app_hess(double [:, :] wf,
                             z[pos] = J/_term2_diag_bb(double_exc,
                                                       wf_cc,
                                                       n_beta)
-                        elif a_irrep == b_irrep and a > b:
+                        elif a > b:
                             z[pos] = -z[pos - (a-b)*nvirt_1]
                         pos += 1
                         double_exc.b += 1
@@ -258,30 +336,31 @@ def min_dist_app_hess(double [:, :] wf,
             else:  # and a_irrep > b_irrep
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
-                        z[pos] = -z[pos_ini[ij, irrep_b]
+                        z[pos] = -z[pos_ini[b_irrep]
                                     + get_pos_from_rectangular(
                                         b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
-            i.to_first()
+            i.rewind()
             double_exc.j = j.orb
         else:
             i.next_()
         double_exc.i = i.orb
     # --- alpha, beta -> alpha, beta
-    i = OccOrbital(corr_orb, n_irrep, n_orb_before)
-    j = OccOrbital(corr_orb, n_irrep, n_orb_before)
+    i = OccOrbital(corr_orb, n_orb_before, True)
+    j = OccOrbital(corr_orb, n_orb_before, False)
     double_exc.i = i.orb
     double_exc.j = j.orb
     while j.alive:
         for a_irrep in range(n_irrep):
             b_irrep = irrep_product[
-                irrep_product[i_irrep, j_irrep], a_irrep]
-            b_spirrep = b_irrep + n_irrep)
+                irrep_product[i.spirrep, j.spirrep - n_irrep], a_irrep]
+            a_spirrep = a_irrep
+            b_spirrep = b_irrep + n_irrep
             double_exc.a = (n_orb_before[a_irrep]
-                            + n_corr_orb[a_irrep])
-            for a in range(virt_orb[a_irrep]):
+                            + corr_orb[a_spirrep])
+            for a in range(virt_orb[a_spirrep]):
                 double_exc.b = (n_orb_before[b_irrep]
                                 + corr_orb[b_spirrep])
                 for b in range(virt_orb[b_spirrep]):
@@ -298,12 +377,12 @@ def min_dist_app_hess(double [:, :] wf,
                     pos += 1
                     double_exc.b += 1
                 double_exc.a += 1
-        if i.pos_in_occ == n_occ_orb - 1:
+                
+        i.next_()
+        if not i.alive:
             j.next_()
-            i.to_first()
+            i.rewind()
             double_exc.j = j.orb
-        else:
-            i.next_()
         double_exc.i = i.orb
     if pos != n_ampl:
         raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
@@ -314,12 +393,12 @@ def min_dist_jac_hess():
     raise NotImplementedError('do it')
     
 
-def double _term1(exc,
-                  int exc_type,
-                  double [:, :] wf,
-                  double [:, :] wf_cc,
-                  int [:, :] alpha_string_graph,
-                  int [:, :] beta_string_graph):
+cdef double _term1(int[:] exc,
+                   int exc_type,
+                   double[:, :] wf,
+                   double[:, :] wf_cc,
+                   int[:, :] alpha_string_graph,
+                   int[:, :] beta_string_graph):
     """The term <\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     We recomment to use the functions _term1_a, _term1_b,
@@ -328,8 +407,8 @@ def double _term1(exc,
     
     Parameters:
     -----------
-    exc (SingleExc or DoubleExc)
-        the excitation
+    exc
+        the excitation, with [i, a] for single and [i, a, j, b] for double
     
     exc_type
         the excitation type. Possible values are EXC_TYPE_A
@@ -354,29 +433,47 @@ def double _term1(exc,
     A float (C double)
     
     """
+    cdef DoubleExc double_exc
+    cdef SingleExc single_exc
     if exc_type == EXC_TYPE_A:
-        return _term1_a(exc, wf, wf_cc,
+        single_exc.i = exc[0]
+        single_exc.a = exc[1]
+        return _term1_a(single_exc, wf, wf_cc,
                         alpha_string_graph)
     if exc_type == EXC_TYPE_AA:
-        return _term1_aa(exc, wf, wf_cc,
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term1_aa(double_exc, wf, wf_cc,
                          alpha_string_graph)
     if exc_type == EXC_TYPE_B:
-        return _term1_b(exc, wf, wf_cc,
+        single_exc.i = exc[0]
+        single_exc.a = exc[1]
+        return _term1_b(single_exc, wf, wf_cc,
                         beta_string_graph)
     if exc_type == EXC_TYPE_BB:
-        return _term1_bb(exc, wf, wf_cc,
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term1_bb(double_exc, wf, wf_cc,
                          beta_string_graph)
     if exc_type == EXC_TYPE_AB:
-        return _term1_ab(exc, wf, wf_cc,
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term1_ab(double_exc, wf, wf_cc,
                          alpha_string_graph,
                          beta_string_graph)
 
 
-def double _term2_diag(exc,
-                       int exc_type,
-                       double [:, :] wf,
-                       int alpha_nel,
-                       int beta_nel):
+cdef double _term2_diag(int[:] exc,
+                        int exc_type,
+                        double[:, :] wf,
+                        int alpha_nel,
+                        int beta_nel):
     """The term <\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
     
     Parameters:
@@ -388,24 +485,42 @@ def double _term2_diag(exc,
     A float (C double)
     
     """
+    cdef DoubleExc double_exc
+    cdef SingleExc single_exc
     if exc_type == EXC_TYPE_A:
-        return _term2_diag_a(exc, wf, alpha_nel)
+        single_exc.i = exc[0]
+        single_exc.a = exc[1]
+        return _term2_diag_a(single_exc, wf, alpha_nel)
     if exc_type == EXC_TYPE_AA:
-        return _term2_diag_aa(exc, wf, alpha_nel)
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term2_diag_aa(double_exc, wf, alpha_nel)
     if exc_type == EXC_TYPE_B:
-        return _term2_diag_b(exc, wf, beta_nel)
+        single_exc.i = exc[0]
+        single_exc.a = exc[1]
+        return _term2_diag_b(single_exc, wf, beta_nel)
     if exc_type == EXC_TYPE_BB:
-        return _term2_diag_bb(exc, wf, beta_nel)
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term2_diag_bb(double_exc, wf, beta_nel)
     if exc_type == EXC_TYPE_AB:
-        return _term2_diag_ab(exc, wf, alpha_nel, beta_nel)
+        double_exc.i = exc[0]
+        double_exc.a = exc[1]
+        double_exc.j = exc[2]
+        double_exc.b = exc[3]
+        return _term2_diag_ab(double_exc, wf, alpha_nel, beta_nel)
 
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_a(SingleExc exc,
-                     double [:, :] wf,
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
+                     double[:, :] wf,
+                     double[:, :] wf_cc,
+                     int[:, :] string_graph):
     """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     for \rho=a_{\alpha}^{\alpha}
@@ -423,8 +538,8 @@ cdef double _term1_a(SingleExc exc,
     cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int[:] I = np.arange(nel, dtype=int_dtype)
+    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
     cdef int I_i, I_exc_i, i
     cdef double S = 0.0
     for I_i in range(nstr_alpha):
@@ -443,9 +558,9 @@ cdef double _term1_a(SingleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_b(SingleExc exc,
-                     double [:, :] wf,
-                     double [:, :] wf_cc,
-                     int [:, :] string_graph):
+                     double[:, :] wf,
+                     double[:, :] wf_cc,
+                     int[:, :] string_graph):
     """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     for \rho=a_{\beta}^{\beta}
@@ -463,8 +578,8 @@ cdef double _term1_b(SingleExc exc,
     cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int[:] I = np.arange(nel, dtype=int_dtype)
+    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
     cdef int I_i, I_exc_i, i
     cdef double S = 0.0
     for I_i in range(nstr_beta):
@@ -482,9 +597,9 @@ cdef double _term1_b(SingleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_aa(DoubleExc exc,
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
+                      double[:, :] wf,
+                      double[:, :] wf_cc,
+                      int[:, :] string_graph):
     """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     for \rho=a_{\alpha\alpha}^{\alpha\alpha}
@@ -502,8 +617,8 @@ cdef double _term1_aa(DoubleExc exc,
     cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int[:] I = np.arange(nel, dtype=int_dtype)
+    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
     cdef int I_i, I_exc_i, sign, i
     cdef double S = 0.0
     for I_i in range(nstr_alpha):
@@ -524,9 +639,9 @@ cdef double _term1_aa(DoubleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_bb(DoubleExc exc,
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] string_graph):
+                      double[:, :] wf,
+                      double[:, :] wf_cc,
+                      int[:, :] string_graph):
     """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     for \rho=a_{\beta\beta}^{\beta\beta}
@@ -544,8 +659,8 @@ cdef double _term1_bb(DoubleExc exc,
     cdef int nel = string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] I = np.arange(nel, dtype=int_dtype)
-    cdef int [:] I_exc = np.empty(nel+1, dtype=int_dtype)
+    cdef int[:] I = np.arange(nel, dtype=int_dtype)
+    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
     cdef int I_i, I_exc_i, sign, i
     cdef double S = 0.0
     for I_i in range(nstr_beta):
@@ -566,10 +681,10 @@ cdef double _term1_bb(DoubleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term1_ab(DoubleExc exc,
-                      double [:, :] wf,
-                      double [:, :] wf_cc,
-                      int [:, :] alpha_string_graph,
-                      int [:, :] beta_string_graph):
+                      double[:, :] wf,
+                      double[:, :] wf_cc,
+                      int[:, :] alpha_string_graph,
+                      int[:, :] beta_string_graph):
     """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
     
     for \rho=a_{\alpha\beta}^{\alpha\beta}
@@ -586,10 +701,10 @@ cdef double _term1_ab(DoubleExc exc,
     cdef int nbeta = beta_string_graph.shape[1]
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ia = np.arange(nalpha, dtype=int_dtype)
-    cdef int [:] Ib = np.arange(nbeta, dtype=int_dtype)
-    cdef int [:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
-    cdef int [:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
+    cdef int[:] Ia = np.arange(nalpha, dtype=int_dtype)
+    cdef int[:] Ib = np.arange(nbeta, dtype=int_dtype)
+    cdef int[:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
+    cdef int[:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
     cdef int Ia_i, Ib_i, Ia_exc_i, Ib_exc_i
     cdef double S = 0.0
     for Ia_i in range(nstr_alpha):
@@ -615,7 +730,7 @@ cdef double _term1_ab(DoubleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term2_diag_a(SingleExc exc,
-                          double [:, :] wf,
+                          double[:, :] wf,
                           int nel):
     """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
     
@@ -631,7 +746,7 @@ cdef double _term2_diag_a(SingleExc exc,
     """
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ia = np.arange(nel, dtype=int_dtype)
+    cdef int[:] Ia = np.arange(nel, dtype=int_dtype)
     cdef double S = 0.0
     cdef int Ia_i, Ib_i
     for Ia_i in range(nstr_alpha):
@@ -645,7 +760,7 @@ cdef double _term2_diag_a(SingleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term2_diag_b(SingleExc exc,
-                          double [:, :] wf,
+                          double[:, :] wf,
                           int nel):
     """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
     
@@ -661,7 +776,7 @@ cdef double _term2_diag_b(SingleExc exc,
     """
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ib = np.arange(nel, dtype=int_dtype)
+    cdef int[:] Ib = np.arange(nel, dtype=int_dtype)
     cdef double S = 0.0
     for Ib_i in range(nstr_beta):
         if (exc.i in Ib) and (exc.a not in Ib):
@@ -675,7 +790,7 @@ cdef double _term2_diag_b(SingleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term2_diag_aa(DoubleExc exc,
-                           double [:, :] wf,
+                           double[:, :] wf,
                            int nel):
     """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
     
@@ -691,7 +806,7 @@ cdef double _term2_diag_aa(DoubleExc exc,
     """
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ia = np.arange(nel, dtype=int_dtype)
+    cdef int[:] Ia = np.arange(nel, dtype=int_dtype)
     cdef double S = 0.0
     cdef int Ia_i, Ib_i
     for Ia_i in range(nstr_alpha):
@@ -707,7 +822,7 @@ cdef double _term2_diag_aa(DoubleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term2_diag_bb(DoubleExc exc,
-                           double [:, :] wf,
+                           double[:, :] wf,
                            int nel):
     """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
     
@@ -723,7 +838,7 @@ cdef double _term2_diag_bb(DoubleExc exc,
     """
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ib = np.arange(nel, dtype=int_dtype)
+    cdef int[:] Ib = np.arange(nel, dtype=int_dtype)
     cdef int Ia_i, Ib_i
     cdef double S = 0.0
     for Ib_i in range(nstr_beta):
@@ -739,7 +854,7 @@ cdef double _term2_diag_bb(DoubleExc exc,
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cdef double _term2_diag_ab(DoubleExc exc,
-                           double [:, :] wf,
+                           double[:, :] wf,
                            int alpha_nel,
                            int beta_nel):
     """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
@@ -756,8 +871,8 @@ cdef double _term2_diag_ab(DoubleExc exc,
     """
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int [:] Ia = np.arange(alpha_nel, dtype=int_dtype)
-    cdef int [:] Ib
+    cdef int[:] Ia = np.arange(alpha_nel, dtype=int_dtype)
+    cdef int[:] Ib
     cdef int Ia_i, Ib_i
     cdef double S = 0.0
     for Ia_i in range(nstr_alpha):
@@ -773,7 +888,7 @@ cdef double _term2_diag_ab(DoubleExc exc,
 
 #@cython.boundscheck(False)  # Deactivate bounds checking
 #@cython.wraparound(False)   # Deactivate negative indexing
-cdef int [:] _exc_on_string(int i, int a, int [:] I):
+cdef int[:] _exc_on_string(int i, int a, int[:] I):
     """Obtain the string after the excitation i->a over I
     
     Parameters:
@@ -797,7 +912,7 @@ cdef int [:] _exc_on_string(int i, int a, int [:] I):
     
     """
     cdef int n = I.shape[0]
-    cdef int [:] new_I = np.empty(n+1, dtype=int_dtype)
+    cdef int[:] new_I = np.empty(n+1, dtype=int_dtype)
     cdef int pos, i_pos, a_pos
     i_pos = 0
     a_pos = 0
