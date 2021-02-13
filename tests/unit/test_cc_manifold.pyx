@@ -6,10 +6,14 @@ import unittest
 import numpy as np
 
 import tests
-from coupled_cluster.manifold cimport (
-    EXC_TYPE_A, EXC_TYPE_B, EXC_TYPE_AA, EXC_TYPE_AB, EXC_TYPE_BB,
-    _term1, _term2_diag, _exc_on_string, OccOrbital)
-from coupled_cluster.manifold import OccOrbital
+from src.coupled_cluster.manifold cimport (_term1, _term2_diag, _exc_on_string,
+    SingleExc, DoubleExc, _term1_a)
+from wave_functions.singles_doubles cimport (
+    EXC_TYPE_ALL,
+    EXC_TYPE_A, EXC_TYPE_B,
+    EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+from orbitals.occ_orbitals cimport OccOrbital
+from orbitals.occ_orbitals import OccOrbital
 from wave_functions.fci import make_occ
 from util.variables import int_dtype
 
@@ -197,6 +201,13 @@ class Terms2el6orbTestCase(unittest.TestCase):
                                 [2]], dtype=int_dtype)
 
     def test_term1_singles(self):
+        cdef SingleExc single_exc
+        single_exc.i = 0
+        single_exc.a = 1
+        self.assertAlmostEqual(_term1_a(single_exc,
+                                        self.wf, self.wf_cc,
+                                        self.str_gr),
+                               -0.41)
         self.assertAlmostEqual(_term1(make_occ([0, 1]),
                                       EXC_TYPE_A,
                                       self.wf, self.wf_cc,
@@ -521,7 +532,7 @@ class OccOrbitalTestCase(unittest.TestCase):
 
     def setUp(self):
         self.corr_orb = np.array([5, 2, 2, 0, 4, 2, 2, 0], int_dtype)
-        self.n_orb_before = np.array([0,10,15,20], int_dtype)
+        self.n_orb_before = np.array([0, 10, 15, 20, 22], int_dtype)
 
     def test_alpha(self):
         cdef OccOrbital i

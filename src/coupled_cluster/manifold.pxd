@@ -1,16 +1,8 @@
-cdef int EXC_TYPE_A
-cdef int EXC_TYPE_B
-cdef int EXC_TYPE_AA
-cdef int EXC_TYPE_AB
-cdef int EXC_TYPE_BB
+cdef struct SingleExc:
+    int i, a
 
-cdef class OccOrbital:
-    cdef int pos_in_occ, orb, spirrep, _n_occ
-    cdef int[:] _corr_orb, _n_orb_before
-    cdef bint alive, is_alpha
-    cdef rewind(self)
-    cdef next_(self)
-
+cdef struct DoubleExc:
+    int i, j, a, b
 
 cdef double _term1(int[:] exc,
                    int exc_type,
@@ -24,5 +16,10 @@ cdef double _term2_diag(int[:] exc,
                         double[:, :] wf_cc,
                         int alpha_nel,
                         int beta_nel)
+
+cdef double _term1_a(SingleExc exc,
+                     double[:, :] wf,
+                     double[:, :] wf_cc,
+                     int[:, :] string_graph)
 
 cdef int[:] _exc_on_string(int i, int a, int[:] I)

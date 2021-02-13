@@ -5,135 +5,23 @@
 import cython
 import numpy as np
 
-
 from wave_functions.strings_rev_lexical_order import get_index
 from wave_functions.strings_rev_lexical_order cimport next_str
+from wave_functions.singles_doubles cimport (
+    EXC_TYPE_ALL,
+    EXC_TYPE_A, EXC_TYPE_B,
+    EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+from orbitals.occ_orbitals cimport OccOrbital
+#from orbitals.occ_orbitals import OccOrbital
 from util.variables import int_dtype
 from util.array_indices cimport get_pos_from_rectangular
 from molecular_geometry.symmetry import irrep_product
-
-cdef int EXC_TYPE_A = 0
-cdef int EXC_TYPE_B = 1
-cdef int EXC_TYPE_AA = 2
-cdef int EXC_TYPE_AB = 3
-cdef int EXC_TYPE_BB = 4
-
-
-cdef class OccOrbital:
-    """Class to run over occupied orbitals
-
-    Usage:
-    ------
-    # alpha and beta correlated orbitals
-    corr_orb = np.array([5,2,2,0, 4,2,2,0], dtype=int_dtype)
-    # number of orbitals before that irrep
-    n_orb_before = np.array([0,10,15,20])
-
-    i = OccOrbital(corr_orb, n_orb_before, True)
-    i.pos_in_occ  # 0
-    i.orb  # 0
-    i.spirrep  # 0
-    i.alive  # True
-
-    i.next_()
-
-    i.pos_in_occ  # 1
-    i.orb  # 1
-    i.spirrep  # 0
-
-    for k in range(3):
-       i.next_()
-
-    i.pos_in_occ  # 4
-    i.orb  # 4
-    i.spirrep  # 0
-
-    i.next_()
-
-    i.pos_in_occ  # 5
-    i.orb  # 0
-    i.spirrep  # 1
-
-    for k in range(4):
-       i.next_()
-
-    i.pos_in_occ   # 9 > n of occupied orb
-    i.alive  # False
-
-    i.rewind()
-    i.pos_in_occ  # 0
-    i.orb  # 0
-    i.spirrep  # 0
-    i.alive  # True
-
-
-    """
-    def __init__(self,
-                  int[:] corr_orb,
-                  int[:] n_orb_before,
-                  bint is_alpha):
-        cdef int irrep, spirrep
-        cdef int n_irrep = n_orb_before.shape[0]
-        self.is_alpha = is_alpha
-        self._corr_orb = corr_orb
-        self._n_orb_before = n_orb_before
-        self._n_occ = 0
-        self.spirrep = 0 if is_alpha else n_irrep
-        spirrep = self.spirrep
-        self.orb = -1
-        for irrep in range(n_irrep):
-            self._n_occ += self._corr_orb[spirrep]
-            if self.orb == -1 and self._corr_orb[spirrep] > 0:
-                self.orb = self._n_orb_before[irrep]
-                self.spirrep = spirrep
-            spirrep += 1
-        if self._n_occ == 0:
-            self.alive = False
-            return
-        self.alive = True
-        self.pos_in_occ = 0
-
-    cdef rewind(self):
-        cdef int irrep = 0
-        if self._n_occ == 0:
-            self.alive = False
-            return
-        self.alive = True
-        self.spirrep = 0 if self.is_alpha else self._n_orb_before.shape[0]
-        while self._corr_orb[self.spirrep] == 0:
-            self.spirrep += 1
-            irrep += 1
-        self.orb = self._n_orb_before[irrep]
-        self.pos_in_occ = 0
-
-    cdef next_(self):
-        self.pos_in_occ += 1
-        if self.pos_in_occ < self._n_occ:
-            self.orb += 1
-            if self.orb < (self._n_orb_before[self.spirrep
-                                              % self._n_orb_before.size]
-                           + self._corr_orb[self.spirrep]):
-                return
-            self.spirrep += 1
-            while self._corr_orb[self.spirrep] == 0:
-                self.spirrep += 1
-            self.orb = self._n_orb_before[self.spirrep
-                                          % self._n_orb_before.size]
-        else:
-            self.alive = False
-
-
-cdef struct SingleExc:
-    int i, a
-
-cdef struct DoubleExc:
-    int i, j, a, b
 
 
 def min_dist_app_hess(double[:, :] wf,
                       double[:, :] wf_cc,
                       int n_ampl,
-                      int[:] n_orb_before,
+                      int[:] orbs_before,
                       int[:] corr_orb,
                       int[:] virt_orb,
                       int[:, :] alpha_string_graph,
@@ -153,29 +41,29 @@ def min_dist_app_hess(double[:, :] wf,
     n_ampl
         The total number of amplitudes
     
-    n_orb_before
+    orbs_before
         The number of orbitals before each irreducible representation,
         in the order "all orbitals of first irrep, then all orbitals of
         second irrep, ...".
         
-        It must have the same number of elements as n_irrep: its size
-        is used to get the n_irrep!
+        It must have one element more than the number of irreps
+        its size is used to get the n_irrep!
         
-        Thus, n_orb_before[0] = 0
-              n_orb_before[1] = total number of orbitals in irrep 0
+        Thus, orbs_before[0] = 0
+              orbs_before[1] = total number of orbitals in irrep 0
                                 (occ and virt)
-              n_orb_before[2] = total number of orbitals in irrep 0 and 1
+              orbs_before[2] = total number of orbitals in irrep 0 and 1
                                 (occ and virt)
     
     corr_orb
         The number of correlatad orbitals in each spirrep.
-        Its size must be twice n_irrep = n_orb_before.size
+        Its size must be twice n_irrep = orbs_before.size - 1
         Currently, the wave function is assumed to be of unrestricted type
     
     virt_orb
         The number of orbitals in the external space (number of virtuals)
         for each spirrep
-        Its size must be twice n_irrep = n_orb_before.size
+        Its size must be twice n_irrep = orbs_before.size - 1
         Currently, the wave function is assumed to be of unrestricted type
     
     alpha_string_graph
@@ -198,20 +86,22 @@ def min_dist_app_hess(double[:, :] wf,
     cdef double normJac = 0.0
     cdef double[:] z = np.zeros(n_ampl)
     cdef int pos = 0, n_alpha, n_beta
-    cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, i, j, a, b
+    cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
     cdef DoubleExc double_exc
     cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
+    cdef OccOrbital i, j
+
     n_alpha = alpha_string_graph.shape[1]
     n_beta = beta_string_graph.shape[1]
-    n_irrep = n_orb_before.size
+    n_irrep = orbs_before.size - 1
     if level == 'SD':
         # --- alpha -> alpha
         for irrep in range(n_irrep):
             spirrep = irrep
-            single_exc.i = n_orb_before[irrep]
-            for i in range(corr_orb[spirrep]):
-                single_exc.a = n_orb_before[irrep] + corr_orb[spirrep]
+            single_exc.i = orbs_before[irrep]
+            for ii in range(corr_orb[spirrep]):
+                single_exc.a = orbs_before[irrep] + corr_orb[spirrep]
                 for a in range(virt_orb[spirrep]):
                     J = _term1_a(single_exc,
                                  wf,
@@ -227,9 +117,9 @@ def min_dist_app_hess(double[:, :] wf,
         # --- beta -> beta
         for irrep in range(n_irrep):
             spirrep = irrep + n_irrep
-            single_exc.i = n_orb_before[irrep]
-            for i in range(corr_orb[spirrep]):
-                single_exc.a = n_orb_before[irrep] + corr_orb[spirrep]
+            single_exc.i = orbs_before[irrep]
+            for ii in range(corr_orb[spirrep]):
+                single_exc.a = orbs_before[irrep] + corr_orb[spirrep]
                 for a in range(virt_orb[spirrep]):
                     J = _term1_b(single_exc,
                                  wf,
@@ -243,8 +133,8 @@ def min_dist_app_hess(double[:, :] wf,
                     single_exc.a += 1
                 single_exc.i += 1
     # --- alpha, alpha -> alpha, alpha
-    i = OccOrbital(corr_orb, n_orb_before, True)
-    j = OccOrbital(corr_orb, n_orb_before, True)
+    i = OccOrbital(corr_orb, orbs_before, True)
+    j = OccOrbital(corr_orb, orbs_before, True)
     j.next_()
     while j.alive:
         double_exc.i = i.orb
@@ -252,10 +142,10 @@ def min_dist_app_hess(double[:, :] wf,
         for a_irrep in range(n_irrep):
             pos_ini[a_irrep] = pos
             b_irrep = irrep_product[
-                irrep_product[i.irrep, j.irrep], a_irrep]
+                irrep_product[i.spirrep, j.spirrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep
-            double_exc.a = (n_orb_before[a_irrep]
+            double_exc.a = (orbs_before[a_irrep]
                             + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
@@ -263,7 +153,7 @@ def min_dist_app_hess(double[:, :] wf,
                         nvirt_1 = virt_orb[a_spirrep] - 1
                         double_exc.b = double_exc.a
                     else:
-                        double_exc.b = (n_orb_before[b_irrep]
+                        double_exc.b = (orbs_before[b_irrep]
                                         + corr_orb[b_spirrep])
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
@@ -295,8 +185,8 @@ def min_dist_app_hess(double[:, :] wf,
             i.next_()
         double_exc.i = i.orb
     # --- beta, beta -> beta, beta
-    i = OccOrbital(corr_orb, n_orb_before, False)
-    j = OccOrbital(corr_orb, n_orb_before, False)
+    i = OccOrbital(corr_orb, orbs_before, False)
+    j = OccOrbital(corr_orb, orbs_before, False)
     j.next_()
     while j.alive:
         double_exc.i = i.orb
@@ -308,7 +198,7 @@ def min_dist_app_hess(double[:, :] wf,
                               j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep + n_irrep
             b_spirrep = b_irrep + n_irrep
-            double_exc.a = (n_orb_before[a_irrep]
+            double_exc.a = (orbs_before[a_irrep]
                             + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
@@ -316,7 +206,7 @@ def min_dist_app_hess(double[:, :] wf,
                         nvirt_1 = virt_orb[a_spirrep] - 1
                         double_exc.b = double_exc.a
                     else:
-                        double_exc.b = (n_orb_before[b_irrep]
+                        double_exc.b = (orbs_before[b_irrep]
                                         + corr_orb[b_spirrep])
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
@@ -348,8 +238,8 @@ def min_dist_app_hess(double[:, :] wf,
             i.next_()
         double_exc.i = i.orb
     # --- alpha, beta -> alpha, beta
-    i = OccOrbital(corr_orb, n_orb_before, True)
-    j = OccOrbital(corr_orb, n_orb_before, False)
+    i = OccOrbital(corr_orb, orbs_before, True)
+    j = OccOrbital(corr_orb, orbs_before, False)
     double_exc.i = i.orb
     double_exc.j = j.orb
     while j.alive:
@@ -358,10 +248,10 @@ def min_dist_app_hess(double[:, :] wf,
                 irrep_product[i.spirrep, j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep + n_irrep
-            double_exc.a = (n_orb_before[a_irrep]
+            double_exc.a = (orbs_before[a_irrep]
                             + corr_orb[a_spirrep])
             for a in range(virt_orb[a_spirrep]):
-                double_exc.b = (n_orb_before[b_irrep]
+                double_exc.b = (orbs_before[b_irrep]
                                 + corr_orb[b_spirrep])
                 for b in range(virt_orb[b_spirrep]):
                     J = _term1_ab(double_exc,
@@ -411,9 +301,7 @@ cdef double _term1(int[:] exc,
         the excitation, with [i, a] for single and [i, a, j, b] for double
     
     exc_type
-        the excitation type. Possible values are EXC_TYPE_A
-        and EXC_TYPE_B for singles, and EXC_TYPE_AA, EXC_TYPE_AB
-        and EXC_TYPE_BB for doubles.
+        the excitation type.
         This determines the "\rho"
     
     wf

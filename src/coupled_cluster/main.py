@@ -5,6 +5,7 @@ Yuri Aoto, 2021
 """
 from input_output.log import logtime, logger
 from wave_functions import fci
+from wave_functions.interm_norm import IntermNormWaveFunction
 
 
 def main(args, f_out):
@@ -31,10 +32,13 @@ def main(args, f_out):
         with logtime('Loading FCI wave function'):
             fci_wf = fci.WaveFunctionFCI.from_Molpro_FCI(args.molpro_output)
         fci_wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.similar_to(
+            fci_wf, 'CC' + level, restricted=False)
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
         with logtime('Running CC_manifold analysis'):
             resCC = fci_wf.calc_dist_to_cc_manifold(level=level,
                                                     f_out=f_out,
+                                                    ini_wf=cc_wf,
                                                     restore_wf=False)
         logger.info(resCC.wave_function)
         f_out.write(

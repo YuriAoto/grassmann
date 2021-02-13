@@ -35,6 +35,7 @@ def eucl_distance(double [:, :] wf1, double [:, :] wf2):
                 S += (wf1[i, j] - wf2[i, j])*(wf1[i, j] - wf2[i, j])
     return sqrt(S)
 
+
 def generate_graph(int nel, int norb):
     """Generate the string graph matrix to set the reverse lexical order
     
@@ -64,6 +65,7 @@ def generate_graph(int nel, int norb):
         for j in range(1, nel):
             str_gr[i,j] = str_gr[i-1,j] + str_gr[i,j-1]
     return str_gr
+
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
@@ -130,6 +132,7 @@ def occ_from_pos(str_ind, Y):
     for i in range(str_ind):
         next_str(occ)
     return occ
+
 
 def sign_relative_to_ref(int[:] holes, int[:] particles, int[:] ref_det_occ):
     """Get sign to adapt to reference Slater determinant

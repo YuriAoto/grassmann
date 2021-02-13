@@ -27,7 +27,7 @@ from util.memory import mem_of_floats
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
-from wave_functions.int_norm import IntermNormWaveFunction
+from wave_functions.interm_norm import IntermNormWaveFunction
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
@@ -1786,7 +1786,6 @@ class WaveFunctionFCI(WaveFunction):
                             self._coefficients,
                             cc_wf_as_fci._coefficients,
                             n_ampl,
-                            self.n_irrep,
                             self.orbs_before,
                             corr_orb,
                             virt_orb,
@@ -1799,7 +1798,6 @@ class WaveFunctionFCI(WaveFunction):
                         Jac, Hess = cc_manifold.min_dist_jac_hess(
                             self._coefficients,
                             cc_wf_as_fci._coefficients,
-                            n_ampl,
                             self.n_irrep,
                             self.orbs_before,
                             corr_orb,
