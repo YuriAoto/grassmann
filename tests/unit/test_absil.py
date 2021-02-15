@@ -10,7 +10,7 @@ import tests
 from wave_functions import cisd, int_norm
 from orbitals import orbitals
 from dist_grassmann import absil
-from util.variables import int_dtype
+from util.other import int_array
 
 
 np.set_printoptions(formatter={'float': lambda x: '{0:>9.6f}'.format(x)})
@@ -32,38 +32,32 @@ class YieldExcitations523TestCase(unittest.TestCase):
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 5))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 6))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 2)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 7))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 5))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 6))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 2)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 7))
             else:
                 self.fail('Too many indices')
 
@@ -77,24 +71,21 @@ class YieldExcitations523TestCase(unittest.TestCase):
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 5, 6))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 5, 7))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 6, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 6, 7))
             else:
                 self.fail('Too many indices')
 
@@ -115,56 +106,47 @@ class YieldExcitations633TestCase(unittest.TestCase):
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 5, 6))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 5, 7))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 0)
                     self.assertEqual(a, 2)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 5, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 5, 8))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 5, 6))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 5, 7))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(a, 2)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 5, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 5, 8))
             elif i_Ind == 6:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 6],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 4, 6))
             elif i_Ind == 7:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 4, 7))
             elif i_Ind == 8:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(a, 2)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 4, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 4, 8))
             else:
                 self.fail('Too many indices')
 
@@ -178,72 +160,63 @@ class YieldExcitations633TestCase(unittest.TestCase):
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 5, 6, 7))
             elif i_Ind == 1:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 6, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 5, 6, 8))
             elif i_Ind == 2:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 1)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 5, 7, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 5, 7, 8))
             elif i_Ind == 3:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 6, 7))
             elif i_Ind == 4:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 6, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 6, 8))
             elif i_Ind == 5:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 0)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 4, 7, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 4, 7, 8))
             elif i_Ind == 6:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 1)
                     self.assertEqual(a, 1)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 7],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 6, 7))
             elif i_Ind == 7:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 1)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 0)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 6, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 6, 8))
             elif i_Ind == 8:
                 with self.subTest(i_Ind=i_Ind):
                     self.assertEqual(i, 2)
                     self.assertEqual(j, 1)
                     self.assertEqual(a, 2)
                     self.assertEqual(b, 1)
-                    self.assertEqual(Ind, np.array([0, 1, 2, 3, 7, 8],
-                                                   dtype=int_dtype))
+                    self.assertEqual(Ind, int_array(0, 1, 2, 3, 7, 8))
             else:
                 self.fail('Too many indices')
 

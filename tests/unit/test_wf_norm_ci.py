@@ -8,8 +8,8 @@ import numpy as np
 
 import tests
 from util.variables import int_dtype
+from util.other import int_array
 from wave_functions import general, norm_ci, int_norm
-from wave_functions.fci import make_occ
 from string_indices.string_indices import SpirrepStringIndex, SD_StringIndex
 from orbitals.symmetry import OrbitalsSets
 
@@ -30,11 +30,11 @@ class WFConstructorsTestCase(unittest.TestCase):
                                       use_structure=True)
         self.assertAlmostEqual(wf.C0, 0.7568532707525314, places=10)
         self.assertAlmostEqual(wf[0].c, 0.7568532707525314, places=10)
-        self.assertEqual(wf[0].occupation[0], make_occ([0]))
-        self.assertEqual(wf[0].occupation[8], make_occ([0]))
+        self.assertEqual(wf[0].occupation[0], int_array(0))
+        self.assertEqual(wf[0].occupation[8], int_array(0))
         self.assertAlmostEqual(wf[1].c, -0.6535848273569357, places=10)
-        self.assertEqual(wf[1].occupation[4], make_occ([0]))
-        self.assertEqual(wf[1].occupation[12], make_occ([0]))
+        self.assertEqual(wf[1].occupation[4], int_array(0))
+        self.assertEqual(wf[1].occupation[12], int_array(0))
         tests.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
 
 
@@ -75,8 +75,8 @@ class SlaterDetTestCase(unittest.TestCase):
     
     def test_simple_construction(self):
         det = norm_ci.SlaterDet(c=0.123,
-                                occupation=(make_occ([0, 1, 2]),
-                                            make_occ([1])))
+                                occupation=(int_array(0, 1, 2),
+                                            int_array(1)))
         self.assertEqual(det.c, 0.123)
         self.assertEqual(det[0], 0.123)
         self.assertEqual(det.occupation[0][1], 1)
@@ -93,14 +93,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.162676901257, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 1]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0, 1]))
-        self.assertEqual(det.occupation[5], make_occ([0]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0, 1))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0, 1))
+        self.assertEqual(det.occupation[5], int_array(0))
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array())
 
     def test_get_from_FCI_line_2(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
@@ -111,14 +111,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.049624632911, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 1, 3]))
-        self.assertEqual(det.occupation[1], make_occ([]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0, 1, 5]))
-        self.assertEqual(det.occupation[5], make_occ([]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0, 1, 3))
+        self.assertEqual(det.occupation[1], int_array())
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0, 1, 5))
+        self.assertEqual(det.occupation[5], int_array())
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array())
 
     def test_get_from_FCI_line_3(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
@@ -139,14 +139,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.000000000000, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 1]))
-        self.assertEqual(det.occupation[1], make_occ([]))
-        self.assertEqual(det.occupation[2], make_occ([0]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0, 1]))
-        self.assertEqual(det.occupation[5], make_occ([]))
-        self.assertEqual(det.occupation[6], make_occ([1]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0, 1))
+        self.assertEqual(det.occupation[1], int_array())
+        self.assertEqual(det.occupation[2], int_array(0))
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0, 1))
+        self.assertEqual(det.occupation[5], int_array())
+        self.assertEqual(det.occupation[6], int_array(1))
+        self.assertEqual(det.occupation[7], int_array())
 
     def test_get_from_FCI_line_5(self):
         line = '    -0.162676901257  1  2  7  1  2  7'
@@ -157,14 +157,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.162676901257, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 5]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0, 5]))
-        self.assertEqual(det.occupation[5], make_occ([0]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0, 5))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0, 5))
+        self.assertEqual(det.occupation[5], int_array(0))
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array())
 
     def test_get_from_FCI_line_6(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
@@ -175,14 +175,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.049624632911, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 2]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0, 4]))
-        self.assertEqual(det.occupation[5], make_occ([0]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0, 2))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0, 4))
+        self.assertEqual(det.occupation[5], int_array(0))
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array())
 
     def test_get_from_FCI_line_7(self):
         line = '    -0.049624632911  1  2  4  1  2  6'
@@ -203,27 +203,27 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_FCI_line(
             line, orb_dim, n_core, n_irrep, Ms)
         self.assertAlmostEqual(det.c, -0.000000000000, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([0]))
-        self.assertEqual(det.occupation[3], make_occ([]))
-        self.assertEqual(det.occupation[4], make_occ([0]))
-        self.assertEqual(det.occupation[5], make_occ([0]))
-        self.assertEqual(det.occupation[6], make_occ([1]))
-        self.assertEqual(det.occupation[7], make_occ([]))
+        self.assertEqual(det.occupation[0], int_array(0))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array(0))
+        self.assertEqual(det.occupation[3], int_array())
+        self.assertEqual(det.occupation[4], int_array(0))
+        self.assertEqual(det.occupation[5], int_array(0))
+        self.assertEqual(det.occupation[6], int_array(1))
+        self.assertEqual(det.occupation[7], int_array())
     
     def test_get_from_String_Index_1(self):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.12345, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 2, 4]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([0]))
-        self.assertEqual(det.occupation[4], make_occ([0, 1, 2]))
-        self.assertEqual(det.occupation[5], make_occ([1, 3]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([0]))
+        self.assertEqual(det.occupation[0], int_array(0, 2, 4))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array(0))
+        self.assertEqual(det.occupation[4], int_array(0, 1, 2))
+        self.assertEqual(det.occupation[5], int_array(1, 3))
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array(0))
     
     def test_get_from_String_Index_2(self):
         det = norm_ci._get_Slater_Det_from_String_Index(
@@ -234,14 +234,14 @@ class SlaterDetTestCase(unittest.TestCase):
         det = norm_ci._get_Slater_Det_from_String_Index(self.string_index_2,
                                                     self.n_irrep)
         self.assertAlmostEqual(det.c, 0.6789, places=10)
-        self.assertEqual(det.occupation[0], make_occ([0, 2, 4]))
-        self.assertEqual(det.occupation[1], make_occ([0]))
-        self.assertEqual(det.occupation[2], make_occ([]))
-        self.assertEqual(det.occupation[3], make_occ([0]))
-        self.assertEqual(det.occupation[4], make_occ([0, 1, 2]))
-        self.assertEqual(det.occupation[5], make_occ([1, 3]))
-        self.assertEqual(det.occupation[6], make_occ([]))
-        self.assertEqual(det.occupation[7], make_occ([0]))
+        self.assertEqual(det.occupation[0], int_array(0, 2, 4))
+        self.assertEqual(det.occupation[1], int_array(0))
+        self.assertEqual(det.occupation[2], int_array())
+        self.assertEqual(det.occupation[3], int_array(0))
+        self.assertEqual(det.occupation[4], int_array(0, 1, 2))
+        self.assertEqual(det.occupation[5], int_array(1, 3))
+        self.assertEqual(det.occupation[6], int_array())
+        self.assertEqual(det.occupation[7], int_array(0))
 
 
 class JacHess_H2_TestCase(unittest.TestCase):
