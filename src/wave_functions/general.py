@@ -6,7 +6,7 @@ All wave functions should inherit from this class.
 # Covention for orbitals ordering:
 
 Consider a multideterminantal wave function that:
-1) is symmetry adapted: It is presented in a basis of symmetry adapted
+1) is possibly symmetry adapted: It is presented in a basis of symmetry adapted
    (spin-)orbitals, such that each orbital belongs to one of g possible
    irreducible representations (irrep).
 2) is based on excitations on top of a Slater determinant,
@@ -100,6 +100,9 @@ ref_orb   [ 5, 3, 3, 1,  3, 3, 3, 1]    Reference occupation
 corr_orb  [ 3, 2, 2, 0,  1, 2, 2, 0]    Correlated orbitals
                                         (alpha/beta)
 virt_orb  [ 5, 3, 3, 3,  7, 3, 3, 3]    Virtual orbitals
+
+corr_orbs_before = [0, 3, 5, 7, 0, 1, 3, 5, 0]
+
 
 Orbital order (irrep = irreducible representation):
 
@@ -203,7 +206,6 @@ from molecular_geometry.symmetry import (number_of_irreducible_repr,
 from orbitals.symmetry import OrbitalsSets
 
 
-
 class WaveFunction(ABC):
     """An abstract base class for electronic wave functions
     
@@ -245,7 +247,7 @@ class WaveFunction(ABC):
     
     corr_orbs_before (np.array of int)
         The number of correlated orbitals before each irrep.
-        orbs_before[irrep] = sum(corr_orb[:irrep])
+        corr_orbs_before[irrep] = sum(corr_orb[:irrep])
     
     n_alpha, n_beta, n_elec, n_corr_alpha, n_corr_beta, n_corr_elec (int)
         Number of alpha, beta, total, correlated alpha, correlated beta,
@@ -468,6 +470,76 @@ class WaveFunction(ABC):
             if orb < self.orbs_before[i_irrep+1]:
                 return i_irrep
     
+    def get_local_index(self, p, alpha_orb):
+        """Return index of p within its block of corr. or virtual orbitals
+
+        Given the global index of an orbital, calculates its index within
+        the block of orbitals it belongs
+
+        Example:
+        --------
+
+        Parameters:
+        -----------
+
+
+        """
+        irrep = self.get_orb_irrep(p)
+        p -= self.orbs_before[irrep]
+        spirrep = irrep + (0
+                           if alpha_orb or self.restricted else
+                           self.n_irrep)
+        if p >= self.corr_orb[spirrep]:
+            p -= self.corr_orb[spirrep]
+        return p, irrep
+    
+    def get_absolute_index(self, p, irrep, occupied, alpha_orb):
+        """Return the absolute index of p
+
+        Given the local index p, within a block of orbitals it belongs,
+        its irrep, and whether it is occupied/virtual or alpha/beta,
+        return its global index (within alpha or beta)
+        
+        It is the inverse of get_local_index
+        
+        Example:
+        --------
+
+        Parameters:
+        -----------
+
+
+        """
+        p += self.orbs_before[irrep]
+        if occupied:
+            p += self.corr_orb[
+                irrep + (0
+                         if alpha_orb or self.restricted else
+                         self.n_irrep)]
+        return p
+    
+    def get_abs_corr_index(self, p, irrep, alpha_orb):
+        """Return the absolute index of p within correlated orbitals
+        
+        Given the local index p, within a correlated block of orbitals,
+        its irrep, and whether it is alpha/beta,
+        return its global index (within alpha or beta correlated orbitals)
+        
+        It is the inverse of get_local_index
+        
+        Example:
+        --------
+        
+        Parameters:
+        -----------
+        
+        
+        """
+        return p + self.corr_orbs_before[
+            irrep
+            + (0 if alpha_orb or self.restricted else
+               self.n_irrep)]
+                
     @property
     def n_irrep(self):
         """Number or irreducible representations"""

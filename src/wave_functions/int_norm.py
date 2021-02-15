@@ -13,7 +13,9 @@ import numpy as np
 
 from util.array_indices import (triangular,
                                 get_ij_from_triang,
-                                get_n_from_triang)
+                                get_n_from_triang,
+                                get_ij_from_triang_with_diag,
+                                get_n_from_triang_with_diag)
 from util.variables import int_dtype
 from util.memory import mem_of_floats
 from input_output import molpro
@@ -317,12 +319,15 @@ class IntermNormWaveFunction(WaveFunction):
         """
         n_aa = self.n_corr_alpha * (self.n_corr_alpha - 1) // 2
         n_bb = self.n_corr_beta * (self.n_corr_beta - 1) // 2
-        if self.restricted or N < n_aa:
+        if self.restricted:
             exc_type = 'aa'
-            i, j = get_ij_from_triang(N)
+            j, i = get_ij_from_triang_with_diag(N)
+        elif N < n_aa:
+            exc_type = 'aa'
+            j, i = get_ij_from_triang(N)
         elif N < n_aa + n_bb:
             exc_type = 'bb'
-            i, j = get_ij_from_triang(N - n_aa)
+            j, i = get_ij_from_triang(N - n_aa)
         else:
             exc_type = 'ab'
             i = (N - (n_aa + n_bb)) // self.n_corr_beta
@@ -371,9 +376,9 @@ class IntermNormWaveFunction(WaveFunction):
         else:
             j += sum(self.corr_orb[self.n_irrep:self.n_irrep + j_irrep])
         if self.restricted:
-            pos_ij = get_n_from_triang(i, j)
+            pos_ij = get_n_from_triang_with_diag(j, i)
         elif exc_type[0] == exc_type[1]:
-            pos_ij = get_n_from_triang(i, j, with_diag=False)
+            pos_ij = get_n_from_triang(j, i)
         elif exc_type == 'ab':
             pos_ij = j + i * self.n_corr_beta
         return spin_shift + pos_ij
@@ -822,8 +827,7 @@ class IntermNormWaveFunction(WaveFunction):
         if occ_case == -2:
             if len(i) != 2 or len(a) != 0:
                 return None
-            return get_n_from_triang(max(i), min(i),
-                                     with_diag=False)
+            return get_n_from_triang(min(i), max(i))
         elif occ_case == -1:
             if len(i) != 1 or len(a) != 0:
                 return None
@@ -837,9 +841,9 @@ class IntermNormWaveFunction(WaveFunction):
                 return 1 + i[0] * self.virt_orb[spirrep] + a[0]
             if len(i) == 2:
                 return (1 + self.corr_orb[spirrep] * self.virt_orb[spirrep]
-                        + (get_n_from_triang(max(i), min(i), with_diag=False)
+                        + (get_n_from_triang(min(i), max(i))
                            * triangular(self.virt_orb[spirrep] - 1))
-                        + get_n_from_triang(max(a), min(a), with_diag=False))
+                        + get_n_from_triang(min(a), max(a)))
             return None
         elif occ_case == 1:
             if len(i) != 0 or len(a) != 1:
@@ -848,8 +852,7 @@ class IntermNormWaveFunction(WaveFunction):
         elif occ_case == 2:
             if len(i) != 0 or len(a) != 2:
                 return None
-            return get_n_from_triang(max(a), min(a),
-                                     with_diag=False)
+            return get_n_from_triang(min(a), max(a))
         return None
 
     def spirrep_blocks(self, restricted=None):
@@ -905,9 +908,8 @@ class IntermNormWaveFunction(WaveFunction):
         There are two holes and no particles. These two holes must be in
         different spin-orbitals. If these are i and j, with i > j:
 
-        std_pos = get_n_from_triang(i - self.froz_orb[irrep],
-                                     j - self.froz_orb[irrep],
-                                     with_diag=False)
+        std_pos = get_n_from_triang(j - self.froz_orb[irrep],
+                                    i - self.froz_orb[irrep])
 
         That is, we start with both holes at the lowest positions and
         go up following a trianglar arrangement
@@ -952,13 +954,11 @@ class IntermNormWaveFunction(WaveFunction):
         and the particles at a and b (a > b)
 
         std_pos = (1 + self.corr_orb[spirrep] * self.virt_orb[spirrep]
-                   + (get_n_from_triang(i - self.froz_orb[irrep],
-                                         j - self.froz_orb[irrep],
-                                         with_diag=False)
+                   + (get_n_from_triang(j - self.froz_orb[irrep],
+                                        i - self.froz_orb[irrep])
                       * triangular(self.virt_orb[spirrep] - 1))
                    + get_n_from_triang(a - self.ref_orb[spirrep],
-                                        b - self.ref_orb[spirrep],
-                                        with_diag=False))
+                                       b - self.ref_orb[spirrep]))
 
         Although the expression looks complicated, you can look at it as:
 
@@ -986,9 +986,8 @@ class IntermNormWaveFunction(WaveFunction):
         There are two particles and no hole. These two particles must be in
         different spin-orbitals. If these are a and b, with a > b:
 
-        std_pos = get_n_from_triang(a - self.ref_orb[spirrep],
-                                    b - self.ref_orb[spirrep],
-                                    with_diag=False)
+        std_pos = get_n_from_triang(b - self.ref_orb[spirrep],
+                                    a - self.ref_orb[spirrep])
 
         TODO:
         -----

@@ -53,6 +53,7 @@ _all_test_systems = [
     'N2__3__cc-pVDZ__D2h',
     'HCl__1.5__631g__C1',
     'HCl__1.5__631g__C2v',
+    'HCl_plus__1.5__631g__C2v',
     'h2o__Req__sto3g__C2v',
     'h2o__Req__631g__C2v',
     'h2o__1.5__sto3g__C2v',

@@ -12,10 +12,14 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 extensions = [
-#    Extension("src.coupled_cluster.manifold",
-#              ["src/coupled_cluster/manifold.pyx"]),
+    Extension("src.coupled_cluster.manifold",
+              ["src/coupled_cluster/manifold.pyx"]),
+    Extension("src.wave_functions.singles_doubles",
+              ["src/wave_functions/singles_doubles.pyx"]),
     Extension("src.wave_functions.strings_rev_lexical_order",
               ["src/wave_functions/strings_rev_lexical_order.pyx"]),
+    Extension("src.orbitals.occ_orbitals",
+              ["src/orbitals/occ_orbitals.pyx"]),
     Extension("src.util.array_indices",
               ["src/util/array_indices.pyx"])
 ]
@@ -35,5 +39,6 @@ setup(name='grassmann',
       test_suite="tests",
       ext_modules=cythonize(extensions,
                             language_level = "3",
+                            include_path=['src/'],
                             annotate=True)
 )

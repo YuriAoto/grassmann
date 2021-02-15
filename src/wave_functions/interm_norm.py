@@ -5,25 +5,37 @@ Classes:
 
 IntermNormWaveFunction
 """
-import math
 import logging
 
 import numpy as np
 
 from util.array_indices import (triangular,
-                                get_ij_from_triang,
+                                get_pos_from_rectangular,
+                                get_n_from_triang_with_diag,
                                 get_n_from_triang)
-from util.variables import int_dtype
+from util.variables import int_dtype, zero
 from util.memory import mem_of_floats
 from input_output import molpro
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
+from orbitals.occ_orbitals import OccOrbital
+
+
+# from wave_functions.singles_doubles import (
+#     EXC_TYPE_A, EXC_TYPE_B,
+#     EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+EXC_TYPE_A = 1
+EXC_TYPE_B = 2
+EXC_TYPE_AA = 3
+EXC_TYPE_AB = 4
+EXC_TYPE_BB = 5
+
 
 logger = logging.getLogger(__name__)
 
 
 class IntermNormWaveFunction(WaveFunction):
-    """An electronic wave function in intermediate normalisation
+    r"""An electronic wave function in intermediate normalisation
     
     This class stores the wave function by its amplitudes,
     that form a cluster operator T, with up to double excitations:
@@ -36,14 +48,6 @@ class IntermNormWaveFunction(WaveFunction):
     
     Atributes:
     ----------
-    norm (float)
-        The norm of the wave function.
-        Recall that, in the intermediate normalisation,
-        the wave function is given as:
-        |ref> + |ext>
-        where |ref> is the normalised reference wave function
-        (here, a single Slater determinant), and <ref|ext> = 0
-        The external wave function is stored by its amplitudes.
     
     amplitudes (a 1D np.ndarray)
         t_i^a  and t_ij^ab
@@ -141,26 +145,23 @@ class IntermNormWaveFunction(WaveFunction):
         beta-orbitals, is:
         
         
-        aa (alpha-alpha):
+        EXC_TYPE_AA (alpha-alpha):
         0,1                    0
         0,2  1,2               1   2
         0,3  1,3  2,3          3   4   5
         0,4  1,4  2,4  3,4     6   7   8   9
         
-        bb (beta-beta):
+        EXC_TYPE_BB (beta-beta):
         0,1                10
         0,2  1,2           11  12
         0,3  1,3  2,3      13  14  15
         
-        ab (alpha-beta):
+        EXC_TYPE_AB (alpha-beta):
         0,0  1,0  2,0  3,0  4,0       16  17  18  19  20
         0,1  1,1  2,1  3,1  4,1       21  22  23  24  25
         0,2  1,2  2,2  3,2  4,2       26  27  28  29  30
         0,3  1,3  2,3  3,3  4,3       31  32  33  34  35
         
-        
-        To help handling the order, the functions N_from_ij and
-        ij_from_N are provided.
         
         Then, for each of these pairs, the situation is similar to
         in the restricted case: there are blocks for the irrep of a
@@ -174,15 +175,30 @@ class IntermNormWaveFunction(WaveFunction):
     Data Model:
     -----------
     [key]
-        Get and set the amplitude:
+        key should be a tuple, with length 3, 4 or 8:
         
-        Parameters:
-        -----------
-        key (tuple, with length 4 or 8):
-        if len(key) == 4, it is assumed that it is a single excitation,
-        with key = (i, a, irrep, exc_type)
-        if len(key) == 8, it is assumed that it is a single excitation,
-        with key = (i, j, a, b, i_irrep, j_irrep, a_irrep, exc_type)
+        if len(key) == 3:
+            represents alpha holes and particles of that excitation:
+            key = (rank,
+                   (alpha_holes, alpha_particles),
+                   (beta_holes, beta_particles))
+            rank should be 1 or 2, indicating the rank of that
+            excitation
+            alpha_holes should be a iterable with the holes in
+            alpha orbitals
+            similar for alpha_particles, beta_holes, and beta_particles
+        
+        if len(key) == 4:
+            represents a single excitation, t_i^a
+            key = (i, a, irrep, exc_type)
+        
+        if len(key) == 8:
+            represents a double excitation, t_{ij}^{ab}
+            key = (i, j, a, b, i_irrep, j_irrep, a_irrep, exc_type)
+       
+        for the last two cases, i, j, a, b are indices local to the
+        correlated or virtual orbitals; i_irrep, j_irrep, and a_irrep
+        are irreducible representation and exc_type the excitation type
         
         Return:
         -------
@@ -343,11 +359,6 @@ class IntermNormWaveFunction(WaveFunction):
         Return:
         -------
         A float, with the amplitude
-
-
-
-
-
     
     len
         The number of (initialized) amplitudes
@@ -386,80 +397,154 @@ class IntermNormWaveFunction(WaveFunction):
             self._calc_ini_blocks()
         return self._n_ampl
 
-
-    def occupied_pairs(self):
+    def occupied_pairs(self, exc_type='all'):
         """Generator for all pairs i,j
         
         """
-        i = first_occ(self.corr_orb)
-        j = first_occ(self.corr_orb)
-        while :
-            yield i, j
-            if i == j:
-                j = next_occ(j, self.corr_orb)
-                i = first_occ(self.corr_orb)
-            else:
-                i = next_occ(i, self.corr_orb)
+        if self.restricted:
+            i = OccOrbital(self.corr_orb.as_array(),
+                           self.orbs_before,
+                           True)
+            j = OccOrbital(self.corr_orb.as_array(),
+                           self.orbs_before,
+                           True)
+            while j.alive:
+                yield i, j
+                if i.pos_in_occ == j.pos_in_occ:
+                    j.next_()
+                    i.rewind()
+                else:
+                    i.next_()
+        else:
+            if exc_type in ('all', EXC_TYPE_AA):
+                i = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               True)
+                j = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               True)
+                j.next_()
+                while j.alive:
+                    yield i, j
+                    if i.pos_in_occ == j.pos_in_occ - 1:
+                        j.next_()
+                        i.rewind()
+                    else:
+                        i.next_()
+            if exc_type in ('all', EXC_TYPE_BB):
+                i = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               False)
+                j = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               False)
+                j.next_()
+                while j.alive:
+                    yield i, j
+                    if i.pos_in_occ == j.pos_in_occ - 1:
+                        j.next_()
+                        i.rewind()
+                    else:
+                        i.next_()
+            if exc_type in ('all', EXC_TYPE_AB):
+                i = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               True)
+                j = OccOrbital(self.corr_orb.as_array(),
+                               self.orbs_before,
+                               False)
+                while j.alive:  # alpha, beta
+                    yield i, j
+                    i.next_()
+                    if not i.alive:
+                        j.next_()
+                        i.rewind()
 
     def _calc_ini_blocks(self):
         """Calculate the arrays with the initial index of amplitude blocks"""
-        def add_block(n, new_ij=False):
-            if new_ij:
-                self.ini_blocks_D.append([self.ini_blocks_D[-1][-1]])
+        def add_block(i_in_D, spirrep_a, spirrep_b):
+            n = (self.ini_blocks_D[i_in_D]
+                 + self.virt_orb[spirrep_a] * self.virt_orb[spirrep_b])
+            i_in_D += 1
+            if i_in_D < self.ini_blocks_D.size:
+                self.ini_blocks_D[i_in_D] = n
             else:
-                self.ini_blocks_D[-1].append(self.ini_blocks_D[-1][-1] + n)
-        
-        if "SD" in self.wf_type:
-            self.ini_blocks_S = [0]
-            for spirrep in self.spirrep_blocks():
-                self.ini_blocks_S.append(
-                    self.ini_blocks_S[-1]
-                    + self.corr_orb[spirrep] * self.virt_orb[spirrep])
-            self.ini_blocks_D = [[self.ini_blocks_S.pop()]]
-            self.ini_blocks_S = np.array(self.ini_blocks_S)
+                self._n_ampl = n
+            return i_in_D
+        n_occ_alpha = (self.corr_orbs_before[self.n_irrep - 1]
+                       + self.corr_orb[self.n_irrep - 1])
+        n_occ_beta = self.corr_orbs_before[-1]
+        if self.restricted:
+            self.ini_blocks_S = np.zeros(self.n_irrep, dtype=int_dtype)
+            self.ini_blocks_D = np.zeros(triangular(n_occ_alpha)
+                                         * self.n_irrep,
+                                         dtype=int_dtype)
         else:
-            self.ini_blocks_S = [[0]]
+            self.ini_blocks_S = np.zeros(2*self.n_irrep, dtype=int_dtype)
+            self.ini_blocks_D = np.zeros(
+                (triangular(n_occ_alpha - 1)
+                 + triangular(n_occ_beta - 1)
+                 + n_occ_alpha * n_occ_beta) * self.n_irrep,
+                dtype=int_dtype)
+        if "SD" in self.wf_type:
+            self.ini_blocks_S[0] = 0
+            for spirrep in self.spirrep_blocks():
+                new_index = (self.ini_blocks_S[spirrep]
+                             + self.corr_orb[spirrep] * self.virt_orb[spirrep])
+                if spirrep == (self.n_irrep
+                               if self.restricted else
+                               (2*self.n_irrep)) - 1:
+                    self.ini_blocks_D[0] = new_index
+                else:
+                    self.ini_blocks_S[spirrep + 1] = new_index
+        else:
+            self.ini_blocks_D[0] = 0
+        i_in_D = 0
         if self.restricted:
             for i, j in self.occupied_pairs():
-                for a_irrep in range(self.n_irrep - 1):
-                    b_irrep = irrep_product[
-                        a_irrep, irrep_product[i.irrep,
-                                               j.irrep]]
-                    n = self.virt_orb[a_irrep] * self.virt_orb[b_irrep]
-                    add_block(n, new_ij=a_irrep == self.n_irrep - 1)
-            self.n_ampl = self.ini_blocks_D.pop()[0]
-            self.ini_blocks_D = np.array(self.ini_blocks_D)
+                for a_irrep in range(self.n_irrep):
+                    i_in_D = add_block(
+                        i_in_D,
+                        a_irrep,
+                        irrep_product[
+                            a_irrep, irrep_product[i.spirrep,
+                                                   j.spirrep]])
         else:
-            for i, j in self.occupied_pairs('aa'):
-                for a_irrep in range(self.n_irrep - 1):
-                    b_irrep = irrep_product[
-                        a_irrep, irrep_product[i.irrep,
-                                               j.irrep]]
-                    n = (self.virt_orb[a_irrep]
-                         * self.virt_orb[b_irrep])
-                    add_block(n, new_ij=a_irrep == self.n_irrep - 1)
-            self.first_bb_pair = len(self.ini_blocks_D)
-            for i, j in self.occupied_pairs('bb'):
-                for a_irrep in range(self.n_irrep - 1):
-                    b_irrep = irrep_product[
-                        a_irrep, irrep_product[i.irrep,
-                                               j.irrep]]
-                    n = (self.virt_orb[a_irrep + self.n_irrep]
-                         * self.virt_orb[b_irrep + self.n_irrep])
-                    add_block(n, new_ij=a_irrep == self.n_irrep - 1)
-            self.first_ab_pair = len(self.ini_blocks_D)
-            for i, j in self.occupied_pairs('ab'):
-                for a_irrep in range(self.n_irrep - 1):
-                    b_irrep = irrep_product[
-                        a_irrep, irrep_product[i.irrep,
-                                               j.irrep]]
-                    n = (self.virt_orb[a_irrep]
-                         * self.virt_orb[b_irrep + self.n_irrep])
-                    add_block(n, new_ij=a_irrep == self.n_irrep - 1)
-            self.n_ampl = self.ini_blocks_D.pop()[0]
-            self.ini_blocks_D = np.array(self.ini_blocks_D)
-        self.ini_blocks_D = np.array(self.ini_blocks_D)
-
+            self.first_bb_pair = 0
+            for i, j in self.occupied_pairs(EXC_TYPE_AA):
+                self.first_bb_pair += 1
+                for a_irrep in range(self.n_irrep):
+                    i_in_D = add_block(
+                        i_in_D,
+                        a_irrep,
+                        irrep_product[a_irrep,
+                                      irrep_product[i.spirrep,
+                                                    j.spirrep]])
+            self.first_ab_pair = self.first_bb_pair
+            for i, j in self.occupied_pairs(EXC_TYPE_BB):
+                self.first_ab_pair += 1
+                for a_irrep in range(self.n_irrep):
+                    i_in_D = add_block(
+                        i_in_D,
+                        a_irrep + self.n_irrep,
+                        irrep_product[a_irrep,
+                                      irrep_product[i.spirrep - self.n_irrep,
+                                                    j.spirrep - self.n_irrep]]
+                        + self.n_irrep)
+            for i, j in self.occupied_pairs(EXC_TYPE_AB):
+                for a_irrep in range(self.n_irrep):
+                    i_in_D = add_block(
+                        i_in_D,
+                        a_irrep,
+                        irrep_product[a_irrep,
+                                      irrep_product[i.spirrep,
+                                                    j.spirrep - self.n_irrep]]
+                        + self.n_irrep)
+        self.ini_blocks_D = np.reshape(self.ini_blocks_D,
+                                       (self.ini_blocks_D.size // self.n_irrep,
+                                        self.n_irrep))
+        if i_in_D != self.ini_blocks_D.size:
+            raise Exception(f'BUG: {i_in_D} != {self.ini_blocks_D.size}')
     
     def __setitem__(self, key, value):
         """Set the amplitude associated to that excitation. See class doc."""
@@ -469,44 +554,109 @@ class IntermNormWaveFunction(WaveFunction):
         """Get the amplitude associated to that excitation. See class doc."""
         return self.amplitudes[self.pos_in_ampl(key)]
     
-    def pos_in_ampl(key):
+    def pos_in_ampl(self, key):
         """The position of that key in amplitudes vector"""
         if len(key) == 3:
-            if key[2] == 1:
+            if key[0] == 1:
                 return self.pos_in_ampl(
-                    indices_of_singles(self, alpha_hp, beta_hp))
-            elif key[2] == 2:
+                    self.indices_of_singles(key[1], key[2]))
+            elif key[0] == 2:
                 return self.pos_in_ampl(
-                    indices_of_doubles(self, alpha_hp, beta_hp))
+                    self.indices_of_doubles(key[1], key[2]))
             else:
                 raise IndexError('Rank must be 1 or 2!')
         if len(key) == 4:
             i, a, irrep, exc_type = key
-            if exc_type == 'b':
+            if exc_type == EXC_TYPE_B:
                 irrep += self.n_irrep
-            return self.amplitudes[self.ini_blocks_S[irrep]
-                                   + get_pos_from_rectangular(
-                                       i, a, self.virt_orb[irrep])]
+            return (self.ini_blocks_S[irrep]
+                    + get_pos_from_rectangular(
+                        i, a, self.virt_orb[irrep]))
         if len(key) == 8:
             i, j, a, b, i_irrep, j_irrep, a_irrep, exc_type = key
-            i = get_abs_position(i, i_irrep, exc_type[0])
-            j = get_abs_position(j, j_irrep, exc_type[1])
-            irrep_b = irrep_product[irrep_product[i_irrep, j_irrep],
-                                    a_irrep]
-            if self.restricted:
-                ij = get_n_from_triang(i, j, with_diag=True)
-            elif exc_type == 'aa':
-                ij = get_n_from_triang(i, j, with_diag=False)
-            elif exc_type == 'bb':
-                ij = self.first_bb_pair + get_n_from_triang(i, j)
-            else:  #exc_type == 'ab'
-                ij = self.first_ab_pair + get_n_from_rectangular(
-                    i, j, self.corr_orb[j_irrep + self.n_irrep])
-            return self.amplitudes[self.ini_blocks_D[ij, a_irrep]
-                                   + get_pos_from_rectangular(
-                                       a, b, self.virt_orb[b_irrep])]
+            i = self.get_abs_corr_index(i, i_irrep,
+                                        exc_type in (EXC_TYPE_AA, EXC_TYPE_AB))
+            j = self.get_abs_corr_index(j, j_irrep,
+                                        exc_type == EXC_TYPE_AA)
+            ij = self.get_ij_pos_from_i_j(i, j, i_irrep, exc_type)
+            return (self.ini_blocks_D[ij, a_irrep]
+                    + get_pos_from_rectangular(
+                        a, b, self.virt_orb[
+                            irrep_product[a_irrep,
+                                          irrep_product[i_irrep,
+                                                        j_irrep]]]))
         raise KeyError('Key must have 3, 4 (S) or 8 (D) entries!')
+
+    def get_ij_pos_from_i_j(self, i, j, i_irrep, exc_type):
+        """Get the position of pair i,j as stored in self.ini_blocks_D
         
+        Parameters:
+        -----------
+        i, j (int)
+            The absolute position (within all occupied orbitals of same spin)
+            of occupied orbitals i and j.
+        
+        i_irrep (int)
+            The irreducible representation of orbital i
+        
+        exc_type (int, an excitation type)
+            The excitation type
+            
+        """
+        if self.restricted:
+            ij = get_n_from_triang_with_diag(i, j)
+        elif exc_type == EXC_TYPE_AA:
+            ij = get_n_from_triang(i, j)
+        elif exc_type == EXC_TYPE_BB:
+            ij = self.first_bb_pair + get_n_from_triang(i, j)
+        else:  # exc_type == EXC_TYPE_AB
+            ij = self.first_ab_pair + get_pos_from_rectangular(
+                j, i,
+                self.corr_orbs_before[self.n_irrep - 1]
+                + self.corr_orb[self.n_irrep - 1])
+        return ij
+    
+    def indices_of_singles(self, alpha_hp, beta_hp):
+        """Return i, a, irrep, exc_type of single excitation"""
+        exc_type = (EXC_TYPE_A
+                    if alpha_hp[0].size == 1 else
+                    EXC_TYPE_B)
+        i, a = ((alpha_hp[0][0], alpha_hp[1][0])
+                if exc_type == EXC_TYPE_A else
+                (beta_hp[0][0], beta_hp[1][0]))
+        irrep = self.get_orb_irrep(i)
+        i -= self.orbs_before[irrep]
+        a -= self.orbs_before[irrep]
+        a -= self.corr_orb[
+            irrep + (0
+                     if (not self.restricted
+                         and exc_type == EXC_TYPE_A) else
+                     self.n_irrep)]
+        return i, a, irrep, exc_type
+
+    def indices_of_doubles(self, alpha_hp, beta_hp):
+        if self.restricted:
+            raise NotImplementedError('Missing for restricted')
+        if alpha_hp[0].size == 2:
+            exc_type = EXC_TYPE_AA
+            i, i_irrep = self.get_local_index(alpha_hp[0][0], True)
+            j, j_irrep = self.get_local_index(alpha_hp[0][1], True)
+            a, a_irrep = self.get_local_index(alpha_hp[1][0], True)
+            b, b_irrep = self.get_local_index(alpha_hp[1][1], True)
+        elif alpha_hp[0].size == 1:
+            exc_type = EXC_TYPE_AB
+            i, i_irrep = self.get_local_index(alpha_hp[0][0], True)
+            j, j_irrep = self.get_local_index(beta_hp[0][0], False)
+            a, a_irrep = self.get_local_index(alpha_hp[1][0], True)
+            b, b_irrep = self.get_local_index(beta_hp[1][0], False)
+        else:
+            exc_type = EXC_TYPE_BB
+            i, i_irrep = self.get_local_index(beta_hp[0][0], False)
+            j, j_irrep = self.get_local_index(beta_hp[0][1], False)
+            a, a_irrep = self.get_local_index(beta_hp[1][0], False)
+            b, b_irrep = self.get_local_index(beta_hp[1][1], False)
+        return i, j, a, b, i_irrep, j_irrep, a_irrep, exc_type
+
     def calc_memory(self):
         """Calculate memory needed for amplitudes
         
@@ -523,169 +673,6 @@ class IntermNormWaveFunction(WaveFunction):
         """Initialize the list for the amplitudes."""
         self._set_memory('Amplitudes array in IntermNormWaveFunction')
         self.amplitudes = np.zeros(len(self))
-    
-    @property
-    def norm(self):
-        if self._norm is None:
-            raise NotImplementedError('Do it')
-        return self._norm
-    
-    @property
-    def C0(self):
-        """The coefficient of reference"""
-        return 1.0 / self.norm
-    
-    def get_irrep_from_global(self, p, alpha_orb):
-        """Get index and irrep of p, given in global ordering
-        
-        
-        """
-        irrep = self.get_orb_irrep(p)
-        p -= self.orbs_before[irrep]
-        spirrep = irrep + (0
-                           if alpha_orb or self.restricted else
-                           self.n_irrep)
-        if p < self.ref_orb[spirrep]:
-            p -= self.corr_orbs_before[spirrep]
-        else:
-            p -= self.corr_orb[spirrep]
-        return p, irrep
-
-    def get_occ_irrep(self, i, alpha_orb):
-        """Get irrep of occupied index i, that runs all occupied orbitals
-        
-        Do not confuse with WaveFunction.get_orb_irrep.
-        The present function considers the indices of all ocuppied orbitals
-        running in sequence
-        
-        """
-        prev_corr_sum = corr_sum = 0
-        shift = (0
-                 if alpha_orb or self.restricted else
-                 self.n_irrep)
-        for irrep in range(self.n_irrep):
-            corr_sum += self.corr_orb[irrep + shift]
-            if i < corr_sum:
-                return i - prev_corr_sum, irrep
-            prev_corr_sum = corr_sum
-        raise Exception('BUG: This point should never be reached!'
-                        + ' Data structure is incorrrect!')
-    
-    
-    def N_from_ij(self, i, j, i_irrep, j_irrep, exc_type):
-        """Get the initial position of block ij
-        
-        The indices i and j are relative to the correlated
-        orbitals only, that is, start at 0 for the first correlated
-        orbital (and thus frozen orbitals are excluded)
-        
-        Parameters:
-        -----------
-        i, j (int)
-            The hole indices i and j
-        
-        i_irrep, j_irrep (int)
-            The irrep of i and j
-        
-        exc_type (str)
-            'aa', 'bb', or 'ab', indicating the exception type
-        
-        Returns:
-        --------
-        The global index for hole pairs
-        """
-        spin_shift = 0
-        if exc_type[1] == 'b':
-            spin_shift += self.n_corr_alpha * (self.n_corr_alpha - 1) // 2
-            if exc_type[0] == 'a':
-                spin_shift += self.n_corr_beta * (self.n_corr_beta - 1) // 2
-        if self.restricted or exc_type[0] == 'a':
-            i += sum(self.corr_orb[:i_irrep])
-        else:
-            i += sum(self.corr_orb[self.n_irrep:self.n_irrep + i_irrep])
-        if self.restricted or exc_type[1] == 'b':
-            j += sum(self.corr_orb[:j_irrep])
-        else:
-            j += sum(self.corr_orb[self.n_irrep:self.n_irrep + j_irrep])
-        if self.restricted:
-            pos_ij = get_n_from_triang(i, j)
-        elif exc_type[0] == exc_type[1]:
-            pos_ij = get_n_from_triang(i, j, with_diag=False)
-        elif exc_type == 'ab':
-            pos_ij = j + i * self.n_corr_beta
-        return spin_shift + pos_ij
-    
-    def test_indices_func(self, N,
-                          i, j,
-                          i_irrep, j_irrep,
-                          exc_type):
-        """Check if N is the global index of i, j, ... and log the result."""
-        my_N = self.N_from_ij(i, j, i_irrep, j_irrep, exc_type)
-        logger.debug(
-            '(i=%s, j=%s, i_irrep=%s, j_irrep=%s, exc_type=%s):'
-            + '  my_N, N = %s, %s%s',
-            i, j, i_irrep, j_irrep, exc_type,
-            my_N, N,
-            '' if my_N == N else ' <<< my_N != N')
-        (my_i, my_j,
-         my_i_irrep, my_j_irrep,
-         my_exc_type) = self.ij_from_N(N)
-        logger.debug(
-            'N = %s: i=(%s %s) j=(%s %s)'
-            + ' i_irrep=(%s %s) j_irrep=(%s %s) exc_type=(%s %s)%s',
-            N, i, my_i, i, my_j,
-            i_irrep, my_i_irrep,
-            j_irrep, my_j_irrep,
-            exc_type, my_exc_type,
-            '' if (i == my_i
-                   and j == my_j
-                   and i_irrep == my_i_irrep
-                   and j_irrep == my_j_irrep
-                   and exc_type == my_exc_type) else
-            ' <<< differ')
-
-    def indices_of_singles(self, alpha_hp, beta_hp):
-        """Return spirrep, i and a of single excitation"""
-
-        raise NotImplementedError('Fix it')
-        beta_exc = beta_hp[0].size == 2
-        i, a = ((beta_hp[0][0], beta_hp[1][0])
-                if beta_exc else
-                (alpha_hp[0][0], alpha_hp[1][0]))
-        irrep = self.get_orb_irrep(i)
-        i -= self.orbs_before[irrep]
-        a -= self.orbs_before[irrep]
-        if not self.restricted and beta_exc:
-            irrep += self.n_irrep
-        a -= self.corr_orb[irrep]
-
-
-        return i, a, irrep, exc_type
-
-    def indices_of_doubles(self, alpha_hp, beta_hp):
-        raise NotImplementedError('Fix it')
-        if self.restricted:
-            raise NotImplementedError('Missing for restricted')
-        if alpha_hp[0].size == 2:
-            exc_type = 'aa'
-            i, i_irrep = self.get_irrep_from_global(alpha_hp[0][0], True)
-            j, j_irrep = self.get_irrep_from_global(alpha_hp[0][1], True)
-            a, a_irrep = self.get_irrep_from_global(alpha_hp[1][0], True)
-            b, b_irrep = self.get_irrep_from_global(alpha_hp[1][1], True)
-        elif alpha_hp[0].size == 1:
-            exc_type = 'ab'
-            i, i_irrep = self.get_irrep_from_global(alpha_hp[0][0], True)
-            j, j_irrep = self.get_irrep_from_global(beta_hp[0][0], False)
-            a, a_irrep = self.get_irrep_from_global(alpha_hp[1][0], True)
-            b, b_irrep = self.get_irrep_from_global(beta_hp[1][0], False)
-        else:
-            exc_type = 'bb'
-            i, i_irrep = self.get_irrep_from_global(beta_hp[0][0], False)
-            j, j_irrep = self.get_irrep_from_global(beta_hp[0][1], False)
-            a, a_irrep = self.get_irrep_from_global(beta_hp[1][0], False)
-            b, b_irrep = self.get_irrep_from_global(beta_hp[1][1], False)
-        N = self.N_from_ij(i, j, i_irrep, j_irrep, exc_type)
-        return N, a_irrep, a, b
     
     def update_amplitudes(self, z):
         """Update the amplitudes by z
@@ -742,9 +729,9 @@ class IntermNormWaveFunction(WaveFunction):
             new_wf.Ms = 0.0
         else:
             new_wf.Ms = 0
-            for i_irrep in range(self.n_irrep):
+            for i_irrep in range(new_wf.n_irrep):
                 new_wf.Ms += (new_wf.ref_orb[i_irrep]
-                              - new_wf.ref_orb[i_irrep + self.n_irrep])
+                              - new_wf.ref_orb[i_irrep + new_wf.n_irrep])
             new_wf.Ms /= 2
         new_wf.initialize_amplitudes()
         return new_wf
@@ -765,7 +752,6 @@ class IntermNormWaveFunction(WaveFunction):
         new_wf = cls()
         new_wf.Ms = 0.0
         new_wf.restricted = None
-        check_pos_ij = False
         sgl_found = False
         dbl_found = False
         MP2_step_passed = True
@@ -785,7 +771,7 @@ class IntermNormWaveFunction(WaveFunction):
                     + ' is a file object')
             new_wf.wf_type = wf_type
             new_wf.point_group = point_group
-            new_wf.initialize_data()
+            new_wf.initialize_orbitals_sets()
         new_wf.source = 'From file ' + f_name
         for line_number, line in enumerate(f, start=start_line_number):
             if new_wf.wf_type is None:
@@ -801,7 +787,7 @@ class IntermNormWaveFunction(WaveFunction):
                                 molpro.UCCSD_header,
                                 molpro.RCCSD_header):
                         new_wf.wf_type = line[11:15]
-                        new_wf.initialize_data()
+                        new_wf.initialize_orbitals_sets()
                 continue
             if ('Number of closed-shell orbitals' in line
                     or 'Number of frozen orbitals' in line):
@@ -833,9 +819,9 @@ class IntermNormWaveFunction(WaveFunction):
                 sgl_found = True
                 new_wf.restricted = not ('Alpha-Alpha' in line
                                          or 'Beta-Beta' in line)
-                if new_wf.singles is None:
+                if new_wf.amplitudes is None:
                     new_wf.initialize_amplitudes()
-                exc_type = 'b' if 'Beta-Beta' in line else 'a'
+                exc_type = EXC_TYPE_B if 'Beta-Beta' in line else EXC_TYPE_A
             elif molpro.CC_dbl_str in line and MP2_step_passed:
                 dbl_found = True
                 prev_Molpros_i = prev_Molpros_j = -1
@@ -853,35 +839,48 @@ class IntermNormWaveFunction(WaveFunction):
                         file_name=f_name)
                 else:
                     new_wf.restricted = restricted
-                if new_wf.singles is None and new_wf.doubles is None:
+                if new_wf.amplitudes is None:
                     if new_wf.wf_type == 'CCSD':
                         new_wf.wf_type = 'CCD'
                     elif new_wf.wf_type == 'CCSD':
                         new_wf.wf_type = 'CID'
                     new_wf.initialize_amplitudes()
                 if new_wf.restricted or 'Alpha-Alpha' in line:
-                    exc_type = 'aa'
+                    exc_type = EXC_TYPE_AA
                 elif 'Beta-Beta' in line:
-                    exc_type = 'bb'
+                    exc_type = EXC_TYPE_BB
                 elif 'Alpha-Beta' in line:
-                    exc_type = 'ab'
+                    exc_type = EXC_TYPE_AB
             elif dbl_found:
                 lspl = line.split()
                 if len(lspl) == 7:
-                    (Molpros_i, Molpros_j,
-                     irrep_a, irrep_b,
-                     a, b) = map(
-                         lambda x: int(x) - 1, lspl[0:-1])
+                    all_indices = map(
+                        lambda x: int(x) - 1, lspl[0:-1])
+                    if exc_type == EXC_TYPE_AB:
+                        (Molpros_i, Molpros_j,
+                         irrep_a, irrep_b,
+                         a, b) = all_indices
+                    else:
+                        # We will invert the pairs i,j and a,b
+                        # because we use the convention i <= j,
+                        # contrary to molpro convention.
+                        # For alpha-beta (above) our convention
+                        # is like in molpro
+                        (Molpros_j, Molpros_i,
+                         irrep_b, irrep_a,
+                         b, a) = all_indices
+                    spirrep_b = irrep_b + (
+                        0 if exc_type == EXC_TYPE_AA else new_wf.n_irrep)
                     C = float(lspl[-1])
-                    if exc_type[0] == 'a':
+                    if exc_type in (EXC_TYPE_AA, EXC_TYPE_AB):
                         a -= new_wf.act_orb[irrep_a]
-                    if exc_type[1] == 'a':
+                    if exc_type == EXC_TYPE_AA:
                         b -= new_wf.act_orb[irrep_b]
                     if a < 0 or b < 0:
                         if abs(C) > zero:
                             raise molpro.MolproInputError(
                                 'This coefficient of'
-                                + ' singles should be zero!',
+                                + ' doubles should be zero!',
                                 line=line,
                                 line_numbe=line_number,
                                 file_name=f_name)
@@ -890,58 +889,44 @@ class IntermNormWaveFunction(WaveFunction):
                                                   prev_Molpros_j):
                         (prev_Molpros_i,
                          prev_Molpros_j) = Molpros_i, Molpros_j
-                        # In Molpro's output,
-                        # both occupied orbitals
-                        # (alpha and beta) follow the
-                        # same notation.
-                        i, i_irrep = new_wf.get_occ_irrep(
-                            Molpros_i, True)
-                        j, j_irrep = new_wf.get_occ_irrep(
-                            Molpros_j, True)
-                        pos_ij = new_wf.N_from_ij(i, j,
-                                                  i_irrep, j_irrep,
-                                                  exc_type)
-                    elif check_pos_ij:
-                        my_i, my_i_irrep = new_wf.get_occ_irrep(
-                            Molpros_i, True)
-                        my_j, my_j_irrep = new_wf.get_occ_irrep(
-                            Molpros_j, True)
-                        my_pos_ij = new_wf.N_from_ij(
-                            my_i, my_j,
-                            my_i_irrep, my_j_irrep,
-                            exc_type)
-                        if (i != my_i
-                            or j != my_j
-                            or i_irrep != my_i_irrep
-                            or j_irrep != my_j_irrep
-                                or pos_ij != my_pos_ij):
-                            logger.warning(
-                                'check_pos_ij: differ -->'
-                                + ' i=(%s %s) j=(%s %s)'
-                                + 'i_irrep=(%s %s)'
-                                + ' j_irrep=(%s %s)'
-                                + ' pos_ij=(%s %s)',
-                                i, my_i, j, my_j,
-                                i_irrep, my_i_irrep,
-                                j_irrep, my_j_irrep,
-                                pos_ij, my_pos_ij)
-                    new_wf.doubles[pos_ij][irrep_a][a, b] = C
+                        # In Molpro's output, both occupied orbitals
+                        # (alpha and beta) follow the same notation:
+                        # Let us remove "active" orbitals from beta,
+                        # that are occupied in alpha but virtual in beta
+                        i, j = Molpros_i, Molpros_j
+                        irrep_i = 0
+                        while (irrep_i < new_wf.n_irrep
+                               and i >= new_wf.corr_orbs_before[irrep_i + 1]):
+                            irrep_i += 1
+                        if exc_type in (EXC_TYPE_AB, EXC_TYPE_BB):
+                            irrep_j = 0
+                            while (irrep_j < new_wf.n_irrep
+                                   and j >= new_wf.corr_orbs_before[irrep_j + 1]):
+                                irrep_j += 1
+                            if irrep_j > 0:
+                                j -= sum(new_wf.act_orb[:irrep_j])
+                            if exc_type == EXC_TYPE_BB:
+                                if irrep_i > 0:
+                                    i -= sum(new_wf.act_orb[:irrep_i])
+                        pos_ij = new_wf.get_ij_pos_from_i_j(i, j,
+                                                            irrep_i,
+                                                            exc_type)
+                    new_wf.amplitudes[new_wf.ini_blocks_D[pos_ij, irrep_a]
+                                      + get_pos_from_rectangular(
+                                          a, b, new_wf.virt_orb[spirrep_b])] = C
             elif sgl_found:
                 lspl = line.split()
                 if len(lspl) == 4:
                     i, irrep, a = map(lambda x: int(x) - 1,
                                       lspl[0:-1])
                     C = float(lspl[-1])
-                    spirrep = (irrep
-                               if exc_type == 'a' else
-                               irrep + new_wf.n_irrep)
-                    i -= (sum(new_wf.ref_orb[:irrep])
-                          - sum(new_wf.froz_orb[:irrep]))
-                    if exc_type == 'a':
+                    spirrep = irrep + (0
+                                       if exc_type == EXC_TYPE_A else
+                                       new_wf.n_irrep)
+                    i -= new_wf.corr_orbs_before[irrep]
+                    if exc_type == EXC_TYPE_A:
                         a -= new_wf.act_orb[irrep]
-                    if (a < 0
-                        or i >= (new_wf.ref_orb[spirrep]
-                                 - new_wf.froz_orb[irrep])):
+                    if a < 0 or i >= new_wf.corr_orb[spirrep]:
                         if abs(C) > zero:
                             raise molpro.MolproInputError(
                                 'This coefficient of singles'
@@ -951,9 +936,9 @@ class IntermNormWaveFunction(WaveFunction):
                                 file_name=f_name)
                         continue
                     if new_wf.wf_type == 'BCCD':
-                        new_wf.BCC_orb_gen[spirrep][i, a] = C
+                        raise NotImplementedError('Not done for BCCD')
                     else:
-                        new_wf.singles[spirrep][i, a] = C
+                        new_wf[i, a, irrep, exc_type] = C
             if (MP2_step_passed
                 and ('RESULTS' in line
                      or 'Spin contamination' in line)):

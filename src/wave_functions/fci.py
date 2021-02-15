@@ -8,7 +8,6 @@ History:
 
 Yuri
 """
-import os
 import logging
 import numpy as np
 from numpy import linalg
@@ -16,42 +15,23 @@ from scipy.linalg import lu
 from scipy.special import comb
 import copy
 import math
-from collections import namedtuple
 
-from input_output.log import logtime
 from input_output import molpro
+
 from util.array_indices import get_pos_from_rectangular
-from util.results import Results, OptResults
 from util.variables import int_dtype
 from util.memory import mem_of_floats
+from util.other import int_array
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
-from wave_functions.int_norm import IntermNormWaveFunction
+from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
+from coupled_cluster.cluster_decomposition import cluster_decompose
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
-from coupled_cluster import manifold as cc_manifold
 
 logger = logging.getLogger(__name__)
-
-default_recipe_files = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
-
-_str_excitation_list = ['R',
-                        'S',
-                        'D',
-                        'T',
-                        'Q']
-
-
-def _str_excitation(x):
-    return _str_excitation_list[x] if x < 5 else str(x)
-
-
-def make_occ(x):
-    """Return an orbital occupation from x"""
-    return np.array(x, dtype=int_dtype)
 
 
 def _compare_strings(ref, exc):
@@ -99,255 +79,7 @@ def _compare_strings(ref, exc):
     return len(holes), holes, particles
 
 
-def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
-    """Carry out the decomposition
-    
-    Given the alpha and beta hole-particle indices,
-    that indicate the excitation, return how this excitation
-    is decomposed in clusters. This is returned as a list with the
-    terms in the decomposition. Each of these terms is a tuple
-    with the sign (+1 or -1) and all determinants that, multiplied,
-    give this term.
-    This decomposition is into doubles (mode = 'D')
-    or into singles and doubles (mode = 'SD')
-    
-    
-    Examples:
-    ---------
-    holes = [ijkl]
-    particles = [abcd]
-    return  [(sign, det_ij_ab, det_kl_cd),
-             (sign, det_ik_ab, det_jl_cd),
-                ...  ]
-    
-    holes = [ijklmn...]
-    particles = [abcdef..]
-    return  [(sign, det_ij_ab, det_kl_cd, det_mn_ef, ...),
-             (sign, det_ik_ab, det_kl_cd, det_mn_ef, ...),
-                ...   ]
-    
-    Parameters:
-    -----------
-    alpha_hp (2-tuple of np.array of int):
-        alpha holes, alpha particles
-    
-    beta_hp (2-tuple of np.array of int):
-        beta holes, beta particles
-    
-    ref_det (SlaterDet)
-        The reference Slater determinant
-    
-    mode (str: "D" or "SD")
-        decompose into doubles or single and double
-    
-    recipes_f (None or str with a file name prefix)
-        use the files
-            recipes_f + '_{}.dat'.format(rank)
-        as the recipes to obtain the decomposition.
-        If None, use the module variable default_recipe_files
-    
-    Return:
-    -------
-    All terms in the decomposition that preserve spin projection,
-    that is, do not change the number of alpha/beta electrons.
-    See the Example for the details
-    
-    """
-    recipes_f = default_recipe_files if recipes_f is None else recipes_f
-    n_alpha = alpha_hp[0].shape[0]
-    n_beta = beta_hp[0].shape[0]
-    rank = n_alpha + n_beta
-    all_decompositions = []
-    only_doubles = mode == 'D'
-    # Example:
-    # alpha_hp, beta_hp = ([i,j,k], [l]), ([a,b,c], [d])
-    # orbitals = [i,j,k,l,a,b,c,d]
-    #
-    orbitals = np.concatenate((alpha_hp[0], beta_hp[0],
-                               alpha_hp[1], beta_hp[1]))
-    with open(recipes_f + '_{}.dat'.format(rank), 'r') as f:
-        for line in f:
-            lspl = list(map(int, line.split()))
-            if only_doubles and rank // 2 != lspl[1]:
-                continue
-            use_this_decomposition = True
-            new_decomposition = [lspl[0]]
-            i = 2
-            while i < len(lspl):
-                exc_rank = lspl[i]
-                if exc_rank > 2 or exc_rank == 1 and only_doubles:
-                    use_this_decomposition = False
-                    break
-                first_h = i + 1
-                first_p = first_h + exc_rank
-                n_alpha_h = sum(orbind < n_alpha
-                                for orbind in lspl[first_h:first_p])
-                n_alpha_p = sum(orbind < rank + n_alpha
-                                for orbind in lspl[first_p:first_p+exc_rank])
-                if n_alpha_h != n_alpha_p:
-                    use_this_decomposition = False
-                    break
-                alpha_hp = ([], [])
-                beta_hp = ([], [])
-                for r in range(exc_rank):
-                    if r < n_alpha_h:
-                        alpha_hp[0].append(orbitals[lspl[first_h + r]])
-                        alpha_hp[1].append(orbitals[lspl[first_p + r]])
-                    else:
-                        beta_hp[0].append(orbitals[lspl[first_h + r]])
-                        beta_hp[1].append(orbitals[lspl[first_p + r]])
-                new_decomposition.append(_get_slater_det_from_excitation(
-                    ref_det, 0.0, alpha_hp, beta_hp))
-                i += 2 * exc_rank + 1
-            if use_this_decomposition:
-                all_decompositions.append(new_decomposition)
-    return all_decompositions
-
-
-class SlaterDet(namedtuple('SlaterDet',
-                           ['c',
-                            'alpha_occ',
-                            'beta_occ'])):
-    """A namedtuple for a generic Slater determinant
-    
-    Attributes:
-    -----------
-    c (float)
-        The coefficient associated to this Slater determinant
-    
-    {alpha,beta}_occ (1D np.arrays of int)
-        The occupied orbitals for {alpha,beta} orbitals
-    """
-    __slots__ = ()
-    
-    def __str__(self):
-        return ('Slater determinant: c = {0:15.12f} ; '.
-                format(self.c)
-                + '^'.join(map(str, self.alpha_occ))
-                + ' ^ '
-                + '^'.join(map(str, self.beta_occ)))
-
-
-def _get_slater_det_from_excitation(ref_det, c, alpha_hp, beta_hp):
-    """Create a new SlaterDet as an excitation on top of reference
-    
-    Parameters:
-    -----------
-    ref_det (SlaterDet)
-        The reference Slater determinant
-    
-    c (float)
-        The coefficient of the returned Slater determinant
-    
-    alpha_hp (2-tuple of np.array)
-        The alpha holes and particles of the excitation
-
-    beta_hp (2-tuple of np.array)
-        The beta holes and particles of the excitation
-    
-    Return:
-    -------
-    The new Slater determinant
-    
-    """
-    return SlaterDet(c=c,
-                     alpha_occ=np.array(sorted(
-                         [x for x in ref_det.alpha_occ
-                          if x not in alpha_hp[0]] + alpha_hp[1]),
-                                        dtype=int_dtype),
-                     beta_occ=np.array(sorted(
-                         [x for x in ref_det.beta_occ
-                          if x not in beta_hp[0]] + beta_hp[1]),
-                                       dtype=int_dtype))
-
-
-def _get_slater_det_from_fci_line(line, Ms, froz_orb,
-                                  molpro_output='', line_number=-1,
-                                  zero_coefficient=False):
-    """Read a FCI configuration from Molpro output and return a Slater Determinant
-    
-    Parameters:
-    -----------
-    line (str)
-        The line with a configuration, from the FCI program in Molpro
-        to be converted to a Slater Determinant.
-    
-
-
-
-    molpro_output (str, optional, default='')
-        The output file name (only for error message)
-    
-    line_number (int, optional, default=-1)
-        The line number in Molpro output
-    
-    zero_coefficient (bool, optional, default=False)
-        If True, the coefficient is set to zero and the value
-        in line is discarded
-    
-    Return:
-    --------
-    An instance of SlaterDet containing only active orbitals.
-    That is, all frozen electrons are discarded and the first
-    non-frozen orbital is indexed by 0.
-    All irreps are merged in a single array
-    
-    Raise:
-    ------
-    molpro.MolproInputError
-    
-    Examples:
-    ---------
-    
-    # if n_irrep = 4, orb_dim = (6,2,2,0), froz_orb = (0,0,0,0) then
-    
-    -0.162676901257  1  2  7  1  2  7
-    gives
-    c=-0.162676901257; alpha_occ=[0,1,6]; beta_occ=[0,1,6]
-    
-    -0.049624632911  1  2  4  1  2  6
-    gives
-    c=-0.049624632911; alpha_occ=[0,1,3]; beta_occ=[0,1,5]
-    
-    0.000000000000  1  2  9  1  2 10
-    gives
-    c=-0.000000000000; alpha_occ=[0,1,8]; alpha_occ=[0,1,9]
-    
-    # but if froz_orb = (1,1,0,0) then the above cases give
-        (because frozen electrons are indexed first in Molpro convention
-         and they do not enter in the returned SlaterDet)
-    
-    c=-0.162676901257; alpha_occ=[4]; beta_occ=[4]
-    
-    c=-0.049624632911; alpha_occ=[1]; beta_occ=[3]
-    
-    c=-0.000000000000; alpha_occ=[6]; beta_occ=[7]
-    """
-    lspl = line.split()
-    n_total_frozen = len(froz_orb) // 2
-    try:
-        coeff = float(lspl[0])
-        occ = [int(x) - 1 - n_total_frozen
-               for x in lspl[1:]
-               if int(x) > n_total_frozen]
-    except Exception as e:
-        raise molpro.MolproInputError(
-            "Error when reading FCI configuration. Exception was:\n"
-            + str(e),
-            line=line,
-            line_number=line_number,
-            file_name=molpro_output)
-    n_alpha = (len(occ) + int(2 * Ms)) // 2
-    n_beta = (len(occ) - int(2 * Ms)) // 2
-    if n_beta + n_alpha != len(occ):
-        raise ValueError('Ms = {} is not consistent with occ = {}'.format(
-            Ms, occ))
-    return SlaterDet(c=0.0 if zero_coefficient else coeff,
-                     alpha_occ=make_occ(occ[:n_alpha]),
-                     beta_occ=make_occ(occ[n_alpha:]))
-
-
-class WaveFunctionFCI(WaveFunction):
+class FCIWaveFunction(WaveFunction):
     """A FCI-like wave function, based on alpha and beta strings
     
     The wave function is stored in a 2D np.array, whose rows and columns
@@ -418,7 +150,7 @@ class WaveFunctionFCI(WaveFunction):
     def enumerate(self):
         """Generator for determinants that also yield the index
         
-        Has the same philosophy as enumerate(self), but
+        Has the same philosophy as __iter__(self), but
         give the indices for alpha and beta strings. Usage:
         
         for ia, ib, det in self.enumerate:
@@ -667,7 +399,7 @@ class WaveFunctionFCI(WaveFunction):
     
     @classmethod
     def similar_to(cls, wf, restricted=None):
-        """Construct a WaveFunctionFCI with same basic attributes as wf"""
+        """Construct a FCIWaveFunction with same basic attributes as wf"""
         new_wf = super().similar_to(wf, restricted=restricted)
         new_wf.initialize_coeff_matrix()
         new_wf.set_ref_det_from_corr_orb()
@@ -752,7 +484,7 @@ class WaveFunctionFCI(WaveFunction):
                             break
                         rank, alpha_hp, beta_hp = self.get_exc_info(
                             cluster_det)
-                        new_contribution *= wf[rank, alpha_hp,beta_hp]
+                        new_contribution *= wf[rank, alpha_hp, beta_hp]
                     if add_contr:
                         self._coefficients[ia, ib] -= new_contribution
         self.set_coeff_ref_det()
@@ -828,7 +560,7 @@ class WaveFunctionFCI(WaveFunction):
                     continue
                 if 'EOF' in line:
                     break
-                det = _get_slater_det_from_fci_line(
+                det = get_slater_det_from_fci_line(
                     line, self.Ms, self.froz_orb,
                     molpro_output=molpro_output,
                     line_number=line_number)
@@ -1259,7 +991,7 @@ class WaveFunctionFCI(WaveFunction):
     
     def _change_orb_basis_traditional(self, U, just_C0=False):
         raise NotImplementedError('do it')
-        new_wf = WaveFunctionFCI()
+        new_wf = FCIWaveFunction()
         new_wf.restricted = self.restricted
         new_wf.point_group = self.point_group
         new_wf.Ms = self.Ms
@@ -1456,7 +1188,7 @@ class WaveFunctionFCI(WaveFunction):
         
         Parameters:
         -----------
-        other (WaveFunctionFCI)
+        other (FCIWaveFunction)
             The wave function to which the distance will be calculated
         
         metric (str, optional, default='IN')
@@ -1499,330 +1231,3 @@ class WaveFunctionFCI(WaveFunction):
             total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
         return total_irrep == self.irrep
     
-    def vertical_proj_to_cc_manifold(self,
-                                     level='D',
-                                     recipes_f=None,
-                                     coeff_thr=1.0E-10,
-                                     restore_wf=True):
-        """Analyse how the wave function relates to the CC manifold
-        
-        This function is intended to compare the wave function to the
-        CCD manifold by a "vertical "projection". It writes several
-        information to the logfile (at info level). These are:
-        
-        For every triple, quadruple, ..., and octuple excitation,
-        compares the coefficient of the excitation to the sum of product of
-        the coefficients given by the cluster decomposition of that excitation.
-        It checks if the coefficient has the "correct" sign to be in the
-        "right direction" to which the CC manifold curves to.
-        A general information is printed to log in the end of the function
-        
-        Behaviour:
-        ----------
-        It will print to the logs all tests, if loglevel is larger or equal
-        20 (INFO)
-        
-        Limitation:
-        -----------
-        It can handle only up to n-fold excitation, where n is the largest
-        case that has a file with the cluster decomposition, as given through
-        recipes_f.
-        
-        Attention:
-        ----------
-        For the result (the vertical distance in the intermediate
-        normalisation) to be meaningful, this wave function should
-        be in the intermediate normalisation.
-        This is not checked or tested! The user is responsible to transform
-        (if desired) the wave function first
-        (using normalise(mode='intermediate')).
-        If the coefficient of the reference (.ref_det) is positive,
-        the information about curving towards FCI is correct, even if
-        not in the intermediate normalisation.
-        
-        Side Effect:
-        ------------
-        If level == 'SD', this function changes the coefficients
-        of the wave function! The double excitations are transformed
-        to amplitudes by removing the contribution from singles.
-        Thus, does not the wave function for other purposes
-        (unless you know very well what you are doing)!
-        
-        Parameters:
-        -----------
-        level (str, optional, default='D'; possible values: 'D', 'SD')
-            The level of CC theory to compare.
-        
-        recipes_f (str, a file name, optional, default=None)
-            The files that describe the cluster decomposition.
-            See decompose for the details
-        
-        coeff_thr (float, optional, default=1.0E-10)
-            Slater determinants with coefficients lower than this
-            threshold value are ignored in the analysis
-        
-        restore_wf (bool, optional, default=True)
-            Restore all changes made to the wave function during
-            this function, such that it can be further used.
-            If the wave function is not going to be used for further purposes,
-            set it to False.
-        
-        Return:
-        -------
-        An instance of Results.
-        Some attributes:
-        distance: the "vertical" distance between self and the CC manifold,
-                  in the metric induced by intermediate normalisation.
-        wave_function: the wave function at the CC manifold, as an instace
-                       of IntermNormWaveFunction
-        right_dir: a dictionary, with keys as ranks, and values as 2-tuples,
-                   that show [0] how many directions are curved towards self
-                   and [1] the total number of such directions. Example:
-                   {'T': (10,12),
-                    'Q': (5,5),
-                    '5': (1,1)}
-                    10 out of 12 triples are in the right direction
-                    5 out of 5 quadruples are in the right direction
-                    1 out of 1 quintuples are in the right direction
-        
-        TODO:
-        -----
-        Change back the doubles, implementing _restore_S_from_D.
-        
-        """
-        logfmt = '\n'.join(['det = %s',
-                            'C dec = %s',
-                            'C dec/C = %s',
-                            '(C dec - C)^2 = %s',
-                            'same sign = %s'])
-        if level not in ['D', 'SD']:
-            raise ValueError('Possible values for level are "S" and "SD"')
-        if level == 'SD':
-            with logtime('Extracting S from D'):
-                self._extract_S_from_D()
-        with logtime('Changing coefficients as order is relative to ref_det.'):
-            self._coeff_as_order_relative_to_ref()
-        norm = 0.0
-        right_dir = {}
-        cc_wf = IntermNormWaveFunction.similar_to(
-            self, 'CC' + level, restricted=False)
-        for det in self:
-            if not self.symmetry_allowed(det):
-                continue
-            rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            do_decomposition = (abs(det.c) > coeff_thr
-                                and rank > 2
-                                and (level == 'SD' or rank % 2 == 0))
-            if rank == 2 or (level == 'SD' and rank == 1):
-                cc_wf[rank, alpha_hp, beta_hp] = det.c
-            if do_decomposition:
-                decomposition = cluster_decompose(
-                    alpha_hp, beta_hp, self.ref_det,
-                    mode=level, recipes_f=recipes_f)
-                C = 0.0
-                for d in decomposition:
-                    new_contribution = d[0]
-                    for cluster_det in d[1:]:
-                        new_contribution *= self[self.index(cluster_det)]
-                    C -= new_contribution
-                norm_contribution = (det.c - C)**2
-                cc_towards_wf = det.c * C >= 0
-                norm += norm_contribution
-                rank = _str_excitation(rank)
-                if rank not in right_dir:
-                    right_dir[rank] = [0, 1]
-                else:
-                    right_dir[rank][1] += 1
-                if cc_towards_wf:
-                    right_dir[rank][0] += 1
-                logger.info(logfmt,
-                            det,
-                            C,
-                            C/det.c,
-                            norm_contribution,
-                            cc_towards_wf)
-            elif rank > 2 or (rank, level) == (1, 'D'):
-                norm += det.c**2
-        tolog = ['Number of excitations where the CC manifold\n'
-                 + '   curves towards the wave function:']
-        for rank, n in right_dir.items():
-            tolog.append(f'{rank}: {n[0]} of {n[1]}')
-        logger.info('\n'.join(tolog))
-        if restore_wf:
-            if level == 'SD':
-                self._restore_S_to_D()
-            self._coeff_as_order_relative_to_ref()
-        res = Results('Vertical distance to CC manifold')
-        res.distance = math.sqrt(norm)
-        res.wave_function = cc_wf
-        res.right_dir = right_dir
-        return res
-    
-    def calc_dist_to_cc_manifold(self,
-                                 level='SD',
-                                 maxiter=10,
-                                 f_out=None,
-                                 approx_hess=True,
-                                 thrsh_Z=1.0E-8,
-                                 thrsh_J=1.0E-8,
-                                 ini_wf=None,
-                                 use_FCI_directly=False,
-                                 recipes_f=None,
-                                 coeff_thr=1.0E-10,
-                                 restore_wf=True):
-        """Calculate the distance to the coupled cluster manifold
-        
-        Attention:
-        ----------
-        For the result (the distance in the intermediate
-        normalisation) to be meaningful, this wave function should
-        be in the intermediate normalisation.
-        This is not checked or tested! The user is responsible to transform
-        (if desired) the wave function first
-        (using normalise(mode='intermediate')).
-        
-        Parameters:
-        -----------
-        level (str, optional, default='D'; possible values: 'D', 'SD')
-            The level of coupled cluster theory to compare.
-        
-        maxiter (int, optional, default=10)
-            The maximum number of iterations
-        
-        f_out (File object, optional, default=None)
-            The output to print the iterations.
-            If None the iterations are not printed.
-        
-        approx_hess (bool, optional, default=True)
-            Use approximate Hessian (only diagonal elements)
-        
-        thrsh_Z (float, optional, default=1.0E-8)
-            Convergence threshold for z
-        
-        thrsh_J (float, optional, default=1.0E-8)
-            Convergence threshold for the Jacobian
-        
-        ini_wf (None or an instance of WaveFunction)
-            The initial wave function.
-            If None or an instance of WaveFunctionFCI,
-            the "vertical" projection of self or of ini_wf is used.
-        
-        use_FCI_directly (bool, optional, default=False)
-            It is meaningful only if ini_wf is passed and is an instance
-            of WaveFunctionFCI.
-            If True, uses this wave function directly in the optimisation
-            procedure, instead getting the vertical projection to the CC
-            manifold first. In this case, the first step of the optimisation
-            procedure use a "CC wave function" that does not belong to the
-            CC manifold.
-            If False, uses the vertical projection to the CC manifold.
-        
-        recipes_f (str, a file name, optional, default=None)
-            The files that describe the cluster decomposition.
-            See decompose for the details
-        
-        coeff_thr (float, optional, default=1.0E-10)
-            Slater determinants with coefficients lower than this
-            threshold value are ignored in the analysis
-            
-        restore_wf (bool, optional, default=True)
-            Restore all changes made to the wave function during
-            this function, such that it can be further used.
-            If the wave function is not going to be used for further purposes,
-            set it to False.
-        
-        Return:
-        -------
-        An instance of OptResults.
-        
-        """
-        converged = False
-        normZ = normJ = 1.0
-        if ini_wf is None:
-            cc_wf = self.vertical_proj_to_cc_manifold(
-                level=level,
-                recipes_f=recipes_f,
-                coeff_thr=coeff_thr,
-                restore_wf=True).wave_function
-        elif isinstance(ini_wf, WaveFunctionFCI) and not use_FCI_directly:
-            cc_wf = ini_wf.vertical_proj_to_cc_manifold(
-                level=level,
-                recipes_f=recipes_f,
-                coeff_thr=coeff_thr,
-                restore_wf=True).wave_function
-        elif isinstance(ini_wf, WaveFunctionFCI) and not use_FCI_directly:
-            cc_wf = IntermNormWaveFunction.similar_to(
-                self, 'CC' + level, restricted=False)
-        elif isinstance(ini_wf, IntermNormWaveFunction):
-            cc_wf = copy.deepcopy(ini_wf)
-        else:
-            raise ValueError('Unknown type of initial wave function')
-        n_ampl = len(cc_wf)
-        corr_orb = self.corr_orb.as_array()
-        virt_orb = self.virt_orb.as_array()
-        cc_wf_as_fci = WaveFunctionFCI.similar_to(self, restricted=False)
-        if f_out is not None:
-            f_out.write(
-                'it.   dist      |Z|       |J|        time in iteration\n')
-        for i_iteration in range(maxiter):
-            with logtime(f'Starting iteration {i_iteration}') as T_iter:
-                if (i_iteration == 0
-                    and isinstance(ini_wf, WaveFunctionFCI)
-                        and use_FCI_directly):
-                    cc_wf_as_fci._coefficients[:] = ini_wf._coefficients
-                else:
-                    with logtime('Transforming CC wave function to FCI-like'):
-                        cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
-                with logtime('Distance to current CC wave function'):
-                    dist = self.dist_to(cc_wf_as_fci, metric='IN')
-                if (i_iteration > 0
-                    and normJ < thrsh_J
-                        and normZ < thrsh_Z):
-                    converged = True
-                    break
-                if approx_hess:
-                    with logtime('Making Jacobian and approximate Hessian'):
-                        z, normJ = cc_manifold.min_dist_app_hess(
-                            self._coefficients,
-                            cc_wf_as_fci._coefficients,
-                            n_ampl,
-                            self.n_irrep,
-                            self.orbs_before,
-                            corr_orb,
-                            virt_orb,
-                            self._alpha_string_graph,
-                            self._beta_string_graph,
-                            level=level)
-                    logger.log(1, 'Update vector z:\n%r', z)
-                else:
-                    with logtime('Making Jacobian and Hessian'):
-                        Jac, Hess = cc_manifold.min_dist_jac_hess(
-                            self._coefficients,
-                            cc_wf_as_fci._coefficients,
-                            n_ampl,
-                            self.n_irrep,
-                            self.orbs_before,
-                            corr_orb,
-                            virt_orb,
-                            self._alpha_string_graph,
-                            self._beta_string_graph)
-                    logger.log(1, 'Jacobian:\n%r', Jac)
-                    logger.log(1, 'Hessian:\n%r', Hess)
-                    with logtime('Calculating z: Solving linear system.'):
-                        z = -linalg.solve(Hess, Jac)
-                    normJ = linalg.norm(Jac)
-                normZ = linalg.norm(z)
-                cc_wf.update_amplitudes(z)
-            if f_out is not None:
-                f_out.write(f' {i_iteration:<4} {dist:7.5}  {normZ:6.4}'
-                            f'  {normJ:6.4}   {T_iter.elapsed_time}\n')
-                f_out.flush()
-        res = OptResults('Minimun distance to CC manifold')
-        res.success = converged
-        if not converged:
-            res.error = 'Optimisation did not converge'
-        res.distance = dist
-        res.wave_function = cc_wf
-        res.norm = (normZ, normJ)
-        res.n_iter = i_iteration
-        return res
