@@ -254,10 +254,8 @@ def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
                                               wf.corr_orb[irrep],
                                               wf.virt_orb[irrep]):
             contr_irrep += (_calc_fI(U[irrep], Index)
-                            * wf.Cd[irrep][get_n_from_triang(
-                                i, j, with_diag=False),
-                                           get_n_from_triang(
-                                               a, b, with_diag=False)])
+                            * wf.Cd[irrep][get_n_from_triang(j, i),
+                                           get_n_from_triang(b, a)])
         contr_irrep *= 2 * F0[irrep]
         contr_irrep += np.einsum('ijkl,ij,kl',
                                  wf.Csd[irrep][irrep], Fs[irrep], Fs[irrep])
@@ -555,9 +553,9 @@ def _generate_lin_system_from_restricted_CISD(
                     -1)
             for a in range(wf.virt_orb[irrep]):
                 for j in range(i):
-                    ij = get_n_from_triang(i, j, with_diag=False)
+                    ij = get_n_from_triang(j, i)
                     for b in range(a):
-                        ab = get_n_from_triang(a, b, with_diag=False)
+                        ab = get_n_from_triang(b, a)
                         tmp = sign * np.dot(U[irrep][wf.ref_orb[irrep] + a, :],
                                             Gs[irrep][j, b,
                                                       wf.froz_orb[irrep] + i, :])
@@ -607,8 +605,8 @@ def _generate_lin_system_from_restricted_CISD(
         for i, j, a, b, Index in _all_doubles(n[irrep],
                                               wf.corr_orb[irrep],
                                               wf.virt_orb[irrep]):
-            ij = get_n_from_triang(i, j, with_diag=False)
-            ab = get_n_from_triang(a, b, with_diag=False)
+            ij = get_n_from_triang(j, i)
+            ab = get_n_from_triang(b, a)
             for p in range(K[irrep]):
                 for q in range(n[irrep]):
                     Gd[p, q] = _calc_G(U[irrep], Index,
@@ -656,8 +654,8 @@ def _generate_lin_system_from_restricted_CISD(
         for i, j, a, b, Index in _all_doubles(n[irrep],
                                               wf.corr_orb[irrep],
                                               wf.virt_orb[irrep]):
-            ij = get_n_from_triang(i, j, with_diag=False)
-            ab = get_n_from_triang(a, b, with_diag=False)
+            ij = get_n_from_triang(j, i)
+            ab = get_n_from_triang(b, a)
             for p in range(K[irrep]):
                 for q in range(n[irrep]):
                     H[p, q, p, q] = -_calc_fI(U[irrep], Index)

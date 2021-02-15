@@ -4,7 +4,7 @@
 
 """
 from libc.math cimport sqrt, floor
-
+import cython
 
 # def get_I(n, i=None, a=None):
 #     """Return range(n).remove(i) + [a]"""
@@ -23,42 +23,46 @@ cpdef inline int triangular(int n):
     return ((n + 1) * n) // 2
 
 
-cpdef (int, int) get_ij_from_triang(int n, with_diag=True):
-    """Returns (i,j). Inverse of get_n_from_triang"""
-    i = int(floor((sqrt(1 + 8 * n) - 1) / 2))
-    j = n - i * (i + 1) // 2
-    if not with_diag:
-        i += 1
-    return i, j
-
-
-cpdef inline int get_n_from_triang(int i, int j, with_diag=True):
-    """Return the position in a triangular arrangement (i>=j):
+cpdef inline int get_n_from_triang(int i, int j):
+    """Return the position in a triangular arrangement (i < j), i runs faster
     
-    with_diag=True:
-    
-    0,0                      0
-    1,0  1,1                 1  2
-    2,0  2,1  2,2            3  4  5
-    3,0  3,1  3,2   3,3      6  7  8  9
-    ...  i,j
-    
-    with_diag=False:
-    
-    1,0               0
-    2,0  2,1          1  2
-    3,0  3,1  3,2     3  4  5
+    0,1                    0
+    0,2  1,2               1   2
+    0,3  1,3  2,3          3   4   5
+    0,4  1,4  2,4  3,4     6   7   8   9
     ...  i,j
     
     """
-    if with_diag:
-        return j + triangular(i)
-    else:
-        return j + triangular(i - 1)
+    return i + triangular(j - 1)
+
+
+cpdef inline (int, int) get_ij_from_triang(int n):
+    """Returns (i,j). Inverse of get_n_from_triang"""
+    cdef int j = <int>(floor((sqrt(1 + 8 * n) - 1) / 2))
+    return n - j * (j + 1) // 2, j + 1
+
+
+cpdef inline int get_n_from_triang_with_diag(int i, int j):
+    """Return the position in a triangular arrangement (i <= j), i runs faster
+    
+    0,0                          0
+    0,1  1,1                     1   2
+    0,2  1,2  2,2                3   4   5
+    0,3  1,3  2,3  3,3           6   7   8   9
+    0,4  1,4  2,4  3,4  4,4     10  11  12  13  14
+    ...  i,j
+    """
+    return i + triangular(j)
+
+
+cpdef inline (int, int) get_ij_from_triang_with_diag(int n):
+    """Return (i, j). Inverse of get_n_from_triang_with_diag"""
+    cdef int j = <int>(floor((sqrt(1 + 8 * n) - 1) / 2))
+    return n - j * (j + 1) // 2, j
 
 
 cpdef inline int get_pos_from_rectangular(int i, int a, int n):
-    """Returns i*n + a (position in row-major, C order)
+    """Return i*n + a (position in row-major, C order)
     
     i,a                           pos
     
@@ -70,6 +74,7 @@ cpdef inline int get_pos_from_rectangular(int i, int a, int n):
     return i * n + a
 
 
-cpdef inline int get_ia_from_rectangular(int pos, int n):
+@cython.cdivision(True)
+cpdef inline (int, int) get_ia_from_rectangular(int pos, int n):
     """Returns (i,a). Inverse of get_pos_from_rectangular"""
     return pos // n, pos % n

@@ -10,6 +10,7 @@ from util.variables import int_dtype
 from wave_functions import fci, general
 from wave_functions.fci import make_occ
 
+
 class ClusterDecTestCase(unittest.TestCase):
         
     def setUp(self):
@@ -357,7 +358,7 @@ class ExcInfoTestCase(unittest.TestCase):
         
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-        self.wf = fci.WaveFunctionFCI.from_Molpro_FCI(
+        self.wf = fci.FCIWaveFunction.from_Molpro_FCI(
             'tests/inputs_outputs/h2o__Req__sto3g__C2v/FCI_allE.out')
 
     def test_get_exc_1(self):
@@ -393,4 +394,3 @@ class ExcInfoTestCase(unittest.TestCase):
         self.assertEqual(beta_hp[0], make_occ([2]))
         self.assertEqual(beta_hp[1], make_occ([9]))
 
-        

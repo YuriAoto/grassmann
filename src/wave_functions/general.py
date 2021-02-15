@@ -101,6 +101,9 @@ corr_orb  [ 3, 2, 2, 0,  1, 2, 2, 0]    Correlated orbitals
                                         (alpha/beta)
 virt_orb  [ 5, 3, 3, 3,  7, 3, 3, 3]    Virtual orbitals
 
+corr_orbs_before = [0, 3, 5, 7, 0, 1, 3, 5, 0]
+
+
 Orbital order (irrep = irreducible representation):
 
 Frozen (Only formally, not really used)
@@ -203,7 +206,6 @@ from molecular_geometry.symmetry import (number_of_irreducible_repr,
 from orbitals.symmetry import OrbitalsSets
 
 
-
 class WaveFunction(ABC):
     """An abstract base class for electronic wave functions
     
@@ -245,7 +247,7 @@ class WaveFunction(ABC):
     
     corr_orbs_before (np.array of int)
         The number of correlated orbitals before each irrep.
-        orbs_before[irrep] = sum(corr_orb[:irrep])
+        corr_orbs_before[irrep] = sum(corr_orb[:irrep])
     
     n_alpha, n_beta, n_elec, n_corr_alpha, n_corr_beta, n_corr_elec (int)
         Number of alpha, beta, total, correlated alpha, correlated beta,
@@ -538,7 +540,6 @@ class WaveFunction(ABC):
             + (0 if alpha_orb or self.restricted else
                self.n_irrep)]
                 
-    
     @property
     def n_irrep(self):
         """Number or irreducible representations"""

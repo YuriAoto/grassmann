@@ -25,7 +25,7 @@ CCSD_header = (
     + 'Authors: '
     + 'C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n')
 UCCSD_header = (
-    'PROGRAM * CCSD (Unrestricted open-shell coupled cluster)     '
+    ' PROGRAM * CCSD (Unrestricted open-shell coupled cluster)     '
     + 'Authors: '
     + 'C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992\n')
 RCCSD_header = (

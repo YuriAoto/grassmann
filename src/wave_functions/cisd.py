@@ -56,8 +56,8 @@ class CISD_WaveFunction(WaveFunction):
         
         and store the coefficients for the excitation i,j to a,b.
         Indices for the pairs i,j and a,b are stored in triangular order:
-        ij = get_n_from_triang(i, j, with_diag=False)
-        ab = get_n_from_triang(a, b, with_diag=False)
+        ij = get_n_from_triang(j, i)
+        ab = get_n_from_triang(b, a)
         with i>j and a>b.
     
     Csd (list of lists of 4D np.ndarrays)
@@ -200,9 +200,9 @@ class CISD_WaveFunction(WaveFunction):
             Jac[slices_HJ[irp]] = -np.ravel(self.Cs[irp],
                                             order='C')
             for ij in range(self.Cd[irp].shape[0]):
-                i, j = get_ij_from_triang(ij, with_diag=False)
+                j, i = get_ij_from_triang(ij)
                 for ab in range(self.Cd[irp].shape[1]):
-                    a, b = get_ij_from_triang(ab, with_diag=False)
+                    b, a = get_ij_from_triang(ab)
                     ia = (slices_HJ[irp].start
                           + get_pos_from_rectangular(i, a,
                                                      self.virt_orb[irp]))
@@ -320,7 +320,7 @@ class CISD_WaveFunction(WaveFunction):
                 if intN_wf.singles is not None:
                     singles = intN_wf.singles[irp]
                 if i != j:
-                    ij = get_n_from_triang(i, j, with_diag=False)
+                    ij = get_n_from_triang(j, i)
                 new_wf.Csd[irp][irp][i, :, j, :] += doubles[irp][:, :]
                 new_wf.Csd[irp][irp][j, :, i, :] += doubles[irp][:, :].T
                 if intN_wf.wf_type == 'CCSD':
@@ -334,7 +334,7 @@ class CISD_WaveFunction(WaveFunction):
                     for a in range(new_wf.virt_orb[irp]):
                         for b in range(a):
                             # Increment ab instead?? Check the order
-                            ab = get_n_from_triang(a, b, with_diag=False)
+                            ab = get_n_from_triang(b, a)
                             new_wf.Cd[irp][ij, ab] = (
                                 doubles[irp][b, a]
                                 - doubles[irp][a, b])
