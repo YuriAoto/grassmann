@@ -12,8 +12,8 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 extensions = [
-    Extension("src.coupled_cluster.manifold",
-              ["src/coupled_cluster/manifold.pyx"]),
+#    Extension("src.coupled_cluster.manifold",
+#              ["src/coupled_cluster/manifold.pyx"]),
     Extension("src.wave_functions.strings_rev_lexical_order",
               ["src/wave_functions/strings_rev_lexical_order.pyx"]),
     Extension("src.util.array_indices",

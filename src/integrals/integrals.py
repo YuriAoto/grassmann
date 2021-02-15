@@ -13,6 +13,7 @@ import numpy as np
 from scipy import linalg
 
 from input_output.parser import ParseError
+import integrals.integrals_cy
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -31,16 +32,16 @@ class Integrals():
         A MolecuarGeometry object conatining all molecular data
 
     n_func (int)
-        Number of contarcted functions in the basis set ((??check))
+        Number of contracted functions in the basis set ((??check))
 
     S (np.ndarray ((??check)))
         The overlap matrix
     
     h (np.ndarray ((??check)))
-        one-electron integral matxix
+        one-electron integral matrix
 
     g (np.ndarray ((??check)))
-        two-electron integral matxix
+        two-electron integral matrix
 
     X (??)
         ??
@@ -58,8 +59,24 @@ class Integrals():
         self.X = None
         if method == 'ir-wmme':
             self.set_wmme_integrals()
-        self.orthogonalise_S(method=orth_method)
+        if orth_method != None:
+            self.orthogonalise_S(method=orth_method)
         logger.debug('h:\n%r', self.h)
+
+    @classmethod
+    def from_atomic_to_molecular(cls, old_int, molecular, cy=True):
+        new_int = cls(old_int.mol_geo, old_int.basis_set, method = None, orth_method = None)
+        new_int.n_func = old_int.n_func
+        irr = 0
+        if cy:
+            pass
+            ##TODO: In src/integrals/integrals_cy.pyx
+        else:
+            new_int.h = _from_1e_atomic_to_molecular(old_int.h, molecular[irr], old_int.n_func)
+            new_int.S = _from_1e_atomic_to_molecular(old_int.S, molecular[irr], old_int.n_func)
+        new_int.g = Two_Elec_Int.from_2e_atomic_to_molecular(old_int, molecular, cy=cy) 
+        return new_int
+
 
     def set_wmme_integrals(self):
         """Set integrals from Knizia's ir-wmme program"""
@@ -133,6 +150,18 @@ class Integrals():
 class Two_Elec_Int():
     """Two electron integrals and related functions
 
+    Parameters:
+    -----------
+   
+    _format (str)
+        Indicates how the integrals are organized (F2e or ijkl)
+    
+    _integrals (ndarrays)
+        contains the integrals values
+
+    n_func (int)
+        number of basis functions
+
     """
     def __init__(self):
         self._format = None
@@ -160,13 +189,36 @@ class Two_Elec_Int():
     @classmethod
     def from_wmme_fint2e(cls, wmme_fint2e_file, n_func):
         """Load integrals as intF2e"""
-        new_int = cls()
-        new_int.n_func = n_func
-        new_int._format = 'F2e'
-        new_int._integrals = np.load(wmme_fint2e_file)
-        new_int._integrals = new_int._integrals.reshape(
-            (new_int._integrals.shape[0], n_func, n_func))
-        return new_int
+        new_2e_int = cls()
+        new_2e_int.n_func = n_func
+        new_2e_int._format = 'F2e'
+        new_2e_int._integrals = np.load(wmme_fint2e_file)
+        new_2e_int._integrals = new_int._integrals.reshape(
+            (new_2e_int._integrals.shape[0], n_func, n_func))
+        return new_2e_int
+
+    @classmethod
+    def from_2e_atomic_to_molecular(cls, atomic, molecular, cy=True):
+        """Change a Two_Elec_Int in atomic basis to molecular basis
+           TODO: Set atomic int as a parameter of molecular orbitals.
+                 Only the moleular will be the input.
+                 That way we don't need to check for size compatibility
+        """
+        new_2e_int = cls()
+        new_2e_int.n_func  = atomic.n_func
+        new_2e_int._format = 'ijkl'
+        if atomic.g._format == 'F2e':
+            atomic.g.transform_to_ijkl()
+        n_g = atomic.n_func * (atomic.n_func + 1) // 2
+        n_g = n_g * (n_g + 1) // 2
+        mo_integrals = np.zeros(n_g)
+        irr = 0 #TODO Generalize the symmetry
+        if cy:
+            new_2e_int._integrals = integrals.integrals_cy.from_2e_atomic_to_molecular_cy(mo_integrals,molecular[irr],atomic.g._integrals,atomic.n_func)
+        else:
+            new_2e_int._integrals = _old_from_2e_atomic_to_molecular(mo_integrals, atomic, molecular, irr=irr)
+        return new_2e_int
+
 
     def transform_to_ijkl(self):
         """Transform integrals in tho ijkl format"""
@@ -193,3 +245,98 @@ class Two_Elec_Int():
                         for Ffit in self._integrals:
                             g_in_new_format[ijkl] += Ffit[i][j] * Ffit[k][l]
         self._integrals = g_in_new_format
+
+
+
+
+def _from_1e_atomic_to_molecular(atomic_matrix, molecular, n_func):
+    mol_int = np.zeros(len(atomic_matrix))
+    for i in range(n_func):
+        for j in range(n_func):
+            if i < j:
+                continue
+            ij = i+j*(j+1)//2 ##Check if it's right
+            for p in range(n_func):
+                for q in range(n_func):
+                    if p < q:
+                        continue
+                    pq = p+q*(q+1)//2
+                    #print(i,j,ij,p,q,pq)
+                    mol_int[ij]+= molecular[p,i]*molecular[q,j]*atomic_matrix[pq]
+                    if p != q:
+                        mol_int[ij]+= molecular[q,i]*molecular[p,j]*atomic_matrix[pq]
+                    #print(mol_int[ij])
+    return mol_int
+
+
+
+
+#####OLD####
+def _old_from_2e_atomic_to_molecular(mo_integrals, atomic, molecular, irr = 0):
+    ij=-1
+    for i in range(atomic.n_func):                      
+        for j in range(atomic.n_func):
+            if i < j:
+                continue
+            ij += 1
+            kl = -1
+            for k in range(atomic.n_func):
+                for l in range(atomic.n_func):
+                    if k < l:
+                        continue
+                    kl += 1
+                    if ij < kl:
+                        continue
+                    ijkl = (kl + ij * (ij + 1) // 2
+                            if ij >= kl else
+                            ij + kl * (kl + 1) // 2)
+                    pq=-1
+                    for p in range(atomic.n_func):                      
+                        for q in range(atomic.n_func):
+                            if p < q:
+                                continue
+                            pq += 1
+                            rs = -1
+                            for r in range(atomic.n_func):
+                                for s in range(atomic.n_func):
+                                    if r < s:
+                                        continue
+                                    rs += 1
+                                    if pq < rs:
+                                        continue
+                                    pqrs = (rs + pq * (pq + 1) // 2
+                                            if pq >= rs else
+                                            pq + rs * (rs + 1) // 2)
+                                    mo_integrals[ijkl]+= molecular[irr][p,i]*molecular[irr][q,j]*molecular[irr][r,k]*molecular[irr][s,l]*atomic.g._integrals[pqrs]
+                                    if p != q and r != s and ( q != s or p != r ):
+                                        mo_integrals[ijkl]+= molecular[irr][q,i]*molecular[irr][p,j]*molecular[irr][r,k]*molecular[irr][s,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][p,i]*molecular[irr][q,j]*molecular[irr][s,k]*molecular[irr][r,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][q,i]*molecular[irr][p,j]*molecular[irr][s,k]*molecular[irr][r,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][q,k]*molecular[irr][p,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][s,i]*molecular[irr][r,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][s,i]*molecular[irr][r,j]*molecular[irr][q,k]*molecular[irr][p,l]*atomic.g._integrals[pqrs]
+                                     #    print(8)
+                                    elif p != q and r != s:
+                                        mo_integrals[ijkl]+= molecular[irr][q,i]*molecular[irr][p,j]*molecular[irr][r,k]*molecular[irr][s,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][p,i]*molecular[irr][q,j]*molecular[irr][s,k]*molecular[irr][r,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][q,i]*molecular[irr][p,j]*molecular[irr][s,k]*molecular[irr][r,l]*atomic.g._integrals[pqrs]
+                                     #    print(4)
+ 
+                                    elif p != q:
+                                        mo_integrals[ijkl]+= molecular[irr][q,i]*molecular[irr][p,j]*molecular[irr][r,k]*molecular[irr][s,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][q,k]*molecular[irr][p,l]*atomic.g._integrals[pqrs]
+                                     #    print(4)
+                                    elif r != s:
+                                        mo_integrals[ijkl]+= molecular[irr][p,i]*molecular[irr][q,j]*molecular[irr][s,k]*molecular[irr][r,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                        mo_integrals[ijkl]+= molecular[irr][s,i]*molecular[irr][r,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                     #    print(4)
+                                    elif p != r or q != s:
+                                        mo_integrals[ijkl]+= molecular[irr][r,i]*molecular[irr][s,j]*molecular[irr][p,k]*molecular[irr][q,l]*atomic.g._integrals[pqrs]
+                                     #    print(2)
+                                    else:
+                                       pass
+                                     #    print(1)
+    return mo_integrals

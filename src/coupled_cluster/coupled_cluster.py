@@ -141,7 +141,6 @@ def get_t1_transf(h,g,wf):
     """
         
 
-
 def equation(wf,h,g,F,L):
     """Calculate the residual from the singles and doubles configurations.
 

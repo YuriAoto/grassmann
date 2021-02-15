@@ -12,12 +12,14 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 extensions = [
-    Extension("coupled_cluster.manifold",
-              ["coupled_cluster/manifold.pyx"]),
+#    Extension("coupled_cluster.manifold",
+#              ["coupled_cluster/manifold.pyx"]),
+    Extension("integrals.integrals_cy",
+              ["integrals/integrals_cy.pyx"]),
     Extension("wave_functions.strings_rev_lexical_order",
               ["wave_functions/strings_rev_lexical_order.pyx"]),
-    Extension("test.implementation.residual_cy",
-              ["test/implementation/residual_cy.pyx"],
+    Extension("tests.implementation.residual_cy",
+              ["../tests/implementation/residual_cy.pyx"],
               extra_compile_args=['-fopenmp'],
               extra_link_args=['-fopenmp'])
 ]
