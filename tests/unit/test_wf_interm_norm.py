@@ -10,12 +10,6 @@ from wave_functions.interm_norm import IntermNormWaveFunction
 import tests
 
 
-class FromFCITestCase(unittest.TestCase):
-
-    def test_1(self):
-        pass
-
-
 
 class FromMolproTestCase(unittest.TestCase):
 
@@ -292,7 +286,7 @@ class FromMolproTestCase(unittest.TestCase):
             ])
         self.assertEqual(wf.amplitudes, my_ampl)
     
-    def test_hcl_631g_c2v(self):
+    def test_hcl_plus_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('HCl_plus__1.5__631g__C2v'))
         my_ampl = np.array(
@@ -620,7 +614,7 @@ class FromMolproTestCase(unittest.TestCase):
         self.assertEqual(wf.n_irrep, 4)
         self.assertFalse(wf.restricted)
 
-    def test_hcl_631g_cs(self):
+    def test_hcl_plus_631g_cs(self):
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('HCl_plus__1.5__631g__Cs'))
         my_ampl = np.array(

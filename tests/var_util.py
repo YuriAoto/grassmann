@@ -14,4 +14,4 @@ logging.basicConfig(filename='testing.log',
 logger = logging.getLogger(__name__)
 
 
-memory.set_total_memory(100.0)
+memory.set_total_memory(200.0)
