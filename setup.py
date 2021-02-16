@@ -12,6 +12,8 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 extensions = [
+    Extension("src.integrals.integrals_cy",
+              ["src/integrals/integrals_cy.pyx"]),
     Extension("src.coupled_cluster.manifold",
               ["src/coupled_cluster/manifold.pyx"]),
     Extension("src.wave_functions.singles_doubles",
