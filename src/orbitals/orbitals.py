@@ -604,3 +604,11 @@ class MolecularOrbitals():
                                           i_inf:i_sup])
         logger.debug('MO (self) in the basis of MO (other):\n%s', U)
         return U
+
+#########TEST#######
+    def molecular_integral(self):
+        """Create a new Integrals object containing the one- and two-electron
+           molecular integrals.
+        """
+        pass
+####################

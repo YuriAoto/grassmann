@@ -31,6 +31,7 @@
 
 \usepackage{physics}
 
+\usepackage{multirow}
 \usepackage{eufrak}
 \usepackage{amsmath}
 \usepackage{mathrsfs}
@@ -162,20 +163,27 @@
 % --------------------------------
 % print occupied indices (defined in \orccorb) in \occorbcolor, with \printoccorb
 % print virtual indices (defined in \virtcorb) in \virtorbcolor, with \printvirtorb
-\newcommand*{\occorb}{ijklmn}
+\newcommand*{\occorb}{ijkl}
 \newcommand*{\virtorb}{abcdef}
+\newcommand*{\allorb}{pqrsumn}
 \newcommand*{\occorbcolor}{blue}
 \newcommand*{\virtorbcolor}{red}
+\newcommand*{\allorbcolor}{black}
 \newcommand*\printoccorb[1] {\textcolor{\occorbcolor} {#1}}
 \newcommand*\printvirtorb[1]{\textcolor{\virtorbcolor}{#1}}
+\newcommand*\printallorb[1]{\textcolor{\allorbcolor}{#1}}
 \makeatletter
 \def\instring#1#2{TT\fi\begingroup
   \edef\x{\endgroup\noexpand\in@{#1}{#2}}\x\ifin@}
 \newcommand\printorbcolor[1]{
   \if\instring{#1}{\occorb}
   \printoccorb{#1}
-  \else
+  \else 
+  \if\instring{#1}{\virtorb}
   \printvirtorb{#1}
+  \else
+  \printallorb{#1}
+  \fi
   \fi
   }
 \def\parseorbitals#1#2|{%
@@ -200,9 +208,16 @@
 }
 \makeatother
 \newcommand*{\gtil}[1]{\ensuremath{\tilde{g}_{\colororbindices{#1}}}}
+\newcommand*{\Ltil}[1]{\ensuremath{\tilde{L}_{\colororbindices{#1}}}}
+\newcommand*{\htil}[1]{\ensuremath{\tilde{h}_{\colororbindices{#1}}}}
+\newcommand*{\Ftil}[1]{\ensuremath{\tilde{F}^I_{\colororbindices{#1}}}}
+\newcommand*{\F}[1]{\ensuremath{F^I_{\colororbindices{#1}}}}
+\newcommand*{\h}[1]{\ensuremath{h_{\colororbindices{#1}}}}
 \newcommand*{\g}[1]{\ensuremath{g_{\colororbindices{#1}}}}
+\newcommand*{\Lmat}[1]{\ensuremath{L_{\colororbindices{#1}}}}
 \newcommand*{\orbsum}[1]{\ensuremath{\sum_{\colororbindices{#1}}}}
 \newcommand*{\ampl}[2]{\ensuremath{t_{\colororbindices{#1}}^{\colororbindices{#2}}}}
+\newcommand*{\uampl}[2]{\ensuremath{u_{\colororbindices{#1}}^{\colororbindices{#2}}}}
 
 
 
