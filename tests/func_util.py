@@ -3,25 +3,30 @@ import unittest
 import numpy as np
 from scipy import linalg
 
+assert_arrays_rtol = 1e-5
+assert_arrays_atol = 1e-6
 
 def assert_arrays(array1, array2, msg=None):
     """Asserts arrays. To be used with addTypeEqualityFunc"""
     if array1.shape != array2.shape:
         raise unittest.TestCase.failureException(
-            str(array1) + ' != ' + str(array2))
+            '\n' + str(array1) + '\n!=\n' + str(array2))
     if len(array1) == 0:
         return True
     if array1.dtype != array2.dtype:
         raise unittest.TestCase.failureException(
-            str(array1) + ' != ' + str(array2))
+            '\n' + str(array1) + '\n!=\n' + str(array2))
     if (np.issubdtype(array1.dtype, np.integer)
             and not (array1 == array2).all()):
         raise unittest.TestCase.failureException(
-            str(array1) + ' != ' + str(array2))
+            '\n' + str(array1) + '\n!=\n' + str(array2))
     if (np.issubdtype(array1.dtype, np.floating)
-            and not np.allclose(array1, array2, rtol=1e-05, atol=1e-08)):
+            and not np.allclose(array1, array2,
+                                rtol=assert_arrays_rtol,
+                                atol=assert_arrays_atol)):
+        print('----->', assert_arrays_atol)
         raise unittest.TestCase.failureException(
-            str(array1) + ' != ' + str(array2))
+            '\n' + str(array1) + '\n!=\n' + str(array2))
     return True
 
 

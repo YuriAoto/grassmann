@@ -5,14 +5,15 @@ Classes:
 
 IntermNormWaveFunction
 """
+import copy
 import logging
 
 import numpy as np
 
 from util.array_indices import (triangular,
-                                get_pos_from_rectangular,
-                                get_n_from_triang_with_diag,
-                                get_n_from_triang)
+                                n_from_triang_with_diag,
+                                n_from_triang,
+                                n_from_rect)
 from util.variables import int_dtype, zero
 from util.memory import mem_of_floats
 from input_output import molpro
@@ -24,11 +25,39 @@ from orbitals.occ_orbitals import OccOrbital
 # from wave_functions.singles_doubles import (
 #     EXC_TYPE_A, EXC_TYPE_B,
 #     EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+EXC_TYPE_ALL = 0
 EXC_TYPE_A = 1
 EXC_TYPE_B = 2
 EXC_TYPE_AA = 3
 EXC_TYPE_AB = 4
 EXC_TYPE_BB = 5
+
+
+def _transpose(X, nrow, ncol):
+    """Return the ravel form of the transpose of the (raveled) block
+    
+    Given X as a ravelled 2D array, return its transpose, also ravelled,
+    such that:
+    
+    X[n_from_rect(i, j, ncol)] == \
+        transpose(X, nrow, ncol)[n_from_rect(j, i, nrow)]
+    
+    is True for all (0, 0) <= (i, j) < (nrow, ncol)
+    
+    Parameters:
+    -----------
+    X (1D np.array)
+        The ravelled array to be transposed
+    
+    nrow, ncol (int)
+        The number of rows and columns of the 2D version of X.
+        ncol is associated to the index that runs faster
+        X.size == nrow * ncol must be True
+    
+    """
+    return np.ravel(np.reshape(X, (nrow, ncol),
+                               order='C'),
+                    order='F')
 
 
 logger = logging.getLogger(__name__)
@@ -397,7 +426,7 @@ class IntermNormWaveFunction(WaveFunction):
             self._calc_ini_blocks()
         return self._n_ampl
 
-    def occupied_pairs(self, exc_type='all'):
+    def occupied_pairs(self, exc_type=EXC_TYPE_ALL):
         """Generator for all pairs i,j
         
         """
@@ -416,7 +445,7 @@ class IntermNormWaveFunction(WaveFunction):
                 else:
                     i.next_()
         else:
-            if exc_type in ('all', EXC_TYPE_AA):
+            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_AA):
                 i = OccOrbital(self.corr_orb.as_array(),
                                self.orbs_before,
                                True)
@@ -431,7 +460,7 @@ class IntermNormWaveFunction(WaveFunction):
                         i.rewind()
                     else:
                         i.next_()
-            if exc_type in ('all', EXC_TYPE_BB):
+            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_BB):
                 i = OccOrbital(self.corr_orb.as_array(),
                                self.orbs_before,
                                False)
@@ -446,7 +475,7 @@ class IntermNormWaveFunction(WaveFunction):
                         i.rewind()
                     else:
                         i.next_()
-            if exc_type in ('all', EXC_TYPE_AB):
+            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_AB):
                 i = OccOrbital(self.corr_orb.as_array(),
                                self.orbs_before,
                                True)
@@ -567,10 +596,10 @@ class IntermNormWaveFunction(WaveFunction):
                 raise IndexError('Rank must be 1 or 2!')
         if len(key) == 4:
             i, a, irrep, exc_type = key
-            if exc_type == EXC_TYPE_B:
+            if exc_type == EXC_TYPE_B and not self.restricted:
                 irrep += self.n_irrep
             return (self.ini_blocks_S[irrep]
-                    + get_pos_from_rectangular(
+                    + n_from_rect(
                         i, a, self.virt_orb[irrep]))
         if len(key) == 8:
             i, j, a, b, i_irrep, j_irrep, a_irrep, exc_type = key
@@ -580,13 +609,13 @@ class IntermNormWaveFunction(WaveFunction):
                                         exc_type == EXC_TYPE_AA)
             ij = self.get_ij_pos_from_i_j(i, j, i_irrep, exc_type)
             return (self.ini_blocks_D[ij, a_irrep]
-                    + get_pos_from_rectangular(
+                    + n_from_rect(
                         a, b, self.virt_orb[
                             irrep_product[a_irrep,
                                           irrep_product[i_irrep,
                                                         j_irrep]]]))
         raise KeyError('Key must have 3, 4 (S) or 8 (D) entries!')
-
+    
     def get_ij_pos_from_i_j(self, i, j, i_irrep, exc_type):
         """Get the position of pair i,j as stored in self.ini_blocks_D
         
@@ -604,13 +633,13 @@ class IntermNormWaveFunction(WaveFunction):
             
         """
         if self.restricted:
-            ij = get_n_from_triang_with_diag(i, j)
+            ij = n_from_triang_with_diag(i, j)
         elif exc_type == EXC_TYPE_AA:
-            ij = get_n_from_triang(i, j)
+            ij = n_from_triang(i, j)
         elif exc_type == EXC_TYPE_BB:
-            ij = self.first_bb_pair + get_n_from_triang(i, j)
+            ij = self.first_bb_pair + n_from_triang(i, j)
         else:  # exc_type == EXC_TYPE_AB
-            ij = self.first_ab_pair + get_pos_from_rectangular(
+            ij = self.first_ab_pair + n_from_rect(
                 j, i,
                 self.corr_orbs_before[self.n_irrep - 1]
                 + self.corr_orb[self.n_irrep - 1])
@@ -635,8 +664,8 @@ class IntermNormWaveFunction(WaveFunction):
         return i, a, irrep, exc_type
 
     def indices_of_doubles(self, alpha_hp, beta_hp):
-        if self.restricted:
-            raise NotImplementedError('Missing for restricted')
+        # if self.restricted:
+        #     raise NotImplementedError('Missing for restricted')
         if alpha_hp[0].size == 2:
             exc_type = EXC_TYPE_AA
             i, i_irrep = self.get_local_index(alpha_hp[0][0], True)
@@ -694,7 +723,7 @@ class IntermNormWaveFunction(WaveFunction):
         new_wf.wf_type = wf_type
         new_wf.initialize_amplitudes()
         return new_wf
-
+    
     @classmethod
     def from_zero_amplitudes(cls, point_group,
                              ref_orb, orb_dim, froz_orb,
@@ -735,6 +764,185 @@ class IntermNormWaveFunction(WaveFunction):
             new_wf.Ms /= 2
         new_wf.initialize_amplitudes()
         return new_wf
+    
+    @classmethod
+    def restrict(cls, ur_wf):
+        """A contructor that return a restricted version of wf
+        
+        The constructed wave function should be the same as wf, however,
+        of a restricted type. This method will work only if the amplitudes
+        associated to alpha and beta excitations are equal, within the
+        tolerance dictated by util.variables.zero.
+        
+        Parameters:
+        -----------
+        ur_wf (IntermNormWaveFunction)
+        The wave function (in general of unrestricted type). If restricted,
+        a deepcopy  is returned
+        
+        Raise:
+        ------
+        ValueError if the wave function cannot be restricted.
+        
+        """
+        if ur_wf.restricted:
+            return copy.deepcopy(ur_wf)
+        if "S" in ur_wf.wf_type:
+            if not np.allclose(
+                    ur_wf.amplitudes[:ur_wf.ini_blocks_S[ur_wf.n_irrep]],
+                    ur_wf.amplitudes[ur_wf.ini_blocks_S[ur_wf.n_irrep]:
+                                     ur_wf.ini_blocks_D[0, 0]]
+            ):
+                raise ValueError('alpha and beta singles are not the same!')
+        if not np.allclose(
+                ur_wf.amplitudes[ur_wf.ini_blocks_D[0, 0]:
+                                 ur_wf.ini_blocks_D[ur_wf.first_bb_pair, 0]],
+                ur_wf.amplitudes[ur_wf.ini_blocks_D[ur_wf.first_bb_pair, 0]:
+                                 ur_wf.ini_blocks_D[ur_wf.first_ab_pair, 0]]
+        ):
+            raise ValueError(
+                'alpha,alpha and beta,beta singles are not the same!')
+        n_corr = ur_wf.n_corr_alpha
+        for i, j in ur_wf.occupied_pairs(EXC_TYPE_AB):
+            pos_ij = (ur_wf.first_ab_pair
+                      + n_from_rect(j.pos_in_occ,
+                                    i.pos_in_occ,
+                                    n_corr))
+            if i.pos_in_occ >= j.pos_in_occ:
+                pos_ji = (ur_wf.first_ab_pair
+                          + n_from_rect(i.pos_in_occ,
+                                        j.pos_in_occ,
+                                        n_corr))
+                for irrep_a in range(ur_wf.n_irrep):
+                    irrep_b = irrep_product[
+                        irrep_a, irrep_product[i.spirrep,
+                                               j.spirrep - ur_wf.n_irrep]]
+                    block_len = ur_wf.virt_orb[irrep_a]*ur_wf.virt_orb[irrep_b]
+                    ij_ini = ur_wf.ini_blocks_D[pos_ij, irrep_a]
+                    ji_ini = ur_wf.ini_blocks_D[pos_ji, irrep_b]
+                    if not np.allclose(
+                            ur_wf.amplitudes[ij_ini:
+                                             ij_ini + block_len],
+                            _transpose(ur_wf.amplitudes[ji_ini:
+                                                        ji_ini + block_len],
+                                       ur_wf.virt_orb[irrep_b],
+                                       ur_wf.virt_orb[irrep_a])):
+                        a_block = ur_wf.amplitudes[ij_ini:
+                                                   ij_ini + block_len]
+                        b_block = _transpose(
+                            ur_wf.amplitudes[ji_ini:
+                                             ji_ini + block_len],
+                            ur_wf.virt_orb[irrep_b],
+                            ur_wf.virt_orb[irrep_a])
+                        to_msg = []
+                        for iampl in range(block_len):
+                            to_msg.append(
+                                f'{a_block[iampl]:10.7f}'
+                                + f'  {b_block[iampl]:10.7f}'
+                                + f'  {a_block[iampl]-b_block[iampl]}')
+                        raise ValueError(
+                            'alpha,beta with non equivalent blocks:\n'
+                            + '\n'.join(to_msg))
+        r_wf = cls.similar_to(ur_wf, ur_wf.wf_type, True)
+        if "S" in ur_wf.wf_type:
+            r_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]] = \
+                ur_wf.amplitudes[:ur_wf.ini_blocks_S[ur_wf.n_irrep]]
+        r_pos_ij = 0
+        for i, j in ur_wf.occupied_pairs(EXC_TYPE_AB):
+            pos_ij = (ur_wf.first_ab_pair
+                      + n_from_rect(j.pos_in_occ,
+                                    i.pos_in_occ,
+                                    n_corr))
+            if i.pos_in_occ <= j.pos_in_occ:
+                r_wf.amplitudes[
+                    r_wf.ini_blocks_D[r_pos_ij, 0]:
+                    r_wf.ini_blocks_D[r_pos_ij + 1, 0]
+                    if r_pos_ij + 1 < r_wf.ini_blocks_D.shape[0] else
+                    len(r_wf)] = ur_wf.amplitudes[
+                        ur_wf.ini_blocks_D[pos_ij, 0]:
+                        ur_wf.ini_blocks_D[pos_ij + 1, 0]
+                        if pos_ij + 1 < ur_wf.ini_blocks_D.shape[0] else
+                        len(ur_wf)]
+                r_pos_ij += 1
+        return r_wf
+    
+    @classmethod
+    def unrestrict(cls, r_wf):
+        """A constructor that return a unrestricted version of wf
+        
+        The constructed wave function should be the same as wf, however,
+        of a unrestricted type. Thus, the amplitudes are "duplicated" to
+        hold both alpha and beta amplitudes
+        
+        Parameters:
+        -----------
+        r_wf (IntermNormWaveFunction)
+        The wave function (in general of restricted type). If unrestricted,
+        a deepcopy is returned
+        """
+        if not r_wf.restricted:
+            return copy.deepcopy(r_wf)
+        ur_wf = cls.similar_to(r_wf, r_wf.wf_type, False)
+        if "S" in r_wf.wf_type:
+            ur_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]] = \
+                r_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]]
+            ur_wf.amplitudes[r_wf.ini_blocks_D[0, 0]:
+                             ur_wf.ini_blocks_D[0, 0]] = \
+                r_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]]
+        ij = 0
+        ij_diff = 0
+        first_bb_ampl = (ur_wf.ini_blocks_D[ur_wf.first_bb_pair, 0]
+                         - ur_wf.ini_blocks_D[0, 0])
+        n_corr = r_wf.n_corr_alpha
+        for i, j in r_wf.occupied_pairs(EXC_TYPE_ALL):
+            for irrep_a in range(r_wf.n_irrep):
+                irrep_b = irrep_product[
+                    irrep_a, irrep_product[i.spirrep,
+                                           j.spirrep]]
+                block_len = r_wf.virt_orb[irrep_a] * r_wf.virt_orb[irrep_b]
+                ini_bl = r_wf.ini_blocks_D[ij, irrep_a]
+                this_block = r_wf.amplitudes[ini_bl:
+                                             ini_bl + block_len]
+                ij_ab_pos = (ur_wf.first_ab_pair
+                             + n_from_rect(j.pos_in_occ,
+                                           i.pos_in_occ,
+                                           n_corr))
+                ini_bl = ur_wf.ini_blocks_D[ij_ab_pos, irrep_a]
+                ur_wf.amplitudes[ini_bl:
+                                 ini_bl + block_len] = this_block
+                if i.pos_in_occ != j.pos_in_occ:
+                    transp_block = _transpose(this_block,
+                                              r_wf.virt_orb[irrep_a],
+                                              r_wf.virt_orb[irrep_b])
+                    ji_ab_pos = (ur_wf.first_ab_pair
+                                 + n_from_rect(i.pos_in_occ,
+                                               j.pos_in_occ,
+                                               n_corr))
+                    ini_bl = ur_wf.ini_blocks_D[ji_ab_pos, irrep_b]
+                    ur_wf.amplitudes[ini_bl:
+                                     ini_bl + block_len] = transp_block
+                    # ----- direct term
+                    # alpha,alpha -> alpha,alpha
+                    ini_bl = ur_wf.ini_blocks_D[ij_diff, irrep_a]
+                    ur_wf.amplitudes[ini_bl:
+                                     ini_bl + block_len] += this_block
+                    # beta,beta -> beta,beta
+                    ini_bl += first_bb_ampl
+                    ur_wf.amplitudes[ini_bl:
+                                     ini_bl + block_len] += this_block
+                    # ----- minus transpose term
+                    # alpha,alpha -> alpha,alpha
+                    ini_bl = ur_wf.ini_blocks_D[ij_diff, irrep_b]
+                    ur_wf.amplitudes[ini_bl:
+                                     ini_bl + block_len] -= transp_block
+                    # beta,beta -> beta,beta
+                    ini_bl += first_bb_ampl
+                    ur_wf.amplitudes[ini_bl:
+                                     ini_bl + block_len] -= transp_block
+            ij += 1
+            if i.pos_in_occ != j.pos_in_occ:
+                ij_diff += 1
+        return ur_wf
     
     @classmethod
     def from_Molpro(cls, molpro_output,
@@ -901,7 +1109,8 @@ class IntermNormWaveFunction(WaveFunction):
                         if exc_type in (EXC_TYPE_AB, EXC_TYPE_BB):
                             irrep_j = 0
                             while (irrep_j < new_wf.n_irrep
-                                   and j >= new_wf.corr_orbs_before[irrep_j + 1]):
+                                   and
+                                   j >= new_wf.corr_orbs_before[irrep_j + 1]):
                                 irrep_j += 1
                             if irrep_j > 0:
                                 j -= sum(new_wf.act_orb[:irrep_j])
@@ -912,8 +1121,9 @@ class IntermNormWaveFunction(WaveFunction):
                                                             irrep_i,
                                                             exc_type)
                     new_wf.amplitudes[new_wf.ini_blocks_D[pos_ij, irrep_a]
-                                      + get_pos_from_rectangular(
-                                          a, b, new_wf.virt_orb[spirrep_b])] = C
+                                      + n_from_rect(
+                                          a, b,
+                                          new_wf.virt_orb[spirrep_b])] = C
             elif sgl_found:
                 lspl = line.split()
                 if len(lspl) == 4:

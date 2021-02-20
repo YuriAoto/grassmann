@@ -191,12 +191,12 @@ class FromMolproTestCase(unittest.TestCase):
              # ----------    a, b     irrep_a = 2
              -0.00550082,  # 0, 0
              # ====> pair ij = 3:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 1)
-             # ----------    a, b     irrep_a = 0
+             # ----------    a, b     irrep_a = 0  (=> irrep_b = 1)
              -0.00985632,  # 0, 0
               0.01210219,  # 1, 0
              -0.00917792,  # 2, 0
              -0.00813465,  # 3, 0
-             # ----------    a, b     irrep_a = 1
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 0)
              -0.00652416,  # 0, 0
               0.00208640,  # 0, 1
              -0.00496870,  # 0, 2
@@ -1167,3 +1167,879 @@ class FromMolproTestCase(unittest.TestCase):
         self.assertEqual(wf.amplitudes, my_ampl)
         self.assertEqual(wf.n_irrep, 2)
         self.assertFalse(wf.restricted)
+
+
+class RestrictUnrestrictItTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+
+    def test_h2_sto3g_d2h(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('H2__5__sto3g__D2h'))
+        self.assertTrue(wf.restricted)
+        wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(wf.restricted)
+        self.assertEqual(wf.amplitudes, np.array([-0.86355553]))
+        wf = IntermNormWaveFunction.restrict(wf)
+        self.assertTrue(wf.restricted)
+        self.assertEqual(wf.amplitudes, np.array([-0.86355553]))
+
+    def test_h2_631g_c2v(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('H2__5__631g__C2v'))
+        self.assertTrue(wf.restricted)
+        wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(wf.restricted)
+        self.assertEqual(wf.amplitudes, np.array(
+            # Singles:
+            [# alpha -> alpha
+             #               i, a       irrep = 0
+             -0.00000000,  # 0, 0
+              0.07852602,  # 0, 1
+             -0.00000000,  # 0, 2
+             # beta -> beta
+             #               i, a       irrep = 0
+             -0.00000000,  # 0, 0
+              0.07852602,  # 0, 1
+             -0.00000000,  # 0, 2
+             # ==============================================
+             # Doubles:
+             # alpha,beta -> alpha,beta
+             # ---> pair ij = 0: (i, i_irrep) = (0, 0)   j, j_irrep = (0, 0)
+             #               a, b     irrep_a = 0  (=> irrep_a = 0)
+             -0.78356502,  # 0, 0
+              0.00000000,  # 0, 1
+             -0.07011574,  # 0, 2
+              0.00000000,  # 1, 0
+             -0.00272632,  # 1, 1
+             -0.00000000,  # 1, 2
+             -0.07011574,  # 2, 0
+             -0.00000000,  # 2, 1
+             -0.00808512,  # 2, 2
+            ]))
+        wf = IntermNormWaveFunction.restrict(wf)
+        self.assertTrue(wf.restricted)
+        self.assertEqual(wf.amplitudes, np.array(
+            # Singles:
+            [#               i, a       irrep = 0
+             -0.00000000,  # 0, 0
+              0.07852602,  # 0, 1
+             -0.00000000,  # 0, 2
+             # ==============================================
+             # Doubles:
+             # ---> pair ij = 0: (i, i_irrep) = (0, 0)   j, j_irrep = (0, 0)
+             #               a, b     irrep_a = 0
+             -0.78356502,  # 0, 0
+              0.00000000,  # 0, 1
+             -0.07011574,  # 0, 2
+              0.00000000,  # 1, 0
+             -0.00272632,  # 1, 1
+             -0.00000000,  # 1, 2
+             -0.07011574,  # 2, 0
+             -0.00000000,  # 2, 1
+             -0.00808512,  # 2, 2
+            ]))
+
+    def test_h2_ccpvdz_c2v(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('H2__5__ccpVDZ__C2v'))
+        self.assertTrue(wf.restricted)
+        wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(wf.restricted)
+        my_ampl = np.array(
+            # Singles:
+            [# alpha -> alpha
+             #               i, a    irrep = 0
+              0.00000000,  # 0, 0
+             -0.10780149,  # 0, 1
+              0.00000000,  # 0, 2
+             -0.00566969,  # 0, 3
+              0.00000000,  # 0, 4
+             # beta -> beta
+             #               i, a    irrep = 0
+              0.00000000,  # 0, 0
+             -0.10780149,  # 0, 1
+              0.00000000,  # 0, 2
+             -0.00566969,  # 0, 3
+              0.00000000,  # 0, 4
+             # ==============================================
+             # Doubles:
+             # alpha,beta -> alpha,beta
+             # ---> pair ij = 0: (i, i_irrep) = (0, 0)   j, j_irrep = (0, 0)
+             #              a, b     irrep_a = 0  (=> irrep_b = 0)
+             -0.76921165,  # 0, 0
+             -0.00000000,  # 0, 1
+              0.10150132,  # 0, 2
+              0.00000000,  # 0, 3
+             -0.00563809,  # 0, 4
+             -0.00000000,  # 1, 0
+             -0.00322314,  # 1, 1
+             -0.00000000,  # 1, 2
+              0.00021971,  # 1, 3
+             -0.00000000,  # 1, 4
+              0.10150132,  # 1, 0
+             -0.00000000,  # 2, 1
+             -0.01518971,  # 2, 2
+             -0.00000000,  # 2, 3
+              0.00068753,  # 2, 4
+              0.00000000,  # 3, 0
+              0.00021971,  # 3, 1
+             -0.00000000,  # 3, 2
+             -0.00549708,  # 3, 3
+              0.00000000,  # 3, 4
+             -0.00563809,  # 4, 0
+             -0.00000000,  # 4, 1
+              0.00068753,  # 4, 2
+              0.00000000,  # 4, 3
+             -0.00120278,  # 4, 4
+             #              a, b     irrep_a = 1  (=> irrep_b = 1)
+             -0.00374441,  # 0, 0
+              0.00000000,  # 0, 1
+              0.00000000,  # 1, 0
+             -0.00148179,  # 1, 1
+             #              a, b     irrep_a = 2  (=> irrep_b = 2)
+             -0.00374441,  # 0, 0
+              0.00000000,  # 0, 1
+              0.00000000,  # 1, 0
+             -0.00148179,  # 1, 1
+            ])
+        self.assertEqual(wf.amplitudes, my_ampl)
+        wf = IntermNormWaveFunction.restrict(wf)
+        self.assertTrue(wf.restricted)
+        my_ampl = np.array(
+            # Singles:
+            [#               i, a    irrep = 0
+              0.00000000,  # 0, 0
+             -0.10780149,  # 0, 1
+              0.00000000,  # 0, 2
+             -0.00566969,  # 0, 3
+              0.00000000,  # 0, 4
+              # ==============================================
+              # Doubles:
+              # ---> pair ij = 0: (i, i_irrep) = (0, 0)   j, j_irrep = (0, 0)
+              #              a, b     irrep_a = 0
+             -0.76921165,  # 0, 0
+             -0.00000000,  # 0, 1
+              0.10150132,  # 0, 2
+              0.00000000,  # 0, 3
+             -0.00563809,  # 0, 4
+             -0.00000000,  # 1, 0
+             -0.00322314,  # 1, 1
+             -0.00000000,  # 1, 2
+              0.00021971,  # 1, 3
+             -0.00000000,  # 1, 4
+              0.10150132,  # 1, 0
+             -0.00000000,  # 2, 1
+             -0.01518971,  # 2, 2
+             -0.00000000,  # 2, 3
+              0.00068753,  # 2, 4
+              0.00000000,  # 3, 0
+              0.00021971,  # 3, 1
+             -0.00000000,  # 3, 2
+             -0.00549708,  # 3, 3
+              0.00000000,  # 3, 4
+             -0.00563809,  # 4, 0
+             -0.00000000,  # 4, 1
+              0.00068753,  # 4, 2
+              0.00000000,  # 4, 3
+             -0.00120278,  # 4, 4
+              #              a, b     irrep_a = 1
+             -0.00374441,  # 0, 0
+              0.00000000,  # 0, 1
+              0.00000000,  # 1, 0
+             -0.00148179,  # 1, 1
+              #              a, b     irrep_a = 2
+             -0.00374441,  # 0, 0
+              0.00000000,  # 0, 1
+              0.00000000,  # 1, 0
+             -0.00148179,  # 1, 1
+            ])
+        self.assertEqual(wf.amplitudes, my_ampl)
+
+    def test_hcl_631g_c2v(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('HCl__1.5__631g__C2v'))
+        self.assertTrue(wf.restricted)
+        wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(wf.restricted)
+        my_ampl = np.array(
+            # Singles:
+            [# alpha -> alpha
+             # ----------    i, a    irrep = 0
+             -0.00014166,  # 0, 0
+             -0.00315634,  # 0, 1
+              0.00174224,  # 0, 2
+             -0.00075553,  # 0, 3
+             -0.00087725,  # 1, 0
+              0.00203402,  # 1, 1
+              0.00606624,  # 1, 2
+             -0.00102091,  # 1, 3
+             # ----------    i, a    irrep = 1
+              0.00731866,  # 0, 0
+             # ----------    i, a    irrep = 2
+              0.00731866,  # 0, 0
+             # beta -> beta
+             # ----------    i, a    irrep = 0
+             -0.00014166,  # 0, 0
+             -0.00315634,  # 0, 1
+              0.00174224,  # 0, 2
+             -0.00075553,  # 0, 3
+             -0.00087725,  # 1, 0
+              0.00203402,  # 1, 1
+              0.00606624,  # 1, 2
+             -0.00102091,  # 1, 3
+             # ----------    i, a    irrep = 1
+              0.00731866,  # 0, 0
+             # ----------    i, a    irrep = 2
+              0.00731866,  # 0, 0
+             # ==============================================
+             # Doubles:
+             # alpha,alpha -> alpha,alpha
+             # ====> pair ij = 0:  (i = 0, i_irrep = 0); (j = 1, j_irrep = 0)
+             # ----------    a, b   irrep_a = 0  (=> irrep_b = 0)
+              0.00000000,  # 0, 0
+             -0.00225423,  # 0, 1
+             -0.00555283,  # 0, 2
+             -0.00027998,  # 0, 3
+              0.00225423,  # 1, 0
+              0.00000000,  # 1, 1
+              0.00500587,  # 1, 2
+              0.00327735,  # 1, 3
+              0.00555283,  # 2, 0
+             -0.00500587,  # 2, 1
+              0.00000000,  # 2, 2
+              0.00569444,  # 2, 3
+              0.00027998,  # 3, 0
+             -0.00327735,  # 3, 1
+             -0.00569444,  # 3, 2
+              0.00000000,  # 3, 3
+             # ----------    a, b   irrep_a = 1  (=> irrep_b = 1)
+              0.00000000,  # 0, 0
+             # ----------    a, b   irrep_a = 2  (=> irrep_b = 2)
+              0.000000000,  # 0, 0
+             # ====> pair ij = 1:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 1)
+             # ----------    a, b   irrep_a = 0
+             -0.00333216,  # 0, 0
+              0.01001579,  # 1, 0
+             -0.00420922,  # 2, 0
+             -0.00139091,  # 3, 0
+             # ----------    a, b   irrep_a = 1
+              0.00333216,  # 0, 0
+             -0.01001579,  # 0, 1
+              0.00420922,  # 0, 2
+              0.00139091,  # 0, 3
+             # ====> pair ij = 2:  (i = 1, i_irrep =  0); (j = 0, j_irrep = 1)
+             # ----------    a, b   irrep_a = 0  (irrep_b = 1)
+              0.00248016,  # 0, 0
+             -0.00448302,  # 1, 0
+             -0.01513164,  # 2, 0
+              0.00321471,  # 3, 0
+             # ----------    a, b   irrep_a = 1  (irrep_b = 0)
+             -0.00248016,  # 0, 0
+              0.00448302,  # 0, 1
+              0.01513164,  # 0, 2
+             -0.00321471,  # 0, 3
+             # ====> pair ij = 3:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 0  (=> irrep_b = 2)
+             -0.00333216,  # 0, 0
+              0.01001579,  # 1, 0
+             -0.00420922,  # 2, 0
+             -0.00139091,  # 3, 0
+             # ----------    a, b   irrep_a = 2  (irrep_b = 0)
+              0.00333216,  # 0, 0
+             -0.01001579,  # 0, 1
+              0.00420922,  # 0, 2
+              0.00139091,  # 0, 3
+             # ====> pair ij = 4:  (i = 1, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 0  (irrep_b = 2)
+              0.00248016,  # 0, 0
+             -0.00448302,  # 1, 0
+             -0.01513164,  # 2, 0
+              0.00321471,  # 3, 0
+             # ----------    a, b   irrep_a = 2  (irrep_b = 0)
+             -0.00248016,  # 0, 0
+              0.00448302,  # 0, 1
+              0.01513164,  # 0, 2
+             -0.00321471,  # 0, 3
+             # ====> pair ij = 5:  (i = 0, i_irrep = 1);  (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 1  (=> irrep_b = 2)
+             -0.02098510,  # 0, 0
+             # ----------    a, b   irrep_a = 2  (=> irrep_b = 0)
+             0.02098510,  # 0, 0
+             # beta,beta -> beta,beta
+             # ====> pair ij = 6:  (i = 0, i_irrep = 0); (j = 1, j_irrep = 0)
+             # ----------    a, b   irrep_a = 0  (=> irrep_b = 0)
+              0.00000000,  # 0, 0
+             -0.00225423,  # 0, 1
+             -0.00555283,  # 0, 2
+             -0.00027998,  # 0, 3
+              0.00225423,  # 1, 0
+              0.00000000,  # 1, 1
+              0.00500587,  # 1, 2
+              0.00327735,  # 1, 3
+              0.00555283,  # 2, 0
+             -0.00500587,  # 2, 1
+              0.00000000,  # 2, 2
+              0.00569444,  # 2, 3
+              0.00027998,  # 3, 0
+             -0.00327735,  # 3, 1
+             -0.00569444,  # 3, 2
+              0.00000000,  # 3, 3
+             # ----------    a, b   irrep_a = 1  (=> irrep_b = 1)
+              0.00000000,  # 0, 0
+             # ----------    a, b   irrep_a = 2  (=> irrep_b = 2)
+              0.000000000, # 0, 0
+             # ====> pair ij = 7:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 1)
+             # ----------    a, b   irrep_a = 0
+             -0.00333216,  # 0, 0
+              0.01001579,  # 1, 0
+             -0.00420922,  # 2, 0
+             -0.00139091,  # 3, 0
+             # ----------    a, b   irrep_a = 1
+              0.00333216,  # 0, 0
+             -0.01001579,  # 0, 1
+              0.00420922,  # 0, 2
+              0.00139091,  # 0, 3
+             # ====> pair ij = 8:  (i = 1, i_irrep =  0); (j = 0, j_irrep = 1)
+             # ----------    a, b   irrep_a = 0  (irrep_b = 1)
+              0.00248016,  # 0, 0
+             -0.00448302,  # 1, 0
+             -0.01513164,  # 2, 0
+              0.00321471,  # 3, 0
+             # ----------    a, b   irrep_a = 1  (irrep_b = 0)
+             -0.00248016,  # 0, 0
+              0.00448302,  # 0, 1
+              0.01513164,  # 0, 2
+             -0.00321471,  # 0, 3
+             # ====> pair ij = 9:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 0  (=> irrep_b = 2)
+             -0.00333216,  # 0, 0
+              0.01001579,  # 1, 0
+             -0.00420922,  # 2, 0
+             -0.00139091,  # 3, 0
+             # ----------    a, b   irrep_a = 2  (irrep_b = 0)
+              0.00333216,  # 0, 0
+             -0.01001579,  # 0, 1
+              0.00420922,  # 0, 2
+              0.00139091,  # 0, 3
+             # ====> pair ij = 10:  (i = 1, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 0  (irrep_b = 2)
+              0.00248016,  # 0, 0
+             -0.00448302,  # 1, 0
+             -0.01513164,  # 2, 0
+              0.00321471,  # 3, 0
+             # ----------    a, b   irrep_a = 2  (irrep_b = 0)
+             -0.00248016,  # 0, 0
+              0.00448302,  # 0, 1
+              0.01513164,  # 0, 2
+             -0.00321471,  # 0, 3
+             # ====> pair ij = 11:  (i = 0, i_irrep = 1);  (j = 0, j_irrep = 2)
+             # ----------    a, b   irrep_a = 1  (=> irrep_b = 2)
+             -0.02098510,  # 0, 0
+             # ----------    a, b   irrep_a = 2  (=> irrep_b = 0)
+             0.02098510,   # 0, 0
+             # alpha,beta -> alpha,beta
+             # ====> pair ij = 12:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 0)
+             -0.00792707,  # 0, 0
+              0.00309373,  # 0, 1
+             -0.00187224,  # 0, 2
+             -0.01071886,  # 0, 3
+              0.00309373,  # 1, 0
+             -0.01368087,  # 1, 1
+              0.00048542,  # 1, 2
+             -0.00421862,  # 1, 3
+             -0.00187224,  # 2, 0
+              0.00048542,  # 2, 1
+             -0.00387597,  # 2, 2
+             -0.00277093,  # 2, 3
+             -0.01071886,  # 3, 0
+             -0.00421862,  # 3, 1
+             -0.00277093,  # 3, 2
+             -0.02225884,  # 3, 3
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 1)
+             -0.00674917,  # 0, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 2)
+             -0.00674917,  # 0, 0
+             # ====> pair ij = 13:  (i = 1, i_irrep = 0); (j = 0, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 0)
+              0.00486590,  # 0, 0
+              0.00079211,  # 0, 1
+              0.00078957,  # 0, 2
+              0.00697936,  # 0, 3
+             -0.00146212,  # 1, 0
+              0.00963770,  # 1, 1
+              0.00209965,  # 1, 2
+              0.00516810,  # 1, 3
+             -0.00476326,  # 2, 0
+              0.00710552,  # 2, 1
+             -0.01024934,  # 2, 2
+             -0.00118494,  # 2, 3
+              0.00669938,  # 3, 0
+              0.00844545,  # 3, 1
+              0.00450950,  # 3, 2
+              0.01544026,  # 3, 3
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 1)
+             -0.00407663,  # 0, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 2)
+             -0.00407663,  # 0, 0
+             # ====> pair ij = 14:  (i = 0, i_irrep 1); (j = 0, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 1)
+             -0.00652416,  # 0, 0
+              0.00208640,  # 1, 0
+             -0.00496870,  # 2, 0
+             -0.00674374,  # 3, 0
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 0)
+             -0.00985632,  # 0, 0
+              0.01210219,  # 0, 1
+             -0.00917792,  # 0, 2
+             -0.00813465,  # 0, 3
+             # ====> pair ij = 15:  (i = 0, i_irrep 2); (j = 0, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 2)
+             -0.00652416,  # 0, 0
+              0.00208640,  # 1, 0
+             -0.00496870,  # 2, 0
+             -0.00674374,  # 3, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 0)
+             -0.00985632,  # 0, 0
+              0.01210219,  # 0, 1
+             -0.00917792,  # 0, 2
+             -0.00813465,  # 0, 3
+             # ====> pair ij = 16:  (i = 0, i_irrep = 0); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 0)
+              0.00486590,  # 0, 0
+             -0.00146212,  # 0, 1
+             -0.00476326,  # 0, 2
+              0.00669938,  # 0, 3
+              0.00079211,  # 1, 0
+              0.00963770,  # 1, 1
+              0.00710552,  # 1, 2
+              0.00844545,  # 1, 3
+              0.00078957,  # 2, 0
+              0.00209965,  # 2, 1
+             -0.01024934,  # 2, 2
+              0.00450950,  # 2, 3
+              0.00697936,  # 3, 0
+              0.00516810,  # 3, 1
+             -0.00118494,  # 3, 2
+              0.01544026,  # 3, 3
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 1)
+             -0.00407663,  # 0, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 2)
+             -0.00407663,  # 0, 0
+             # ====> pair ij = 17:  (i = 1, i_irrep = 0); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0
+             -0.02275450,  # 0, 0
+             -0.00720109,  # 0, 1
+              0.00303153,  # 0, 2
+             -0.01575975,  # 0, 3
+             -0.00720109,  # 1, 0
+             -0.00989622,  # 1, 1
+             -0.00111353,  # 1, 2
+             -0.01084226,  # 1, 3
+              0.00303153,  # 2, 0
+             -0.00111353,  # 2, 1
+             -0.03064355,  # 2, 2
+              0.00877140,  # 2, 3
+             -0.01575975,  # 3, 0
+             -0.01084226,  # 3, 1
+              0.00877140,  # 3, 2
+             -0.02266788,  # 3, 3
+             # ----------    a, b     irrep_a = 1
+             -0.00550082,  # 0, 0
+             # ----------    a, b     irrep_a = 2
+             -0.00550082,  # 0, 0
+             # ====> pair ij = 18:  (i = 0, i_irrep = 1); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 1)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 1, 0
+             -0.00917737,  # 2, 0
+             -0.00049167,  # 3, 0
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 0)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 0, 1
+             -0.02430901,  # 0, 2
+              0.00272304,  # 0, 3
+             # ====> pair ij = 19:  (i = 0, i_irrep = 2); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 2)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 1, 0
+             -0.00917737,  # 2, 0
+             -0.00049167,  # 3, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 0)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 0, 1
+             -0.02430901,  # 0, 2
+              0.00272304,  # 0, 3
+             # ====> pair ij = 20:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0
+             -0.00985632,  # 0, 0
+              0.01210219,  # 1, 0
+             -0.00917792,  # 2, 0
+             -0.00813465,  # 3, 0
+             # ----------    a, b     irrep_a = 1
+             -0.00652416,  # 0, 0
+              0.00208640,  # 0, 1
+             -0.00496870,  # 0, 2
+             -0.00674374,  # 0, 3
+             # ====> pair ij = 21:  (i = 1, i_irrep = 0); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 1)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 1, 0
+             -0.02430901,  # 2, 0
+              0.00272304,  # 3, 0
+             # ----------    a, b     irrep_a = 1  (irrep_b = 0)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 0, 1
+             -0.00917737,  # 0, 2
+             -0.00049167,  # 0, 3
+             # ====> pair ij = 22:  (i = 0, i_irrep = 1); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 0)
+             -0.00911375,  # 0, 0
+             -0.00396353,  # 0, 1
+             -0.00069415,  # 0, 2
+             -0.00610306,  # 0, 3
+             -0.00396353,  # 1, 0
+             -0.01256441,  # 1, 1
+              0.00717613,  # 1, 2
+             -0.00086672,  # 1, 3
+             -0.00069415,  # 2, 0
+              0.00717613,  # 2, 1
+             -0.01074585,  # 2, 2
+             -0.00125227,  # 2, 3
+             -0.00610306,  # 3, 0
+             -0.00086672,  # 3, 1
+             -0.00125227,  # 3, 2
+             -0.00575189,  # 3, 3
+             # ----------    a, b     irrep_a = 1  (irrep_b = 1)
+             -0.04065767,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 2)
+             -0.00384435,  # 0, 0
+             # ====> pair ij = 23:  (i = 0, i_irrep = 2);  (j = 0, j_irrep = 1)
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 2)
+             -0.00791411,  # 0, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 0)
+             -0.02889921,  # 0, 0
+             # ====> pair ij = 24:  (i = 0, i_irrep 0); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (=> irrep_b = 2)
+             -0.00985632,  # 0, 0
+              0.01210219,  # 1, 0
+             -0.00917792,  # 2, 0
+             -0.00813465,  # 3, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 0)
+             -0.00652416,  # 0, 0
+              0.00208640,  # 0, 1
+             -0.00496870,  # 0, 2
+             -0.00674374,  # 0, 3
+             # ====> pair ij = 25:  (i = 1, i_irrep 0); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 2)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 1, 0
+             -0.02430901,  # 2, 0
+              0.00272304,  # 3, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 0)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 0, 1
+             -0.00917737,  # 0, 2
+             -0.00049167,  # 0, 3
+             # ====> pair ij = 26:  (i = 0, i_irrep = 1); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 2)
+             -0.02889921,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (=> irrep_b = 0)
+             -0.00791411,  # 0, 0
+             # ====> pair ij = 27:  (i = 0, i_irrep = 2);  (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (=> irrep_b = 0)
+             -0.00911375,  # 0, 0
+             -0.00396353,  # 0, 1
+             -0.00069415,  # 0, 2
+             -0.00610306,  # 0, 3
+             -0.00396353,  # 1, 0
+             -0.01256441,  # 1, 1
+              0.00717613,  # 1, 2
+             -0.00086672,  # 1, 3
+             -0.00069415,  # 2, 0
+              0.00717613,  # 2, 1
+             -0.01074585,  # 2, 2
+             -0.00125227,  # 2, 3
+             -0.00610306,  # 3, 0
+             -0.00086672,  # 3, 1
+             -0.00125227,  # 3, 2
+             -0.00575189,  # 3, 3
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 1)
+             -0.00384435,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
+             -0.04065767   # 0, 0
+            ])
+        self.assertEqual(wf.amplitudes, my_ampl)
+        wf = IntermNormWaveFunction.restrict(wf)
+        self.assertTrue(wf.restricted)
+        my_ampl = np.array(
+            # Singles:
+            [# ----------    i, a    irrep = 0
+             -0.00014166,  # 0, 0
+             -0.00315634,  # 0, 1
+              0.00174224,  # 0, 2
+             -0.00075553,  # 0, 3
+             -0.00087725,  # 1, 0
+              0.00203402,  # 1, 1
+              0.00606624,  # 1, 2
+             -0.00102091,  # 1, 3
+             # ----------    i, a    irrep = 1
+              0.00731866,  # 0, 0
+             # ----------    i, a    irrep = 2
+              0.00731866,  # 0, 0
+             # ==============================================
+             # Doubles:
+             # ====> pair ij = 0:   (i = 0, i_irrep = 0); (j = 0, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 0)
+             -0.00792707,  # 0, 0
+              0.00309373,  # 0, 1
+             -0.00187224,  # 0, 2
+             -0.01071886,  # 0, 3
+              0.00309373,  # 1, 0
+             -0.01368087,  # 1, 1
+              0.00048542,  # 1, 2
+             -0.00421862,  # 1, 3
+             -0.00187224,  # 2, 0
+              0.00048542,  # 2, 1
+             -0.00387597,  # 2, 2
+             -0.00277093,  # 2, 3
+             -0.01071886,  # 3, 0
+             -0.00421862,  # 3, 1
+             -0.00277093,  # 3, 2
+             -0.02225884,  # 3, 3
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 1)
+             -0.00674917,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
+             -0.00674917,  # 0, 0
+             # ====> pair ij = 1:   (i = 0, i_irrep = 0); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0  (=> irrep_b = 0)
+              0.00486590,  # 0, 0
+             -0.00146212,  # 0, 1
+             -0.00476326,  # 0, 2
+              0.00669938,  # 0, 3
+              0.00079211,  # 1, 0
+              0.00963770,  # 1, 1
+              0.00710552,  # 1, 2
+              0.00844545,  # 1, 3
+              0.00078957,  # 2, 0
+              0.00209965,  # 2, 1
+             -0.01024934,  # 2, 2
+              0.00450950,  # 2, 3
+              0.00697936,  # 3, 0
+              0.00516810,  # 3, 1
+             -0.00118494,  # 3, 2
+              0.01544026,  # 3, 3
+             # ----------    a, b    irrep_a = 1  (=> irrep_b = 1)
+             -0.00407663,  # 0, 0
+             # ----------    a, b    irrep_a = 2  (=> irrep_b = 2)
+             -0.00407663,  # 0, 0
+             # ====> pair ij = 2:  (i = 1, i_irrep 0); (j = 1, j_irrep = 0)
+             # ----------    a, b    irrep_a = 0
+             -0.02275450,  # 0, 0
+             -0.00720109,  # 0, 1
+              0.00303153,  # 0, 2
+             -0.01575975,  # 0, 3
+             -0.00720109,  # 1, 0
+             -0.00989622,  # 1, 1
+             -0.00111353,  # 1, 2
+             -0.01084226,  # 1, 3
+              0.00303153,  # 2, 0
+             -0.00111353,  # 2, 1
+             -0.03064355,  # 2, 2
+              0.00877140,  # 2, 3
+             -0.01575975,  # 3, 0
+             -0.01084226,  # 3, 1
+              0.00877140,  # 3, 2
+             -0.02266788,  # 3, 3
+             # ----------    a, b     irrep_a = 1
+             -0.00550082,  # 0, 0
+             # ----------    a, b     irrep_a = 2
+             -0.00550082,  # 0, 0
+             # ====> pair ij = 3:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0
+             -0.00985632,  # 0, 0
+              0.01210219,  # 1, 0
+             -0.00917792,  # 2, 0
+             -0.00813465,  # 3, 0
+             # ----------    a, b     irrep_a = 1
+             -0.00652416,  # 0, 0
+              0.00208640,  # 0, 1
+             -0.00496870,  # 0, 2
+             -0.00674374,  # 0, 3
+             # ====> pair ij = 4:  (i = 1, i_irrep =  0); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 1)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 1, 0
+             -0.02430901,  # 2, 0
+              0.00272304,  # 3, 0
+             # ----------    a, b     irrep_a = 1  (irrep_b = 0)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 0, 1
+             -0.00917737,  # 0, 2
+             -0.00049167,  # 0, 3
+             # ====> pair ij = 5:  (i = 0, i_irrep = 1); (j = 0, j_irrep = 1)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 0)
+             -0.00911375,  # 0, 0
+             -0.00396353,  # 0, 1
+             -0.00069415,  # 0, 2
+             -0.00610306,  # 0, 3
+             -0.00396353,  # 1, 0
+             -0.01256441,  # 1, 1
+              0.00717613,  # 1, 2
+             -0.00086672,  # 1, 3
+             -0.00069415,  # 2, 0
+              0.00717613,  # 2, 1
+             -0.01074585,  # 2, 2
+             -0.00125227,  # 2, 3
+             -0.00610306,  # 3, 0
+             -0.00086672,  # 3, 1
+             -0.00125227,  # 3, 2
+             -0.00575189,  # 3, 3
+             # ----------    a, b     irrep_a = 1  (irrep_b = 1)
+             -0.04065767,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 2)
+             -0.00384435,  # 0, 0
+             # ====> pair ij = 6:  (i = 0, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (=> irrep_b = 2)
+             -0.00985632,  # 0, 0
+              0.01210219,  # 1, 0
+             -0.00917792,  # 2, 0
+             -0.00813465,  # 3, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 0)
+             -0.00652416,  # 0, 0
+              0.00208640,  # 0, 1
+             -0.00496870,  # 0, 2
+             -0.00674374,  # 0, 3
+             # ====> pair ij = 7: (i = 1, i_irrep = 0); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (irrep_b = 2)
+              0.00036483,  # 0, 0
+             -0.00344245,  # 1, 0
+             -0.02430901,  # 2, 0
+              0.00272304,  # 3, 0
+             # ----------    a, b     irrep_a = 2  (irrep_b = 0)
+             -0.00211533,  # 0, 0
+              0.00104057,  # 0, 1
+             -0.00917737,  # 0, 2
+             -0.00049167,  # 0, 3
+             # ====> pair ij = 8: (i = 0, i_irrep = 1);  (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 2)
+             -0.02889921,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (=> irrep_b = 0)
+             -0.00791411,  # 0, 0
+             # ====> pair ij = 9: (i = 0, i_irrep = 2); (j = 0, j_irrep = 2)
+             # ----------    a, b     irrep_a = 0  (=> irrep_b = 0)
+             -0.00911375,  # 0, 0
+             -0.00396353,  # 0, 1
+             -0.00069415,  # 0, 2
+             -0.00610306,  # 0, 3
+             -0.00396353,  # 1, 0
+             -0.01256441,  # 1, 1
+              0.00717613,  # 1, 2
+             -0.00086672,  # 1, 3
+             -0.00069415,  # 2, 0
+              0.00717613,  # 2, 1
+             -0.01074585,  # 2, 2
+             -0.00125227,  # 2, 3
+             -0.00610306,  # 3, 0
+             -0.00086672,  # 3, 1
+             -0.00125227,  # 3, 2
+             -0.00575189,  # 3, 3
+             # ----------    a, b     irrep_a = 1  (=> irrep_b = 1)
+             -0.00384435,  # 0, 0
+             # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
+             -0.04065767   # 0, 0
+            ])
+        self.assertEqual(wf.amplitudes, my_ampl)
+
+    def test_hcl_plus_631g_c2v(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('HCl_plus__1.5__631g__C2v'))
+        with self.assertRaises(ValueError):
+            IntermNormWaveFunction.restrict(wf)
+
+    def test_hcl_plus_631g_cs(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('HCl_plus__1.5__631g__Cs'))
+        with self.assertRaises(ValueError):
+            IntermNormWaveFunction.restrict(wf)
+
+    def test_h2o_sto3g_c2v(self):
+        dir_name = 'h2o__1.5__sto3g__C2v'
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(dir_name))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(dir_name))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(dir_name, allE=True))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(dir_name, allE=True))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+    
+    def test_h2o_req_631g_c2v(self):
+        dir_name = 'h2o__Req__631g__C2v'
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(dir_name))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(dir_name))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(dir_name, allE=True))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        # -----------
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(dir_name, allE=True))
+        self.assertTrue(wf.restricted)
+        ur_wf = IntermNormWaveFunction.unrestrict(wf)
+        self.assertFalse(ur_wf.restricted)
+        r_wf = IntermNormWaveFunction.restrict(ur_wf)
+        self.assertTrue(r_wf.restricted)
+        self.assertEqual(wf.amplitudes, r_wf.amplitudes)
+        

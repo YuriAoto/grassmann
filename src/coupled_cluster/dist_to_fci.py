@@ -31,7 +31,7 @@ def _str_excitation(x):
 
 
 def vertical_proj_to_cc_manifold(wf,
-                                 level='D',
+                                 level='SD',
                                  recipes_f=None,
                                  coeff_thr=1.0E-10,
                                  restore_wf=True):
@@ -277,13 +277,15 @@ def calc_dist_to_cc_manifold(wf,
     converged = False
     normZ = normJ = 1.0
     if ini_wf is None:
-        cc_wf = wf.vertical_proj_to_cc_manifold(
+        cc_wf = vertical_proj_to_cc_manifold(
+            wf,
             level=level,
             recipes_f=recipes_f,
             coeff_thr=coeff_thr,
             restore_wf=True).wave_function
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
         cc_wf = ini_wf.vertical_proj_to_cc_manifold(
+            wf,
             level=level,
             recipes_f=recipes_f,
             coeff_thr=coeff_thr,
@@ -299,6 +301,7 @@ def calc_dist_to_cc_manifold(wf,
     corr_orb = wf.corr_orb.as_array()
     virt_orb = wf.virt_orb.as_array()
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
+    logger.info('Wave Function, before iterations:\n%s', wf)
     if f_out is not None:
         f_out.write(
             'it.   dist      |Z|       |J|        time in iteration\n')
@@ -311,6 +314,9 @@ def calc_dist_to_cc_manifold(wf,
             else:
                 with logtime('Transforming CC wave function to FCI-like'):
                     cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
+            logger.info('Wave Function, at iteration %d:\n%s',
+                        i_iteration,
+                        cc_wf_as_fci)
             with logtime('Distance to current CC wave function'):
                 dist = wf.dist_to(cc_wf_as_fci, metric='IN')
             if (i_iteration > 0

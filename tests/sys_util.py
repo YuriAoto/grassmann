@@ -9,7 +9,7 @@ In particular:
 over these directories, with filters.
 
 # The following functions give the full path for files:
-CISD_file, CCSD_file, FCI_file
+CISD_file, CID_file, CCD_file, CCSD_file, FCI_file
 RHF_file, UHF_file, orbitals_file
 
 The first three accept an optional argument allE, for all electron
@@ -64,7 +64,9 @@ _all_test_systems = [
 ]
 
 _files = ['CISD',
+          'CID',
           'CCSD',
+          'CCD',
           'FCI']
 
 _files_no_allE = ['RHF',

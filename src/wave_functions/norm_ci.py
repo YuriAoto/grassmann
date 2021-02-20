@@ -18,7 +18,7 @@ import copy
 import math
 from collections import namedtuple
 
-from util.array_indices import get_pos_from_rectangular
+from util.array_indices import n_from_rect
 from util.variables import int_dtype
 from util import memory
 from input_output import molpro
@@ -859,7 +859,7 @@ class NormCI_WaveFunction(WaveFunction):
                         and holes[0].spirrep >= self.n_irrep):  # beta
                     continue
                 pos = spirrep_start[holes[0].spirrep]
-                pos += get_pos_from_rectangular(
+                pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
                     self.virt_orb[particles[0].spirrep])
                 Jac[pos] += (det.c
@@ -884,11 +884,11 @@ class NormCI_WaveFunction(WaveFunction):
                                     and particles[0].orb > particles[1].orb):
                                 continue
                 pos = spirrep_start[holes[0].spirrep]
-                pos += get_pos_from_rectangular(
+                pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
                     self.virt_orb[particles[0].spirrep])
                 pos1 = spirrep_start[holes[1].spirrep]
-                pos1 += get_pos_from_rectangular(
+                pos1 += n_from_rect(
                     holes[1].orb, particles[1].orb,
                     self.virt_orb[particles[1].spirrep])
                 if holes[0].spirrep == holes[1].spirrep:
@@ -906,11 +906,11 @@ class NormCI_WaveFunction(WaveFunction):
                              pos, pos1, -det.c if negative else det.c)
                 if holes[0].spirrep == holes[1].spirrep:
                     pos = spirrep_start[holes[0].spirrep]
-                    pos += get_pos_from_rectangular(
+                    pos += n_from_rect(
                         holes[0].orb, particles[1].orb,
                         self.virt_orb[particles[1].spirrep])
                     pos1 = spirrep_start[holes[1].spirrep]
-                    pos1 += get_pos_from_rectangular(
+                    pos1 += n_from_rect(
                         holes[1].orb, particles[0].orb,
                         self.virt_orb[particles[0].spirrep])
                     negative = not negative
