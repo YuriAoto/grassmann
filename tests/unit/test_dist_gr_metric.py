@@ -6,8 +6,9 @@ import unittest
 import numpy as np
 
 from dist_grassmann.metric import dist_from_ovlp
+import tests
 
-
+@tests.category('SHORT')
 class OverlapTestCase(unittest.TestCase):
 
     def test_raises(self):

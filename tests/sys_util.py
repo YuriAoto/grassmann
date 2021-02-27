@@ -47,6 +47,8 @@ _all_test_systems = [
     'Li2__5__ccpVDZ__D2h',
     'Li2__5__ccpVTZ__D2h',
     'Li2__5__ccpVQZ__D2h',
+    'Be__at__sto3g__D2h',
+    'Be__at__ccpVDZ__D2h',
     'N2__3__sto3g__D2h',
     'N2__3__631g__D2h',
     'N2__3__631g__D2h_occ_21101110',

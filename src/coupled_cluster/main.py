@@ -6,7 +6,8 @@ Yuri Aoto, 2021
 from input_output.log import logtime, logger
 from wave_functions import fci
 from wave_functions.interm_norm import IntermNormWaveFunction
-from .dist_to_fci import vertical_proj_to_cc_manifold, calc_dist_to_cc_manifold
+from coupled_cluster.dist_to_fci import (vertical_proj_to_cc_manifold,
+                                         calc_dist_to_cc_manifold)
 
 
 def main(args, f_out):

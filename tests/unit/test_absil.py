@@ -16,6 +16,7 @@ from util.other import int_array
 np.set_printoptions(formatter={'float': lambda x: '{0:>9.6f}'.format(x)})
 
 
+@tests.category('SHORT')
 class YieldExcitations523TestCase(unittest.TestCase):
 
     def setUp(self):
@@ -90,6 +91,7 @@ class YieldExcitations523TestCase(unittest.TestCase):
                 self.fail('Too many indices')
 
 
+@tests.category('SHORT')
 class YieldExcitations633TestCase(unittest.TestCase):
 
     def setUp(self):
@@ -221,6 +223,7 @@ class YieldExcitations633TestCase(unittest.TestCase):
                 self.fail('Too many indices')
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class CalcOverlap(unittest.TestCase):
 
     def setUp(self):
@@ -317,6 +320,7 @@ class CalcOverlap(unittest.TestCase):
         self.assertAlmostEqual(f_orth, f_non_orth)
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class CalcXCmatrices(unittest.TestCase):
 
     def setUp(self):

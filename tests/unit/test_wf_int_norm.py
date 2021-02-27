@@ -11,6 +11,8 @@ from wave_functions import int_norm
 from orbitals.symmetry import OrbitalsSets
 from string_indices.string_indices import SD_StringIndex
 
+
+@tests.category('SHORT')
 class ConstructorTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -64,7 +66,7 @@ class ConstructorTestCase(unittest.TestCase):
                                                      [0.0, 0.0, 0.0]]))
 
 
-
+@tests.category('SHORT')
 class He2StringIndicesTestCase(unittest.TestCase):
 
     def setUp(self):

@@ -14,6 +14,7 @@ from string_indices.string_indices import SpirrepStringIndex, SD_StringIndex
 from orbitals.symmetry import OrbitalsSets
 
 
+@tests.category('SHORT')
 class WFConstructorsTestCase(unittest.TestCase):
     
     def setUp(self):
@@ -38,6 +39,7 @@ class WFConstructorsTestCase(unittest.TestCase):
         tests.logger.info('end of WFConstructorsTestCase.test_int_norm_contructor')
 
 
+@tests.category('SHORT')
 class SlaterDetTestCase(unittest.TestCase):
         
     def setUp(self):
@@ -244,6 +246,7 @@ class SlaterDetTestCase(unittest.TestCase):
         self.assertEqual(det.occupation[7], int_array(0))
 
 
+@tests.category('SHORT')
 class JacHess_H2_TestCase(unittest.TestCase):
     
     def setUp(self):
@@ -309,6 +312,7 @@ class JacHess_H2_TestCase(unittest.TestCase):
         self.assertEqual(Hanal, Hnum)
 
 
+@tests.category('SHORT')
 class WForbChangeTestCase(unittest.TestCase):
     
     def setUp(self):
@@ -349,6 +353,3 @@ class WForbChangeTestCase(unittest.TestCase):
         newWF3_direct = self.WF.change_orb_basis(self.U)
         self.assertEqual(newWF3, newWF3_direct)
 
-
-if __name__ == '__main__':
-    unittest.main()

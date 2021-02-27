@@ -1,3 +1,4 @@
+"""Useful functions for tests. See package documentation"""
 import unittest
 
 import numpy as np

@@ -26,7 +26,7 @@ from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
-from coupled_cluster.cluster_decomposition import cluster_decompose
+from coupled_cluster.cluster_decomposition import cluster_decompose, str_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
@@ -456,6 +456,7 @@ class FCIWaveFunction(WaveFunction):
         If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
+        _to_print = (-1, -1)
         level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         for ia, ib, det in self.enumerate():
@@ -471,17 +472,25 @@ class FCIWaveFunction(WaveFunction):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
                     mode=level, recipes_f=None)
+                if (ia,ib) == _to_print:
+                    print(str_dec(decomposition))
                 self._coefficients[ia, ib] = 0.0
                 for d in decomposition:
+                    if (ia,ib) == _to_print:
+                        print('------ new!!')
                     new_contribution = d[0]
                     add_contr = True
                     for cluster_det in d[1:]:
                         if not self.symmetry_allowed(cluster_det):
+                            if (ia,ib) == _to_print:
+                                print('------ not all')
                             add_contr = False
                             break
                         rank, alpha_hp, beta_hp = self.get_exc_info(
                             cluster_det)
                         new_contribution *= wf[rank, alpha_hp, beta_hp]
+                        if (ia,ib) == _to_print:
+                            print(alpha_hp, beta_hp, wf[rank, alpha_hp, beta_hp])
                     if add_contr:
                         self._coefficients[ia, ib] -= new_contribution
         self.set_coeff_ref_det()

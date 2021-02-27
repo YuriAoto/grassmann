@@ -5,24 +5,25 @@ import unittest
 
 import numpy as np
 
-import test
+import tests
 from input_output.log import logtime
 
 
+@tests.category('SHORT')
 class CheckCsdInCCSDwf(unittest.TestCase):
     """Check for array manipulation in from_intNorm
     
     Checks if the array manipulation to get Csd is as it should be
     """
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.n_corr = 50
         self.n_ext = 50
         self.doubles = np.random.RandomState(
-            test.init_random_state).random_sample(
+            tests.init_random_state).random_sample(
             size=(self.n_ext, self.n_ext))
         self.singles = np.random.RandomState(
-            test.init_random_state).random_sample(
+            tests.init_random_state).random_sample(
             size=(self.n_corr, self.n_ext))
         self.Csd1 = np.zeros((self.n_corr, self.n_ext,
                               self.n_corr, self.n_ext))

@@ -11,6 +11,7 @@ import tests
 
 
 
+@tests.category('SHORT')
 class FromMolproTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -1169,6 +1170,7 @@ class FromMolproTestCase(unittest.TestCase):
         self.assertFalse(wf.restricted)
 
 
+@tests.category('SHORT')
 class RestrictUnrestrictItTestCase(unittest.TestCase):
 
     def setUp(self):

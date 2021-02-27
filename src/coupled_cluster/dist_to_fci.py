@@ -15,6 +15,9 @@ from coupled_cluster import manifold as cc_manifold
 from coupled_cluster.cluster_decomposition import cluster_decompose
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.fci import FCIWaveFunction
+from wave_functions.slater_det import SlaterDet
+import wave_functions.strings_rev_lexical_order as str_order
+from util.other import int_array
 
 logger = logging.getLogger(__name__)
 
@@ -144,11 +147,17 @@ def vertical_proj_to_cc_manifold(wf,
         if not wf.symmetry_allowed(det):
             continue
         rank, alpha_hp, beta_hp = wf.get_exc_info(det)
+        sign_rel_ref = (str_order.sign_relative_to_ref(alpha_hp[0],
+                                                       alpha_hp[1],
+                                                       wf.ref_det.alpha_occ)
+                        * str_order.sign_relative_to_ref(beta_hp[0],
+                                                         beta_hp[1],
+                                                         wf.ref_det.beta_occ))
         do_decomposition = (abs(det.c) > coeff_thr
                             and rank > 2
                             and (level == 'SD' or rank % 2 == 0))
         if rank == 2 or (level == 'SD' and rank == 1):
-            cc_wf[rank, alpha_hp, beta_hp] = det.c
+            cc_wf[rank, alpha_hp, beta_hp] = det.c * sign_rel_ref
         if do_decomposition:
             decomposition = cluster_decompose(
                 alpha_hp, beta_hp, wf.ref_det,
@@ -157,10 +166,18 @@ def vertical_proj_to_cc_manifold(wf,
             for d in decomposition:
                 new_contribution = d[0]
                 for cluster_det in d[1:]:
-                    new_contribution *= wf[wf.index(cluster_det)]
+                    exc_info_inner = wf.get_exc_info(cluster_det)
+                    inner_sign_rel_ref = (
+                        str_order.sign_relative_to_ref(exc_info_inner[1][0],
+                                                       exc_info_inner[1][1],
+                                                       wf.ref_det.alpha_occ)
+                        * str_order.sign_relative_to_ref(exc_info_inner[2][0],
+                                                         exc_info_inner[2][1],
+                                                         wf.ref_det.beta_occ))
+                    new_contribution *= wf[wf.index(cluster_det)] * inner_sign_rel_ref
                 C -= new_contribution
-            norm_contribution = (det.c - C)**2
-            cc_towards_wf = det.c * C >= 0
+            norm_contribution = (det.c * sign_rel_ref  - C)**2
+            cc_towards_wf = det.c * sign_rel_ref * C >= 0
             norm += norm_contribution
             rank = _str_excitation(rank)
             if rank not in right_dir:

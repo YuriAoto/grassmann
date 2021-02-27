@@ -12,6 +12,7 @@ from wave_functions.slater_det import SlaterDet
 from coupled_cluster.cluster_decomposition import cluster_decompose
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class ClusterDecTestCase(unittest.TestCase):
         
     def setUp(self):

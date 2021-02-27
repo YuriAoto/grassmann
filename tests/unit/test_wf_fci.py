@@ -11,10 +11,11 @@ import tests
 from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
 from util.other import int_array
+from input_output.log import logtime
 from wave_functions.slater_det import SlaterDet
 from wave_functions.strings_rev_lexical_order import get_index
 
-
+@tests.category('SHORT')
 class FromMolproTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -139,7 +140,8 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-    
+
+    @tests.category('SHORT')
     def test_h2_sto3g_d2h(self):
         wf = FCIWaveFunction.from_int_norm(
             IntermNormWaveFunction.from_Molpro(
@@ -150,6 +152,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
         self.assertEqual(wf._coefficients,
                          wf_from_molpro_fci._coefficients)
     
+    @tests.category('SHORT')
     def test_h2_631g_c2v(self):
         wf = FCIWaveFunction.from_int_norm(
             IntermNormWaveFunction.from_Molpro(
@@ -165,7 +168,8 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__631g__C2v'))))
         self.assertEqual(wf._coefficients, my_coeff)
-
+    
+    @tests.category('SHORT')
     def test_h2_631g_d2h(self):
         wf = FCIWaveFunction.from_int_norm(
             IntermNormWaveFunction.from_Molpro(
@@ -181,7 +185,8 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__631g__D2h'))))
         self.assertEqual(wf._coefficients, my_coeff)
-
+    
+    @tests.category('SHORT')
     def test_h2_ccpvdz_d2h(self):
         wf = FCIWaveFunction.from_int_norm(
             IntermNormWaveFunction.from_Molpro(
@@ -203,7 +208,8 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__ccpVDZ__D2h'))))
         self.assertEqual(wf._coefficients, my_coeff)
-
+    
+    @tests.category('SHORT')
     def test_li2_sto3g_d2h(self):
         wf = FCIWaveFunction.from_int_norm(
             IntermNormWaveFunction.from_Molpro(
@@ -223,8 +229,324 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('Li2__5__sto3g__D2h'))))
         self.assertEqual(wf._coefficients, my_coeff)
+    
+    @tests.category('LONG')
+    def test_li2_sto3g_d2h_alle(self):
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('Li2__5__sto3g__D2h', allE=True))
+        wf = FCIWaveFunction.from_int_norm(wfcc)
+        # Ref det: SlaterDet(c=0.0,
+        #                    alpha_occ=int_array(0,1,5),
+        #                    beta_occ=int_array(0,1,5)))
+        self.assertAlmostEqual(wf.C0, 1.0)
+        self.assertEqual(wf.ref_det.alpha_occ, int_array(0,1,5))
+        self.assertEqual(wf.ref_det.beta_occ, int_array(0,1,5))
+        # --------- some singles
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,2),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,3),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,4),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,6),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,7),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,8),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,9),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(0,1,2)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(0,1,8)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(1,3,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(1,5,9)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,5,8),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,2,5),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        # --------- some doubles, alpha,beta
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,2,5),
+            beta_occ=int_array(1,2,5)))],
+                               -0.00091750)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,3,5),
+            beta_occ=int_array(1,3,5)))],
+                               -0.00042147)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,5,6),
+            beta_occ=int_array(1,5,6)))],
+                               -0.00202693)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,5,6),
+            beta_occ=int_array(1,5,7)))],
+                               -0.00092670)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,5,7),
+            beta_occ=int_array(1,5,7)))],
+                               -0.00260880)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,2,5),
+            beta_occ=int_array(0,2,5)))],
+                               -0.00328470)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,3,5),
+            beta_occ=int_array(1,3,5)))],
+                               -0.00284484)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,5,6),
+            beta_occ=int_array(0,5,6)))],
+                               0.00117550)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(1,5,6),
+            beta_occ=int_array(0,5,7)))],
+                               0.00227618)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,5,6),
+            beta_occ=int_array(1,5,7)))],
+                               0.00252029)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,5,7),
+            beta_occ=int_array(1,5,6)))],
+                               0.00227618)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,2,5),
+            beta_occ=int_array(0,2,5)))],
+                               -0.09496718)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,3,5),
+            beta_occ=int_array(0,3,5)))],
+                               -0.17272984)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,5,6),
+            beta_occ=int_array(0,5,6)))],
+                               -0.12989194)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,5,6),
+            beta_occ=int_array(0,5,7)))],
+                               -0.05293789)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,2),
+            beta_occ=int_array(0,1,2)))],
+                               -0.00079094)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,6),
+            beta_occ=int_array(0,1,7)))],
+                               -0.00085545)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,2),
+            beta_occ=int_array(1,5,6)))],
+                               0.00085432)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,2),
+            beta_occ=int_array(1,5,7)))],
+                               -0.00086412)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,7),
+            beta_occ=int_array(1,2,5)))],
+                               -0.00097751)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,7),
+            beta_occ=int_array(0,2,5)))],
+                               -0.00347713)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,2,5),
+            beta_occ=int_array(0,1,7)))],
+                               -0.00347713)
+        # --------- some doubles alpha,alpha or beta,beta
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(2,3,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(4,5,6),
+            beta_occ=int_array(0,1,5)))],
+                               0.0)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(5,6,7),
+            beta_occ=int_array(0,1,5)))],
+                               0.00227618-0.00252029)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(1,2,6)))],
+                               0.00091881-0.00085432)
+        self.assertAlmostEqual(wf[wf.index(SlaterDet(
+            c=0.0,
+            alpha_occ=int_array(0,1,5),
+            beta_occ=int_array(1,3,8)))],
+                               -0.00102550-(-0.00096368))
+        # --------- some quadruples
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(2,3,5),  #  0a 1a 0b 1b -> 2a 3a 2b 3b
+                beta_occ=int_array(2,3,5)))],
+            (-0.00091750 * -0.17272984)   # 0a 0b -> 2a 2b ; 1a 1b -> 3a 3b
+            +(-0.00042147 * -0.09496718)  # 0a 0b -> 3a 3b ; 1a 1b -> 2a 2b
+            -(-0.00328470 * -0.00284484)  # 0a 1b -> 2a 2b ; 1a 0b -> 3a 3b
+            -(-0.00284484 * -0.00328470)) # 0a 1b -> 3a 3b ; 1a 0b -> 2a 2b
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(5,6,7),  #  0a 1a 0b 1b -> 6a 7a 6b 7b
+                beta_occ=int_array(5,6,7)))],
+             (-0.00202693 * -0.02804540)  # 0a 0b -> 6a 6b ; 1a 1b -> 7a 7b
+            +(-0.00260880 * -0.12989194)  # 0a 0b -> 7a 7b ; 1a 1b -> 6a 6b
+            -(-0.00092670 * -0.05293789)  # 0a 0b -> 6a 7b ; 1a 1b -> 7a 6b
+            -(-0.00092670 * -0.05293789)  # 0a 0b -> 7a 6b ; 1a 1b -> 6a 7b
+            -( 0.00117550 * -0.00113985)  # 0a 1b -> 6a 6b ; 1a 0b -> 7a 7b
+            -(-0.00113985 *  0.00117550)  # 0a 1b -> 7a 7b ; 1a 0b -> 6a 6b
+            +( 0.00252029 *  0.00252029)  # 0a 1b -> 6a 7b ; 1a 0b -> 7a 6b
+            +( 0.00227618 *  0.00227618)  # 0a 1b -> 7a 6b ; 1a 0b -> 6a 7b
+            +( (0.00227618-0.00252029)
+               * (0.00227618-0.00252029)))  # 0a 1a -> 6a 7a ; 0b 1b -> 6b 7b
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(5,6,7), 
+                beta_occ=int_array(0,5,6)))],
+            0.0)
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(0,2,6),  # 1a 5a 1b 5b -> 2a 6a 2b 6b
+                beta_occ=int_array(0,2,6)))],
+             (-0.09496718 * -0.00205421)  # 1a 1b -> 2a 2b ; 5a 5b -> 6a 6b
+            +(-0.00079094 * -0.12989194)  # 1a 1b -> 6a 6b ; 5a 5b -> 2a 2b
+            +( 0.00125126 *  0.00125126)  # 1a 5b -> 2a 6b ; 5a 1b -> 6a 2b
+            +( 0.00089563 *  0.00089563)  # 1a 5b -> 6a 2b ; 5a 1b -> 2a 6b
+            +((0.00125126 - 0.00089563)
+              * (0.00125126 - 0.00089563))  # 1a 5a -> 2a 6a ; 1b 5b -> 2b 6b
+            )
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(0,3,6),  # 1a 5a 1b 5b -> 3a 6a 3b 6b
+                beta_occ=int_array(0,3,6)))],
+             (-0.17272984 * -0.00205421)  # 1a 1b -> 3a 3b ; 5a 5b -> 6a 6b
+            +(-0.12989194 * -0.00036760)  # 1a 1b -> 6a 6b ; 5a 5b -> 3a 3b
+            )
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(4,8,9),
+                beta_occ=int_array(0,1,2)))],
+            0.0)
+        self.assertAlmostEqual(
+            wf[wf.index(SlaterDet(
+                c=0.0,
+                alpha_occ=int_array(2,6,7),  # 0a 1a 5a 5b -> 2a 6a 7a 2b
+                beta_occ=int_array(0,1,2)))],
+            ((0.00227618 - 0.00252029) * -0.00079094)  # 0a 1a -> 6a 7a ; 5a 5b -> 2a 2b
+            -((0.00091881 - 0.00085432) * -0.00190054)  # 0a 5a -> 2a 6a ; 1a 5b -> 7a 2b
+            +((-0.00097751 - -0.00086412) * 0.00089563)  # 0a 5a -> 2a 7a ; 1a 5b -> 6a 2b
+            -(0.00085432 * (-0.00347713 - -0.00190054))  # 0a 5b -> 6a 2b ; 1a 5a -> 2a 7a
+            +(-0.00086412 * (0.00125126 - 0.00089563)))  # 0a 5b -> 7a 2b ; 1a 5a -> 2a 6a
+        # --------- Some sextuple:
+        # self.assertAlmostEqual(
+        #     wf[wf.index(SlaterDet(
+        #         c=0.0,
+        #         alpha_occ=int_array(2,6,7),  # 0a 1a 5a 0b 1b 5b -> 2a 6a 7a 2b 6a 7a
+        #         beta_occ=int_array(2,6,7)))],
+        #     () # 0a 0b -> 2a 2b; 1a 1b -> 6a 6b; 5a 5b -> 7a 7b
+        #     () # 0a 0b -> 2a 2b; 1a 1b -> 6a 7b; 5a 5b -> 7a 6b
+        #     () # 0a 0b -> 2a 2b; 1a 1b -> 7a 6b; 5a 5b -> 6a 7b
+        #     () # 0a 0b -> 2a 2b; 1a 1b -> 7a 7b; 5a 5b -> 6a 6b
+        #     () # 0a 0b -> 6a 6b; 1a 1b -> 2a 2b; 5a 5b -> 7a 7b
+        #     () # 0a 0b -> 6a 7b; 1a 1b -> 2a 2b; 5a 5b -> 7a 6b
+        #     () # 0a 0b -> 7a 6b; 1a 1b -> 2a 2b; 5a 5b -> 6a 7b
+        #     () # 0a 0b -> 6a 6b; 1a 1b -> 7a 7b; 5a 5b -> 2a 2b
+        #     () # 0a 0b -> 7a 7b; 1a 1b -> 6a 6b; 5a 5b -> 2a 2b
+        #     () # 0a 0b -> 7a 6b; 1a 1b -> 6a 7b; 5a 5b -> 2a 2b
+        #     () # 0a 0b -> 6a 7b; 1a 1b -> 7a 6b; 5a 5b -> 2a 2b
+        #     () # 0a 0b -> 7a 7b; 1a 1b -> 2a 2b; 5a 5b -> 7a 7b
+
+        #     () # 0a 1b -> 2a 2b; 1a 0b -> 6a 6b; 5a 5b -> 7a 7b
+        #     () # 0a 1b -> 2a 2b; 1a 0b -> 6a 7b; 5a 5b -> 7a 6b
+        #     () # 0a 1b -> 2a 2b; 1a 0b -> 7a 6b; 5a 5b -> 6a 7b
+        #     () # 0a 1b -> 2a 2b; 1a 0b -> 7a 7b; 5a 5b -> 6a 6b
+        #     () # 0a 1b -> 6a 6b; 1a 0b -> 2a 2b; 5a 5b -> 7a 7b
+        #     () # 0a 1b -> 6a 7b; 1a 0b -> 2a 2b; 5a 5b -> 7a 6b
+        #     () # 0a 1b -> 7a 6b; 1a 0b -> 2a 2b; 5a 5b -> 6a 7b
+        #     () # 0a 1b -> 6a 6b; 1a 0b -> 7a 7b; 5a 5b -> 2a 2b
+        #     () # 0a 1b -> 7a 7b; 1a 0b -> 6a 6b; 5a 5b -> 2a 2b
+        #     () # 0a 1b -> 7a 6b; 1a 0b -> 6a 7b; 5a 5b -> 2a 2b
+        #     () # 0a 1b -> 6a 7b; 1a 0b -> 7a 6b; 5a 5b -> 2a 2b
+        #     () # 0a 1b -> 7a 7b; 1a 0b -> 2a 2b; 5a 5b -> 7a 7b
+            
+        #     () # 0a 5b -> .....
 
 
+@tests.category('SHORT')
 class FromIntermNormCCSDTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -290,7 +612,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         self.assertEqual(wf._coefficients,
                          wf_from_molpro_fci._coefficients)
 
-
+@tests.category('SHORT', 'ESSENTIAL')
 class ExcInfoTestCase(unittest.TestCase):
         
     def setUp(self):
@@ -332,7 +654,7 @@ class ExcInfoTestCase(unittest.TestCase):
         self.assertEqual(beta_hp[1], int_array(9))
 
 
-
+@tests.category('SHORT')
 class NormTestCase(unittest.TestCase):
 
     def test_h2_sto3g_d2h(self):

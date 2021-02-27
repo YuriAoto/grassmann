@@ -8,6 +8,7 @@ import numpy as np
 import tests
 
 
+@tests.category('COMPLETE')
 class MinDistCISDTestCase(unittest.TestCase):
 
     def setUp(self):

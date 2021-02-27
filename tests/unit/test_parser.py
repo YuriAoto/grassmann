@@ -6,10 +6,11 @@ import sys
 import unittest
 from unittest.mock import patch
 
-import test
+import tests
 from input_output import parser
 
 
+@tests.category('SHORT')
 class InternalsTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -101,6 +102,8 @@ class InternalsTestCase(unittest.TestCase):
             self.assertEqual(sys.argv[17], '--key7')
             self.assertEqual(sys.argv[18], 'value7')
 
+
+@tests.category('SHORT')
 class ParserTestCase(unittest.TestCase):
     
     def setUp(self):

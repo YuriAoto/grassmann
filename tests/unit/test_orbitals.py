@@ -11,6 +11,7 @@ from orbitals import orbitals
 from orbitals.symmetry import OrbitalsSets
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class ContructExtSpaceTestCase(unittest.TestCase):
 
     def setUp(self):

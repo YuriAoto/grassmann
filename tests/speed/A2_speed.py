@@ -13,7 +13,7 @@ from input_output import log
 from orbitals.symmetry import OrbitalsSets
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.interm_norm_full import IntermNormWaveFunctionFull
-from test.implementation import residual 
+from test.speed import residual 
 from util import memory
 
 

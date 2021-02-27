@@ -3,12 +3,14 @@
 """
 import unittest
 
+import tests
 from util.array_indices import (
     triangular,
     ij_from_triang, n_from_triang,
     ij_from_triang_with_diag, n_from_triang_with_diag,
     n_from_rect, ij_from_rect)
 
+@tests.category('SHORT', 'ESSENTIAL')
 class TriangTestCase(unittest.TestCase):
 
     def test_triang(self):
@@ -89,6 +91,7 @@ class TriangTestCase(unittest.TestCase):
                     *ij_from_triang_with_diag(n)), n)
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class RectTestCase(unittest.TestCase):
 
     def setUp(self):
