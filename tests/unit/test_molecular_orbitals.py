@@ -18,6 +18,7 @@ class AtomicToMolecularIntegralsTestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
         self.prng = np.random.RandomState(tests.init_random_state)
 
+    @tests.category('SHORT', 'ESSENTIAL')
     def test_1e_int(self):
         """H_2 one-electron integrals tranformation from atomic to molecular
            g values: Szabo p.162
@@ -64,7 +65,7 @@ class AtomicToMolecularIntegralsTestCase(unittest.TestCase):
                 self.assertAlmostEqual(new_int.S[i,j],S_corr[i][j])
         
 
-
+    @tests.category('SHORT', 'ESSENTIAL')
     def test_2e_int(self):
         """H_2 two-electron integrals tranformation from atomic to molecular
            g values: Szabo p.162
@@ -102,6 +103,7 @@ class AtomicToMolecularIntegralsTestCase(unittest.TestCase):
 #            print(mol_int._integrals[i])
             self.assertAlmostEqual(mol_int._integrals[i],g_corr[i])
 
+    @tests.category('SHORT')
     def test_2e_int_2(self):
         """Random g matrix, two rotation operations leading to a C1 rotation"""
         atomic_int = Integrals(None,None,method=None,orth_method=None)

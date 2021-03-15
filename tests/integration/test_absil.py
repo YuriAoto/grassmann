@@ -8,48 +8,51 @@ import numpy as np
 from dist_grassmann import absil
 from orbitals import orbitals
 from wave_functions import int_norm, cisd
-import test
+import tests
 
 molecules = ('H2', 'Li2')
 
+@tests.category('SHORT')
 class GenCisdAlgorithmsTestCase(unittest.TestCase):
     """Compares Absil algorithm for general and CISD wave functions
     """
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        self.prng = np.random.RandomState(test.init_random_state)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.prng = np.random.RandomState(tests.init_random_state)
 
+    @tests.category('SHORT')
     def test_overlap(self):
-        for cisd_sys in test.test_systems(has_method='CISD',
+        for cisd_sys in tests.test_systems(has_method='CISD',
                                           molecule=molecules):
             wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CISD_file(cisd_sys))
+                tests.CISD_file(cisd_sys))
             wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            U = test.construct_random_orbitals(wf_CISD.ref_occ,
-                                               wf_CISD.orb_dim,
-                                               wf_CISD.n_irrep,
-                                               self.prng)
-            test.logger.debug("Int norm WF (%s):\n%s",
-                              cisd_sys, wf_intN)
-            test.logger.debug("CISD WF (%s):\n%s",
-                              cisd_sys, wf_CISD)
+            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
+                                                wf_CISD.orb_dim,
+                                                wf_CISD.n_irrep,
+                                                self.prng)
+            tests.logger.debug("Int norm WF (%s):\n%s",
+                               cisd_sys, wf_intN)
+            tests.logger.debug("CISD WF (%s):\n%s",
+                               cisd_sys, wf_CISD)
             f_CI = absil.overlap_to_det(wf_CISD, U)
             orbitals.extend_to_unrestricted(U)
             fgen = absil.overlap_to_det(wf_intN, U)
             with self.subTest(system=cisd_sys):
                 self.assertAlmostEqual(f_CI, fgen)
 
+    @tests.category('LONG')
     def test_create_XC_matrices(self):
-        for cisd_sys in test.test_systems(has_method='CISD',
+        for cisd_sys in tests.test_systems(has_method='CISD',
                                           molecule=molecules):
             wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CISD_file(cisd_sys))
+                tests.CISD_file(cisd_sys))
             wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            U = test.construct_random_orbitals(wf_CISD.ref_occ,
-                                               wf_CISD.orb_dim,
-                                               wf_CISD.n_irrep,
-                                               self.prng)
+            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
+                                                wf_CISD.orb_dim,
+                                                wf_CISD.n_irrep,
+                                                self.prng)
             f_CI, X_CI, C_CI = absil.generate_lin_system(
                 wf_CISD,
                 U,
@@ -60,19 +63,19 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
                 wf_intN,
                 U,
                 slice_XC)
-            test.logger.info('Original Xgen aa:\n%s',
-                             Xgen[slice_XC[0],
-                                  slice_XC[0]].reshape(U[0].shape
-                                                       + U[0].shape,
-                                                       order='F'))
-            test.logger.info('Original Xgen ab:\n%s',
-                             Xgen[slice_XC[0],
-                                  slice_XC[wf_intN.n_irrep]].reshape(
-                                      U[0].shape + U[0].shape,
-                                      order='F'))
+            tests.logger.info('Original Xgen aa:\n%s',
+                              Xgen[slice_XC[0],
+                                   slice_XC[0]].reshape(U[0].shape
+                                                        + U[0].shape,
+                                                        order='F'))
+            tests.logger.info('Original Xgen ab:\n%s',
+                              Xgen[slice_XC[0],
+                                   slice_XC[wf_intN.n_irrep]].reshape(
+                                       U[0].shape + U[0].shape,
+                                       order='F'))
             sep = '\n' + '=' * 30 + '\n'
             sep2 = '\n' + '-' * 30 + '\n'
-            test.logger.info(sep + 'f:\n'
+            tests.logger.info(sep + 'f:\n'
                              + 'General algorithm:  %.12f\n'
                              + 'CISD-opt algorithm: %.12f', fgen, f_CI)
             with self.subTest(system=cisd_sys):
@@ -84,12 +87,12 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
                 M_CI = C_CI[slice_XC[i]].reshape(U[i].shape, order='C')
                 with self.subTest(system=cisd_sys, irrep=i):
                     self.assertEqual(Mgen, M_CI)
-                test.logger.info(sep
-                                 + 'C[irrep = %d]:\n'
-                                 + 'General algorithm:\n%r\n' + sep2
-                                 + 'CISD-opt algorithm:\n%r' + sep2
-                                 + 'Cgen - C_CI:\n%r' + sep2,
-                                 i, Mgen, M_CI, Mgen - M_CI)
+                tests.logger.info(sep
+                                  + 'C[irrep = %d]:\n'
+                                  + 'General algorithm:\n%r\n' + sep2
+                                  + 'CISD-opt algorithm:\n%r' + sep2
+                                  + 'Cgen - C_CI:\n%r' + sep2,
+                                  i, Mgen, M_CI, Mgen - M_CI)
                 for j in wf_CISD.spirrep_blocks(restricted=True):
                     if U[j].shape[0] * U[j].shape[1] == 0:
                         continue
@@ -103,9 +106,9 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
                         U[i].shape + U[j].shape, order='C')
                     with self.subTest(system=cisd_sys, irrep=i, irrep2=j):
                         self.assertEqual(Mgen, M_CI)
-                    test.logger.info(sep
-                                     + 'X[irrep = %d, irrep = %d]:\n'
-                                     + 'General algorithm:\n%r\n' + sep2
-                                     + 'CISD-opt algorithm:\n%r' + sep2
-                                     + 'Xgen - X_CI:\n%r' + sep2,
-                                     i, j, Mgen, M_CI, Mgen - M_CI)
+                    tests.logger.info(sep
+                                      + 'X[irrep = %d, irrep = %d]:\n'
+                                      + 'General algorithm:\n%r\n' + sep2
+                                      + 'CISD-opt algorithm:\n%r' + sep2
+                                      + 'Xgen - X_CI:\n%r' + sep2,
+                                      i, j, Mgen, M_CI, Mgen - M_CI)

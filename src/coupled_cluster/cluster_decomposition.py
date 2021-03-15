@@ -13,6 +13,18 @@ default_recipe_files = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
 
 
+
+def str_dec(decomposition):
+    """Get a string version of the cluster decomposition"""
+    d_str = ['------------------']
+    for d in decomposition:
+        d_str.append(f'sign = {d[0]}')
+        for det in d:
+            d_str.append(str(det))
+    d_str.append('------------------')
+    return '\n'.join(d_str)
+
+
 def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
     """Carry out the decomposition
     

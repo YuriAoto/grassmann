@@ -6,7 +6,10 @@ Yuri Aoto, 2021
 from input_output.log import logtime, logger
 from wave_functions import fci
 from wave_functions.interm_norm import IntermNormWaveFunction
+
 from coupled_cluster import optimiser
+from coupled_cluster.dist_to_fci import (vertical_proj_to_cc_manifold,
+                                         calc_dist_to_cc_manifold)
 
 
 def main(args, f_out):
@@ -15,12 +18,13 @@ def main(args, f_out):
     if args.method in ('CCD_mani_vert', 'CCSD_mani_vert'):
         level = 'SD' if 'SD' in args.method else 'D'
         with logtime('Loading FCI wave function'):
-            fci_wf = fci.WaveFunctionFCI.from_Molpro_FCI(args.molpro_output)
+            fci_wf = fci.FCIWaveFunction.from_Molpro_FCI(args.molpro_output)
         fci_wf.normalise(mode='intermediate')
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
         with logtime('Running CC_manifold analysis'):
-            resCC = fci_wf.vertical_proj_to_cc_manifold(level=level,
-                                                        restore_wf=False)
+            resCC = vertical_proj_to_cc_manifold(fci_wf,
+                                                 level=level,
+                                                 restore_wf=False)
         logger.info(resCC.wave_function)
         f_out.write(
             f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
@@ -31,16 +35,17 @@ def main(args, f_out):
     elif args.method in ('CCD_mani_minD', 'CCSD_mani_minD'):
         level = 'SD' if 'SD' in args.method else 'D'
         with logtime('Loading FCI wave function'):
-            fci_wf = fci.WaveFunctionFCI.from_Molpro_FCI(args.molpro_output)
+            fci_wf = fci.FCIWaveFunction.from_Molpro_FCI(args.molpro_output)
         fci_wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.similar_to(
             fci_wf, 'CC' + level, restricted=False)
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
         with logtime('Running CC_manifold analysis'):
-            resCC = fci_wf.calc_dist_to_cc_manifold(level=level,
-                                                    f_out=f_out,
-                                                    ini_wf=cc_wf,
-                                                    restore_wf=False)
+            resCC = calc_dist_to_cc_manifold(fci_wf,
+                                             level=level,
+                                             f_out=f_out,
+                                             ini_wf=cc_wf,
+                                             restore_wf=False)
         logger.info(resCC.wave_function)
         f_out.write(
             f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')

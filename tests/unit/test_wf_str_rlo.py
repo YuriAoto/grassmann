@@ -10,6 +10,7 @@ from util.other import int_array
 import wave_functions.strings_rev_lexical_order as str_order
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class StringGraphsTestCase(unittest.TestCase):
         
     def setUp(self):
@@ -70,7 +71,8 @@ class StringGraphsTestCase(unittest.TestCase):
                                     [6, 21, 56, 126, 252]]))
 
 
-class StringGraphsTestCase2(unittest.TestCase):
+@tests.category('SHORT', 'ESSENTIAL')
+class StringGraphs2TestCase(unittest.TestCase):
         
     def setUp(self):
         self.string_gr_1 = str_order.generate_graph(4, 6)
@@ -124,7 +126,8 @@ class StringGraphsTestCase2(unittest.TestCase):
                          22)
 
 
-class StringGraphsTestCase3(unittest.TestCase):
+@tests.category('SHORT')
+class StringGraphs3TestCase(unittest.TestCase):
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
@@ -175,7 +178,8 @@ class StringGraphsTestCase3(unittest.TestCase):
             int_array(0, 1, 2, 5, 7))
 
 
-class RevLexOrdTestCase3(unittest.TestCase):
+@tests.category('SHORT')
+class RevLexOrd3TestCase(unittest.TestCase):
 
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
@@ -215,6 +219,7 @@ class RevLexOrdTestCase3(unittest.TestCase):
         self.assertEqual(occ, int_array(0, 1, 2, 8))
 
 
+@tests.category('SHORT')
 class SignRelRefTestCase(unittest.TestCase):
 
     def test_sign_rel_ref(self):

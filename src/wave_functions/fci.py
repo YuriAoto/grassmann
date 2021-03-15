@@ -11,14 +11,14 @@ Yuri
 import logging
 import numpy as np
 from numpy import linalg
-from scipy.linalg import lu
+from scipy.linalg import lu, norm
 from scipy.special import comb
 import copy
 import math
 
 from input_output import molpro
 
-from util.array_indices import get_pos_from_rectangular
+from util.array_indices import n_from_rect
 from util.variables import int_dtype
 from util.memory import mem_of_floats
 from util.other import int_array
@@ -26,7 +26,7 @@ from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
-from coupled_cluster.cluster_decomposition import cluster_decompose
+from coupled_cluster.cluster_decomposition import cluster_decompose, str_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
@@ -367,10 +367,7 @@ class FCIWaveFunction(WaveFunction):
                 (with respect to .ref_det)
         """
         if mode == 'unit':
-            S = 0.0
-            for c in self:
-                S += c**2
-            S = math.sqrt(S)
+            S = norm(self._coefficients)
         elif mode == 'intermediate':
             S = self.C0
         self._coefficients /= S
@@ -459,7 +456,8 @@ class FCIWaveFunction(WaveFunction):
         If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
-        level = 'SD' if 'SD' in wf.wf_type else 'SD'
+        _to_print = (-1, -1)
+        level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed(det):
@@ -468,23 +466,31 @@ class FCIWaveFunction(WaveFunction):
             if rank == 0:
                 self._coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
-                  or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
+                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
                 self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
                     mode=level, recipes_f=None)
+                if (ia,ib) == _to_print:
+                    print(str_dec(decomposition))
                 self._coefficients[ia, ib] = 0.0
                 for d in decomposition:
+                    if (ia,ib) == _to_print:
+                        print('------ new!!')
                     new_contribution = d[0]
                     add_contr = True
                     for cluster_det in d[1:]:
                         if not self.symmetry_allowed(cluster_det):
+                            if (ia,ib) == _to_print:
+                                print('------ not all')
                             add_contr = False
                             break
                         rank, alpha_hp, beta_hp = self.get_exc_info(
                             cluster_det)
                         new_contribution *= wf[rank, alpha_hp, beta_hp]
+                        if (ia,ib) == _to_print:
+                            print(alpha_hp, beta_hp, wf[rank, alpha_hp, beta_hp])
                     if add_contr:
                         self._coefficients[ia, ib] -= new_contribution
         self.set_coeff_ref_det()
@@ -835,7 +841,7 @@ class FCIWaveFunction(WaveFunction):
                         and holes[0].spirrep >= self.n_irrep):  # beta
                     continue
                 pos = spirrep_start[holes[0].spirrep]
-                pos += get_pos_from_rectangular(
+                pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
                     self.virt_orb[particles[0].spirrep])
                 Jac[pos] += (det.c
@@ -860,11 +866,11 @@ class FCIWaveFunction(WaveFunction):
                                     and particles[0].orb > particles[1].orb):
                                 continue
                 pos = spirrep_start[holes[0].spirrep]
-                pos += get_pos_from_rectangular(
+                pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
                     self.virt_orb[particles[0].spirrep])
                 pos1 = spirrep_start[holes[1].spirrep]
-                pos1 += get_pos_from_rectangular(
+                pos1 += n_from_rect(
                     holes[1].orb, particles[1].orb,
                     self.virt_orb[particles[1].spirrep])
                 if holes[0].spirrep == holes[1].spirrep:
@@ -882,11 +888,11 @@ class FCIWaveFunction(WaveFunction):
                              pos, pos1, -det.c if negative else det.c)
                 if holes[0].spirrep == holes[1].spirrep:
                     pos = spirrep_start[holes[0].spirrep]
-                    pos += get_pos_from_rectangular(
+                    pos += n_from_rect(
                         holes[0].orb, particles[1].orb,
                         self.virt_orb[particles[1].spirrep])
                     pos1 = spirrep_start[holes[1].spirrep]
-                    pos1 += get_pos_from_rectangular(
+                    pos1 += n_from_rect(
                         holes[1].orb, particles[0].orb,
                         self.virt_orb[particles[0].spirrep])
                     negative = not negative
@@ -1145,7 +1151,7 @@ class FCIWaveFunction(WaveFunction):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
                     mode='SD', recipes_f=recipes_f)
-                for d in decomposition:
+                for d in decomposition[1:]:
                     singles_contr = d[0]
                     for cluster_det in d[1:]:
                         singles_contr *= self[self.index(cluster_det)]

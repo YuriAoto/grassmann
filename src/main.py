@@ -11,9 +11,9 @@ import git
 
 from input_output.log import logtime
 from util import memory
-import dist_grassmann
-import hartree_fock
-import coupled_cluster
+from dist_grassmann.main import main as main_dist_gr
+from hartree_fock.main import main as main_hf
+from coupled_cluster.main import main as main_cc
 
 
 def main_grassmann(args, f_out):
@@ -50,15 +50,15 @@ def main_grassmann(args, f_out):
         toout(f'Starting at {dt.fromtimestamp(T.ini_time):%d %b %Y - %H:%M}')
         toout()
         if args.method == 'dist_Grassmann':
-            dist_grassmann.main(args, f_out)
+            main_dist_gr(args, f_out)
         elif args.method == 'Hartree_Fock' or args.method == 'CCSD' or args.method == 'CCD':
-            args.res_hf = hartree_fock.main(args, f_out)
+            args.res_hf = main_hf(args, f_out)
             print(args.res_hf)
             if args.method == 'CCSD' or args.method == 'CCD':
-                coupled_cluster.main(args, f_out)
+                main_cc(args, f_out)
         elif args.method in ('CCD_mani_vert', 'CCSD_mani_vert',
                              'CCD_mani_minD', 'CCSD_mani_minD'):
-            coupled_cluster.main(args, f_out)
+            main_cc(args, f_out)
         else:
             raise ValueError('Unknown method: ' + args.method)
     toout()

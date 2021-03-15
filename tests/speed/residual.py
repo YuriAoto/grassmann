@@ -5,7 +5,7 @@ import numpy as np
 
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.interm_norm_full import IntermNormWaveFunctionFull
-from test.implementation import residual_cy
+from tests.implementation import residual_cy
 
 def cal_V2_A2(wf,g):
     residual = IntermNormWaveFunction.similar_to(

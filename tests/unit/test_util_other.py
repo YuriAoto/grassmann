@@ -9,6 +9,7 @@ import tests
 from util.other import int_array
 from util.variables import int_dtype
 
+@tests.category('SHORT', 'ESSENTIAL')
 class SlaterDetTestCase(unittest.TestCase):
         
     def setUp(self):

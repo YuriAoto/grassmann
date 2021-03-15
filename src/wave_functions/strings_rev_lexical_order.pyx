@@ -102,7 +102,7 @@ def get_index(int[:] occupation, int[:, :] Y):
 
 
 def occ_from_pos(str_ind, Y):
-    """Get the occupied orbitals from its referse lexical order
+    """Get the occupied orbitals from its reverse lexical order
     
     This is the inverse of _get_string_index: The following
     should hold True for any valid str_ind:

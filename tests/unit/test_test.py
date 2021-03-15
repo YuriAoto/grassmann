@@ -6,6 +6,7 @@ import unittest
 import tests
 
 
+@tests.category('SHORT')
 class TestsTestCase(unittest.TestCase):
 
     def test_get_inpout_file(self):
@@ -55,6 +56,7 @@ class TestsTestCase(unittest.TestCase):
         self.assertFalse(tests.FCI_file('Li2__5__to2s__C2vaa', only_check=True))
 
 
+@tests.category('SHORT')
 class GeneratorTestCase(unittest.TestCase):
 
     def test_generator_1(self):

@@ -14,7 +14,7 @@ from wave_functions.singles_doubles cimport (
 from orbitals.occ_orbitals cimport OccOrbital
 #from orbitals.occ_orbitals import OccOrbital
 from util.variables import int_dtype
-from util.array_indices cimport get_pos_from_rectangular
+from util.array_indices cimport n_from_rect
 from molecular_geometry.symmetry import irrep_product
 
 
@@ -174,7 +174,7 @@ def min_dist_app_hess(double[:, :] wf,
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
                         z[pos] = -z[pos_ini[b_irrep]
-                                    + get_pos_from_rectangular(
+                                    + n_from_rect(
                                         b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
@@ -227,7 +227,7 @@ def min_dist_app_hess(double[:, :] wf,
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
                         z[pos] = -z[pos_ini[b_irrep]
-                                    + get_pos_from_rectangular(
+                                    + n_from_rect(
                                         b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:

@@ -17,7 +17,7 @@ from wave_functions.singles_doubles cimport (
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
 
-
+@tests.category('SHORT', 'ESSENTIAL')
 class ExcOnStringTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -184,6 +184,7 @@ class ExcOnStringTestCase(unittest.TestCase):
                              12, 15, int_array(3, 4, 5, 10, 11, 12))))
 
 
+@tests.category('SHORT')
 class Terms2el6orbTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -312,6 +313,7 @@ class Terms2el6orbTestCase(unittest.TestCase):
                                1.0)
 
 
+@tests.category('SHORT')
 class Terms3el7orbTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -528,6 +530,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                1.49)
 
 
+@tests.category('SHORT', 'ESSENTIAL')
 class OccOrbitalTestCase(unittest.TestCase):
 
     def setUp(self):

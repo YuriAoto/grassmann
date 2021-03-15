@@ -10,6 +10,7 @@ from util.other import int_array
 from orbitals.symmetry import OrbitalsSets
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
 
+@tests.category('SHORT', 'ESSENTIAL')
 class SlaterDetTestCase(unittest.TestCase):
         
     def setUp(self):

@@ -6,9 +6,10 @@ import unittest
 import numpy as np
 
 from wave_functions import int_norm, cisd
-import test
+import tests
 
 
+@tests.category('SHORT')
 class CISDvsCCSDTestCase(unittest.TestCase):
     """Compares CISD and CCSD wave functions for H2
     
@@ -17,17 +18,17 @@ class CISDvsCCSDTestCase(unittest.TestCase):
     """
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, test.assert_arrays)
-        self.prng = np.random.RandomState(test.init_random_state)
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.prng = np.random.RandomState(tests.init_random_state)
 
     def test_check_CCvsCI_cisd_for_H2(self):
-        for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
-                                        molecule='H2'):
+        for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
+                                         molecule='H2'):
             wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CISD_file(H2_sys))
+                tests.CISD_file(H2_sys))
             wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
             wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CCSD_file(H2_sys))
+                tests.CCSD_file(H2_sys))
             wf_intN.use_CISD_norm = True
             wf_CCSD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
             with self.subTest(system=H2_sys, coef='C0'):
@@ -44,12 +45,12 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                          wf_CISD.Csd[irp][irp2])
 
     def test_check_CCvsCI_string_indices_for_H2(self):
-        for H2_sys in test.test_systems(has_method=('CISD', 'CCSD'),
-                                        molecule='H2'):
+        for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
+                                         molecule='H2'):
             wf_CI = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CISD_file(H2_sys))
+                tests.CISD_file(H2_sys))
             wf_CC = int_norm.IntermNormWaveFunction.from_Molpro(
-                test.CCSD_file(H2_sys))
+                tests.CCSD_file(H2_sys))
             wf_CC.use_CISD_norm = True
             str_ind_CC = wf_CC.string_indices()
             for Ind_CI in wf_CI.string_indices():
