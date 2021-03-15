@@ -20,3 +20,4 @@ def main(args, f_out):
     RHF = optimiser.Restricted_Closed_Shell_SCF(
         molecular_system, f_out=f_out, n_DIIS=0)
     f_out.write(str(RHF))
+    return RHF

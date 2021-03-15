@@ -26,7 +26,7 @@ class Integrals():
     -----------
     
     basis_set (int)
-        Name of the basis set to be used (This info is contained in mol_geo, why use?)
+        Name of the basis set to be used
 
     mol_geo (MolecularGeometry)
         A MolecuarGeometry object conatining all molecular data
@@ -37,10 +37,10 @@ class Integrals():
     S (np.ndarray ((??check)))
         The overlap matrix
     
-    h (np.ndarray ((??check)))
+    h (2D np.ndarray)
         one-electron integral matrix
 
-    g (np.ndarray ((??check)))
+    g (3D np.ndarray)
         two-electron integral matrix
 
     X (??)
@@ -69,14 +69,15 @@ class Integrals():
         new_int.n_func = old_int.n_func
         irr = 0
         if cy:
-            pass
-            ##TODO: In src/integrals/integrals_cy.pyx
+            new_int.h = np.zeros((old_int.n_func,old_int.n_func))
+            integrals.integrals_cy.from_1e_atomic_to_molecular_cy(new_int.h,molecular[irr],old_int.h,old_int.n_func)
+            new_int.S = np.zeros((old_int.n_func,old_int.n_func))
+            integrals.integrals_cy.from_1e_atomic_to_molecular_cy(new_int.S,molecular[irr],old_int.S,old_int.n_func)
         else:
             new_int.h = _from_1e_atomic_to_molecular(old_int.h, molecular[irr], old_int.n_func)
             new_int.S = _from_1e_atomic_to_molecular(old_int.S, molecular[irr], old_int.n_func)
         new_int.g = Two_Elec_Int.from_2e_atomic_to_molecular(old_int, molecular, cy=cy) 
         return new_int
-
 
     def set_wmme_integrals(self):
         """Set integrals from Knizia's ir-wmme program"""
@@ -193,7 +194,7 @@ class Two_Elec_Int():
         new_2e_int.n_func = n_func
         new_2e_int._format = 'F2e'
         new_2e_int._integrals = np.load(wmme_fint2e_file)
-        new_2e_int._integrals = new_int._integrals.reshape(
+        new_2e_int._integrals = new_2e_int._integrals.reshape(
             (new_2e_int._integrals.shape[0], n_func, n_func))
         return new_2e_int
 
@@ -249,29 +250,30 @@ class Two_Elec_Int():
 
 
 
+#####OLD####
 def _from_1e_atomic_to_molecular(atomic_matrix, molecular, n_func):
     mol_int = np.zeros(len(atomic_matrix))
     for i in range(n_func):
         for j in range(n_func):
-            if i < j:
-                continue
-            ij = i+j*(j+1)//2 ##Check if it's right
+        #    if i < j:
+        #        continue
+        #    ij = i+j*(j+1)//2 ##Check if it's right
             for p in range(n_func):
                 for q in range(n_func):
-                    if p < q:
-                        continue
-                    pq = p+q*(q+1)//2
+        #            if p < q:
+        #                continue
+        #            pq = p+q*(q+1)//2
                     #print(i,j,ij,p,q,pq)
-                    mol_int[ij]+= molecular[p,i]*molecular[q,j]*atomic_matrix[pq]
-                    if p != q:
-                        mol_int[ij]+= molecular[q,i]*molecular[p,j]*atomic_matrix[pq]
+                    mol_int[i,j]+= molecular[p,i]*molecular[q,j]*atomic_matrix[p,q]
+        #            mol_int[ij]+= molecular[p,i]*molecular[q,j]*atomic_matrix[pq]
+        #            if p != q:
+        #                mol_int[ij]+= molecular[q,i]*molecular[p,j]*atomic_matrix[pq]
                     #print(mol_int[ij])
     return mol_int
 
 
 
 
-#####OLD####
 def _old_from_2e_atomic_to_molecular(mo_integrals, atomic, molecular, irr = 0):
     ij=-1
     for i in range(atomic.n_func):                      

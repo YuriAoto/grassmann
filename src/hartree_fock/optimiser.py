@@ -127,7 +127,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
-    
+
     hf_step.orb.name = 'RHF'
     res = OptResults(kind_of_calc)
     res.energy = mol_geom.nucl_rep + hf_step.energy

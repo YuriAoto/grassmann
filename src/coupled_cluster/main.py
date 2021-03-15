@@ -6,6 +6,7 @@ Yuri Aoto, 2021
 from input_output.log import logtime, logger
 from wave_functions import fci
 from wave_functions.interm_norm import IntermNormWaveFunction
+from coupled_cluster import optimiser
 
 
 def main(args, f_out):
@@ -45,6 +46,13 @@ def main(args, f_out):
             f'D_vert(FCI, CC{level} manifold) = {resCC.distance:.8f}\n')
     elif args.method in ('CCD', 'CCSD'):
         level = 'SD' if 'SD' in args.method else 'D'
+        optimiser.cc_closed_shell(args.res_hf.energy,
+                                  args.res_hf.orbitals,
+                                  wf_ini=None,
+                                  preserve_wf_ini=False,
+                                  level='SD',
+                                  max_inter=20)
+
     else:
         raise ValueError(
             'Only CC method so far implemented is for CC_manifold!')

@@ -51,8 +51,11 @@ def main_grassmann(args, f_out):
         toout()
         if args.method == 'dist_Grassmann':
             dist_grassmann.main(args, f_out)
-        elif args.method == 'Hartree_Fock':
-            hartree_fock.main(args, f_out)
+        elif args.method == 'Hartree_Fock' or args.method == 'CCSD' or args.method == 'CCD':
+            args.res_hf = hartree_fock.main(args, f_out)
+            print(args.res_hf)
+            if args.method == 'CCSD' or args.method == 'CCD':
+                coupled_cluster.main(args, f_out)
         elif args.method in ('CCD_mani_vert', 'CCSD_mani_vert',
                              'CCD_mani_minD', 'CCSD_mani_minD'):
             coupled_cluster.main(args, f_out)

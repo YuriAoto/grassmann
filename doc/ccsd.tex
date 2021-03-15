@@ -214,8 +214,8 @@ Last, for the equation \ref{eq:t1g_iajb} there is no transformation and the valu
 \end{equation}
 where
 \begin{align}
-  \Omega_i^{a(A1)}&=\orbsum{ckd}\uampl{ki}{cd}\gtil{adkc}\\
-  \Omega_i^{a(B1)}&=-\orbsum{ckl}\uampl{ki}{ac}\gtil{kilc}\\
+  \Omega_i^{a(A1)}&=\orbsum{ckd}\uampl{ki}{cd}\gtil{kcad}\\
+  \Omega_i^{a(B1)}&=-\orbsum{ckl}\uampl{kl}{ac}\gtil{kilc}\\
   \Omega_i^{a(C1)}&=\orbsum{ck}\uampl{ik}{ac}\Ftil{kc}=\orbsum{ck}\uampl{ik}{ac}\F{kc}\\
   \Omega_i^{a(D1)}&=\Ftil{ai}
 \end{align}
@@ -248,7 +248,7 @@ where
   \Omega_{ij}^{ab(B2)}&=\orbsum{kl}\ampl{kl}{ab}\bigg(\gtil{kilj}+\orbsum{cd}\ampl{ij}{cd}\gtil{kcld}\bigg)\\
   \Omega_{ij}^{ab(C2)}&=-\frac{1}{2}\orbsum{ck}\ampl{kj}{bc}\bigg(\gtil{kiac}-\frac{1}{2}\orbsum{dl}\ampl{li}{ad}\gtil{kdlc}\bigg)-\orbsum{ck}\ampl{ki}{bc}\bigg(\gtil{kjac}-\frac{1}{2}\orbsum{dl}\ampl{lj}{ad}\gtil{kdlc}\bigg)\\
   \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\orbsum{ck}\uampl{jk}{bc}\bigg(\Ltil{aikc}+\frac{1}{2}\orbsum{dl}\uampl{il}{ad}\Ltil{ldkc}\bigg)\\
-  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\Ftil{bc}-\orbsum{dkl}\uampl{ki}{bd}\gtil{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\Ftil{kj}+\orbsum{cdl}\uampl{lj}{cd}\gtil{kdlc}\bigg)
+  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\Ftil{bc}-\orbsum{dkl}\uampl{kl}{bd}\gtil{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\Ftil{kj}+\orbsum{cdl}\uampl{lj}{cd}\gtil{kdlc}\bigg)
 \end{align}
 
 
@@ -278,13 +278,50 @@ Using these information, we can rewrite the doubles residual equation as:
   \Omega_{ij}^{ab(A2')}&=\underline{\gtil{aibj}}\label{eq:omega_A2_prime}\\
   \Omega_{ij}^{ab(A2'')}&=\orbsum{cd}\ampl{ij}{cd}\underline{\gtil{acbd}}\\
   \Omega_{ij}^{ab(B2)}&=\orbsum{kl}\ampl{kl}{ab}\bigg(\underline{\gtil{kilj}}+\orbsum{cd}\ampl{ij}{cd}\g{kcld}\bigg)\\
-  \Omega_{ij}^{ab(C2)}&=-\frac{1}{4}\orbsum{ck}\ampl{kj}{bc}\bigg(2\underline{\gtil{kiac}}-\orbsum{dl}\ampl{li}{ad}\g{kdlc}\bigg)-\orbsum{ck}\ampl{ki}{bc}\bigg(\underline{\gtil{kjac}}-\orbsum{dl}\ampl{lj}{ad}\g{kdlc}\bigg)\label{eq:omega_C2_2}\\
+  \Omega_{ij}^{ab(C2)}&=-\frac{1}{4}\orbsum{ck}\ampl{kj}{bc}\bigg(2\underline{\gtil{kiac}}-\orbsum{dl}\ampl{li}{ad}\g{kdlc}\bigg)-\frac{1}{2}\orbsum{ck}\ampl{ki}{bc}\bigg(2\underline{\gtil{kjac}}-\orbsum{dl}\ampl{lj}{ad}\g{kdlc}\bigg)\label{eq:omega_C2_2}\\
   \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\orbsum{ck}\uampl{jk}{bc}\bigg(\underline{\Ltil{aikc}}+\frac{1}{2}\orbsum{dl}\uampl{il}{ad}\Lmat{ldkc}\bigg)\label{eq:omega_D2_2}\\
-  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{ki}{bd}\g{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)\label{eq:omega_E2_2}
+  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)\label{eq:omega_E2_2}
 \end{align}
 where $\Omega_{ij}^{ab(A2')}+\Omega_{ij}^{ab(A2'')}=\Omega_{ij}^{ab(A2)}$ (eq.~\ref{eq:omega_A2}) and the transformations needed are underlined.
 In the C2 term the two underline terms are the same.
 In total it is used four times, due to the permutation, eq.~\ref{eq:omega_double}.
+Note that $\Omega_{ij}^{ab}$ has the same symmetry as the amplitudes, but its components lost this property, for example, $\Omega_{ij}^{ab(C2)}\neq\Omega_{ji}^{ba(C2)}$. We can reorganize the $\Omega_{ji}^{ba(C2)}$ element as:
+\begin{equation}
+    \Omega_{ji}^{ba(C2)}=-\frac{1}{2}\orbsum{ck}\ampl{ki}{ac}\underline{\gtil{kjbc}}+\frac{1}{4}\orbsum{ck}\ampl{kj}{bc}\orbsum{dl}\ampl{li}{ad}\g{kdlc}-\orbsum{ck}\ampl{kj}{ac}\underline{\gtil{kibc}}+\frac{1}{2}\ampl{ki}{bc}\orbsum{dl}\ampl{lj}{ad}\g{kdlc}.
+\end{equation}
+Summing this equation with the \ref{eq:omega_C2_2} we obtain an element with the same symmetry as the complete $\Omega_{ij}^{ab}$:
+\begin{equation}
+    \Omega_{ij}^{ab(C2)}+\Omega_{ji}^{ba(C2)}=-\orbsum{ck}\bigg(\frac{1}{2}\ampl{ki}{ac}\underline{\gtil{kjbc}}+\ampl{ki}{bc}\underline{\gtil{kjac}}+\frac{1}{2}\ampl{kj}{bc}\underline{\gtil{kiac}}+\ampl{kj}{ac}\underline{\gtil{kibc}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{1}{2}\ampl{kj}{bc}\ampl{li}{ad}\g{kdlc}+\ampl{ki}{bc}\ampl{lj}{ad}\g{kdlc}\bigg).
+\end{equation}
+In the cases where: $a = b$ and $i \neq j$, we have
+\begin{equation}
+    \Omega_{ij}^{aa(C2)}+\Omega_{ji}^{aa(C2)}=-\frac{3}{2}\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kjac}}+\ampl{kj}{ac}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{kj}{ac}\ampl{li}{ad}\g{kdlc}\bigg);
+\end{equation}
+$a \neq b$ and $i = j$,
+\begin{equation}
+    \Omega_{ii}^{ab(C2)}+\Omega_{ii}^{ba(C2)}=-\frac{3}{2}\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kibc}}+\ampl{ki}{bc}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{ki}{bc}\ampl{li}{ad}\g{kdlc}\bigg);
+\end{equation}
+and $a = b$ and $i = j$,
+\begin{equation}
+    \Omega_{ii}^{aa(C2)}+\Omega_{ii}^{aa(C2)}=-3\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{ki}{ac}\ampl{li}{ad}\g{kalc}\bigg)=2\Omega_{ii}^{aa(C2)}.
+\end{equation}
+
+The same occurs with the D2 and E2 terms and in the same rewrite in the same way:
+\begin{align}
+  \Omega_{ij}^{ab(D2)}+\Omega_{ji}^{ba(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{jk}{bc}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{bjkc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{jk}{bc}\uampl{il}{ad}\Lmat{ldkc},\\
+  \Omega_{ij}^{aa(D2)}+\Omega_{ji}^{aa(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{jk}{ac}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{ajkc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{jk}{ac}\uampl{il}{ad}\Lmat{ldkc},\\
+    \Omega_{ii}^{ab(D2)}+\Omega_{ii}^{ba(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{ik}{bc}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{bikc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{ik}{bc}\uampl{il}{ad}\Lmat{ldkc},\\
+     \Omega_{ii}^{aa(D2)}+\Omega_{ii}^{aa(D2)}&=\orbsum{ck}\uampl{ik}{ac}\underline{\Ltil{aikc}}+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{ik}{ac}\uampl{il}{ad}\Lmat{ldkc};
+\end{align}
+\begin{align}
+  \Omega_{ij}^{ab(E2)}+\Omega_{ji}^{ba(E2)} &=\orbsum{c}\ampl{ij}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)+\orbsum{c}\ampl{ji}{bc}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+  &-\orbsum{k}\ampl{ik}{ab}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)-\orbsum{k}\ampl{jk}{ba}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+    \Omega_{ij}^{aa(E2)}+\Omega_{ji}^{aa(E2)} &=\orbsum{c}\bigg(\ampl{ij}{ac}+\ampl{ij}{ca}\bigg)\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+    &-\orbsum{k}\ampl{ik}{aa}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)-\orbsum{k}\ampl{jk}{aa}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+   \Omega_{ii}^{ab(E2)}+\Omega_{ii}^{ba(E2)} &=\orbsum{c}\ampl{ii}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)+\orbsum{c}\ampl{ii}{bc}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+      &-\orbsum{k}\bigg(\ampl{ik}{ab}+\ampl{ik}{ba}\bigg)\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+   \Omega_{ii}^{aa(E2)}+\Omega_{ii}^{aa(E2)} &=\orbsum{c}2\ampl{ii}{ac}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)-\orbsum{k}2\ampl{ik}{aa}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg).
+  \end{align}
 
 \subsection{Amplitudes update}
 \hypertarget{sec:ccsd_update}{}
@@ -295,11 +332,11 @@ In total it is used four times, due to the permutation, eq.~\ref{eq:omega_double
 \end{equation}
 
 \begin{equation}
-  \Delta t_i^a = \frac{\Omega_i^a(\mathbf{t})}{\epsilon_a - \epsilon_i}
+  \Delta t_i^a = - \frac{\Omega_i^a(\mathbf{t})}{\epsilon_a - \epsilon_i}
 \end{equation}
 
 \begin{equation}
-  \Delta t_{ij}^{ab} = \frac{\Omega_{ij}^{ab}(\mathbf{t})}
+  \Delta t_{ij}^{ab} = -\frac{\Omega_{ij}^{ab}(\mathbf{t})}
   {\epsilon_a + \epsilon_b - \epsilon_i - \epsilon_j}
 \end{equation}
 
@@ -311,25 +348,25 @@ In total it is used four times, due to the permutation, eq.~\ref{eq:omega_double
   \begin{tabular}{c|c|c|c|c}
     Matrix & Similar to    & Object & Min Size & Max Size\\
     \hline
-    \ampl{ij}{ab}    & \uampl{ij}{ab}, $\Omega_{ij}^{ab}$ & np 1D array &$\frac{(n_o+1)*n_o}{2}*n_v^2$&$(n_o*n_v)^2$\\
-    \ampl{i}{a}      & $\Omega_{i}^{a}$ & np 1D array &$n_o*n_v$&$n_o*n_v$\\
+    \ampl{ij}{ab}    & \uampl{ij}{ab}, $\Omega_{ij}^{ab}$ & 1D nparray &$\frac{(n_o+1)*n_o}{2}*n_v^2$&$(n_o*n_v)^2$\\
+    \ampl{i}{a}      & $\Omega_{i}^{a}$ & 1D nparray &$n_o*n_v$&$n_o*n_v$\\
 
-    \h{pq}      &\F{pq}      & ?? & $\frac{(n+1)*n}{2}$ &$n^2$ \\
-    \htil{pq}   &\Ftil{pq}   & ?? & $n^2$ &$n^2$ \\
-    \htil{ij}   &\Ftil{ij}   & ?? & $n_o^2$ &$n_o^2$ \\
-    \htil{ai}   &\Ftil{ai},\htil{ia},\Ftil{ia}   & ?? & $n_o*n_v$ &$n_o*n_v$ \\
-    \htil{ab}   &\Ftil{ab}   & ?? & $n_v^2$ &$n_v^2$ \\
-    \g{pqrs}    &\Lmat{pqrs} & ?? & $\frac{n^4}{8}+\frac{n^3}{4}+\frac{3n^2}{8}+\frac{n}{4}$ &$n^4$ \\
+    \h{pq}      &\F{pq}      & 2D nparray & $\frac{(n+1)*n}{2}$ &$n^2$ \\
+    \htil{pq}   &\Ftil{pq}   & 2D nparray & $n^2$ &$n^2$ \\
+    \htil{ij}   &\Ftil{ij}   & 2D nparray & $n_o^2$ &$n_o^2$ \\
+    \htil{ai}   &\Ftil{ai},\htil{ia},\Ftil{ia}   & 2D nparray & $n_o*n_v$ &$n_o*n_v$ \\
+    \htil{ab}   &\Ftil{ab}   & 2D nparray & $n_v^2$ &$n_v^2$ \\
+    \g{pqrs}    &\Lmat{pqrs} & 1D nparray & $\frac{n^4}{8}+\frac{n^3}{4}+\frac{3n^2}{8}+\frac{n}{4}$ &$n^4$ \\
     \gtil{pqrs}    &\Ltil{pqrs} & ?? & $\frac{n^4+n^2}{2}$ &$n^4$ \\
-    \gtil{ijkl}    &\Ltil{ijkl} & ?? & $\frac{n_o^4}{8}+\frac{n_o^3}{4}+\frac{3n_o^2}{8}+\frac{n_o}{4}$ &$n_o^4$ \\
-    \multirow{2}{*}{\gtil{ijka}}    &\Ltil{ijka},\gtil{ijak},\gtil{iajk},\gtil{aijk}, & \multirow{2}{*}{??} & \multirow{2}{*}{$n_o^3*n_v$} &\multirow{2}{*}{$n_o^3*n_v$} \\
+    \gtil{ijkl}    &\Ltil{ijkl} & 1D nparray & $\frac{n_o^4+n_o^2}{2}$ &$n_o^4$ \\
+    \multirow{2}{*}{\gtil{ijka}}    &\Ltil{ijka},\gtil{ijak},\gtil{iajk},\gtil{aijk}, & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o^3*n_v$} &\multirow{2}{*}{$n_o^3*n_v$} \\
     &\Ltil{ijak},\Ltil{iajk},\Ltil{aijk} &  &  & \\
-    \multirow{2}{*}{\gtil{ijab}}    &\Ltil{ijab},\gtil{abij},\Ltil{abij} & \multirow{2}{*}{??} & \multirow{2}{*}{$n_o^2*n_v^2$} &\multirow{2}{*}{$n_o^2*n_v^2$} \\
+    \multirow{2}{*}{\gtil{ijab}}    &\Ltil{ijab},\gtil{abij},\Ltil{abij} & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o^2*n_v^2$} &\multirow{2}{*}{$n_o^2*n_v^2$} \\
     &\Ltil{iabj},\gtil{aijb},\gtil{iabj},\Ltil{iabj}&  & & \\
-    \gtil{iajb}    &\Ltil{iajb},\gtil{aibj},\Ltil{aibj} & ?? & $\frac{n_o^2*n_v^2+n_o*n_v}{2}$ &$n_o^2*n_v^2$ \\
-    \multirow{2}{*}{\gtil{iabc}}    &\Ltil{iabc},\gtil{aibc},\gtil{abic},\gtil{abci}, & \multirow{2}{*}{??} & \multirow{2}{*}{$n_o*n_v^3$} &\multirow{2}{*}{$n_o*n_v^3$} \\
+    \gtil{iajb}    &\Ltil{iajb},\gtil{aibj},\Ltil{aibj} & ?? & $\frac{n_o^2*n_v^2+n_o*n_v^2}{2}$ &$n_o^2*n_v^2$ \\
+    \multirow{2}{*}{\gtil{iabc}}    &\Ltil{iabc},\gtil{aibc},\gtil{abic},\gtil{abci}, & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o*n_v^3$} &\multirow{2}{*}{$n_o*n_v^3$} \\
                        &  \Ltil{aibc},\Ltil{abic},\Ltil{abci}           &  & & \\
-    \gtil{abcd}    &\Ltil{abcd} & ?? & $\frac{n_v^4}{8}+\frac{n_v^3}{4}+\frac{3n_v^2}{8}+\frac{n_v}{4}$ &$n_v^4$ \\
+    \gtil{abcd}    &\Ltil{abcd} & 1D nparray & $\frac{n_v^4+n_v^2}{2}$ &$n_v^4$ \\
   \end{tabular}
 \end{table}
 \begin{enumerate}

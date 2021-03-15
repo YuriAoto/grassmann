@@ -16,7 +16,7 @@
   % ------
 
   % ======
-  \node (init)  at (\X{25}, \Y{-15})
+  \node (init)  at (\X{25}, \Y{-13})
   [algstep, text width=\W{50}]
   {
     \textbf{Initialisation}\vspT
@@ -25,19 +25,11 @@
   % ------
 
   % ======
-  \node (inter_matrix_1)  at (\X{25}, \Y{-3})
-  [algtest, text width=\W{15}, aspect=2]
-  {
-    \textbf{inter\_matrix}\vspT
-  };
-  % ------
-
-  % ======
-  \node (L)  at (\X{-6}, \Y{-3})
+  \node (F)  at (\X{25}, \Y{0})
   [algstep, text width=\W{25}, hyperlink node=sec:ccsd_inter_matrix]
   {
-    \textbf{$L$ and $F^I$ matrices}\vspT
-    \texttt{ccsd.equation.L\_matrix}\vsp
+    \textbf{$F^I$ matrix}\vspT
+    \texttt{ccsd.make\_F}\vsp
   };
   % ------
 
@@ -78,73 +70,59 @@
   % ------
 
   % ======
-  \node (cc_version)  at (\X{0}, \Y{18})
+  \node (u)  at (\X{17.5}, \Y{18})
+  [algstep, text width=\W{15},aspect=2.5]
+  {
+    \textbf{u matrix}\vspT
+    \texttt{ccsd.make\_u}\vsp
+  };
+  % ------
+  
+  % ======
+  \node (cc_version)  at (\X{17.5}, \Y{35})
   [algtest, text width=\W{15},aspect=2.5]
   {
     \textbf{CC version?}\vspT
   };
-  % ------
+  % -----
 
-  % ======
-  \node (transf_hg)  at (\X{35}, \Y{18})
-  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_t1_trans]
-  {
-    \textbf{$T_1$-transformed Hamiltonian}\vspT
-    \texttt{ccsd.get\_t1\_transf}\vsp
-  };
-  % ------
-
-  % ======
-  \node (inter_matrix_2)  at (\X{35}, \Y{33})
-  [algtest, text width=\W{15}, aspect=2]
-  {
-    \textbf{inter\_matrix}\vspT
-  };
-  % ------
-
-  % ======
-  \node (u_L_matrix)  at (\X{35}, \Y{47})
-  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_inter_matrix]
-  {
-    \textbf{$u$, ${\tilde L}$ and ${\tilde F}^I$ matrices}\vspT
-    \texttt{ccsd...}\vsp
-  };
-  % ------
-  
-  % ======
-  \node (inter_matrix_3)  at (\X{0}, \Y{33})
-  [algtest, text width=\W{15}, aspect=2, hyperlink node=sec:ccsd_energy]
-  {
-    \textbf{inter\_matrix}\vspT
-  };
-  % ------
-
-  % ======
-  \node (u_matrix)  at (\X{0}, \Y{47})
-  [algstep, text width=\W{20}, hyperlink node=sec:ccsd_energy]
-  {
-    \textbf{$u$ matrix}\vspT
-    \texttt{ccsd...}\vsp
-  };
-  % ------
-  
-  % ======
-  \node (res_sing) at (\X{35}, \Y{70})
-  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_sing]
-  {
-    \textbf{Singles, $\Omega_i^a$}\vspT
-    \texttt{ccsd.\_res\_singles}\vsp
-  };
-  % ------
-
-  % ======
-  \node (res_doub) at (\X{0}, \Y{70})
+    % ======
+  \node (res_doub) at (\X{35}, \Y{55})
   [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
   {
     \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
     \texttt{ccsd.\_res\_doubles}\vsp
   };
   % ------
+
+  
+  % ======
+  \node (res_t1_sing) at (\X{0}, \Y{55})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_sing]
+  {
+    \textbf{Singles, $\Omega_i^a$}\vspT
+    \texttt{ccsd.\_res\_t1\_singles}\vsp
+  };
+  % ------
+
+  % ======
+  \node (res_t1_doub) at (\X{0}, \Y{75})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
+    \texttt{ccsd.\_res\_t1\_doubles}\vsp
+  };
+  % ------
+  
+  % ======
+  \node (updater) at (\X{35}, \Y{75})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Updater,$\Delta t_{i}^{a}$, $\Delta t_{ij}^{ab}$}\vspT
+    \texttt{ccsd.updater}\vsp
+  };
+  % ------  
+  
   
   % ------------------------------------------------
 
@@ -160,27 +138,18 @@
 
 
   \draw [->] (start.270) -- (init.90);
-  \draw [->] (init.270) -- (inter_matrix_1.90);
-  \draw [<-, condTrue]  (L.0) .. controls +(right:2) and +(left:1) ..(inter_matrix_1.180);
-  \draw [<-, condFalse] (ener.350) .. controls +(right:2) and +(down:1) .. (inter_matrix_1.270) ;
-  \draw [->] (L.187) -- (ener.10);
+  \draw [->] (init.270) -- (F.90);
+  \draw [->] (F.180) -- (ener.0);
   \draw [->] (ener.270) -- (conv.90);
-  \draw [->, condNo] (conv.0) -- (cc_version.180);
+  \draw [->, condNo] (conv.0) -- (u.180);
   \draw [->, condYes] (conv.270) -- (end.90);
-  \draw [->] (cc_version.0) -- (transf_hg.180)
-  node [midway, above, sloped] (cc) {CCSD};
-  \draw [->] (cc_version.270) -- (inter_matrix_3.90)
-  node [midway, above, sloped] (cc) {CCD};
-  \draw [->] (transf_hg.270) -- (inter_matrix_2.90);
-  \draw [->, condTrue]  (inter_matrix_2.270) -- (u_L_matrix.90);
-  \draw [-, condFalse] (\X{15}, \Y{50}) .. controls +(up:1) and +(left:1) .. (inter_matrix_2.180);
-  \draw [-] (u_L_matrix.180)  .. controls +(left:1) and +(up:0) .. (\X{15}, \Y{50});
-  \draw [->] (\X{15}, \Y{50})  .. controls +(down:1) and +(up:1) .. (res_doub.25);
-  \draw [->] (\X{15}, \Y{50})  .. controls +(down:1) and +(up:1) .. (res_sing.155);
-  \draw [->, condTrue]  (inter_matrix_3.270) -- (u_matrix.90);
-  \draw [<-, condFalse] (res_doub.165)  .. controls +(up:1) and +(left:1) .. (inter_matrix_3.180);
-  \draw [->] (u_matrix.270)  .. controls +(down:1) and +(up:1) .. (res_doub.90);
-  \draw [->] (res.270) -- (update.90);
+  \draw [->] (u.270) -- (cc_version.90);
+  \draw [->] (cc_version.180) .. controls +(left:1) and +(up:1) ..  (res_t1_sing.90) node[midway,above,rotate=70] {CCSD};
+  \draw [->] (cc_version.0) .. controls +(right:1) and +(up:1) ..  (res_doub.90) node[midway,above,rotate=-70] {CCD};
+  \draw [->] (res_t1_sing.270) -- (res_t1_doub.90);
+  \draw [->] (res_doub.270) -- (updater.90);
+  \draw [->] (res_t1_doub.0) -- (updater.180);
+  \draw [->] (updater.270) .. controls +(down:1) and +(up:1) .. (update.90);
 
   \algloop{update.270}{110}{-10}{ener.90}
  % \algloop{update.270}{110}{-10}{ener.130}

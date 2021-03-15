@@ -68,7 +68,7 @@ class IntermNormWaveFunction(WaveFunction):
         If restricted:
         first all amplitudes of {i, a} in irrep = 0,
         then all amplitudes of {i, a} in irrep = 1, etc.
-        In each of these blocks, orbital indices run faster:
+        In each of these blocks, virtual orbital index runs faster:
         
         t_0^0, t_0^1, t_0^2, ..., t_0^{m-1}, t_1^0, ..., t_1^{m-1}, ...
         

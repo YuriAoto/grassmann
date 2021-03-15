@@ -18,6 +18,7 @@ from scipy.linalg import inv, expm, eigh
 
 from util.variables import int_dtype
 from molecular_geometry.symmetry import number_of_irreducible_repr
+from integrals.integrals import Integrals
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,12 @@ class MolecularOrbitals():
     energies (1D ndarray)
         Store the orbital energies
     
+    _integrals (Integrals)
+        Contains the information about the orbitals space, size and atomic integrals.
+ 
+    molecular_integrals (Integrals)
+        Contains the one- and two-electron integrals in the molecular orbital basis set.
+
     Data model:
     -----------
     [spirrep]
@@ -258,10 +265,12 @@ class MolecularOrbitals():
     def __init__(self, source=None):
         if source is None:
             self.name = ''
-            self._basis_len = 0
+#            self._basis_len = 0
+            self._integrals = Integrals(None, None, method=None, orth_method=None)
             self.n_irrep = None
             self.restricted = True
             self._coefficients = None
+            self._mo_integrals = None
             self.in_the_basis = ''
             self.sym_adapted_basis = False
             self.energies = None
@@ -277,7 +286,8 @@ class MolecularOrbitals():
         return iter(self._coefficients)
 
     def __len__(self):
-        return self._basis_len
+#        return self._basis_len
+        return self._integrals.n_func
 
     def __str__(self):
         x = ['Orbitals {} (in the basis {}):'.format(
@@ -296,18 +306,22 @@ class MolecularOrbitals():
             x.append('')
         return '\n'.join(x)
 
+#    @property
+#    def in_the_basis(self):
+#        return self._integrals.basis_set 
+
     @classmethod
     def from_eig_h(cls, intgrls, basis_name=''):
         h_orth = intgrls.X.T @ intgrls.h @ intgrls.X
         logger.debug('h_orth:\n%r', h_orth)
         e, C = eigh(h_orth)
         return cls.from_array(intgrls.X @ C, 1,
-                              in_the_basis=basis_name)
+                              integrals=intgrls)
     
     @classmethod
     def from_array(cls, C, n_irrep,
                    name='Coefficients from array',
-                   in_the_basis='',
+                   integrals=None,
                    restricted=True):
         """Load orbitals from a ndarray-like object
         
@@ -325,7 +339,13 @@ class MolecularOrbitals():
         new_orbitals = cls()
         new_orbitals.name = name
         new_orbitals.n_irrep = n_irrep
-        new_orbitals.in_the_basis = in_the_basis
+        if isinstance(integrals, Integrals):
+            new_orbitals._integrals = integrals
+        elif integrals == None:
+            pass
+        else:
+            raise ValueError(
+                'The basis set informations of the molecular orbital must be given as an Integrals object.')
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
@@ -335,13 +355,13 @@ class MolecularOrbitals():
                 new_orbitals._coefficients.append(np.array(Ci, dtype=float))
         else:
             new_orbitals._coefficients.append(np.array(C, dtype=float))
-        if new_orbitals.sym_adapted_basis:
-            new_orbitals._basis_len = 0
-            for irrep in range(n_irrep):
-                new_orbitals._basis_len += \
-                    new_orbitals._coefficients[irrep].shape[0]
-        else:
-            new_orbitals._basis_len = new_orbitals._coefficients[0].shape[0]
+#        if new_orbitals.sym_adapted_basis:
+#            new_orbitals._basis_len = 0
+#            for irrep in range(n_irrep):
+#                new_orbitals._basis_len += \
+#                    new_orbitals._coefficients[irrep].shape[0]
+#        else:
+#            new_orbitals._basis_len = new_orbitals._coefficients[0].shape[0]
         return new_orbitals
     
     @classmethod
@@ -373,7 +393,7 @@ class MolecularOrbitals():
         new_orbitals.sym_adapted_basis = sym_adapted_basis
         new_orbitals.in_the_basis = basis
         new_orbitals.n_irrep = n_irrep
-        new_orbitals._basis_len = basis_len
+        new_orbitals._integrals.n_func = basis_len
         for i in range(n_irrep):
             new_orbitals.append(np.identity(orb_dim[i])[:, :n_elec[i]])
         return new_orbitals
@@ -413,12 +433,12 @@ class MolecularOrbitals():
               'stm': 'http://www.xml-cml.org/schema',
               'xhtml': 'http://www.w3.org/1999/xhtm'}
         molecule = molpro[0]
-        new_orbitals.in_the_basis = molecule.attrib['basis']
+        new_orbitals._integrals.basis_set = molecule.attrib['basis']
         point_group = molecule.find(
             'cml:molecule', ns).find(
                 'cml:symmetry', ns).attrib['pointGroup']
         new_orbitals.n_irrep = number_of_irreducible_repr[point_group]
-        new_orbitals._basis_len = int(molecule.find(
+        new_orbitals._integrals.n_func = int(molecule.find(
             'molpro:basisSet', ns).attrib['length'])
         if molecule.attrib['method'] == 'UHF':
             new_orbitals.restricted = False
@@ -536,7 +556,7 @@ class MolecularOrbitals():
             raise ValueError('Orbitals do not have the same basis length!')
         U = MolecularOrbitals()
         U.name = self.name
-        U._basis_len = len(self)
+        U._integrals = self._integrals
         U.in_the_basis = other.name
         U.sym_adapted_basis = True
         if other.n_irrep == self.n_irrep:
@@ -605,10 +625,11 @@ class MolecularOrbitals():
         logger.debug('MO (self) in the basis of MO (other):\n%s', U)
         return U
 
-#########TEST#######
-    def molecular_integral(self):
+    @property
+    def molecular_integrals(self):
         """Create a new Integrals object containing the one- and two-electron
            molecular integrals.
         """
-        pass
-####################
+        if self._mo_integrals == None:
+            self._mo_integrals = Integrals.from_atomic_to_molecular(self._integrals, self._coefficients)
+        return self._mo_integrals

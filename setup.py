@@ -21,7 +21,9 @@ extensions = [
     Extension("src.orbitals.occ_orbitals",
               ["src/orbitals/occ_orbitals.pyx"]),
     Extension("src.util.array_indices",
-              ["src/util/array_indices.pyx"])
+              ["src/util/array_indices.pyx"]),
+    Extension("src.integrals.integrals_cy",
+              ["src/integrals/integrals_cy.pyx"])
 ]
 
 requires=['numpy',
