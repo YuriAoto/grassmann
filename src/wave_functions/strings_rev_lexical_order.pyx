@@ -9,6 +9,16 @@ import numpy as np
 
 from util.variables import int_dtype
 
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
+cpdef void ini_str(int[:] occ):
+    cdef int i
+    occ[0] = -1
+    for i in range(1, len(occ)):
+        occ[i] = i
+
+
 cpdef void next_str(int [:] occ):
     """Change occ to the next occupation in reverse lexical order"""
     cdef int i_to_be_raised = 0
@@ -69,7 +79,7 @@ def generate_graph(int nel, int norb):
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
-def get_index(int[:] occupation, int[:, :] Y):
+cpdef get_index(int[:] occupation, int[:, :] Y):
     """Get the position of a alpha/beta string
     
     This is the inverse of _occupation_from_string_index: The following

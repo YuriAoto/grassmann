@@ -13,7 +13,7 @@ log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
 logging.basicConfig(filename='testing.log',
                     format=log_format,
                     filemode='w',
-                    level=logging.INFO)
+                    level=1)
 logger = logging.getLogger(__name__)
 
 

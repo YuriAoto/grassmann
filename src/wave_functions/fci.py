@@ -467,7 +467,20 @@ class FCIWaveFunction(WaveFunction):
                 self._coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                    or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
+                if rank == 1:
+                    is_alpha = len(alpha_hp[0]) == 1
+                    i, irrep = self.get_local_index(alpha_hp[0][0]
+                                                    if is_alpha else
+                                                    beta_hp[0][0], is_alpha)
+                    sign = (1
+                            if (self.corr_orb[irrep
+                                              + (0
+                                                 if is_alpha else
+                                                 self.n_irrep)] - i) % 2 else
+                            -1)
+                else:
+                    raise NotImplementedError("Shit! Not done Yet")
+                self._coefficients[ia, ib] = sign * wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,

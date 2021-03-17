@@ -438,7 +438,7 @@ class IntermNormWaveFunction(WaveFunction):
             for irrep in range(self.n_irrep):
                 x.append(f'irrep = {irrep}')
                 ia_bl = self.ini_blocks_S[irrep]
-                for ia in range(self.corr_orb * self.virt_orb[irrep]):
+                for ia in range(self.corr_orb[irrep] * self.virt_orb[irrep]):
                     x.append(f'{self.amplitudes[ia_bl + ia]}')
             if not self.restricted:
                 x.append(f'beta -> beta')

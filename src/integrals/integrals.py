@@ -193,7 +193,7 @@ class Two_Elec_Int():
         new_2e_int.n_func = n_func
         new_2e_int._format = 'F2e'
         new_2e_int._integrals = np.load(wmme_fint2e_file)
-        new_2e_int._integrals = new_int._integrals.reshape(
+        new_2e_int._integrals = new_2e_int._integrals.reshape(
             (new_2e_int._integrals.shape[0], n_func, n_func))
         return new_2e_int
 

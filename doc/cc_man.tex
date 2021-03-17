@@ -249,12 +249,11 @@ we will use them, stored in a vector $\mathbf{t}$ whose elements are $t_\rho$.
 Applying the stationary condition we have:
 \begin{equation}\label{eq:cc_minD_jac}
   \begin{split}
-    0 =& \frac{1}{2} \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
-    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
-    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
+    0 =& \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
   \end{split}
 \end{equation}
-The factor $\frac{1}{2}$ is just for convenience again.
 The wave function $\Psi_0$ must be in the intermediate normalisation.
 $\Phi_\rho = \tau_\rho\Phi_0$ and the last equality holds because $\tau_\rho$ commutes with
 the cluster operator.
@@ -262,10 +261,10 @@ The Hessian, needed for a Newton optimisation:
 \begin{equation}\label{eq:cc_minD_hess}
   \begin{split}
     H_{\sigma\rho}(\mathbf{t}) =
-    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}}
-    - \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}\\
-    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})}
-    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,.
+    & 2\left( \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}
+      + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}} \right)\\
+    & 2\left( \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}
+    + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})} \right)\,.
   \end{split}
 \end{equation}
 
@@ -290,7 +289,7 @@ is to use only the diagonal elements of the Hessian:
 \begin{equation}\label{eq:cc_minD_hess_diag}
   \begin{split}
     H_{\rho\rho}(\mathbf{t}) =
-    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
+    2\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
   \end{split}
 \end{equation}
 where we used the fact that $\tau_\rho\tau_\rho = 0$
@@ -301,9 +300,9 @@ but the simplicity suggests that it is worth trying.
 With this, the amplitudes update is:
 \begin{equation}\label{eq:cc_minD_update}
   (t_\rho)_\text{new}
-  = t_\rho + \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
+  = t_\rho - \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
   = t_\rho
-  + \frac{\mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
+  - \frac{\mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
   {\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}}\,.
 \end{equation}
 

@@ -43,6 +43,7 @@ def main(args, f_out):
                                              level=level,
                                              f_out=f_out,
                                              ini_wf=cc_wf,
+                                             diag_hess=True,
                                              restore_wf=False)
         logger.info(resCC.wave_function)
         f_out.write(

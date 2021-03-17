@@ -1,24 +1,24 @@
-""" Core functions to optimise distance to the CC manifold
-
+""" Function to optimise distance to the CC manifold
 
 """
 import cython
 import numpy as np
 
-from wave_functions.strings_rev_lexical_order import get_index
-from wave_functions.strings_rev_lexical_order cimport next_str
-from wave_functions.singles_doubles cimport (
-    EXC_TYPE_ALL,
-    EXC_TYPE_A, EXC_TYPE_B,
-    EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
 from orbitals.occ_orbitals cimport OccOrbital
 #from orbitals.occ_orbitals import OccOrbital
-from util.variables import int_dtype
 from util.array_indices cimport n_from_rect
+from util.variables import int_dtype
 from molecular_geometry.symmetry import irrep_product
+from coupled_cluster.manifold_util cimport SingleExc, DoubleExc
+from coupled_cluster.manifold_term1 cimport (
+    term1_a, term1_b, term1_aa, term1_bb, term1_ab)
+from coupled_cluster.manifold_term2 cimport (
+    term2_diag_a, term2_diag_b, term2_diag_aa, term2_diag_bb, term2_diag_ab)
+from coupled_cluster.manifold_hess cimport (
+    calc_H_a, calc_H_b, calc_H_aa, calc_H_bb, calc_H_ab)
+from wave_functions.fci import FCIWaveFunction
 
-
-def min_dist_app_hess(double[:, :] wf,
+def min_dist_jac_hess(double[:, :] wf,
                       double[:, :] wf_cc,
                       int n_ampl,
                       int[:] orbs_before,
@@ -26,8 +26,9 @@ def min_dist_app_hess(double[:, :] wf,
                       int[:] virt_orb,
                       int[:, :] alpha_string_graph,
                       int[:, :] beta_string_graph,
+                      bint diag_hess,
                       level='SD'):
-    """Calculate the Jacobian and approximate the Hessian
+    """Calculate the Jacobian and Hessian
     
     Parameters:
     -----------
@@ -74,24 +75,43 @@ def min_dist_app_hess(double[:, :] wf,
         The graph to obtain the beta strings (associated to the second
         index of wf and wf_cc) in the reverse lexical order
     
+    diag_hess
+        If True, use approximate diagonal Hessian
+    
     level (str, optional, default='SD')
         Coupled cluster level
     
     Return:
     -------
-    The z vector (that updates the amplitudes),
-    and the norm of the Jacobian
+    If diag_hess:
+        The z vector (that updates the amplitudes),
+        and the norm of the Jacobian
+    else:
+        The Jacobian and the Hessian matrices
     
     """
-    cdef double normJac = 0.0
-    cdef double[:] z = np.zeros(n_ampl)
-    cdef int pos = 0, n_alpha, n_beta
+    cdef double[:] J
+    cdef double[:, :] H
+    cdef int pos = 0, pos2, n_alpha, n_beta, nvirt_1
     cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
     cdef DoubleExc double_exc
     cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
+    cdef int pos_ini_exc_type
     cdef OccOrbital i, j
-
+    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1],
+                                       dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1],
+                                           dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1],
+                                       dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1],
+                                           dtype=int_dtype)
+    J = np.zeros(n_ampl)
+    if diag_hess:
+        H = np.zeros((1, 1))
+    else:
+        H = np.zeros((n_ampl, n_ampl))
     n_alpha = alpha_string_graph.shape[1]
     n_beta = beta_string_graph.shape[1]
     n_irrep = orbs_before.size - 1
@@ -103,42 +123,78 @@ def min_dist_app_hess(double[:, :] wf,
             for ii in range(corr_orb[spirrep]):
                 single_exc.a = orbs_before[irrep] + corr_orb[spirrep]
                 for a in range(virt_orb[spirrep]):
-                    J = _term1_a(single_exc,
+                    J[pos] = term1_a(single_exc,
+                                     wf,
+                                     wf_cc,
+                                     alpha_string_graph,
+                                     occ_buff_a, exc_occ_buff_a)
+                    diag = term2_diag_a(single_exc,
+                                        wf_cc,
+                                        occ_buff_a)
+                    if diag_hess:
+                        H[0, 0] += J[pos]**2
+                        J[pos] /= diag
+                    else:
+                        H[pos, pos] = diag
+                        calc_H_a(H[pos, pos:],
+                                 single_exc,
                                  wf,
                                  wf_cc,
-                                 alpha_string_graph)
-                    normJac += J**2
-                    z[pos] = J/_term2_diag_a(single_exc,
-                                             wf_cc,
-                                             n_alpha)
+                                 pos,
+                                 n_irrep,
+                                 orbs_before,
+                                 corr_orb,
+                                 virt_orb,
+                                 alpha_string_graph,
+                                 beta_string_graph
+                        )
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
         # --- beta -> beta
+        pos_ini_exc_type = pos
         for irrep in range(n_irrep):
             spirrep = irrep + n_irrep
             single_exc.i = orbs_before[irrep]
             for ii in range(corr_orb[spirrep]):
                 single_exc.a = orbs_before[irrep] + corr_orb[spirrep]
                 for a in range(virt_orb[spirrep]):
-                    J = _term1_b(single_exc,
+                    J[pos] = term1_b(single_exc,
+                                     wf,
+                                     wf_cc,
+                                     beta_string_graph,
+                                     occ_buff_b, exc_occ_buff_b)
+                    diag = term2_diag_b(single_exc,
+                                        wf_cc,
+                                        occ_buff_b)
+                    if diag_hess:
+                        H[0, 0] += J[pos]**2
+                        J[pos] /= diag
+                    else:
+                        H[pos, pos] = diag 
+                        calc_H_b(H[pos, pos:],
+                                 single_exc,
                                  wf,
                                  wf_cc,
-                                 beta_string_graph)
-                    normJac += J**2
-                    z[pos] = J/_term2_diag_b(single_exc,
-                                             wf_cc,
-                                             n_beta)
+                                 pos - pos_ini_exc_type,
+                                 n_irrep,
+                                 orbs_before,
+                                 corr_orb,
+                                 virt_orb,
+                                 alpha_string_graph,
+                                 beta_string_graph
+                        )
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
     # --- alpha, alpha -> alpha, alpha
+    pos_ini_exc_type = pos
     i = OccOrbital(corr_orb, orbs_before, True)
     j = OccOrbital(corr_orb, orbs_before, True)
     j.next_()
+    double_exc.i = i.orb
+    double_exc.j = j.orb
     while j.alive:
-        double_exc.i = i.orb
-        double_exc.j = j.orb
         for a_irrep in range(n_irrep):
             pos_ini[a_irrep] = pos
             b_irrep = irrep_product[
@@ -157,23 +213,43 @@ def min_dist_app_hess(double[:, :] wf,
                                         + corr_orb[b_spirrep])
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
-                            J = _term1_aa(double_exc,
+                            J[pos] = term1_aa(double_exc,
+                                              wf,
+                                              wf_cc,
+                                              alpha_string_graph,
+                                              occ_buff_a, exc_occ_buff_a)
+                            diag = term2_diag_aa(double_exc,
+                                                 wf_cc,
+                                                 occ_buff_a)
+                            if diag_hess:
+                                H[0, 0] += J[pos]**2
+                                J[pos] /= diag
+                            else:
+                                H[pos, pos] = diag
+                                calc_H_aa(H[pos, pos:],
+                                          double_exc,
                                           wf,
                                           wf_cc,
-                                          alpha_string_graph)
-                            normJac += J**2
-                            z[pos] = J/_term2_diag_aa(double_exc,
-                                                      wf_cc,
-                                                      n_alpha)
+                                          pos - pos_ini_exc_type,
+                                          n_irrep,
+                                          orbs_before,
+                                          corr_orb,
+                                          virt_orb,
+                                          alpha_string_graph,
+                                          beta_string_graph)
                         elif a > b:
-                            z[pos] = -z[pos - (a-b)*nvirt_1]
+                            J[pos] = -J[pos - (a-b)*nvirt_1]
+                            if not diag_hess:
+                                for pos2 in range(pos+1, n_ampl):
+                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1,
+                                                      pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
             else:  # and a_irrep > b_irrep
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
-                        z[pos] = -z[pos_ini[b_irrep]
+                        J[pos] = -J[pos_ini[b_irrep]
                                     + n_from_rect(
                                         b, a, virt_orb[a_spirrep])]
                         pos += 1
@@ -185,12 +261,13 @@ def min_dist_app_hess(double[:, :] wf,
             i.next_()
         double_exc.i = i.orb
     # --- beta, beta -> beta, beta
+    pos_ini_exc_type = pos
     i = OccOrbital(corr_orb, orbs_before, False)
     j = OccOrbital(corr_orb, orbs_before, False)
     j.next_()
+    double_exc.i = i.orb
+    double_exc.j = j.orb
     while j.alive:
-        double_exc.i = i.orb
-        double_exc.j = j.orb
         for a_irrep in range(n_irrep):
             pos_ini[a_irrep] = pos
             b_irrep = irrep_product[
@@ -210,23 +287,43 @@ def min_dist_app_hess(double[:, :] wf,
                                         + corr_orb[b_spirrep])
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
-                            J = _term1_bb(double_exc,
+                            J[pos] = term1_bb(double_exc,
+                                              wf,
+                                              wf_cc,
+                                              beta_string_graph,
+                                              occ_buff_b, exc_occ_buff_b)
+                            diag = term2_diag_bb(double_exc,
+                                                 wf_cc,
+                                                 occ_buff_b)
+                            if diag_hess:
+                                H[0, 0] += J[pos]**2
+                                J[pos] /= diag
+                            else:
+                                H[pos, pos] = diag
+                                calc_H_bb(H[pos, pos:],
+                                          double_exc,
                                           wf,
                                           wf_cc,
+                                          pos - pos_ini_exc_type,
+                                          n_irrep,
+                                          orbs_before,
+                                          corr_orb,
+                                          virt_orb,
+                                          alpha_string_graph,
                                           beta_string_graph)
-                            normJac += J**2
-                            z[pos] = J/_term2_diag_bb(double_exc,
-                                                      wf_cc,
-                                                      n_beta)
                         elif a > b:
-                            z[pos] = -z[pos - (a-b)*nvirt_1]
+                            J[pos] = -J[pos - (a-b)*nvirt_1]
+                            if not diag_hess:
+                                for pos2 in range(pos+1, n_ampl):
+                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1,
+                                                      pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
             else:  # and a_irrep > b_irrep
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
-                        z[pos] = -z[pos_ini[b_irrep]
+                        J[pos] = -J[pos_ini[b_irrep]
                                     + n_from_rect(
                                         b, a, virt_orb[a_spirrep])]
                         pos += 1
@@ -238,6 +335,7 @@ def min_dist_app_hess(double[:, :] wf,
             i.next_()
         double_exc.i = i.orb
     # --- alpha, beta -> alpha, beta
+    pos_ini_exc_type = pos
     i = OccOrbital(corr_orb, orbs_before, True)
     j = OccOrbital(corr_orb, orbs_before, False)
     double_exc.i = i.orb
@@ -254,16 +352,32 @@ def min_dist_app_hess(double[:, :] wf,
                 double_exc.b = (orbs_before[b_irrep]
                                 + corr_orb[b_spirrep])
                 for b in range(virt_orb[b_spirrep]):
-                    J = _term1_ab(double_exc,
+                    J[pos] = term1_ab(double_exc,
+                                      wf,
+                                      wf_cc,
+                                      alpha_string_graph,
+                                      beta_string_graph,
+                                      occ_buff_a, exc_occ_buff_a,
+                                      occ_buff_b, exc_occ_buff_b)
+                    diag = term2_diag_ab(double_exc,
+                                         wf_cc,
+                                         occ_buff_a, occ_buff_b)
+                    if diag_hess:
+                        H[0, 0] += J[pos]**2
+                        J[pos] /= diag
+                    else:
+                        H[pos, pos] = diag
+                        calc_H_ab(H[pos, pos:],
+                                  double_exc,
                                   wf,
                                   wf_cc,
+                                  pos - pos_ini_exc_type,
+                                  n_irrep,
+                                  orbs_before,
+                                  corr_orb,
+                                  virt_orb,
                                   alpha_string_graph,
                                   beta_string_graph)
-                    normJac += J**2
-                    z[pos] = J/_term2_diag_ab(double_exc,
-                                              wf_cc,
-                                              n_alpha,
-                                              n_beta)
                     pos += 1
                     double_exc.b += 1
                 double_exc.a += 1
@@ -276,554 +390,173 @@ def min_dist_app_hess(double[:, :] wf,
         double_exc.i = i.orb
     if pos != n_ampl:
         raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
-    return z, np.sqrt(normJac)
+    if not diag_hess:
+        for pos in range(n_ampl):
+            for pos2 in range(pos):
+                H[pos, pos2] = H[pos2, pos]
+    return J, H
 
 
-def min_dist_jac_hess():
-    raise NotImplementedError('do it')
+def min_dist_jac_hess_num(wf,
+                          cc_wf,
+                          int n_singles,
+                          int n_ampl,
+                          int[:] orbs_before,
+                          int[:] corr_orb,
+                          int[:] virt_orb,
+                          eps=0.001):
+    """Calculate the Jacobian and Hessian numerically
     
-
-cdef double _term1(int[:] exc,
-                   int exc_type,
-                   double[:, :] wf,
-                   double[:, :] wf_cc,
-                   int[:, :] alpha_string_graph,
-                   int[:, :] beta_string_graph):
-    """The term <\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+    The Jacobian and Hessian are calculated numerically, by the finite
+    differences approach
     
-    We recomment to use the functions _term1_a, _term1_b,
-    _term1_aa, _term1_bb, and _term1_ab directly, since they
-    are cdef functions and strongly typed.
-    
-    Parameters:
+    Paramaters:
     -----------
-    exc
-        the excitation, with [i, a] for single and [i, a, j, b] for double
+    wf (FCIWaveFunction)
+        The wave function whose distance to the CC manifold is to be measured
     
-    exc_type
-        the excitation type.
-        This determines the "\rho"
+    cc_wf (IntermNormWaveFunction)
+        The wave function at the CC manifold, where the jacobian will
+        be calculated
     
-    wf
-        The wave function, as a coefficients matrix of alpha and beta
-        strings. This determines the "\Psi".
-    
-    wf_cc
-        The coupled cluster wave function, as a coefficients matrix
-        of alpha and beta strings. This determines the "\Psi_cc".
-    
-    {alpha,beta}_string_graph
-        The string graph that determines the reverse lexical order
-        for the {alpha,beta} strings
+    eps (float, optional, default=0.001)
+        The step to be used in the finite differences approximation to the
+        derivative:
+        df(x0)/dx \approx (f(x0+eps) - f(x0-eps))/(2*eps)
     
     Return:
     -------
-    A float (C double)
+    Two numpy arrays: one 1D of the same lenght as the amplitudes,
+    with the jacobian, and another 2D, square, with the hessian.
+    These are exactly the hessian of the function "square of the distance".
+    Note that what is returned from min_dist_jac_hess is half of this.
     
     """
-    cdef DoubleExc double_exc
-    cdef SingleExc single_exc
-    if exc_type == EXC_TYPE_A:
-        single_exc.i = exc[0]
-        single_exc.a = exc[1]
-        return _term1_a(single_exc, wf, wf_cc,
-                        alpha_string_graph)
-    if exc_type == EXC_TYPE_AA:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term1_aa(double_exc, wf, wf_cc,
-                         alpha_string_graph)
-    if exc_type == EXC_TYPE_B:
-        single_exc.i = exc[0]
-        single_exc.a = exc[1]
-        return _term1_b(single_exc, wf, wf_cc,
-                        beta_string_graph)
-    if exc_type == EXC_TYPE_BB:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term1_bb(double_exc, wf, wf_cc,
-                         beta_string_graph)
-    if exc_type == EXC_TYPE_AB:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term1_ab(double_exc, wf, wf_cc,
-                         alpha_string_graph,
-                         beta_string_graph)
-
-
-cdef double _term2_diag(int[:] exc,
-                        int exc_type,
-                        double[:, :] wf,
-                        int alpha_nel,
-                        int beta_nel):
-    """The term <\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
+    cdef int pos
+    cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
+    cdef double [:] f_p, f_m
+    cdef double[:] jac
+    cdef double[:, :] hess
+    cdef double f, f_pp, f_mm
+    cdef int n_irrep_or_0
+    def Func(x):
+        wf_as_fci = FCIWaveFunction.from_int_norm(x)
+        d = wf.dist_to(wf_as_fci,
+                       metric='IN',
+                       normalise=False)**2
+        return d
     
-    Parameters:
-    -----------
-    See _term1 (here wf is \Psi_cc)
-    
-    Return:
-    -------
-    A float (C double)
-    
-    """
-    cdef DoubleExc double_exc
-    cdef SingleExc single_exc
-    if exc_type == EXC_TYPE_A:
-        single_exc.i = exc[0]
-        single_exc.a = exc[1]
-        return _term2_diag_a(single_exc, wf, alpha_nel)
-    if exc_type == EXC_TYPE_AA:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term2_diag_aa(double_exc, wf, alpha_nel)
-    if exc_type == EXC_TYPE_B:
-        single_exc.i = exc[0]
-        single_exc.a = exc[1]
-        return _term2_diag_b(single_exc, wf, beta_nel)
-    if exc_type == EXC_TYPE_BB:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term2_diag_bb(double_exc, wf, beta_nel)
-    if exc_type == EXC_TYPE_AB:
-        double_exc.i = exc[0]
-        double_exc.a = exc[1]
-        double_exc.j = exc[2]
-        double_exc.b = exc[3]
-        return _term2_diag_ab(double_exc, wf, alpha_nel, beta_nel)
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_a(SingleExc exc,
-                     double[:, :] wf,
-                     double[:, :] wf_cc,
-                     int[:, :] string_graph):
-    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha}^{\alpha}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] I = np.arange(nel, dtype=int_dtype)
-    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_i, I_exc_i, i
-    cdef double S = 0.0
-    for I_i in range(nstr_alpha):
-        if (exc.i in I) and (exc.a not in I):
-            I_exc = _exc_on_string(exc.i, exc.a, I)
-            I_exc_i = get_index(I_exc[:nel], string_graph)
-            with nogil:
-                for i in range(nstr_beta):
-                    S += (I_exc[nel]
-                          * (wf[I_exc_i, i] - wf_cc[I_exc_i, i])
-                          * wf_cc[I_i, i])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_b(SingleExc exc,
-                     double[:, :] wf,
-                     double[:, :] wf_cc,
-                     int[:, :] string_graph):
-    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\beta}^{\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] I = np.arange(nel, dtype=int_dtype)
-    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_i, I_exc_i, i
-    cdef double S = 0.0
-    for I_i in range(nstr_beta):
-        if (exc.i in I) and (exc.a not in I):
-            I_exc = _exc_on_string(exc.i, exc.a, I)
-            I_exc_i = get_index(I_exc[:nel], string_graph)
-            for i in range(nstr_alpha):
-                S += (I_exc[nel]
-                      * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
-                      * wf_cc[i, I_i])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_aa(DoubleExc exc,
-                      double[:, :] wf,
-                      double[:, :] wf_cc,
-                      int[:, :] string_graph):
-    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha\alpha}^{\alpha\alpha}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the first dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] I = np.arange(nel, dtype=int_dtype)
-    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_i, I_exc_i, sign, i
-    cdef double S = 0.0
-    for I_i in range(nstr_alpha):
-        if ((exc.i in I) and (exc.a not in I)
-                and (exc.j in I) and (exc.b not in I)):
-            I_exc = _exc_on_string(exc.i, exc.a, I)
-            sign = I_exc[nel]
-            I_exc = _exc_on_string(exc.j, exc.b, I_exc[:nel])
-            I_exc_i = get_index(I_exc[:nel], string_graph)
-            for i in range(nstr_beta):
-                S += (I_exc[nel] * sign
-                      * (wf[I_exc_i, i] - wf_cc[I_exc_i, i])
-                      * wf_cc[I_i, i])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_bb(DoubleExc exc,
-                      double[:, :] wf,
-                      double[:, :] wf_cc,
-                      int[:, :] string_graph):
-    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\beta\beta}^{\beta\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    string_graph should be associated to the second dimension of wf and wf_cc
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nel = string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] I = np.arange(nel, dtype=int_dtype)
-    cdef int[:] I_exc = np.empty(nel+1, dtype=int_dtype)
-    cdef int I_i, I_exc_i, sign, i
-    cdef double S = 0.0
-    for I_i in range(nstr_beta):
-        if ((exc.i in I) and (exc.a not in I)
-                and (exc.j in I) and (exc.b not in I)):
-            I_exc = _exc_on_string(exc.i, exc.a, I)
-            sign = I_exc[nel]
-            I_exc = _exc_on_string(exc.j, exc.b, I_exc[:nel])
-            I_exc_i = get_index(I_exc[:nel], string_graph)
-            for i in range(nstr_alpha):
-                S += (I_exc[nel]
-                      * (wf[i, I_exc_i] - wf_cc[i, I_exc_i])
-                      * wf_cc[i, I_i])
-        next_str(I)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term1_ab(DoubleExc exc,
-                      double[:, :] wf,
-                      double[:, :] wf_cc,
-                      int[:, :] alpha_string_graph,
-                      int[:, :] beta_string_graph):
-    """<\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha\beta}^{\alpha\beta}
-    
-    Parameters:
-    -----------
-    See _term1
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nalpha = alpha_string_graph.shape[1]
-    cdef int nbeta = beta_string_graph.shape[1]
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ia = np.arange(nalpha, dtype=int_dtype)
-    cdef int[:] Ib = np.arange(nbeta, dtype=int_dtype)
-    cdef int[:] Ia_exc = np.empty(nalpha + 1, dtype=int_dtype)
-    cdef int[:] Ib_exc = np.empty(nbeta + 1, dtype=int_dtype)
-    cdef int Ia_i, Ib_i, Ia_exc_i, Ib_exc_i
-    cdef double S = 0.0
-    for Ia_i in range(nstr_alpha):
-        if (exc.i in Ia) and (exc.a not in Ia):
-            Ia_exc = _exc_on_string(exc.i, exc.a, Ia)
-            Ia_exc_i = get_index(Ia_exc[:nalpha],
-                             alpha_string_graph)
-            Ib = np.arange(nbeta, dtype=int_dtype)
-            for Ib_i in range(nstr_beta):
-                if (exc.j in Ib) and (exc.b not in Ib):
-                    Ib_exc = _exc_on_string(exc.j, exc.b, Ib)
-                    Ib_exc_i = get_index(Ib_exc[:nbeta],
-                                     beta_string_graph)
-                    S += (Ia_exc[nalpha] * Ib_exc[nbeta]
-                          * (wf[Ia_exc_i, Ib_exc_i]
-                             - wf_cc[Ia_exc_i, Ib_exc_i])
-                          * wf_cc[Ia_i, Ib_i])
-                next_str(Ib)
-        next_str(Ia)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_diag_a(SingleExc exc,
-                          double[:, :] wf,
-                          int nel):
-    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha}^{\alpha}
-    
-    Parameters:
-    -----------
-    See _term2_diag
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ia = np.arange(nel, dtype=int_dtype)
-    cdef double S = 0.0
-    cdef int Ia_i, Ib_i
-    for Ia_i in range(nstr_alpha):
-        if (exc.i in Ia) and (exc.a not in Ia):
-            with nogil:
-                for Ib_i in range(nstr_beta):
-                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
-        next_str(Ia)
-    return S
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_diag_b(SingleExc exc,
-                          double[:, :] wf,
-                          int nel):
-    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\beta}^{\beta}
-    
-    Parameters:
-    -----------
-    See _term2_diag
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ib = np.arange(nel, dtype=int_dtype)
-    cdef double S = 0.0
-    for Ib_i in range(nstr_beta):
-        if (exc.i in Ib) and (exc.a not in Ib):
-            with nogil:
-                for Ia_i in range(nstr_alpha):
-                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
-        next_str(Ib)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_diag_aa(DoubleExc exc,
-                           double[:, :] wf,
-                           int nel):
-    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha\alpha}^{\alpha\alpha}
-    
-    Parameters:
-    -----------
-    See _term2_diag
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ia = np.arange(nel, dtype=int_dtype)
-    cdef double S = 0.0
-    cdef int Ia_i, Ib_i
-    for Ia_i in range(nstr_alpha):
-        if ((exc.i in Ia) and (exc.a not in Ia)
-                and (exc.j in Ia) and (exc.b not in Ia)):
-            with nogil:
-                for Ib_i in range(nstr_beta):
-                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
-        next_str(Ia)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_diag_bb(DoubleExc exc,
-                           double[:, :] wf,
-                           int nel):
-    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\beta\beta}^{\beta\beta}
-    
-    Parameters:
-    -----------
-    See _term2_diag
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ib = np.arange(nel, dtype=int_dtype)
-    cdef int Ia_i, Ib_i
-    cdef double S = 0.0
-    for Ib_i in range(nstr_beta):
-        if ((exc.i in Ib) and (exc.a not in Ib)
-                and (exc.j in Ib) and (exc.b not in Ib)):
-            with nogil:
-                for Ia_i in range(nstr_alpha):
-                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
-        next_str(Ib)
-    return S
-
-
-##@cython.boundscheck(False)  # Deactivate bounds checking
-##@cython.wraparound(False)   # Deactivate negative indexing
-cdef double _term2_diag_ab(DoubleExc exc,
-                           double[:, :] wf,
-                           int alpha_nel,
-                           int beta_nel):
-    """<\Psi_cc | \tau_\rho^\dagger \tau_\rho | \Psi_cc>
-    
-    for \rho=a_{\alpha\beta}^{\alpha\beta}
-    
-    Parameters:
-    -----------
-    See _term2_diag
-    
-    Return:
-    -------
-    A float (C double)
-    """
-    cdef int nstr_alpha = wf.shape[0]
-    cdef int nstr_beta = wf.shape[1]
-    cdef int[:] Ia = np.arange(alpha_nel, dtype=int_dtype)
-    cdef int[:] Ib
-    cdef int Ia_i, Ib_i
-    cdef double S = 0.0
-    for Ia_i in range(nstr_alpha):
-        if (exc.i in Ia) and (exc.a not in Ia):
-            Ib = np.arange(beta_nel, dtype=int_dtype)
-            for Ib_i in range(nstr_beta):
-                if (exc.j in Ib) and (exc.b not in Ib):
-                    S += wf[Ia_i, Ib_i]*wf[Ia_i, Ib_i]
-                next_str(Ib)
-        next_str(Ia)
-    return S
-
-
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
-cdef int[:] _exc_on_string(int i, int a, int[:] I):
-    """Obtain the string after the excitation i->a over I
-    
-    Parameters:
-    -----------
-    i
-        hole index (the orbital where the excitation comes from)
-    
-    a
-        particle index (the orbital where the excitation goes to)
-    
-    I
-        The string that represents the Slater determinant
-        where the excitation acts
-    
-    Return:
-    -------
-    A new array, with one more entry than I:
-        The first entries are with the new Slater determinant,
-        and the last has the sign that arises after putting the
-        orbitals in the correct order
-    
-    """
-    cdef int n = I.shape[0]
-    cdef int[:] new_I = np.empty(n+1, dtype=int_dtype)
-    cdef int pos, i_pos, a_pos
-    i_pos = 0
-    a_pos = 0
-    new_I[:n] = I[:]
+    f = Func(cc_wf)
+    f_p = np.zeros(len(cc_wf))
+    f_m = np.zeros(len(cc_wf))
+    jac = np.zeros(len(cc_wf))
+    hess = np.zeros((len(cc_wf), len(cc_wf)))
+    n_irrep = orbs_before.size - 1
     pos = 0
-    if i < a:
-        a_pos = n - 1
-        for pos in range(n):
-            if I[pos] == i:
-                i_pos = pos
-            if I[pos] > a:
-                a_pos = pos - 1
-                break
-        new_I[i_pos: a_pos] = I[i_pos+1: a_pos+1]
-        new_I[a_pos] = a
-    elif i > a:
-        for pos in range(n-1, -1, -1):
-            if I[pos] == i:
-                i_pos = pos
-            if I[pos] < a:
-                a_pos = pos + 1
-                break
-        new_I[a_pos+1: i_pos+1] = I[a_pos: i_pos]
-        new_I[a_pos] = a
-    new_I[n] = 1 - 2*(abs(a_pos - i_pos) % 2)
-    return new_I
+    # --- alpha -> alpha and beta -> beta
+    while pos < n_singles:
+        cc_wf.amplitudes[pos] += eps
+        f_p[pos] = Func(cc_wf)
+        cc_wf.amplitudes[pos] -= 2*eps
+        f_m[pos] = Func(cc_wf)
+        cc_wf.amplitudes[pos] += eps
+        pos += 1
+    # --- alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
+    for is_alpha in [True, False]:
+        i = OccOrbital(corr_orb, orbs_before, is_alpha)
+        j = OccOrbital(corr_orb, orbs_before, is_alpha)
+        j.next_()
+        n_irrep_or_0 = 0 if is_alpha else n_irrep
+        while j.alive:
+            for a_irrep in range(n_irrep):
+                b_irrep = irrep_product[
+                    irrep_product[i.spirrep - n_irrep_or_0,
+                                  j.spirrep - n_irrep_or_0], a_irrep]
+                a_spirrep = a_irrep + n_irrep_or_0
+                b_spirrep = b_irrep + n_irrep_or_0
+                pos_ini[a_irrep] = pos + virt_orb[a_spirrep] * virt_orb[b_spirrep]
+            for a_irrep in range(n_irrep):
+                b_irrep = irrep_product[
+                    irrep_product[i.spirrep - n_irrep_or_0,
+                                  j.spirrep - n_irrep_or_0], a_irrep]
+                a_spirrep = a_irrep + n_irrep_or_0
+                b_spirrep = b_irrep + n_irrep_or_0
+                if a_irrep <= b_irrep:
+                    for a in range(virt_orb[a_spirrep]):
+                        nvirt_1 = virt_orb[a_spirrep] - 1
+                        for b in range(virt_orb[b_spirrep]):
+                            if a_irrep < b_irrep or a < b:
+                                pos_transp = (pos + (b-a)*nvirt_1
+                                              if a_irrep == b_irrep else
+                                              pos_ini[b_irrep] + n_from_rect(
+                                                  b, a, virt_orb[a_spirrep]))
+                                cc_wf.amplitudes[pos] += eps
+                                cc_wf.amplitudes[pos_transp] -= eps
+                                f_p[pos] = Func(cc_wf)
+                                cc_wf.amplitudes[pos] -= 2*eps
+                                cc_wf.amplitudes[pos_transp] += 2*eps
+                                f_m[pos] = Func(cc_wf)
+                                cc_wf.amplitudes[pos] += eps
+                                cc_wf.amplitudes[pos_transp] -= eps
+                            elif a > b:
+                                pos_transp = pos - (a-b)*nvirt_1
+                                f_p[pos] = f_m[pos_transp]
+                                f_m[pos] = f_p[pos_transp]
+                            pos += 1
+                else:  # and a_irrep > b_irrep
+                    for a in range(virt_orb[a_spirrep]):
+                        for b in range(virt_orb[b_spirrep]):
+                            pos_transp = (pos_ini[b_irrep]
+                                          + n_from_rect(
+                                              b, a, virt_orb[a_spirrep]))
+                            f_p[pos] = f_m[pos_transp]
+                            f_m[pos] = f_p[pos_transp]
+                            pos += 1
+            if i.pos_in_occ == j.pos_in_occ - 1:
+                j.next_()
+                i.rewind()
+            else:
+                i.next_()
+    # alpha, beta -> alpha, beta
+    while pos < n_ampl:
+        cc_wf.amplitudes[pos] += eps
+        f_p[pos] = Func(cc_wf)
+        cc_wf.amplitudes[pos] -= 2*eps
+        f_m[pos] = Func(cc_wf)
+        cc_wf.amplitudes[pos] += eps
+        pos += 1
+    if pos != n_ampl:
+        raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
+
+
+
+
+
+
+    
+    # for pos in range(len(cc_wf)):
+    #     for pos_2 in range(len(cc_wf)):
+    #         if pos == pos_2:
+    #             hess[pos, pos] = (f_p[pos]
+    #                                     - 2*f
+    #                                     + f_m[pos]) / eps**2
+    #         elif pos_2 > pos:
+    #             cc_wf.amplitudes[pos] += eps
+    #             cc_wf.amplitudes[pos_2] += eps
+    #             f_pp = Func(cc_wf)
+    #             cc_wf.amplitudes[pos] -= 2*eps
+    #             cc_wf.amplitudes[pos_2] -= 2*eps
+    #             f_mm = Func(cc_wf)
+    #             cc_wf.amplitudes[pos] += eps
+    #             cc_wf.amplitudes[pos_2] += eps
+    #             hess[pos, pos_2] = (f_pp
+    #                                       - f_p[pos] - f_p[pos_2]
+    #                                       + 2*f
+    #                                       - f_m[pos] - f_m[pos_2]
+    #                                       + f_mm) / (2 * eps**2)
+    #         else:
+    #             hess[pos, pos_2] = hess[pos_2, pos]
+    for pos in range(len(cc_wf)):
+        jac[pos] = (f_p[pos] - f_m[pos])/(2*eps)
+    return jac, hess
+

@@ -11,20 +11,25 @@ from setuptools import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
-extensions = [
-    Extension("src.integrals.integrals_cy",
-              ["src/integrals/integrals_cy.pyx"]),
-    Extension("src.coupled_cluster.manifold",
-              ["src/coupled_cluster/manifold.pyx"]),
-    Extension("src.wave_functions.singles_doubles",
-              ["src/wave_functions/singles_doubles.pyx"]),
-    Extension("src.wave_functions.strings_rev_lexical_order",
-              ["src/wave_functions/strings_rev_lexical_order.pyx"]),
-    Extension("src.orbitals.occ_orbitals",
-              ["src/orbitals/occ_orbitals.pyx"]),
-    Extension("src.util.array_indices",
-              ["src/util/array_indices.pyx"])
-]
+# without .pyx
+all_cython_files = ["src/integrals/integrals_cy",
+                    "src/coupled_cluster/exc_on_string",
+                    "src/coupled_cluster/manifold",
+                    "src/coupled_cluster/manifold_term1",
+                    "src/coupled_cluster/manifold_term2",
+                    "src/coupled_cluster/manifold_hess",
+                    "src/wave_functions/singles_doubles",
+                    "src/wave_functions/strings_rev_lexical_order",
+                    "src/orbitals/occ_orbitals",
+                    "src/util/array_indices"]
+
+###                    "tests/speed/cc_manifold_term1",
+    
+
+extensions = []
+for cy_file in all_cython_files:
+    extensions.append(Extension(cy_file.replace('/', '.'),
+                                [cy_file + '.pyx']))
 
 requires=['numpy',
           'scipy',

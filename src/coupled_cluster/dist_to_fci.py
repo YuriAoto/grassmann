@@ -7,6 +7,7 @@ import copy
 import math
 import logging
 
+import numpy as np
 from numpy import linalg
 
 from input_output.log import logtime
@@ -31,6 +32,9 @@ _str_excitation_list = ['R',
 
 def _str_excitation(x):
     return _str_excitation_list[x] if x < 5 else str(x)
+
+
+
 
 
 def vertical_proj_to_cc_manifold(wf,
@@ -214,7 +218,7 @@ def calc_dist_to_cc_manifold(wf,
                              level='SD',
                              maxiter=10,
                              f_out=None,
-                             approx_hess=True,
+                             diag_hess=True,
                              thrsh_Z=1.0E-8,
                              thrsh_J=1.0E-8,
                              ini_wf=None,
@@ -248,7 +252,7 @@ def calc_dist_to_cc_manifold(wf,
         The output to print the iterations.
         If None the iterations are not printed.
 
-    approx_hess (bool, optional, default=True)
+    diag_hess (bool, optional, default=True)
         Use approximate Hessian (only diagonal elements)
 
     thrsh_Z (float, optional, default=1.0E-8)
@@ -318,7 +322,7 @@ def calc_dist_to_cc_manifold(wf,
     corr_orb = wf.corr_orb.as_array()
     virt_orb = wf.virt_orb.as_array()
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
-    logger.info('Wave Function, before iterations:\n%s', wf)
+##    logger.info('Wave Function, before iterations:\n%s', wf)
     if f_out is not None:
         f_out.write(
             'it.   dist      |Z|       |J|        time in iteration\n')
@@ -331,9 +335,9 @@ def calc_dist_to_cc_manifold(wf,
             else:
                 with logtime('Transforming CC wave function to FCI-like'):
                     cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
-            logger.info('Wave Function, at iteration %d:\n%s',
-                        i_iteration,
-                        cc_wf_as_fci)
+##            logger.info('Wave Function, at iteration %d:\n%s',
+##                        i_iteration,
+##                        cc_wf_as_fci)
             with logtime('Distance to current CC wave function'):
                 dist = wf.dist_to(cc_wf_as_fci, metric='IN')
             if (i_iteration > 0
@@ -341,35 +345,29 @@ def calc_dist_to_cc_manifold(wf,
                     and normZ < thrsh_Z):
                 converged = True
                 break
-            if approx_hess:
-                with logtime('Making Jacobian and approximate Hessian'):
-                    z, normJ = cc_manifold.min_dist_app_hess(
-                        wf._coefficients,
-                        cc_wf_as_fci._coefficients,
-                        n_ampl,
-                        wf.orbs_before,
-                        corr_orb,
-                        virt_orb,
-                        wf._alpha_string_graph,
-                        wf._beta_string_graph,
-                        level=level)
-                logger.log(1, 'Update vector z:\n%r', z)
+            with logtime('Making Jacobian and approximate Hessian'):
+                Jac, Hess = cc_manifold.min_dist_jac_hess(
+                    wf._coefficients,
+                    cc_wf_as_fci._coefficients,
+                    n_ampl,
+                    wf.orbs_before,
+                    corr_orb,
+                    virt_orb,
+                    wf._alpha_string_graph,
+                    wf._beta_string_graph,
+                    diag_hess,
+                    level=level)
+            if diag_hess:
+                z = Jac
+                normJ = Hess[0, 0]
             else:
-                with logtime('Making Jacobian and Hessian'):
-                    Jac, Hess = cc_manifold.min_dist_jac_hess(
-                        wf._coefficients,
-                        cc_wf_as_fci._coefficients,
-                        wf.n_irrep,
-                        wf.orbs_before,
-                        corr_orb,
-                        virt_orb,
-                        wf._alpha_string_graph,
-                        wf._beta_string_graph)
-                logger.log(1, 'Jacobian:\n%r', Jac)
-                logger.log(1, 'Hessian:\n%r', Hess)
+                if legger.loglevel <= 1:
+                    logger.log(1, 'Jacobian:\n%r', np.array(Jac))
+                    logger.log(1, 'Hessian:\n%r', np.array(Hess))
                 with logtime('Calculating z: Solving linear system.'):
                     z = -linalg.solve(Hess, Jac)
                 normJ = linalg.norm(Jac)
+            logger.log(1, 'Update vector z:\n%r', z)
             normZ = linalg.norm(z)
             cc_wf.update_amplitudes(z)
         if f_out is not None:

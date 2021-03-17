@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 import tests
+from util.variables import int_dtype
 from util.other import int_array
 import wave_functions.strings_rev_lexical_order as str_order
 
@@ -243,3 +244,28 @@ class SignRelRefTestCase(unittest.TestCase):
             int_array(2, 3),
             int_array(0, 1, 5)),
                          1)
+
+
+@tests.category('SHORT', 'ESSENTIAL')
+class IniStrTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    def test_1(self):
+        occ = np.empty(3, dtype=int_dtype)
+        str_order.ini_str(occ)
+        str_order.next_str(occ)
+        self.assertEqual(occ, int_array(0, 1, 2))
+
+    def test_2(self):
+        occ = np.empty(5, dtype=int_dtype)
+        str_order.ini_str(occ)
+        str_order.next_str(occ)
+        self.assertEqual(occ, int_array(0, 1, 2, 3, 4))
+
+    def test_3(self):
+        occ = np.empty(10, dtype=int_dtype)
+        str_order.ini_str(occ)
+        str_order.next_str(occ)
+        self.assertEqual(occ, int_array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))

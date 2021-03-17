@@ -8,6 +8,6 @@ doc/*.out
 doc/grassmann_doc.toc
 doc/grassmann_doc.pdf
 grassmann/test/inputs_outputs/*/*min_dist*
-src/*/*.c
-src/*/*.so
-src/*/*.html
+*/*/*.c
+*/*/*.so
+*/*/*.html

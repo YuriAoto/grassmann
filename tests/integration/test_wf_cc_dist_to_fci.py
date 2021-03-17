@@ -16,7 +16,7 @@ from coupled_cluster.dist_to_fci import (vertical_proj_to_cc_manifold,
 import tests
 
 
-fout = None
+fout = sys.stdout
 
 @tests.category('SHORT')
 class VertDistTwoElecCCDTestCase(unittest.TestCase):
@@ -385,7 +385,7 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
         self.assertEqual(res.wave_function.amplitudes, cc_wf.amplitudes)
 
 
-    @unittest.skip('This is not working corretly...')
+##    @unittest.skip('This is not working corretly...')
     @tests.category('LONG')
     def test_li2_sto3g_d2h_ini_half(self):
         cc_wf = IntermNormWaveFunction.unrestrict(
@@ -396,7 +396,8 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
         ini_cc = IntermNormWaveFunction.unrestrict(cc_wf)
         ini_cc.amplitudes *= 0.9
         res = calc_dist_to_cc_manifold(wf, level="D",
-                                       ini_wf=ini_cc, f_out=fout)
+                                       ini_wf=ini_cc, f_out=fout,
+                                       diag_hess=False)
         self.assertEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, cc_wf.amplitudes)
 

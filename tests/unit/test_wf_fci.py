@@ -611,6 +611,13 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf._coefficients,
                          wf_from_molpro_fci._coefficients)
+    
+    def test_he2_sto3g_d2h(self):
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('He2__1.5__631g__C2v'))
+        wf = FCIWaveFunction.from_int_norm(wfcc)
+        self.assertEqual(wf[0, 2], -0.00344764)
+
 
 @tests.category('SHORT', 'ESSENTIAL')
 class ExcInfoTestCase(unittest.TestCase):
