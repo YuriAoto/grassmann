@@ -463,23 +463,71 @@ class FCIWaveFunction(WaveFunction):
             if not self.symmetry_allowed(det):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
+            # if (len(alpha_hp[0]) == 0 and len(beta_hp[0]) == 2
+            #     and beta_hp[0][0] == 0 and beta_hp[0][1] == 5
+            #     and beta_hp[1][0] == 2 and beta_hp[1][1] == 6):
+            #     print(ia, ib, det)
             if rank == 0:
                 self._coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                    or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                if rank == 1:
-                    is_alpha = len(alpha_hp[0]) == 1
-                    i, irrep = self.get_local_index(alpha_hp[0][0]
-                                                    if is_alpha else
-                                                    beta_hp[0][0], is_alpha)
-                    sign = (1
-                            if (self.corr_orb[irrep
-                                              + (0
-                                                 if is_alpha else
-                                                 self.n_irrep)] - i) % 2 else
-                            -1)
-                else:
-                    raise NotImplementedError("Shit! Not done Yet")
+                sign = 1
+                if (ia,ib) == _to_print:
+                    print(det)
+                for is_alpha in [True, False]:
+                    if (ia,ib) == _to_print:
+                        print('is alpha: ', is_alpha)
+                    rank_of_spin_block = (len(alpha_hp[0])
+                                          if is_alpha else
+                                          len(beta_hp[0]))
+                    if rank_of_spin_block >= 1:
+                        sign_sp = 1
+                        for ii in range(rank_of_spin_block):
+                            i, spirrep_i = self.get_local_index(
+                                alpha_hp[0][ii]
+                                if is_alpha else
+                                beta_hp[0][ii], is_alpha)
+                            a, spirrep_a = self.get_local_index(
+                                alpha_hp[1][ii]
+                                if is_alpha else
+                                beta_hp[1][ii], is_alpha)
+                            spirrep_i += 0 if is_alpha else self.n_irrep
+                            spirrep_a += 0 if is_alpha else self.n_irrep
+                            if ii == 0:
+                                spirrep_j = spirrep_i
+                                spirrep_b = spirrep_a
+                            if spirrep_i <= spirrep_a:
+                                n_transp = self.corr_orb[spirrep_i] - i - 1
+                                if (ia,ib) == _to_print:
+                                    print('n transp before', n_transp)
+                                for irrep in range(spirrep_i + 1, spirrep_a + 1):
+                                    n_transp += self.corr_orb[irrep]
+                                if (ia,ib) == _to_print:
+                                    print('n transp after', n_transp)
+                            else:
+                                n_transp = i
+                                for irrep in range(spirrep_a + 1, spirrep_i):
+                                    n_transp += self.corr_orb[irrep]
+                            sign_sp *= -1 if n_transp % 2 else 1
+                            if (ia,ib) == _to_print:
+                                print('sign_sp = ', sign_sp)
+                        if rank_of_spin_block == 2:
+                            if (spirrep_i == spirrep_j
+                                or (spirrep_j < spirrep_i <= spirrep_b
+                                    and not (spirrep_j <= spirrep_a < spirrep_b))
+                                or (spirrep_j <= spirrep_a < spirrep_b
+                                    and not (spirrep_j < spirrep_i <= spirrep_b))
+                            ):
+                                if (ia,ib) == _to_print:
+                                    print('change sign!!!!')
+                                sign_sp = -sign_sp
+                        if (ia,ib) == _to_print:
+                            print('final sign_sp = ', sign_sp)
+                        sign *= sign_sp
+                        if (ia,ib) == _to_print:
+                            print('current sign = ', sign_sp)
+                if (ia,ib) == _to_print:
+                    print('sign final:', sign)
                 self._coefficients[ia, ib] = sign * wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(

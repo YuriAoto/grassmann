@@ -337,32 +337,32 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             c=0.0,
             alpha_occ=int_array(1,2,5),
             beta_occ=int_array(0,2,5)))],
-                               -0.00328470)
+                               -(-0.00328470))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,3,5),
             beta_occ=int_array(1,3,5)))],
-                               -0.00284484)
+                               -(-0.00284484))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(1,5,6),
             beta_occ=int_array(0,5,6)))],
-                               0.00117550)
+                               -(0.00117550))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(1,5,6),
             beta_occ=int_array(0,5,7)))],
-                               0.00227618)
+                               -(0.00227618))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,5,6),
             beta_occ=int_array(1,5,7)))],
-                               0.00252029)
+                               -(0.00252029))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,5,7),
             beta_occ=int_array(1,5,6)))],
-                               0.00227618)
+                               -(0.00227618))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,2,5),
@@ -407,7 +407,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             c=0.0,
             alpha_occ=int_array(0,1,7),
             beta_occ=int_array(1,2,5)))],
-                               -0.00097751)
+                               -(-0.00097751))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,1,7),
@@ -438,12 +438,12 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             c=0.0,
             alpha_occ=int_array(0,1,5),
             beta_occ=int_array(1,2,6)))],
-                               0.00091881-0.00085432)
+                               -(0.00091881-0.00085432))
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,
             alpha_occ=int_array(0,1,5),
             beta_occ=int_array(1,3,8)))],
-                               -0.00102550-(-0.00096368))
+                               -(-0.00102550-(-0.00096368)))
         # --------- some quadruples
         self.assertAlmostEqual(
             wf[wf.index(SlaterDet(
