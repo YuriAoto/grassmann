@@ -53,6 +53,7 @@ def main(args, f_out):
         level = 'SD' if 'SD' in args.method else 'D'
         optimiser.cc_closed_shell(args.res_hf.energy,
                                   args.res_hf.orbitals,
+                                  args.res_hf.integrals, ##TODO: Find where the integrals are!!
                                   wf_ini=None,
                                   preserve_wf_ini=False,
                                   level='SD',

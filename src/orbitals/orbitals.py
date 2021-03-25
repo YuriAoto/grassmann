@@ -625,11 +625,14 @@ class MolecularOrbitals():
         logger.debug('MO (self) in the basis of MO (other):\n%s', U)
         return U
 
-    @property
-    def molecular_integrals(self):
+    def molecular_integrals_gen(self,atomic_integrals):
         """Create a new Integrals object containing the one- and two-electron
            molecular integrals.
+          
+           Parametres:
+           ----------
+           
+           atomic_integrals (Integrals)
+               Integrals in the atomic basis set.
         """
-        if self._mo_integrals == None:
-            self._mo_integrals = Integrals.from_atomic_to_molecular(self._integrals, self._coefficients)
-        return self._mo_integrals
+        self.molecular_integrals = Integrals.from_atomic_to_molecular(atomic_integrals, self._coefficients)

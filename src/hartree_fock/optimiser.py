@@ -25,9 +25,13 @@ def Restricted_Closed_Shell_SCF(mol_geom,
                                 ini_orb=None):
     """A Restricted Closed Shell SCF Roothan-Hall procedure
     
-    mol_geom (MolecularGeometry)
-        The molecular geometry, with all integrals already calculated
+  X  mol_geom (MolecularGeometry)
+  X      The molecular geometry, with all integrals already calculated
     
+    integrals ()
+
+    nuc_rep (float)    
+
     max_iter (int, optional, default=20)
         Maximum number of iterations
     
