@@ -208,6 +208,47 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__ccpVDZ__D2h'))))
         self.assertEqual(wf._coefficients, my_coeff)
+
+    def test_he2_sto3g_c2v(self):
+        """
+        0   1   2   3   4   5
+        01  02  12  03  13  23
+        """
+        tq = ((-0.02680236*-0.05023852)
+              + (-0.02730269*-0.03198588)
+              + (-0.02896541)**2 + (-0.03498031)**2
+              + (-0.0060149)**2)
+        coef = np.array(
+            [[1.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, -0.0060149],
+             [0.00000000, -0.03198588,  0.00000000,  0.00000000,  0.02896541,  0.00000000],
+             [0.00000000,  0.00000000, -0.02680236,  0.03498031,  0.00000000,  0.00000000],
+             [0.00000000,  0.00000000,  0.03498031, -0.05023852,  0.00000000,  0.00000000],
+             [0.00000000,  0.02896541,  0.00000000,  0.00000000, -0.02730269,  0.00000000],
+             [-0.0060149,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  tq]]
+            )
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('He2__1.5__631g__C2v'))
+        wf = FCIWaveFunction.from_int_norm(wfcc)
+        self.assertEqual(wf._coefficients, coef)
+
+    def test_he2_sto3g_d2h(self):
+        tq = ((-0.02680236*-0.05023852)
+              + (-0.02730269*-0.03198588)
+              + (-0.02896541)**2 + (-0.03498031)**2
+              + (-0.0060149)**2)
+        coef = np.array(
+            [[-0.03198588,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.02896541],
+             [ 0.00000000,  1.00000000,  0.00000000,  0.00000000,  -0.0060149,  0.00000000],
+             [ 0.00000000,  0.00000000, -0.02680236, -0.03498031,  0.00000000,  0.00000000],
+             [ 0.00000000,  0.00000000, -0.03498031, -0.05023852,  0.00000000,  0.00000000],
+             [ 0.00000000,  -0.0060149,  0.00000000,  0.00000000,  tq,          0.00000000],
+             [ 0.02896541,  0.00000000,  0.00000000,  0.00000000,  0.00000000, -0.02730269]]
+            )
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('He2__1.5__631g__D2h'))
+        wf = FCIWaveFunction.from_int_norm(wfcc)
+        self.assertEqual(wf._coefficients, coef)
+
     
     @tests.category('SHORT')
     def test_li2_sto3g_d2h(self):
@@ -612,11 +653,37 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         self.assertEqual(wf._coefficients,
                          wf_from_molpro_fci._coefficients)
     
-    def test_he2_sto3g_d2h(self):
+    def test_he2_sto3g_c2v(self):
+        """
+        0   1   2   3   4   5
+        01  02  12  03  13  23
+        """
+        tq = ((-0.02692981*-0.05029521)
+              + (-0.02730136*-0.03210796)
+              + (-0.02903510)**2 + (-0.03508008)**2
+              + (-0.00604498)**2)
+        t13t24 = 0.00344764*0.00240016
+        t3_1 = 0.00344764*-0.05029521 + 0.00240016*(-0.03508008 + -0.00604498)
+        t3_2 = 0.00344764*(-0.03508008 + -0.00604498) + 0.00240016*-0.02692981
+        coef = np.array(
+            [[ 1.00000000,         0.00000000, -0.00344764,                0.00240016,                0.00000000, -0.00604498+t13t24],
+             [ 0.00000000,        -0.03210796,  0.00000000,                0.00000000,                0.02903510,  0.00000000],
+             [-0.00344764,         0.00000000, -0.02692981+0.00344764**2,  0.03508008-t13t24,         0.00000000, -t3_2],
+             [ 0.00240016,         0.00000000,  0.03508008-t13t24,        -0.05029521+0.00240016**2,  0.00000000,  t3_1],
+             [ 0.00000000,         0.02903510,  0.00000000,                0.00000000,               -0.02730136,  0.00000000],
+             [-0.00604498+t13t24,  0.00000000, -t3_2,                      t3_1,                      0.00000000,  tq]]
+            )
         wfcc = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('He2__1.5__631g__C2v'))
         wf = FCIWaveFunction.from_int_norm(wfcc)
-        self.assertEqual(wf[0, 2], -0.00344764)
+        self.assertEqual(wf._coefficients, coef)
+
+    def test_he2_sto3g_d2h(self):
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('He2__1.5__631g__D2h'))
+        wf = FCIWaveFunction.from_int_norm(wfcc)
+        self.assertEqual(wf[0, 5], 0.02903510)
+        self.assertEqual(wf[5, 0], 0.02903510)
 
 
 @tests.category('SHORT', 'ESSENTIAL')

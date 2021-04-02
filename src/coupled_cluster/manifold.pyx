@@ -432,7 +432,7 @@ def min_dist_jac_hess_num(wf,
     Note that what is returned from min_dist_jac_hess is half of this.
     
     """
-    cdef int pos
+    cdef int pos, a_irrep, b_irrep, a_spirrep, b_spirrep
     cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
     cdef double [:] f_p, f_m
     cdef double[:] jac
