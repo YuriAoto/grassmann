@@ -12,6 +12,30 @@ from util.variables import int_dtype
 
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
+cpdef int sign_put_max_coincidence(int[:] occ, int[:] ref, int n):
+    """  """
+    cdef int n_holes = 0, n_part = 0
+    cdef int i_ref = 0, i_occ = 0
+    cdef int n_transp = 0
+    while i_ref < n and i_occ < n:
+        if ref[i_ref] == occ[i_occ]:
+            n_transp += n_holes
+            i_ref += 1
+            i_occ += 1
+        elif occ[i_occ] > ref[i_ref]:
+            n_holes += 1
+            i_ref += 1
+        else:
+            n_holes -= 1
+            i_occ += 1
+    if n_holes != i_ref - i_occ:
+        print('------->', n_holes, i_ref, i_occ)
+        raise Exception(
+            'loop in sign_put_max_coincidence ended with n_holes != iref - iocc')
+    return 1 - (n_transp % 2) * 2
+
+##@cython.boundscheck(False)  # Deactivate bounds checking
+##@cython.wraparound(False)   # Deactivate negative indexing
 cpdef void ini_str(int[:] occ):
     cdef int i
     occ[0] = -1

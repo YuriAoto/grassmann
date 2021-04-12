@@ -12,6 +12,231 @@ import wave_functions.strings_rev_lexical_order as str_order
 
 
 @tests.category('SHORT', 'ESSENTIAL')
+class SignPutMaxCoincTestCase(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def test1(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             int_array(0, 1, 2, 3, 4, 5, 7),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 7),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             int_array(0, 1, 2, 3, 4, 5, 9),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             int_array(0, 1, 2, 3, 4, 6, 9),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 6, 9),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 5, 6, 9),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 5, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             int_array(0, 1, 2, 3, 5, 8, 10),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 4, 5, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 4, 6, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 4, 7, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             int_array(0, 1, 2, 4, 7, 8, 10),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 2, 4, 5, 7, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 4, 5, 6, 7, 8, 10),
+                             int_array(0, 1, 2, 3, 4, 5, 6),
+                             7))
+
+    def test2(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 1, 2, 3, 8, 9, 11),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 1, 2, 3, 8, 10, 11),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 1, 2, 5, 8, 10, 11),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 1, 3, 5, 9, 11, 13),
+                             7))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 1, 3, 9, 11, 13, 14),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 2, 3, 9, 11, 13, 14),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             int_array(0, 2, 3, 4, 5, 9, 11),
+                             7))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 2, 3, 4, 5, 9, 11),
+                             int_array(0, 1, 2, 3, 8, 9, 10),
+                             7))
+
+    def test3(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3, 8, 9, 10, 15),
+                             int_array(0, 1, 2, 3, 8, 9, 10, 15),
+                             8))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3,    8, 9, 10, 15),
+                             int_array(   1, 2, 3, 4, 8, 9, 10, 15),
+                             8))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3,    8, 9, 10, 15),
+                             int_array(0, 1, 2, 3, 4, 8, 9, 10),
+                             8))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3,       8, 9, 10, 15),
+                             int_array(   1, 2, 3, 4, 5, 8, 9, 10),
+                             8))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3,       8, 9, 10,    15),
+                             int_array(   1,    3, 4, 5, 8, 9, 10, 13),
+                             8))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1, 2, 3,    8, 9, 10,    15),
+                             int_array(   1,    3, 5, 8, 9, 10,    15, 18),
+                             8))
+    
+    def test4(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0),
+                             int_array(0),
+                             1))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0),
+                             int_array(4),
+                             1))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(3),
+                             int_array(7),
+                             1))
+    
+    def test5(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1),
+                             int_array(0, 1),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1),
+                             int_array(0, 2),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1),
+                             int_array(0, 4),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1),
+                             int_array(2, 4),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 1),
+                             int_array(2, 3),
+                             2))
+    
+    def test6(self):
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(2, 5),
+                             int_array(2, 5),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(2, 7),
+                             int_array(2, 5),
+                             2))
+        self.assertEqual(-1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(0, 2),
+                             int_array(2, 5),
+                             2))
+        self.assertEqual(1,
+                         str_order.sign_put_max_coincidence(
+                             int_array(2, 5),
+                             int_array(0, 1),
+                             2))
+
+
+
+@tests.category('SHORT', 'ESSENTIAL')
 class StringGraphsTestCase(unittest.TestCase):
         
     def setUp(self):

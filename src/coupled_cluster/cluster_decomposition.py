@@ -1,4 +1,4 @@
-"""
+"""Carry out the cluster decomposition
 
 
 """
@@ -11,7 +11,6 @@ from wave_functions.slater_det import get_slater_det_from_excitation
 
 default_recipe_files = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
-
 
 
 def str_dec(decomposition):

@@ -33,11 +33,12 @@ from orbitals.symmetry import OrbitalsSets
 
 logger = logging.getLogger(__name__)
 
+
 def _sign_for_absolute_order(
         wf,
         alpha_hp,
         beta_hp,
-        _to_print = False):
+        _to_print=False):
     """The sign to order an excited determinant in the absolute order
     
     This is the sign to put an excited Slater determinant where the
@@ -102,8 +103,7 @@ def _sign_for_absolute_order(
                     or (spirrep_j < spirrep_i <= spirrep_b
                         and not (spirrep_j <= spirrep_a < spirrep_b))
                     or (spirrep_j <= spirrep_a < spirrep_b
-                        and not (spirrep_j < spirrep_i <= spirrep_b))
-                ):
+                        and not (spirrep_j < spirrep_i <= spirrep_b))):
                     if _to_print:
                         print('change sign!!!!')
                     sign_sp = -sign_sp
@@ -115,6 +115,7 @@ def _sign_for_absolute_order(
     if _to_print:
         print('sign final:', sign)
     return sign
+
 
 def _compare_strings(ref, exc):
     """Compare strings ref and exc and return information about excitation
@@ -167,6 +168,18 @@ class FCIWaveFunction(WaveFunction):
     The wave function is stored in a 2D np.array, whose rows and columns
     refer to alpha and beta strings
     
+    Attributes:
+    -----------
+    ordered_orbs (bool, property)
+    This indicates how the orbitals are ordered in the Slater determinants,
+    within each alpha and beta parts. This affects the sign of the
+    coefficients, although the actual representation of the determinants are,
+    internally, the same.
+    If True, the Slater determinants are assumed to have ordered orbitals.
+    If False, the Slater determinants are assumed to have orbitals with
+    maximal conincidence
+       (this does not uniquelly determines the order. Improve the description!)
+    
     Data Model:
     -----------
     []
@@ -187,6 +200,7 @@ class FCIWaveFunction(WaveFunction):
         self._n_alpha_str = None
         self._n_beta_str = None
         self.ref_det = None
+        self._ordered_orbs = True
     
     def __len__(self):
         try:
@@ -228,6 +242,62 @@ class FCIWaveFunction(WaveFunction):
                 + f' ({excinfo[2][0]!s}->{excinfo[2][1]!s})')
         x.append('-' * 50)
         return '\n'.join(x)
+    
+    @property
+    def ordered_orbs(self):
+        return self._ordered_orbs
+    
+    def change_orbital_order(self):
+        """Change the sign of coefficients as if orbital order were changed
+        
+        THIS DESCRIPTION SHOULD BE UPDATED!
+        The reference Slater determinant might not be
+        that with all occupied orbitals first. This causes some sign problems
+        in the cluster decomposition of the wave function, and thus this
+        subroutine changes the sign of the determinants as if the orbitals
+        were reordered with all occupied orbitals in the reference coming
+        first. However, the order of the orbitals (and thus of the alpha
+        and beta strings) are not really changed!
+        If the wave function is to be used again after decompose, this method
+        has to be called again to change back the signs!
+        
+        See strings_rev_lexical_order.sign_relative_to_ref
+        
+        TODO:
+        -----
+        Can we avoid calling sign_put_max_coincidence for each string,
+        but obtain the sign from the previous using the reverse lexical
+        ordering?
+        
+        """
+        sign_beta = np.empty(self._coefficients.shape[1], dtype=int_dtype)
+        occ_b = np.empty(self.n_corr_beta, dtype=int_dtype)
+        occ_a = np.empty(self.n_corr_alpha, dtype=int_dtype)
+        str_order.ini_str(occ_b)
+        str_order.ini_str(occ_a)
+        for ib in range(self._coefficients.shape[1]):
+            str_order.next_str(occ_b)
+            sign_beta[ib] = str_order.sign_put_max_coincidence(
+                self.ref_det.beta_occ,
+                occ_b, self.n_corr_beta)
+        for ia in range(self._coefficients.shape[0]):
+            str_order.next_str(occ_a)
+            sign_alpha = str_order.sign_put_max_coincidence(
+                self.ref_det.alpha_occ,
+                occ_a, self.n_corr_alpha)
+            for ib in range(self._coefficients.shape[1]):
+                self._coefficients[ia, ib] *= sign_alpha * sign_beta[ib]
+        self._ordered_orbs = not self._ordered_orbs
+    
+    def set_ordered_orbitals(self):
+        """Put as ordered orbitals if they are not"""
+        if not self.ordered_orbs:
+            self.change_orbital_order()
+    
+    def set_max_coincidence_orbitals(self):
+        """Put orbitals in maximal coincidence if they are not"""
+        if self.ordered_orbs:
+            self.change_orbital_order()
     
     def enumerate(self):
         """Generator for determinants that also yield the index
@@ -538,17 +608,16 @@ class FCIWaveFunction(WaveFunction):
         If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
-        _to_print = (1, 4)
+        _to_print = (-1, -1)
         level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
+        self._ordered_orbs = False
         for ia, ib, det in self.enumerate():
             if (ia,ib) == _to_print:
                 print('Starting det = ', det)
             if not self.symmetry_allowed(det):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            sign_abs_order = _sign_for_absolute_order(self, alpha_hp, beta_hp,
-                                                      (ia, ib) ==_to_print)
             # if (len(alpha_hp[0]) == 0 and len(beta_hp[0]) == 2
             #     and beta_hp[0][0] == 0 and beta_hp[0][1] == 5
             #     and beta_hp[1][0] == 2 and beta_hp[1][1] == 6):
@@ -559,9 +628,7 @@ class FCIWaveFunction(WaveFunction):
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
                 if (ia,ib) == _to_print:
                     print('Do not cluster_decompose')
-                self._coefficients[ia, ib] = sign_abs_order * wf[rank,
-                                                                 alpha_hp,
-                                                                 beta_hp]
+                self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 if (ia,ib) == _to_print:
                     print('Do cluster_decompose!')
@@ -584,16 +651,17 @@ class FCIWaveFunction(WaveFunction):
                                 print('not allowed')
                             add_contr = False
                             break
-                        rank, alpha_hp, beta_hp = self.get_exc_info(
-                            cluster_det)
-                        new_contribution *= wf[rank, alpha_hp, beta_hp]
+                        new_contribution *= wf[self.get_exc_info(cluster_det)]
                         if (ia,ib) == _to_print:
                             print('new inner contribution:')
-                            print('alpha_hp:', alpha_hp)
-                            print('beta_hp:', beta_hp)
-                            print('The contribution:', wf[rank, alpha_hp, beta_hp])
+                            print('alpha_hp:', self.get_exc_info(cluster_det)[1])
+                            print('beta_hp:', self.get_exc_info(cluster_det)[2])
+                            print('The contribution:',
+                                  wf[self.get_exc_info(cluster_det)])
                     if add_contr:
-                        self._coefficients[ia, ib] -= sign_abs_order * new_contribution
+                        if (ia,ib) == _to_print:
+                            print("Adding New contribution: ", -new_contribution)
+                        self._coefficients[ia, ib] -= new_contribution
                     if (ia,ib) == _to_print:
                         print('-------------- END OF ITERATION')
         self.set_coeff_ref_det()
@@ -639,6 +707,7 @@ class FCIWaveFunction(WaveFunction):
         uhf_alpha_was_read = False
         found_orbital_source = False
         self.wf_type = 'FCI'
+        self._ordered_orbs = True
         if isinstance(molpro_output, str):
             f = open(molpro_output, 'r')
             f_name = molpro_output
@@ -1264,31 +1333,6 @@ class FCIWaveFunction(WaveFunction):
         """The reverse of _extract_S_from_D"""
         raise NotImplementedError('Do it')
                     
-    def _coeff_as_order_relative_to_ref(self):
-        """Change the coefficients as if the orbitals were relative to ref_det
-        
-        Because of symmetry, the reference Slater determinant might not be
-        that with all occupied orbitals first. This causes some sign problems
-        in the cluster decomposition of the wave function, and thus this
-        subroutine changes the sign of the determinants as if the orbitals
-        were reordered with all occupied orbitals in the reference coming
-        first. However, the order of the orbitals (and thus of the alpha
-        and beta strings) are not really changed!
-        If the wave function is to be used again after decompose, this method
-        has to be called again to change back the signs!
-        
-        See strings_rev_lexical_order.sign_relative_to_ref
-        
-        """
-        for ia, ib, det in self.enumerate():
-            rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            self._coefficients[ia, ib] *= (
-                str_order.sign_relative_to_ref(alpha_hp[0],
-                                               alpha_hp[1],
-                                               self.ref_det.alpha_occ)
-                * str_order.sign_relative_to_ref(beta_hp[0],
-                                                 beta_hp[1],
-                                                 self.ref_det.beta_occ))
     
     def dist_to(self, other,
                 metric='IN',
