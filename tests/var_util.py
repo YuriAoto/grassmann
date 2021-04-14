@@ -17,7 +17,12 @@ logging.basicConfig(filename='testing.log',
 logger = logging.getLogger(__name__)
 
 
-memory.set_total_memory(400.0)
+_GR_MEMORY_env = os.getenv('GR_MEMORY')
+if _GR_MEMORY_env is None:
+    memory.set_total_memory(200.0)
+else:
+    memory.set_total_memory(float(_GR_MEMORY_env))
+
 
 all_test_categories = [
     'ALL',
@@ -32,18 +37,14 @@ all_test_categories = [
 
 
 _GR_TESTS_GROUP_env = os.getenv('GR_TESTS_CATEG')
-
 if _GR_TESTS_GROUP_env is None:
     user_categories = ('ALL',)
 else:
     user_categories = tuple(_GR_TESTS_GROUP_env.split(','))
-
 for cat in user_categories:
     if cat not in all_test_categories:
         raise Exception(cat + ' is not a valid test category!')
-
 run_all_categories = 'ALL' in user_categories
-
 if run_all_categories:
     print('Run all test categories!')
 else:

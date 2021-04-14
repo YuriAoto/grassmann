@@ -5,7 +5,7 @@ import cython
 import numpy as np
 
 from orbitals.occ_orbitals cimport OccOrbital
-#from orbitals.occ_orbitals import OccOrbital
+# from orbitals.occ_orbitals import OccOrbital
 from util.array_indices cimport n_from_rect
 from util.variables import int_dtype
 from molecular_geometry.symmetry import irrep_product
@@ -17,6 +17,7 @@ from coupled_cluster.manifold_term2 cimport (
 from coupled_cluster.manifold_hess cimport (
     calc_H_a, calc_H_b, calc_H_aa, calc_H_bb, calc_H_ab)
 from wave_functions.fci import FCIWaveFunction
+
 
 def min_dist_jac_hess(double[:, :] wf,
                       double[:, :] wf_cc,
@@ -96,17 +97,17 @@ def min_dist_jac_hess(double[:, :] wf,
     cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
     cdef DoubleExc double_exc
-    cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
+    cdef int[8] pos_ini  # assuming no more than 8 irreps in a point group!
     cdef int pos_ini_exc_type
     cdef OccOrbital i, j
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1],
-                                       dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1],
-                                           dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1],
-                                       dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1],
-                                           dtype=int_dtype)
+    cdef int[:] occ_buff_a = np.empty(alpha_string_graph.shape[1],
+                                      dtype=int_dtype)
+    cdef int[:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1],
+                                          dtype=int_dtype)
+    cdef int[:] occ_buff_b = np.empty(beta_string_graph.shape[1],
+                                      dtype=int_dtype)
+    cdef int[:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1],
+                                          dtype=int_dtype)
     J = np.zeros(n_ampl)
     if diag_hess:
         H = np.zeros((1, 1))
@@ -146,8 +147,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                  corr_orb,
                                  virt_orb,
                                  alpha_string_graph,
-                                 beta_string_graph
-                        )
+                                 beta_string_graph)
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
@@ -171,7 +171,7 @@ def min_dist_jac_hess(double[:, :] wf,
                         H[0, 0] += J[pos]**2
                         J[pos] /= diag
                     else:
-                        H[pos, pos] = diag 
+                        H[pos, pos] = diag
                         calc_H_b(H[pos, pos:],
                                  single_exc,
                                  wf,
@@ -182,8 +182,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                  corr_orb,
                                  virt_orb,
                                  alpha_string_graph,
-                                 beta_string_graph
-                        )
+                                 beta_string_graph)
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
@@ -208,6 +207,7 @@ def min_dist_jac_hess(double[:, :] wf,
                     if a_irrep == b_irrep:
                         nvirt_1 = virt_orb[a_spirrep] - 1
                         double_exc.b = double_exc.a
+##################                        WRONG???
                     else:
                         double_exc.b = (orbs_before[b_irrep]
                                         + corr_orb[b_spirrep])
@@ -282,6 +282,7 @@ def min_dist_jac_hess(double[:, :] wf,
                     if a_irrep == b_irrep:
                         nvirt_1 = virt_orb[a_spirrep] - 1
                         double_exc.b = double_exc.a
+##############                        WRONG???
                     else:
                         double_exc.b = (orbs_before[b_irrep]
                                         + corr_orb[b_spirrep])
@@ -433,12 +434,13 @@ def min_dist_jac_hess_num(wf,
     
     """
     cdef int pos, a_irrep, b_irrep, a_spirrep, b_spirrep
-    cdef int[8] pos_ini  ## assuming no more than 8 irreps in a point group!
-    cdef double [:] f_p, f_m
+    cdef int[8] pos_ini  # assuming no more than 8 irreps in a point group!
+    cdef double[:] f_p, f_m
     cdef double[:] jac
     cdef double[:, :] hess
     cdef double f, f_pp, f_mm
     cdef int n_irrep_or_0
+    
     def Func(x):
         wf_as_fci = FCIWaveFunction.from_int_norm(x)
         d = wf.dist_to(wf_as_fci,
@@ -474,7 +476,9 @@ def min_dist_jac_hess_num(wf,
                                   j.spirrep - n_irrep_or_0], a_irrep]
                 a_spirrep = a_irrep + n_irrep_or_0
                 b_spirrep = b_irrep + n_irrep_or_0
-                pos_ini[a_irrep] = pos + virt_orb[a_spirrep] * virt_orb[b_spirrep]
+                pos_ini[a_irrep] = (pos
+                                    + virt_orb[a_spirrep]
+                                    * virt_orb[b_spirrep])
             for a_irrep in range(n_irrep):
                 b_irrep = irrep_product[
                     irrep_product[i.spirrep - n_irrep_or_0,
@@ -527,12 +531,6 @@ def min_dist_jac_hess_num(wf,
         pos += 1
     if pos != n_ampl:
         raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
-
-
-
-
-
-
     
     # for pos in range(len(cc_wf)):
     #     for pos_2 in range(len(cc_wf)):
@@ -559,4 +557,3 @@ def min_dist_jac_hess_num(wf,
     for pos in range(len(cc_wf)):
         jac[pos] = (f_p[pos] - f_m[pos])/(2*eps)
     return jac, hess
-

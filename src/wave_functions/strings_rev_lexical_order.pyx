@@ -37,6 +37,13 @@ cpdef int sign_put_max_coincidence(int[:] occ, int[:] ref, int n):
 ##@cython.boundscheck(False)  # Deactivate bounds checking
 ##@cython.wraparound(False)   # Deactivate negative indexing
 cpdef void ini_str(int[:] occ):
+    """Initializes the string occ
+    
+    The list occ is filled with [-1, 1, 2, 3, ...] such that
+    after one call of next_str it will have the initial string.
+    
+    
+    """
     cdef int i
     occ[0] = -1
     for i in range(1, len(occ)):

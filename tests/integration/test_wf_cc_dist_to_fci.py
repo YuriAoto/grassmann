@@ -18,6 +18,7 @@ import tests
 
 fout = sys.stdout
 
+#### CHANGE?! MOST OF THESE TESTS ARE DONE AT UNIT.TEST_WF_INTERM_NORM
 @tests.category('SHORT')
 class VertDistTwoElecCCDTestCase(unittest.TestCase):
 
@@ -30,7 +31,7 @@ class VertDistTwoElecCCDTestCase(unittest.TestCase):
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCD_file('H2__5__sto3g__D2h'))
-        res = vertical_proj_to_cc_manifold(wf, level="D", restore_wf=False)
+        res = vertical_proj_to_cc_manifold(wf, level="D")
         self.assertEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, cc_wf.amplitudes)
 
@@ -40,7 +41,7 @@ class VertDistTwoElecCCDTestCase(unittest.TestCase):
         wf._coefficients[0, 1:] = 0.0
         wf._coefficients[1:, 0] = 0.0
         wf.normalise(mode='intermediate')
-        res = vertical_proj_to_cc_manifold(wf, level="D", restore_wf=False)        
+        res = vertical_proj_to_cc_manifold(wf, level="D")
         self.assertEqual(res.distance, 0.0)
 
 class VertDistTwoElecCCSDTestCase(unittest.TestCase):

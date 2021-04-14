@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from wave_functions import fci
+from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
 import tests
 
@@ -1169,6 +1169,372 @@ class FromMolproTestCase(unittest.TestCase):
         self.assertEqual(wf.n_irrep, 2)
         self.assertFalse(wf.restricted)
 
+
+class FromProjCCDTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    def test_h2_sto3g_d2h(self):
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file('H2__5__sto3g__D2h'))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('H2__5__sto3g__D2h'))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    @unittest.skip('Is this a valid test??')
+    def test_h2_631g_d2h_noS(self):
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file('H2__5__631g__D2h'))
+        wf._coefficients[0, 1:] = 0.0
+        wf._coefficients[1:, 0] = 0.0
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('H2__5__631g__D2h'))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+
+class FromProjCCSDTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    def test_h2_sto3g_d2h(self):
+        mol_system = 'H2__5__sto3g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_h2_631g_d2h(self):
+        mol_system = 'H2__5__631g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_h2_ccpvdz_d2h(self):
+        mol_system = 'H2__5__ccpVDZ__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_sto3g_d2h(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_to2s_c2v(self):
+        mol_system = 'Li2__5__to2s__C2v'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_to3s_c2v(self):
+        mol_system = 'Li2__5__to3s__C2v'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_he2_631g_c2v(self):
+        """
+        irrep=0    irrep=3
+        -----      -----
+        -|-|-      -|-|-
+        """
+        mol_system = 'He2__1.5__631g__C2v'
+        C0 = 0.995379074095
+        my_ampl = np.array( # only one irrep! Omitting it
+            [   # alpha           (i,a)
+                0.003323494732/C0, # (0,0)
+                0.000000000000, # (0,1)
+                0.000000000000, # (1,0)
+                0.002263551723/C0, # (1,1)
+                # beta
+                0.003323494732/C0, # (0,0)
+                0.000000000000, # (0,1)
+                0.000000000000, # (1,0)
+                0.002263551723/C0, # (0,0)
+                # alpha, alpha;
+                # (0, 1) -> ...
+                 0.000000000000,                                              # (0, 0)
+                -0.006055378514/C0 - (0.003323494732/C0)*(0.002263551723/C0), # (0, 1)
+                 0.006055378514/C0 + (0.003323494732/C0)*(0.002263551723/C0), # (1, 0)
+                 0.000000000000,                                              # (1, 1)
+                # beta, beta;
+                # (0, 1) -> ...
+                 0.000000000000,                                              # (0, 0)
+                -0.006055378514/C0 - (0.003323494732/C0)*(0.002263551723/C0), # (0, 1)
+                 0.006055378514/C0 + (0.003323494732/C0)*(0.002263551723/C0), # (1, 0)
+                 0.000000000000,                                              # (1, 1)
+                # alpha, beta
+                # (0, 0) -> ...
+                -0.026829314916/C0 - (0.003323494732/C0)*(0.003323494732/C0), # (0, 0)
+                 0.000000000000, #                                              (0, 1)
+                 0.000000000000, #                                              (1, 0)
+                -0.027164251452/C0, #                                           (1, 1)
+                # (1, 0) -> ...
+                 0.000000000000, #                                              (0, 0)
+                -0.028884683813/C0, #                                           (0, 1)
+                -0.034938967743/C0 - (0.003323494732/C0)*(0.002263551723/C0), # (1, 0)
+                 0.000000000000,                                              # (1, 1)
+                # (0, 1) -> ...
+                 0.000000000000, #                                              (0, 0)
+                -0.034938967743/C0 - (0.003323494732/C0)*(0.002263551723/C0), # (0, 1)
+                -0.028884683813/C0, #                                           (1, 0)
+                 0.000000000000, #                                              (1, 1)
+                # (1, 1) -> ...
+                -0.031931832482/C0, #                                           (0, 0)
+                 0.000000000000, #                                              (0, 1)
+                 0.000000000000, #                                              (1, 0)
+                -0.050079313551/C0 - (0.002263551723/C0)*(0.002263551723/C0)  # (1, 1)
+        ])
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
+        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+
+    def test_he2_631g_d2h(self):
+        mol_system = 'He2__1.5__631g__D2h'
+        C0 = 0.995379079354
+        my_ampl = np.array([
+            # alpha
+            0.003323812256/C0, # irrep=0; (i,a) = (0,0)
+            0.002263754920/C0, # irrep=4; (i,a) = (0,0)
+            # beta
+            0.003323812256/C0, # irrep=0; (i,a) = (0,0)
+            0.002263754920/C0, # irrep=4; (i,a) = (0,0)
+            # alpha, alpha;
+            # (0, irrep=0; 0, irrep=1) -> ...
+            -0.006055192246/C0 - (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=0; 0, irrep=1)
+            0.006055192246/C0 + (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=1; 0, irrep=0)
+            # beta, beta;
+            # (0, irrep=0; 0, irrep=1) -> ...
+            -0.006055192246/C0 - (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=0; 0, irrep=1)
+            0.006055192246/C0 + (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=1; 0, irrep=0)
+            # alpha, beta
+            # (0, irrep=0; 0, irrep=0) -> ...
+            -0.026830231262/C0 - (0.003323812256/C0)*(0.003323812256/C0), # (0, irrep=0; 0, irrep=0)
+            -0.027164124306/C0, #                                           (0, irrep=4; 0, irrep=4)
+            # (0, irrep=4; 0, irrep=0) -> ...
+            -0.028884182812/C0, #                                           (0, irrep=0; 0, irrep=4)
+            -0.034939549136/C0 - (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=4; 0, irrep=0)
+            # (0, irrep=0; 0, irrep=4) -> ...
+            -0.034939549136/C0 - (0.003323812256/C0)*(0.002263754920/C0), # (0, irrep=0; 0, irrep=4)
+            -0.028884182812/C0, #                                           (0, irrep=4; 0, irrep=0)
+            # (0, irrep=4; 0, irrep=4) -> ...
+            -0.031932478884/C0, #                                           (0, irrep=0; 0, irrep=0)
+            -0.050078119195/C0 - (0.002263754920/C0)*(0.002263754920/C0) #  (0, irrep=4; 0, irrep=4)
+            ])
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
+        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+
+
+class FromProjCISDTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    def test_h2_sto3g_d2h(self):
+        mol_system = 'H2__5__sto3g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_h2_631g_d2h(self):
+        mol_system = 'H2__5__631g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_h2_ccpvdz_d2h(self):
+        mol_system = 'H2__5__ccpVDZ__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_sto3g_d2h(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_to2s_c2v(self):
+        mol_system = 'Li2__5__to2s__C2v'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_li2_to3s_c2v(self):
+        mol_system = 'Li2__5__to3s__C2v'
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        cc_wf = IntermNormWaveFunction.from_Molpro(
+            tests.CISD_file(mol_system))
+        proj_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
+        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+
+    def test_he2_631g_c2v(self):
+        """
+        irrep=0    irrep=3
+        -----      -----
+        -|-|-      -|-|-
+        """
+        mol_system = 'He2__1.5__631g__C2v'
+        C0 = 0.995379074095
+        my_ampl = np.array( # only one irrep! Omitting it
+            [   # alpha           (i,a)
+                0.003323494732/C0, # (0,0)
+                0.000000000000,    # (0,1)
+                0.000000000000,    # (1,0)
+                0.002263551723/C0, # (1,1)
+                # beta
+                0.003323494732/C0, # (0,0)
+                0.000000000000,    # (0,1)
+                0.000000000000,    # (1,0)
+                0.002263551723/C0, # (0,0)
+                # alpha, alpha;
+                # (0, 1) -> ...
+                 0.000000000000,    # (0, 0)
+                -0.006055378514/C0, # (0, 1)
+                 0.006055378514/C0, # (1, 0)
+                 0.000000000000,    # (1, 1)
+                # beta, beta;
+                # (0, 1) -> ...
+                 0.000000000000,    # (0, 0)
+                -0.006055378514/C0, # (0, 1)
+                 0.006055378514/C0, # (1, 0)
+                 0.000000000000,    # (1, 1)
+                # alpha, beta
+                # (0, 0) -> ...
+                -0.026829314916/C0, # (0, 0)
+                 0.000000000000, #    (0, 1)
+                 0.000000000000, #    (1, 0)
+                -0.027164251452/C0, # (1, 1)
+                # (1, 0) -> ...
+                 0.000000000000, #    (0, 0)
+                -0.028884683813/C0, # (0, 1)
+                -0.034938967743/C0, # (1, 0)
+                 0.000000000000, #    (1, 1)
+                # (0, 1) -> ...
+                 0.000000000000, #    (0, 0)
+                -0.034938967743/C0, # (0, 1)
+                -0.028884683813/C0, # (1, 0)
+                 0.000000000000, #    (1, 1)
+                # (1, 1) -> ...
+                -0.031931832482/C0, # (0, 0)
+                 0.000000000000, #    (0, 1)
+                 0.000000000000, #    (1, 0)
+                -0.050079313551/C0 #  (1, 1)
+        ])
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
+        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+
+    def test_he2_631g_d2h(self):
+        mol_system = 'He2__1.5__631g__D2h'
+        C0 = 0.995379079354
+        my_ampl = np.array([
+            # alpha
+            0.003323812256/C0, # irrep=0; (i,a) = (0,0)
+            0.002263754920/C0, # irrep=4; (i,a) = (0,0)
+            # beta
+            0.003323812256/C0, # irrep=0; (i,a) = (0,0)
+            0.002263754920/C0, # irrep=4; (i,a) = (0,0)
+            # alpha, alpha;
+            # (0, irrep=0; 0, irrep=1) -> ...
+            -0.006055192246/C0, # (0, irrep=0; 0, irrep=1)
+            0.006055192246/C0,  # (0, irrep=1; 0, irrep=0)
+            # beta, beta;
+            # (0, irrep=0; 0, irrep=1) -> ...
+            -0.006055192246/C0, # (0, irrep=0; 0, irrep=1)
+            0.006055192246/C0 , # (0, irrep=1; 0, irrep=0)
+            # alpha, beta
+            # (0, irrep=0; 0, irrep=0) -> ...
+            -0.026830231262/C0, # (0, irrep=0; 0, irrep=0)
+            -0.027164124306/C0, # (0, irrep=4; 0, irrep=4)
+            # (0, irrep=4; 0, irrep=0) -> ...
+            -0.028884182812/C0, # (0, irrep=0; 0, irrep=4)
+            -0.034939549136/C0, # (0, irrep=4; 0, irrep=0)
+            # (0, irrep=0; 0, irrep=4) -> ...
+            -0.034939549136/C0, # (0, irrep=0; 0, irrep=4)
+            -0.028884182812/C0, # (0, irrep=4; 0, irrep=0)
+            # (0, irrep=4; 0, irrep=4) -> ...
+            -0.031932478884/C0, # (0, irrep=0; 0, irrep=0)
+            -0.050078119195/C0 # (0, irrep=4; 0, irrep=4)
+            ])
+        wf = FCIWaveFunction.from_Molpro_FCI(
+            tests.FCI_file(mol_system))
+        wf.normalise(mode='intermediate')
+        proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
+        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
 
 @tests.category('SHORT')
 class RestrictUnrestrictItTestCase(unittest.TestCase):

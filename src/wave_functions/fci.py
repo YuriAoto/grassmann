@@ -570,7 +570,7 @@ class FCIWaveFunction(WaveFunction):
             See WaveFunction.get_parameters_from
         
         """
-        new_wf = cls.similar_to(wf, restricted=restricted)
+        new_wf = cls.similar_to(wf, restricted=False)##  Because proj to interm norm requires false...restricted)
         new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
         new_wf.get_coefficients_from_int_norm_wf(wf)
@@ -781,7 +781,9 @@ class FCIWaveFunction(WaveFunction):
                     self.Ms = float(line.split()[3])
                 elif 'Molecular orbitals read from record' in line:
                     if 'RHF' in line:
-                        self.restricted = True
+                        # TO HANDLE RESTRICTED=TRUE WE NEED TO IMPROVE
+                        # corr_orbs_before, PERHAPS OTHER THINGS
+                        self.restricted = False
                         found_orbital_source = True
                     elif 'UHF/ALPHA' in line:
                         self.restricted = False

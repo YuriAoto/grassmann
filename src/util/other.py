@@ -26,6 +26,7 @@ def int_array(*x):
     """
     if len(x) == 0:
         return np.array([], dtype=int_dtype)
-    if len(x) == 1 and not isinstance(x[0], (int, float)) :
+    if len(x) == 1 and not isinstance(x[0], (int, np.integer,
+                                             float, np.floating)):
         return np.array(x[0], dtype=int_dtype)
     return np.array(x, dtype=int_dtype)

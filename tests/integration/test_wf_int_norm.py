@@ -5,8 +5,122 @@ import unittest
 
 import numpy as np
 
+from wave_functions.fci import FCIWaveFunction
+from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions import int_norm, cisd
 import tests
+
+
+
+@tests.category('SHORT')
+class CISDgoFCIbackCISDTestCase(unittest.TestCase):
+    """Check CISD -> FCI -> CISD
+    
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+
+    def test_he2_631g_c2v(self):
+        mol_system = 'He2__1.5__631g__C2v'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
+        goback_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(
+                FCIWaveFunction.from_int_norm(cc_wf), 'CISD'))
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_he2_631g_d2h(self):
+        mol_system = 'He2__1.5__631g__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_li2_ccpvdz_d2h(self):
+        mol_system = 'Li2__5__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+
+@tests.category('SHORT')
+class CCDgoFCIbackCCDTestCase(unittest.TestCase):
+    """Check CCD -> FCI -> CCD
+    
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+
+    def test_he2_631g_c2v(self):
+        mol_system = 'He2__1.5__631g__C2v'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
+        goback_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(
+                FCIWaveFunction.from_int_norm(cc_wf), 'CCD'))
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_he2_631g_d2h(self):
+        mol_system = 'He2__1.5__631g__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_li2_ccpvdz_d2h(self):
+        mol_system = 'Li2__5__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    @unittest.skip('This is too long and requires too much memory...')
+    def test_h2o_631g_c2v(self):
+        mol_system = 'h2o__Req__631g__C2v'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+
+@tests.category('SHORT')
+class CCSDgoFCIbackCCSDTestCase(unittest.TestCase):
+    """Check CCSD -> FCI -> CCSD
+    
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+
+    def test_he2_631g_c2v(self):
+        mol_system = 'He2__1.5__631g__C2v'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
+        goback_cc_wf = IntermNormWaveFunction.restrict(
+            IntermNormWaveFunction.from_projected_fci(
+                FCIWaveFunction.from_int_norm(cc_wf), 'CCSD'))
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_he2_631g_d2h(self):
+        mol_system = 'He2__1.5__631g__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_li2_ccpvdz_d2h(self):
+        mol_system = 'Li2__5__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
 
 
 @tests.category('SHORT')

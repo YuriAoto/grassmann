@@ -4,52 +4,63 @@
 """
 cdef class OccOrbital:
     """Class to run over occupied orbitals
-
-    Usage:
+    
+    Attributes:
+    -----------
+    orb (int)
+        The orbital index within all orbitals (occupied/correlated and virtual)
+    
+    pos_in_occ (int)
+        The orbital index within the occupied (correlated) orbitals only
+    
+    spirrep (int)
+        spin-irrep of the orbital
+    
+    Example:
     ------
     # alpha and beta correlated orbitals
     corr_orb = np.array([5,2,2,0, 4,2,2,0], dtype=int_dtype)
     # number of orbitals before that irrep
     orbs_before = np.array([0, 10, 15, 20, 22])
-
+    
     i = OccOrbital(corr_orb, orbs_before, True)
     i.pos_in_occ  # 0
     i.orb  # 0
     i.spirrep  # 0
     i.alive  # True
-
+    
     i.next_()
-
+    
     i.pos_in_occ  # 1
     i.orb  # 1
     i.spirrep  # 0
-
+    
     for k in range(3):
        i.next_()
-
+    
     i.pos_in_occ  # 4
     i.orb  # 4
     i.spirrep  # 0
-
+    
     i.next_()
-
+    
     i.pos_in_occ  # 5
-    i.orb  # 0
+    i.orb  # 10
     i.spirrep  # 1
-
+    
     for k in range(4):
        i.next_()
-
+    
     i.pos_in_occ   # 9 > n of occupied orb
     i.alive  # False
-
+    
     i.rewind()
     i.pos_in_occ  # 0
     i.orb  # 0
     i.spirrep  # 0
     i.alive  # True
-
-
+    
+    
     """
     def __cinit__(self,
                   int[:] corr_orb,

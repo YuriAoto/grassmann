@@ -288,6 +288,8 @@ class WaveFunction(ABC):
         x.append('n frozen: {}'.format(self.froz_orb))
         x.append('n act: {}'.format(self.act_orb))
         x.append('ref occ: {}'.format(self.ref_orb))
+        x.append('orbs before: {}'.format(self.orbs_before))
+        x.append('corr orbs before: {}'.format(self.corr_orbs_before))
         x.append('irrep: {}'.format(self.irrep))
         x.append('Ms: {}'.format(self.Ms))
         x.append('restricted: {}'.format(self.restricted))
