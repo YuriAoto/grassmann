@@ -35,6 +35,65 @@ EXC_TYPE_AA = 3
 EXC_TYPE_AB = 4
 EXC_TYPE_BB = 5
 
+def _translate(X, ini, end):
+    """X[..., ini, ini+1, ..., end-1, end, ...] -> X[..., ini+1, ..., end-1, end, end, ...]
+    """
+    if ini <= end:
+        X[ini:end] = X[ini+1:end+1]
+    else:
+        X[end+1:ini+1] = X[end:ini]
+    # Better for cython??
+    # if ini <= end:
+    #     for ii in range(ini, end):
+    #         X[ii] = X[ii + 1]
+    # else:
+    #     for ii in range(ini - end):
+    #         alpha_occ[ini-ii] = alpha_occ[end - (ii+1)]
+
+
+
+def _set_virtpos_for_proj_aa_bb(old_virt_pos_a, old_virt_pos_b,
+                                i, j, a_spirrep, b_spirrep,
+                                occ, corr_orbs_before, corr_orb):
+    """Helper for from_projected_fci: set position of virtual orbitals
+    
+    """
+    new_virt_pos_a = corr_orbs_before[a_spirrep] + corr_orb[a_spirrep]
+    new_virt_pos_b = corr_orbs_before[b_spirrep] + corr_orb[b_spirrep]
+    new_virt_pos_b += 1
+    if j.spirrep <= a_spirrep:
+        new_virt_pos_a -= 2
+        new_virt_pos_b -= 2
+    elif i.spirrep <= a_spirrep:
+        new_virt_pos_a -= 1
+        new_virt_pos_b -= 1
+        if j.spirrep <= b_spirrep:
+            new_virt_pos_b -= 1
+    if old_virt_pos_a < new_virt_pos_a:
+        _translate(occ, old_virt_pos_b, new_virt_pos_b)
+        _translate(occ, old_virt_pos_a, new_virt_pos_a)
+    else:
+        _translate(occ, old_virt_pos_a, new_virt_pos_a)
+        _translate(occ, old_virt_pos_b, new_virt_pos_b)
+    return new_virt_pos_a, new_virt_pos_b
+
+
+def _remove_singles_contrib(pos, amplitudes, wf, alpha_hp, beta_hp):
+    """Helper for from_projected_fci: remove the contribution of singles
+    """
+    decomposition = cluster_decompose(alpha_hp, beta_hp, wf.ref_det, mode='SD')
+    add_contr = True
+    for d in decomposition[1:]:
+        singles_contr = d[0]
+        for cluster_det in d[1:]:
+            if not wf.symmetry_allowed(cluster_det):
+                add_contr = False
+                break
+            singles_contr *= wf[wf.index(cluster_det)]
+        if add_contr:
+            amplitudes[pos] += singles_contr
+
+
 
 def _transpose(X, nrow, ncol):
     """Return the ravel form of the transpose of the (raveled) block
@@ -974,11 +1033,6 @@ class IntermNormWaveFunction(WaveFunction):
                         alpha_occ[virt_pos] += 1
                     alpha_occ[wf.corr_orbs_before[spirrep] + ii] = \
                         wf.orbs_before[irrep] + ii
-                # IS THIS NEEDED???
-                # alpha_occ[wf.corr_orbs_before[irrep]
-                #           + wf.corr_orb[spirrep]] = (wf.orbs_before[irrep]
-                #                                      + wf.corr_orb[spirrep])
-                # print('Fixing 2 alpha_occ in singles: ', alpha_occ)
             # --- beta -> beta
             for irrep in range(wf.n_irrep):
                 spirrep = irrep + wf.n_irrep
@@ -999,10 +1053,6 @@ class IntermNormWaveFunction(WaveFunction):
                         beta_occ[virt_pos] += 1
                     beta_occ[wf.corr_orbs_before[spirrep] + ii] = \
                         wf.orbs_before[irrep] + ii
-                # IS THIS NEEDED???
-                #beta_occ[wf.corr_orbs_before[irrep]
-                #         + wf.corr_orbs[spirrep]] = (wf.orbs_before[irrep]
-                #                                     + wf.corr_orbs[spirrep])
         # --- alpha, alpha -> alpha, alpha
         i = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, True)
         j = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, True)
@@ -1025,30 +1075,13 @@ class IntermNormWaveFunction(WaveFunction):
                 if wf.virt_orb[a_spirrep] == 0 or wf.virt_orb[b_spirrep] == 0:
                     continue
                 if a_irrep <= b_irrep:
-                    new_virt_pos_a = (wf.corr_orbs_before[a_spirrep]
-                                      + wf.corr_orb[a_spirrep])
-                    new_virt_pos_b = (wf.corr_orbs_before[b_spirrep]
-                                      + wf.corr_orb[b_spirrep])
-                    if a_irrep == b_irrep:
-                        new_virt_pos_a -= 2
-                        new_virt_pos_b -= 1
-                    elif a_spirrep == i.spirrep:
-                        new_virt_pos_a -= 1
-                        new_virt_pos_b -= 1
-                    if new_virt_pos_a > virt_pos_a:
-                        for ii in range(virt_pos_a, new_virt_pos_a):
-                            alpha_occ[ii] = alpha_occ[ii + 1]
-                    else:
-                        for ii in range(virt_pos_a - new_virt_pos_a):
-                            alpha_occ[virt_pos_a-ii] = alpha_occ[virt_pos_a - (ii+1)]
-                    if new_virt_pos_b > virt_pos_b:
-                        for ii in range(virt_pos_b, new_virt_pos_b):
-                            alpha_occ[ii] = alpha_occ[ii + 1]
-                    else:
-                        for ii in range(virt_pos_b - new_virt_pos_b):
-                            alpha_occ[virt_pos_b-ii] = alpha_occ[virt_pos_b - (ii+1)]
-                    virt_pos_a = new_virt_pos_a
-                    virt_pos_b = new_virt_pos_b
+                    if a_irrep == b_irrep and wf.virt_orb[a_spirrep] < 2:
+                        pos += 1
+                        continue
+                    virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
+                        virt_pos_a, virt_pos_b,
+                        i, j, a_spirrep, b_spirrep,
+                        alpha_occ, wf.corr_orbs_before, wf.corr_orb)
                     alpha_occ[virt_pos_a] = wf.orbs_before[a_irrep] + wf.corr_orb[a_spirrep]
                     for a in range(wf.virt_orb[a_spirrep]):
                         alpha_hp[1][0] = alpha_occ[virt_pos_a]
@@ -1063,21 +1096,9 @@ class IntermNormWaveFunction(WaveFunction):
                                                         wf._alpha_string_graph),
                                     i_beta_ref]
                                 if do_decomposition:
-                                    decomposition = cluster_decompose(
-                                        alpha_hp, beta_hp, wf.ref_det,
-                                        mode='SD')
-                                    add_contr = True
-                                    for d in decomposition[1:]:
-                                        singles_contr = d[0]
-                                        for cluster_det in d[1:]:
-                                            if not wf.symmetry_allowed(
-                                                    cluster_det):
-                                                add_contr = False
-                                                break
-                                            singles_contr *= wf[
-                                                wf.index(cluster_det)]
-                                        if add_contr:
-                                            new_wf.amplitudes[pos] += singles_contr
+                                    _remove_singles_contrib(
+                                        pos, new_wf.amplitudes, wf,
+                                        alpha_hp, beta_hp)
                             elif a > b:
                                 new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                     pos - (a-b)*nvirt_1]
@@ -1088,8 +1109,7 @@ class IntermNormWaveFunction(WaveFunction):
                     for a in range(wf.virt_orb[a_spirrep]):
                         for b in range(wf.virt_orb[b_spirrep]):
                             new_wf.amplitudes[pos] = -new_wf.amplitudes[
-                                pos_ini[b_irrep]
-                                + n_from_rect(
+                                pos_ini[b_irrep] + n_from_rect(
                                     b, a, wf.virt_orb[a_spirrep])]
                             pos += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
@@ -1119,30 +1139,13 @@ class IntermNormWaveFunction(WaveFunction):
                 if wf.virt_orb[a_spirrep] == 0 or wf.virt_orb[b_spirrep] == 0:
                     continue
                 if a_irrep <= b_irrep:
-                    new_virt_pos_a = (wf.corr_orbs_before[a_spirrep]
-                                      + wf.corr_orb[a_spirrep])
-                    new_virt_pos_b = (wf.corr_orbs_before[b_spirrep]
-                                      + wf.corr_orb[b_spirrep])
-                    if a_irrep == b_irrep:
-                        new_virt_pos_a -= 2
-                        new_virt_pos_b -= 1
-                    elif a_spirrep == i.spirrep:
-                        new_virt_pos_a -= 1
-                        new_virt_pos_b -= 1
-                    if new_virt_pos_a > virt_pos_a:
-                        for ii in range(virt_pos_a, new_virt_pos_a):
-                            beta_occ[ii] = beta_occ[ii + 1]
-                    else:
-                        for ii in range(virt_pos_a - new_virt_pos_a):
-                            beta_occ[virt_pos_a-ii] = beta_occ[virt_pos_a - (ii+1)]
-                    if new_virt_pos_b > virt_pos_b:
-                        for ii in range(virt_pos_b, new_virt_pos_b):
-                            beta_occ[ii] = beta_occ[ii + 1]
-                    else:
-                        for ii in range(virt_pos_b - new_virt_pos_b):
-                            beta_occ[virt_pos_b-ii] = beta_occ[virt_pos_b - (ii+1)]
-                    virt_pos_a = new_virt_pos_a
-                    virt_pos_b = new_virt_pos_b
+                    if a_irrep == b_irrep and wf.virt_orb[a_spirrep] < 2:
+                        pos += 1
+                        continue
+                    virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
+                        virt_pos_a, virt_pos_b,
+                        i, j, a_spirrep, b_spirrep,
+                        beta_occ, wf.corr_orbs_before, wf.corr_orb)
                     beta_occ[virt_pos_a] = wf.orbs_before[a_irrep] + wf.corr_orb[a_spirrep]
                     for a in range(wf.virt_orb[a_spirrep]):
                         beta_hp[1][0] = beta_occ[virt_pos_a]
@@ -1157,21 +1160,9 @@ class IntermNormWaveFunction(WaveFunction):
                                     str_order.get_index(beta_occ,
                                                         wf._beta_string_graph)]
                                 if do_decomposition:
-                                    decomposition = cluster_decompose(
-                                        alpha_hp, beta_hp, wf.ref_det,
-                                        mode='SD')
-                                    add_contr = True
-                                    for d in decomposition[1:]:
-                                        singles_contr = d[0]
-                                        for cluster_det in d[1:]:
-                                            if not wf.symmetry_allowed(
-                                                    cluster_det):
-                                                add_contr = False
-                                                break
-                                            singles_contr *= wf[
-                                                wf.index(cluster_det)]
-                                        if add_contr:
-                                            new_wf.amplitudes[pos] += singles_contr
+                                    _remove_singles_contrib(
+                                        pos, new_wf.amplitudes, wf,
+                                        alpha_hp, beta_hp)
                             elif a > b:
                                 new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                     pos - (a-b)*nvirt_1]
@@ -1182,8 +1173,7 @@ class IntermNormWaveFunction(WaveFunction):
                     for a in range(wf.virt_orb[a_spirrep]):
                         for b in range(wf.virt_orb[b_spirrep]):
                             new_wf.amplitudes[pos] = -new_wf.amplitudes[
-                                pos_ini[b_irrep]
-                                + n_from_rect(
+                                pos_ini[b_irrep] + n_from_rect(
                                     b, a, wf.virt_orb[a_spirrep])]
                             pos += 1
             if i.pos_in_occ == j.pos_in_occ - 1:

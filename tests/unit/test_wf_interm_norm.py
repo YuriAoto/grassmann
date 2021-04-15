@@ -13,6 +13,9 @@ import tests
 
 @tests.category('SHORT')
 class FromMolproTestCase(unittest.TestCase):
+    """Tests for constructor from Molpro output
+    
+    """
 
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
@@ -1171,7 +1174,10 @@ class FromMolproTestCase(unittest.TestCase):
 
 
 class FromProjCCDTestCase(unittest.TestCase):
+    """Tests for CCD from projected FCI
     
+    """
+
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
     
@@ -1200,6 +1206,9 @@ class FromProjCCDTestCase(unittest.TestCase):
 
 
 class FromProjCCSDTestCase(unittest.TestCase):
+    """Tests for CCSD from projected FCI
+    
+    """
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
@@ -1369,6 +1378,9 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
 
 class FromProjCISDTestCase(unittest.TestCase):
+    """Tests for CISD from projected FCI
+    
+    """
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
@@ -1535,6 +1547,211 @@ class FromProjCISDTestCase(unittest.TestCase):
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
         self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+
+
+class ProjCCDwfCCDTestCase(unittest.TestCase):
+    """Construct CCD from projecting a FCI-ed CCD
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    @tests.category('SHORT')
+    def test_li2_sto3g_d2h(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        mol_system = 'Be__at__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_li2_sto3g_d2h_allel(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_be_ccpvdz_d2h_allel(self):
+        mol_system = 'Be__at__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c2v_allel(self):
+        mol_system = 'Li2__5__sto3g__C2v'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c1_allel(self):
+        mol_system = 'Li2__5__sto3g__C1'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+
+class ProjCCSDwfCCSDTestCase(unittest.TestCase):
+    """Construct CCSD from projecting a FCI-ed CCSD
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    @tests.category('SHORT')
+    def test_li2_sto3g_d2h(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        mol_system = 'Be__at__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_li2_sto3g_d2h_allel(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_be_ccpvdz_d2h_allel(self):
+        mol_system = 'Be__at__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c2v_allel(self):
+        mol_system = 'Li2__5__sto3g__C2v'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c1_allel(self):
+        mol_system = 'Li2__5__sto3g__C1'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CCSD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+
+class ProjCISDwfCISDTestCase(unittest.TestCase):
+    """Construct CISD from projecting a FCI-ed CISD
+    """
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+    
+    @tests.category('SHORT')
+    def test_li2_sto3g_d2h(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        mol_system = 'Be__at__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_li2_sto3g_d2h_allel(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+    
+    @tests.category('LONG')
+    def test_be_ccpvdz_d2h_allel(self):
+        mol_system = 'Be__at__ccpVDZ__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c2v_allel(self):
+        mol_system = 'Li2__5__sto3g__C2v'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_c1_allel(self):
+        mol_system = 'Li2__5__sto3g__C1'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(
+                tests.CISD_file(mol_system, allE=True)))
+        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
+        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
 
 @tests.category('SHORT')
 class RestrictUnrestrictItTestCase(unittest.TestCase):

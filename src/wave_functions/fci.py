@@ -201,6 +201,7 @@ class FCIWaveFunction(WaveFunction):
         self._n_beta_str = None
         self.ref_det = None
         self._ordered_orbs = True
+        self._normalisation = 'unnormalised'
     
     def __len__(self):
         try:
@@ -507,7 +508,7 @@ class FCIWaveFunction(WaveFunction):
                 (np.array(holes_b, dtype=int_dtype),
                  np.array(particles_b, dtype=int_dtype)))
     
-    def normalise(self, mode='unit'):
+    def normalise(self, mode='unit', force=False):
         """Normalise the wave function
         
         Parameters:
@@ -517,12 +518,20 @@ class FCIWaveFunction(WaveFunction):
             'unit' normalises to unit.
             'intermediate' put in the intermediate normalisation
                 (with respect to .ref_det)
+        
+        force (bool, optional, default='False')
+            If True, the normalisation is carried out anyway.
+            If False, the normalisation is not done if the wave function
+            is already normalised as in mode.
         """
+        if self._normalisation == mode and not force:
+            return
         if mode == 'unit':
             S = norm(self._coefficients)
         elif mode == 'intermediate':
             S = self.C0
         self._coefficients /= S
+        self._normalisation = mode
         self.set_coeff_ref_det()
     
     def set_ref_det_from_corr_orb(self):
@@ -664,6 +673,7 @@ class FCIWaveFunction(WaveFunction):
                         self._coefficients[ia, ib] -= new_contribution
                     if (ia,ib) == _to_print:
                         print('-------------- END OF ITERATION')
+        self._normalisation = 'intermediate'
         self.set_coeff_ref_det()
     
     def get_coeff_from_molpro(self, molpro_output,
@@ -821,6 +831,7 @@ class FCIWaveFunction(WaveFunction):
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
+        self._normalisation = 'unit'
         self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
                                     occ_type='A')
         if active_el_in_out + len(self.froz_orb) != self.n_elec:
