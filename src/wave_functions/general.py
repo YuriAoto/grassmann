@@ -455,6 +455,15 @@ class WaveFunction(ABC):
                                        2)):
             yield i
     
+    def symmetry_allowed(self, det):
+        """Return True if the determinant is symmetry allowed in this wave function"""
+        total_irrep = 0
+        for p in det.alpha_occ:
+            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+        for p in det.beta_occ:
+            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+        return total_irrep == self.irrep
+    
     def get_orb_irrep(self, orb):
         """Return the irrep of orb.
         

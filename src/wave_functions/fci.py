@@ -26,12 +26,57 @@ from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
-from coupled_cluster.cluster_decomposition import cluster_decompose, str_dec
+from coupled_cluster.cluster_decomposition import cluster_decompose
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
 
 logger = logging.getLogger(__name__)
+
+
+def contribution_from_clusters(alpha_hp, beta_hp, ref_det, cc_wf, level, fci_wf):
+    """Return the contribution of a cluter decomposition
+    
+    Parameters:
+    -----------
+    alpha_hp (list of arrays)
+        alpha holes and particles
+    
+    beta_hp (list of arrays)
+        beta holes and particles
+    
+    ref_det (SlaterDet)
+        The reference determinant, relative to which the decomposition will be made
+    
+    fci_wf (FCIWaveFunction)
+        The FCI wave function that should receive the contribution
+        Note that the contribution does not change fci_wf. We need it
+        for the function get_exc_info only. See TODO
+    
+    cc_wf (IntermNormWaveFunction)
+        The CC wave function that will contribute to the decomposition
+    
+    level (str)
+        The level of the decomposition: 'D' or 'SD'
+    
+    TODO:
+    -----
+    If a way is found to heve get_exc_info without fci_wf, this may not be passed
+    
+    """
+    decomposition = cluster_decompose(alpha_hp, beta_hp, ref_det, mode=level)
+    C = 0.0
+    for d in decomposition:
+        new_contribution = d[0]
+        add_contr = True
+        for cluster_det in d[1:]:
+            if not cc_wf.symmetry_allowed(cluster_det):
+                add_contr = False
+                break
+            new_contribution *= cc_wf[fci_wf.get_exc_info(cluster_det)]
+        if add_contr:
+            C -= new_contribution
+    return C
 
 
 def _sign_for_absolute_order(
@@ -617,62 +662,21 @@ class FCIWaveFunction(WaveFunction):
         If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
-        _to_print = (-1, -1)
         level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         self._ordered_orbs = False
         for ia, ib, det in self.enumerate():
-            if (ia,ib) == _to_print:
-                print('Starting det = ', det)
             if not self.symmetry_allowed(det):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            # if (len(alpha_hp[0]) == 0 and len(beta_hp[0]) == 2
-            #     and beta_hp[0][0] == 0 and beta_hp[0][1] == 5
-            #     and beta_hp[1][0] == 2 and beta_hp[1][1] == 6):
-            #     print(ia, ib, det)
             if rank == 0:
                 self._coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                if (ia,ib) == _to_print:
-                    print('Do not cluster_decompose')
                 self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
-                if (ia,ib) == _to_print:
-                    print('Do cluster_decompose!')
-                decomposition = cluster_decompose(
-                    alpha_hp, beta_hp, self.ref_det,
-                    mode=level, recipes_f=None)
-                if (ia,ib) == _to_print:
-                    print('The decomposition:')
-                    print(str_dec(decomposition))
-                self._coefficients[ia, ib] = 0.0
-                for d in decomposition:
-                    new_contribution = d[0]
-                    if (ia,ib) == _to_print:
-                        print('Starting new iteration in decomposition:')
-                        print('With sign: ', new_contribution)
-                    add_contr = True
-                    for cluster_det in d[1:]:
-                        if not self.symmetry_allowed(cluster_det):
-                            if (ia,ib) == _to_print:
-                                print('not allowed')
-                            add_contr = False
-                            break
-                        new_contribution *= wf[self.get_exc_info(cluster_det)]
-                        if (ia,ib) == _to_print:
-                            print('new inner contribution:')
-                            print('alpha_hp:', self.get_exc_info(cluster_det)[1])
-                            print('beta_hp:', self.get_exc_info(cluster_det)[2])
-                            print('The contribution:',
-                                  wf[self.get_exc_info(cluster_det)])
-                    if add_contr:
-                        if (ia,ib) == _to_print:
-                            print("Adding New contribution: ", -new_contribution)
-                        self._coefficients[ia, ib] -= new_contribution
-                    if (ia,ib) == _to_print:
-                        print('-------------- END OF ITERATION')
+                self._coefficients[ia, ib] = contribution_from_clusters(
+                    alpha_hp, beta_hp, self.ref_det, wf, level, self)
         self._normalisation = 'intermediate'
         self.set_coeff_ref_det()
     
@@ -1309,44 +1313,7 @@ class FCIWaveFunction(WaveFunction):
                        only_ref_orb=False,
                        only_this_occ=None):
         raise NotImplementedError('undone')
-    
-    def _extract_S_from_D(self, recipes_f=None):
-        """Extract the contribution of singles from the doubles
         
-        Changes the coefficients of the double excitations
-        by its decomposition into singles:
-        
-        new_c_{ij}^{ab} = c_{ij}^{ab}
-                          - (c_{i}^{a}c_{j}^{b} + c_{i}^{b}c_{j}^{a})
-        
-        Side Effect:
-        ------------
-        The coefficients of all double excitations are changed!
-        
-        TODO:
-        -----
-        Implement an option that creates another coefficients matrix
-        instead of changing this matrix.
-        (or implement a referse function)
-        
-        """
-        for ia, ib, det in self.enumerate():
-            rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            if rank == 2:
-                decomposition = cluster_decompose(
-                    alpha_hp, beta_hp, self.ref_det,
-                    mode='SD', recipes_f=recipes_f)
-                for d in decomposition[1:]:
-                    singles_contr = d[0]
-                    for cluster_det in d[1:]:
-                        singles_contr *= self[self.index(cluster_det)]
-                    self._coefficients[ia, ib] += singles_contr
-                    
-    def _restore_S_to_D(self, recipes_f=None):
-        """The reverse of _extract_S_from_D"""
-        raise NotImplementedError('Do it')
-                    
-    
     def dist_to(self, other,
                 metric='IN',
                 normalise=True):
@@ -1387,13 +1354,3 @@ class FCIWaveFunction(WaveFunction):
         if metric == 'IN':
             return str_order.eucl_distance(self._coefficients,
                                            other._coefficients)
-    
-    def symmetry_allowed(self, det):
-        """Return True if this determinant is symmetry allowed"""
-        total_irrep = 0
-        for p in det.alpha_occ:
-            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
-        for p in det.beta_occ:
-            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
-        return total_irrep == self.irrep
-    

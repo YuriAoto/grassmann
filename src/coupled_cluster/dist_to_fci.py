@@ -14,9 +14,8 @@ from numpy import linalg
 from input_output.log import logtime
 from util.results import Results, OptResults
 from coupled_cluster import manifold as cc_manifold
-from coupled_cluster.cluster_decomposition import cluster_decompose
 from wave_functions.interm_norm import IntermNormWaveFunction
-from wave_functions.fci import FCIWaveFunction
+from wave_functions.fci import FCIWaveFunction, contribution_from_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +31,11 @@ def _str_excitation(x):
     return _str_excitation_list[x] if x < 5 else str(x)
 
 
-def vertical_proj_to_cc_manifold(wf,
+def vertical_dist_to_cc_manifold(wf,
                                  level='SD',
                                  recipes_f=None,
                                  coeff_thr=1.0E-10):
-    """Calculate the vertical projection on the CC manifold
+    """Calculate the vertical distance on the CC manifold
     
     This function is intended to compare the wave function to the
     CCD or CCSD manifold by a "vertical "projection". It writes several
@@ -47,7 +46,7 @@ def vertical_proj_to_cc_manifold(wf,
     the coefficients given by the cluster decomposition of that excitation.
     It checks if the coefficient has the "correct" sign to be in the
     "right direction" to which the CC manifold curves to.
-    A general information is printed to log in the end of the function
+    A general information is printed to log in the end of the function.
     
     Behaviour:
     ----------
@@ -59,18 +58,12 @@ def vertical_proj_to_cc_manifold(wf,
     It can handle only up to n-fold excitation, where n is the largest
     case that has a file with the cluster decomposition, as given through
     recipes_f.
-
-    Attention:
-    ----------
-    For the result (the vertical distance in the intermediate
-    normalisation) to be meaningful, this wave function should
-    be in the intermediate normalisation.
-    This is not checked or tested! The user is responsible to transform
-    (if desired) the wave function first
-    (using normalise(mode='intermediate')).
-    If the coefficient of the reference (.ref_det) is positive,
-    the information about curving towards FCI is correct, even if
-    not in the intermediate normalisation.
+    
+    Side Effects:
+    ------------
+    The wave function wf is put in the intermediate normalisation
+    and the sign of the coefficients should be associated to the determinants
+    in the maximum coincidence order.
     
     Parameters:
     -----------
@@ -95,7 +88,8 @@ def vertical_proj_to_cc_manifold(wf,
     distance: the "vertical" distance between wf and the CC manifold,
               in the metric induced by intermediate normalisation.
     wave_function: the wave function at the CC manifold, as an instace
-                   of IntermNormWaveFunction
+                   of IntermNormWaveFunction. It is obtained by
+                   IntermNormWaveFunction.from_projected_fci
     right_dir: a dictionary, with keys as ranks, and values as 2-tuples,
                that show [0] how many directions are curved towards wf
                and [1] the total number of such directions. Example:
@@ -114,6 +108,7 @@ def vertical_proj_to_cc_manifold(wf,
                         'same sign = %s'])
     if level not in ['D', 'SD']:
         raise ValueError('Possible values for level are "S" and "SD"')
+    wf.normalise(mode='intermediate')
     wf.set_max_coincidence_orbitals()
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
     norm = 0.0
@@ -128,19 +123,7 @@ def vertical_proj_to_cc_manifold(wf,
         if (abs(det.c) > coeff_thr
             and rank > 2
                 and (level == 'SD' or rank % 2 == 0)):
-            decomposition = cluster_decompose(
-                alpha_hp, beta_hp, wf.ref_det,
-                mode=level)
-            C = 0.0
-            for d in decomposition:
-                new_contribution = d[0]
-                for cluster_det in d[1:]:
-                    if not wf.symmetry_allowed(cluster_det):
-                        add_contr = False
-                        break
-                    new_contribution *= cc_wf[wf.get_exc_info(cluster_det)]
-                if add_contr:
-                    C -= new_contribution
+            C = contribution_from_clusters(alpha_hp, beta_hp, wf.ref_det, cc_wf, level, wf)
             norm_contribution = (det.c - C)**2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution
@@ -159,6 +142,8 @@ def vertical_proj_to_cc_manifold(wf,
                         cc_towards_wf)
         elif rank > 2 or (rank, level) == (1, 'D'):
             norm += det.c**2
+            logger.info('Adding .c² to the norm: det = %s', det)
+
     tolog = ['Number of excitations where the CC manifold\n'
              + '   curves towards the wave function:']
     for rank, n in right_dir.items():
@@ -181,8 +166,7 @@ def calc_dist_to_cc_manifold(wf,
                              ini_wf=None,
                              use_FCI_directly=False,
                              recipes_f=None,
-                             coeff_thr=1.0E-10,
-                             restore_wf=True):
+                             coeff_thr=1.0E-10):
     """Calculate the distance to the coupled cluster manifold
 
     Attention:
@@ -241,17 +225,12 @@ def calc_dist_to_cc_manifold(wf,
         Slater determinants with coefficients lower than this
         threshold value are ignored in the analysis
 
-    restore_wf (bool, optional, default=True)
-        Restore all changes made to the wave function during
-        this function, such that it can be further used.
-        If the wave function is not going to be used for further purposes,
-        set it to False.
-
     Return:
     -------
     An instance of OptResults.
 
     """
+    wf.normalise(mode='intermediate')
     converged = False
     normZ = normJ = 1.0
     if ini_wf is None:
@@ -259,15 +238,13 @@ def calc_dist_to_cc_manifold(wf,
             wf,
             level=level,
             recipes_f=recipes_f,
-            coeff_thr=coeff_thr,
-            restore_wf=True).wave_function
+            coeff_thr=coeff_thr).wave_function
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
         cc_wf = ini_wf.vertical_proj_to_cc_manifold(
             wf,
             level=level,
             recipes_f=recipes_f,
-            coeff_thr=coeff_thr,
-            restore_wf=True).wave_function
+            coeff_thr=coeff_thr).wave_function
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
         cc_wf = IntermNormWaveFunction.similar_to(
             wf, 'CC' + level, restricted=False)

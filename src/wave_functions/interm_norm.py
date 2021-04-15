@@ -78,21 +78,41 @@ def _set_virtpos_for_proj_aa_bb(old_virt_pos_a, old_virt_pos_b,
     return new_virt_pos_a, new_virt_pos_b
 
 
-def _remove_singles_contrib(pos, amplitudes, wf, alpha_hp, beta_hp):
-    """Helper for from_projected_fci: remove the contribution of singles
+def singles_contr_from_clusters_fci(alpha_hp, beta_hp, fci_wf):
+    """Return the contribution singles as cluster decomposition of doubles
+    
+    Parameters:
+    -----------
+    alpha_hp (list of arrays)
+        alpha holes and particles
+    
+    beta_hp (list of arrays)
+        beta holes and particles
+    
+    fci_wf (FCIWaveFunction)
+        The FCI wave function that from which the contribution of singles
+        will come.
+    
+    TODO:
+    -----
+    This is essentially similar to fci.contribution_from_clusters, perhaps
+    we could join them. The problem is that here the contribution comes
+    from a fci wave function, whereas there it comes from a IntermNormWaveFunction
+    If the access is unified, this can be joined.
     """
-    decomposition = cluster_decompose(alpha_hp, beta_hp, wf.ref_det, mode='SD')
-    add_contr = True
-    for d in decomposition[1:]:
-        singles_contr = d[0]
+    decomposition = cluster_decompose(alpha_hp, beta_hp, fci_wf.ref_det, mode='SD')
+    C = 0.0
+    for d in decomposition[1:]: # skipping first contribution: it is the double.
+        new_contribution = d[0]
+        add_contr = True
         for cluster_det in d[1:]:
-            if not wf.symmetry_allowed(cluster_det):
+            if not fci_wf.symmetry_allowed(cluster_det):
                 add_contr = False
                 break
-            singles_contr *= wf[wf.index(cluster_det)]
+            new_contribution *= fci_wf[fci_wf.index(cluster_det)]
         if add_contr:
-            amplitudes[pos] += singles_contr
-
+            C += new_contribution
+    return C
 
 
 def _transpose(X, nrow, ncol):
@@ -1096,9 +1116,8 @@ class IntermNormWaveFunction(WaveFunction):
                                                         wf._alpha_string_graph),
                                     i_beta_ref]
                                 if do_decomposition:
-                                    _remove_singles_contrib(
-                                        pos, new_wf.amplitudes, wf,
-                                        alpha_hp, beta_hp)
+                                    new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
+                                        alpha_hp, beta_hp, wf)
                             elif a > b:
                                 new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                     pos - (a-b)*nvirt_1]
@@ -1160,9 +1179,8 @@ class IntermNormWaveFunction(WaveFunction):
                                     str_order.get_index(beta_occ,
                                                         wf._beta_string_graph)]
                                 if do_decomposition:
-                                    _remove_singles_contrib(
-                                        pos, new_wf.amplitudes, wf,
-                                        alpha_hp, beta_hp)
+                                    new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
+                                        alpha_hp, beta_hp, wf)
                             elif a > b:
                                 new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                     pos - (a-b)*nvirt_1]
@@ -1238,14 +1256,8 @@ class IntermNormWaveFunction(WaveFunction):
                             str_order.get_index(alpha_occ, wf._alpha_string_graph),
                             str_order.get_index(beta_occ, wf._beta_string_graph)]
                         if do_decomposition:
-                            decomposition = cluster_decompose(
-                                alpha_hp, beta_hp, wf.ref_det,
-                                mode='SD')
-                            for d in decomposition[1:]:
-                                singles_contr = d[0]
-                                for cluster_det in d[1:]:
-                                    singles_contr *= wf[wf.index(cluster_det)]
-                                new_wf.amplitudes[pos] += singles_contr
+                            new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
+                                alpha_hp, beta_hp, wf)
                         pos += 1
                         beta_occ[virt_pos_b] += 1
                     alpha_occ[virt_pos_a] += 1
