@@ -18,7 +18,10 @@ def main(args, f_out):
     with logtime('Calculate integrals'):
 #        args.integrals = integrals.mol_geo(args.basis, int_meth='ir-wmme') ##TODO:
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
-    RHF = optimiser.Restricted_Closed_Shell_SCF(
-            molecular_system, f_out=f_out, n_DIIS=0)
+    RHF = optimiser.Restricted_Closed_Shell_SCF(molecular_system.integrals,
+												molecular_system.nucl_rep,
+												molecular_system.n_elec,
+												f_out=f_out,
+												n_DIIS=0)
     f_out.write(str(RHF))
     return RHF

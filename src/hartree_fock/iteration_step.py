@@ -22,7 +22,7 @@ class HartreeFockStep():
     def __init__(self):
         self.n_DIIS = 0
         self.n_occ = 0
-        self.intgrls = None
+        self.integrals = None
         self.orb = None
         self.energy = None
         self.grad = None
@@ -56,28 +56,28 @@ class HartreeFockStep():
         with logtime('Form Fock matrix'):
             # F[mn] = h[mn] + Dmat[rs]*(g[mnrs] - g[mrsn]/2)
             # The way that einsum is made matters a lot in the time
-            Fock = np.array(self.intgrls.h)
+            Fock = np.array(self.integrals.h)
             tmp = np.einsum('rs,Frs->F',
                             self.Dmat[:, :, self.i_DIIS],
-                            self.intgrls.g._integrals)
+                            self.integrals.g._integrals)
             Fock += np.einsum('F,Fmn->mn',
                               tmp,
-                              self.intgrls.g._integrals)
+                              self.integrals.g._integrals)
             tmp = np.einsum('rs,Fms->Frm',
                             self.Dmat[:, :, self.i_DIIS],
-                            self.intgrls.g._integrals)
+                            self.integrals.g._integrals)
             Fock -= np.einsum('Frm,Frn->mn',
                               tmp,
-                              self.intgrls.g._integrals) / 2
+                              self.integrals.g._integrals) / 2
         logger.debug('Fock matrix:\n%r', Fock)
 
         with logtime('Calculate Energy'):
             self.energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
-                                       self.intgrls.h + Fock) / 2
+                                       self.integrals.h + Fock) / 2
             self.one_el_energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
-                                              self.intgrls.h)
+                                              self.integrals.h)
             self.two_el_energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
-                                              Fock - self.intgrls.h) / 2
+                                              Fock - self.integrals.h) / 2
         logger.info(
             'Electronic energy: %f\nOne-electron energy: %f'
             + '\nTwo-electron energy: %f',
@@ -99,14 +99,14 @@ class HartreeFockStep():
                 logger.info('Current orbital energies:\n%r', self.orb.energies)
 
         with logtime('Fock matrix in the orthogonal basis'):
-            Fock = self.intgrls.X.T @ Fock @ self.intgrls.X
+            Fock = self.integrals.X.T @ Fock @ self.integrals.X
             e, C = linalg.eigh(Fock)
     #        e, C = linalg.eig(Fock)
     #        e_sort_index = np.argsort(e)
     #        e = e[e_sort_index]
     #        C = C[:, e_sort_index]
             # ----- Back to the AO basis
-            self.orb[0][:, :] = self.intgrls.X @ C
+            self.orb[0][:, :] = self.integrals.X @ C
 
     def density_matrix_scf(i_SCF):
         raise NotImplementedError("Density matrix based SCF")

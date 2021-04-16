@@ -216,7 +216,7 @@ class MolecularOrbitals():
     
     Unrestricted:
     [np.ndarray for alpha/irrep 1, ..., np.ndarray for alpha/irrep (n_irrep-1),
-     np.ndarray for beta/irrep 1, ..., np.ndarray for beta/irrep (n_irrep-1)]
+    np.ndarray for beta/irrep 1, ..., np.ndarray for beta/irrep (n_irrep-1)]
     
     Attributes:
     -----------
