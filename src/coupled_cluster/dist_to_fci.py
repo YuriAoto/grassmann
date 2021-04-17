@@ -114,7 +114,7 @@ def vertical_dist_to_cc_manifold(wf,
     norm = 0.0
     right_dir = {}
     for det in wf:
-        if not wf.symmetry_allowed(det):
+        if not wf.symmetry_allowed_det(det):
             continue
         rank, alpha_hp, beta_hp = wf.get_exc_info(det)
         if rank == 1 and level == 'SD':
@@ -123,7 +123,7 @@ def vertical_dist_to_cc_manifold(wf,
         if (abs(det.c) > coeff_thr
             and rank > 2
                 and (level == 'SD' or rank % 2 == 0)):
-            C = contribution_from_clusters(alpha_hp, beta_hp, wf.ref_det, cc_wf, level, wf)
+            C = contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
             norm_contribution = (det.c - C)**2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution

@@ -21,8 +21,6 @@ from input_output import molpro
 from util.array_indices import n_from_rect
 from util.variables import int_dtype
 from util.memory import mem_of_floats
-from util.other import int_array
-from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
@@ -31,10 +29,12 @@ import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
 
+from wave_functions.slater_det import get_slater_det_from_excitation
+
 logger = logging.getLogger(__name__)
 
 
-def contribution_from_clusters(alpha_hp, beta_hp, ref_det, cc_wf, level, fci_wf):
+def contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
     """Return the contribution of a cluter decomposition
     
     Parameters:
@@ -45,35 +45,23 @@ def contribution_from_clusters(alpha_hp, beta_hp, ref_det, cc_wf, level, fci_wf)
     beta_hp (list of arrays)
         beta holes and particles
     
-    ref_det (SlaterDet)
-        The reference determinant, relative to which the decomposition will be made
-    
-    fci_wf (FCIWaveFunction)
-        The FCI wave function that should receive the contribution
-        Note that the contribution does not change fci_wf. We need it
-        for the function get_exc_info only. See TODO
-    
     cc_wf (IntermNormWaveFunction)
         The CC wave function that will contribute to the decomposition
     
     level (str)
         The level of the decomposition: 'D' or 'SD'
     
-    TODO:
-    -----
-    If a way is found to heve get_exc_info without fci_wf, this may not be passed
-    
     """
-    decomposition = cluster_decompose(alpha_hp, beta_hp, ref_det, mode=level)
+    decomposition = cluster_decompose(alpha_hp, beta_hp, mode=level)
     C = 0.0
     for d in decomposition:
         new_contribution = d[0]
         add_contr = True
-        for cluster_det in d[1:]:
-            if not cc_wf.symmetry_allowed(cluster_det):
+        for cluster_exc in d[1:]:
+            if not cc_wf.symmetry_allowed_exc(cluster_exc[1], cluster_exc[2]):
                 add_contr = False
                 break
-            new_contribution *= cc_wf[fci_wf.get_exc_info(cluster_det)]
+            new_contribution *= cc_wf[cluster_exc]
         if add_contr:
             C -= new_contribution
     return C
@@ -624,7 +612,7 @@ class FCIWaveFunction(WaveFunction):
             See WaveFunction.get_parameters_from
         
         """
-        new_wf = cls.similar_to(wf, restricted=False)##  Because proj to interm norm requires false...restricted)
+        new_wf = cls.similar_to(wf, restricted=False)  # Because proj to interm norm requires false...restricted)
         new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
         new_wf.get_coefficients_from_int_norm_wf(wf)
@@ -666,7 +654,7 @@ class FCIWaveFunction(WaveFunction):
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         self._ordered_orbs = False
         for ia, ib, det in self.enumerate():
-            if not self.symmetry_allowed(det):
+            if not self.symmetry_allowed_det(det):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
@@ -676,7 +664,7 @@ class FCIWaveFunction(WaveFunction):
                 self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 self._coefficients[ia, ib] = contribution_from_clusters(
-                    alpha_hp, beta_hp, self.ref_det, wf, level, self)
+                    alpha_hp, beta_hp, wf, level)
         self._normalisation = 'intermediate'
         self.set_coeff_ref_det()
     
@@ -1243,7 +1231,8 @@ class FCIWaveFunction(WaveFunction):
         n_calcs = 0
         if logger.level <= logging.DEBUG:
             logger.debug('WF:\n%s', str(self))
-        tUa, tLa = lu(Ua, permute_l=True) ### CHECK
+        tUa, tLa = lu(
+            Ua, permute_l=True) ### CHECK
         tUb, tLb = lu(Ub, permute_l=True) ### CHECK
         tUa = linalg.inv(tUa)
         tUb = linalg.inv(tUb)

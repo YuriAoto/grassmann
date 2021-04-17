@@ -20,6 +20,7 @@ from util.other import int_array
 from input_output import molpro
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general import WaveFunction
+from wave_functions.slater_det import get_slater_det_from_excitation
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.occ_orbitals import OccOrbital
 from coupled_cluster.cluster_decomposition import cluster_decompose
@@ -35,6 +36,7 @@ EXC_TYPE_AA = 3
 EXC_TYPE_AB = 4
 EXC_TYPE_BB = 5
 
+
 def _translate(X, ini, end):
     """X[..., ini, ini+1, ..., end-1, end, ...] -> X[..., ini+1, ..., end-1, end, end, ...]
     """
@@ -49,7 +51,6 @@ def _translate(X, ini, end):
     # else:
     #     for ii in range(ini - end):
     #         alpha_occ[ini-ii] = alpha_occ[end - (ii+1)]
-
 
 
 def _set_virtpos_for_proj_aa_bb(old_virt_pos_a, old_virt_pos_b,
@@ -100,16 +101,17 @@ def singles_contr_from_clusters_fci(alpha_hp, beta_hp, fci_wf):
     from a fci wave function, whereas there it comes from a IntermNormWaveFunction
     If the access is unified, this can be joined.
     """
-    decomposition = cluster_decompose(alpha_hp, beta_hp, fci_wf.ref_det, mode='SD')
+    decomposition = cluster_decompose(alpha_hp, beta_hp, mode='SD')
     C = 0.0
-    for d in decomposition[1:]: # skipping first contribution: it is the double.
+    for d in decomposition[1:]:  # skipping first contribution: it is the double.
         new_contribution = d[0]
         add_contr = True
-        for cluster_det in d[1:]:
-            if not fci_wf.symmetry_allowed(cluster_det):
+        for cluster_exc in d[1:]:
+            if not fci_wf.symmetry_allowed_exc(cluster_exc[1], cluster_exc[2]):
                 add_contr = False
                 break
-            new_contribution *= fci_wf[fci_wf.index(cluster_det)]
+            new_contribution *= fci_wf[fci_wf.index(get_slater_det_from_excitation(
+                fci_wf.ref_det, 0.0, cluster_exc[1], cluster_exc[2]))]
         if add_contr:
             C += new_contribution
     return C
@@ -993,11 +995,11 @@ class IntermNormWaveFunction(WaveFunction):
         The new wave function is a "vertical" projection on top of the
         CCSD, CCD, CISD or CID manifold (depending on wf_type) of the
         wave function wf. That is:
-        If wf_type is CCD, CISD or CID, the amplitudes of the returned 
+        If wf_type is CCD, CISD or CID, the amplitudes of the returned
         wave function are the same as the corresponding coefficients in wf.
         If wf_type is CCSD, the singles are the same, but theamplitudes
         of doubles are obtained after a cluster decomposition, such that
-        the coefficients of the doubly excited determinants, 
+        the coefficients of the doubly excited determinants,
             t_ij^ab + t_i^a*t_j^b - t_i^b*t_j^a
         are the coefficients from wf.
         

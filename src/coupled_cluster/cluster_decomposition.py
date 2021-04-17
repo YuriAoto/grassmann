@@ -5,8 +5,7 @@
 import os
 
 import numpy as np
-
-from wave_functions.slater_det import get_slater_det_from_excitation
+from util.variables import int_dtype
 
 
 default_recipe_files = os.path.abspath(
@@ -25,7 +24,7 @@ def str_dec(decomposition):
     return '\n'.join(d_str)
 
 
-def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
+def cluster_decompose(alpha_hp, beta_hp, mode='D', recipes_f=None):
     """Carry out the decomposition
     
     Given the alpha and beta hole-particle indices,
@@ -42,14 +41,14 @@ def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
     ---------
     holes = [ijkl]
     particles = [abcd]
-    return  [(sign, det_ij_ab, det_kl_cd),
-             (sign, det_ik_ab, det_jl_cd),
+    return  [(sign, (i->a;j->b), (k->c;l->d)),
+             (sign, (i->a;k->b), (j->c;l->d)),
                 ...  ]
     
     holes = [ijklmn...]
     particles = [abcdef..]
-    return  [(sign, det_ij_ab, det_kl_cd, det_mn_ef, ...),
-             (sign, det_ik_ab, det_kl_cd, det_mn_ef, ...),
+    return  [(sign, (i->a;j->b), (k->c;l->d), (m->e;n->f), ...),
+             (sign, (i->a;k->b), (k->c;l->d), (m->e;n->f), ...),
                 ...   ]
     
     Parameters:
@@ -59,9 +58,6 @@ def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
     
     beta_hp (2-tuple of np.array of int):
         beta holes, beta particles
-    
-    ref_det (SlaterDet)
-        The reference Slater determinant
     
     mode (str: "D" or "SD")
         decompose into doubles or single and double
@@ -76,6 +72,9 @@ def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
     -------
     All terms in the decomposition that preserve spin projection,
     that is, do not change the number of alpha/beta electrons.
+    These terms are returned as a list of lists, each starting with the
+    sign of that decomposition, followd by tuples with (rank, alpha_hp, beta_hp)
+    for that excitation.
     See the Example for the details
     
     """
@@ -122,8 +121,11 @@ def cluster_decompose(alpha_hp, beta_hp, ref_det, mode='D', recipes_f=None):
                     else:
                         beta_hp[0].append(orbitals[lspl[first_h + r]])
                         beta_hp[1].append(orbitals[lspl[first_p + r]])
-                new_decomposition.append(get_slater_det_from_excitation(
-                    ref_det, 0.0, alpha_hp, beta_hp))
+                new_decomposition.append((exc_rank,
+                                          (np.array(alpha_hp[0], dtype=int_dtype),
+                                           np.array(alpha_hp[1], dtype=int_dtype)),
+                                          (np.array(beta_hp[0], dtype=int_dtype),
+                                           np.array(beta_hp[1], dtype=int_dtype))))
                 i += 2 * exc_rank + 1
             if use_this_decomposition:
                 all_decompositions.append(new_decomposition)

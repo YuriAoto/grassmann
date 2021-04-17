@@ -45,6 +45,14 @@ class CISDgoFCIbackCISDTestCase(unittest.TestCase):
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
         self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
 
+    def test_li2_sto3g_d2h_allel(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system, allE=True))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
+        goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
 
 @tests.category('SHORT')
 class CCDgoFCIbackCCDTestCase(unittest.TestCase):
@@ -120,6 +128,18 @@ class CCSDgoFCIbackCCSDTestCase(unittest.TestCase):
         goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
+        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+
+    def test_li2_sto3g_d2h_allel(self):
+        mol_system = 'Li2__5__sto3g__D2h'
+        cc_wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system, allE=True)))
+        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        tests.logger.info('in the FCI wave function:\n%s', goback_cc_wf)
+        goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
+        tests.logger.info('cc_wf:\n%s', cc_wf)
+        for i, j in zip(cc_wf.amplitudes, goback_cc_wf.amplitudes):
+            tests.logger.info('%f %f %f', i, j, i-j)
         self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
 
 

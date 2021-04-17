@@ -455,7 +455,7 @@ class WaveFunction(ABC):
                                        2)):
             yield i
     
-    def symmetry_allowed(self, det):
+    def symmetry_allowed_det(self, det):
         """Return True if the determinant is symmetry allowed in this wave function"""
         total_irrep = 0
         for p in det.alpha_occ:
@@ -463,6 +463,29 @@ class WaveFunction(ABC):
         for p in det.beta_occ:
             total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
         return total_irrep == self.irrep
+    
+    def symmetry_allowed_exc(self, alpha_hp, beta_hp):
+        """Return True if the excitation is symmetry allowed in this wave function
+        
+        Parameters:
+        -----------
+        alpha_hp (2-tuple of np.array)
+            alpha holes and particles
+        
+        beta_hp (2-tuple of np.array)
+            beta holes and particles
+        """
+        h_irrep = 0
+        p_irrep = 0
+        for h in alpha_hp[0]:
+            h_irrep = irrep_product[h_irrep, self.get_orb_irrep(h)]
+        for h in beta_hp[0]:
+            h_irrep = irrep_product[h_irrep, self.get_orb_irrep(h)]
+        for p in alpha_hp[1]:
+            p_irrep = irrep_product[p_irrep, self.get_orb_irrep(p)]
+        for p in beta_hp[1]:
+            p_irrep = irrep_product[p_irrep, self.get_orb_irrep(p)]
+        return h_irrep == p_irrep
     
     def get_orb_irrep(self, orb):
         """Return the irrep of orb.
