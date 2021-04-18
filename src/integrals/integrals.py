@@ -6,18 +6,199 @@ from subprocess import check_output, CalledProcessError
 from tempfile import mkdtemp
 from shutil import rmtree
 import os
+import re
 from sys import version_info
 import logging
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from collections import namedtuple
 
 import numpy as np
 from scipy import linalg
 
 from input_output.parser import ParseError
 import integrals.integrals_cy
+from molecular_geometry.periodic_table import ATOMS_NAME, ATOMS
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
+
+BasisInfo = namedtuple('BasisInfo', ['name', 'atom', 'basis'])
+
+
+class BasisSetError(Exception):
+    
+    def __init__(self, msg, basis):
+        super().__init__(msg)
+        self.msg = msg
+        self.basis = basis
+    
+    def __str__(self):
+        return (super().__str__() + '\n' + 'Basis set: ' + self.basis)
+
+
+def _get_atomic_number_of_line(line):
+    """Get the atomic number from a line '! <ELEMENT_NAME> (xxx) -> [XXX]' """
+    rematch = re.match('^!\s*([a-zA-Z]+)\s*\(.+\)\s*->\s*\[.+\]', line)
+    if rematch:
+        rematch = ATOMS_NAME.index(rematch.group(1).lower())
+    return rematch
+
+
+def _check_basis(file_name, atoms):
+    """Check if basis is in there
+    
+    Parameters:
+    -----------
+    basis (str)
+        The basis set name. Same as in the basis set exchange
+    
+    atoms (list of int)
+        The atomic numbers of the atoms, for which basis sets will be fetched
+    
+    Side Effect:
+    ------------
+    The list atoms are updated, leaving only the elements for which basis set has
+    not been found
+    
+    """
+    try:
+        with open(file_name, 'r') as f:
+            for line in f:
+                if not atoms:
+                    break
+                atom_cand = _get_atomic_number_of_line(line)
+                if atom_cand is not None and atom_cand in atoms:
+                    atoms.remove(atom_cand)
+    except OSError:
+        return
+
+
+def _write_basis(info, wmme_dir):
+    """Write basis to files
+    
+    Parameters:
+    -----------
+    info (list of tuples)
+        The basis information, as returned from _fetch_from_basis_set_exchange
+    
+    wmme_dir (str)
+        A string with the directory for the Knizia's ir-wmme program
+    
+    Side Effect:
+    ------------
+    The information from info is written to the directory wmme_dir,
+    perhaps updating files if the basis file is already there
+    
+    """
+    for x in info:
+        try:
+            with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'r') as f:
+                file_content = f.readlines()
+        except OSError:
+            file_content = []
+        pos_new_at = len(file_content)
+        for i, line in enumerate(file_content):
+            cur_atom = _get_atomic_number_of_line(line)
+            if cur_atom is not None and cur_atom > x.atom:
+                pos_new_at = i
+                break
+        file_content.insert(pos_new_at, x.basis)
+        with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'w') as f:
+            f.write(''.join(file_content))
+
+
+def _fetch_from_basis_set_exchange(basis, atoms):
+    """Get the basis for the listed atoms from https://www.basissetexchange.org/
+    
+    Parameters:
+    -----------
+    basis (str)
+        The basis set name. Same as in the basis set exchange
+    
+    atoms (list of int)
+        The atomic numbers of the atoms, for which basis sets will be fetched
+    
+    Return:
+    -------
+    A list of tuples:
+    Each element of this list is the following tuple:
+    (basis, atomic number, basis set information)
+    
+    Raise:
+    ------
+    BasisSetError if the basis set could not be obtained from the webpage
+    
+    """
+    url_fmt = ('https://www.basissetexchange.org/api/basis/{0}/format/molpro/'
+               +'?version={1}&elements={2}')
+    basis_info = []
+    version = 0
+    for at in atoms:
+        url = url_fmt.format(basis, version, at)
+        try:
+            page = urlopen(url)
+        except HTTPError:
+            raise BasisSetError('HTTP error from https://www.basissetexchange.org:\n'
+                                + f'Perhaps they do not have {basis} for {ATOMS[at]}',
+                                basis)
+        except URLError:
+            raise BasisSetError('URL error:\n'
+                                + f'Perhaps you have no connection to the internet',
+                                basis)
+        basis_info.append(BasisInfo(name=basis,
+                                    atom=at,
+                                    basis=page.read().decode("utf-8")))
+    return basis_info
+
+
+def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
+    """Return the filename with the basis set.
+    
+    Parameters:
+    -----------
+    basis (str)
+        The basis set name. Same as in the basis set exchange
+    
+    mol_geom (MolecularGeometry)
+        The molecular geometry for which a basis is required
+    
+    wmme_dir (str)
+        A string with the directory for the Knizia's ir-wmme program
+    
+    try_getting_it (bool, optional, default=True)
+        If True, try to fetch the basis set from the basis set exchange
+        webpage. In this case it stores it for further usages.
+    
+    Return:
+    -------
+    A string with the filename of the basis set
+    
+    Raise:
+    ------
+    BasiSetError, if the basis set for the needed atoms is not found
+    nor fetched.
+    
+    """
+    atoms = []
+    for at in mol_geom:
+        if at.atomic_number not in atoms:
+            atoms.append(at.atomic_number)
+    if basis == 'univ-JKFIT':
+        return os.path.join(wmme_dir, 'bases/def2-nzvpp-jkfit.libmol')
+    file_name = os.path.join(wmme_dir, f'bases/emsl_{basis}.libmol')
+    _check_basis(file_name, atoms)
+    if atoms:
+        if try_getting_it:
+            raise NotImplementedError('Automatic fetch of basis set not implemented!')
+            _write_basis(_fetch_from_basis_set_exchange(basis, atoms), wmme_dir)
+        else:
+            raise BasisSetError(
+                f'We do not have the basis {basis} for these atoms:\n'
+                + ' '.join(map(lambda x: ATOMS[x], atoms)),
+                basis)
+    return file_name
 
 class Integrals():
     """All molecular integrals
@@ -29,7 +210,7 @@ class Integrals():
         Name of the basis set to be used
 
     mol_geo (MolecularGeometry)
-        A MolecuarGeometry object conatining all molecular data
+        A MolecularGeometry object conatining all molecular data
 
     n_func (int)
         Number of contracted functions in the basis set ((??check))
@@ -48,9 +229,11 @@ class Integrals():
 
     """
     def __init__(self, mol_geo, basis_set,
+                 basis_fit='univ-JKFIT',
                  method='ir-wmme',
                  orth_method='canonical'):
         self.basis_set = basis_set
+        self.basis_fit = basis_fit
         self.mol_geo = mol_geo
         self.n_func = 0
         self.S = None
@@ -82,29 +265,27 @@ class Integrals():
     def set_wmme_integrals(self):
         """Set integrals from Knizia's ir-wmme program"""
         try:
-            wmmeDir = os.environ['GR_IR_WMME_DIR']
+            wmme_dir = os.environ['GR_IR_WMME_DIR']
         except KeyError:
             raise ParseError(
-                'Please set the environment variable GR_IR_WMME_DIR')
+                'Please set the environment variable GR_IR_WMME_DIR;'
+                + " It should have the directory of Knizia's ir-wmme program")
         wmmeBasePath = mkdtemp(prefix="bf-int.", dir=None)
         wmme_xyz_file = os.path.join(wmmeBasePath, 'coord.xyz')
         wmme_overlap_file = os.path.join(wmmeBasePath, 'overlap.int')
         wmme_coreh_file = os.path.join(wmmeBasePath, 'coreh.int')
         wmme_fint2e_file = os.path.join(wmmeBasePath, 'fint.int')
-        basis_files = {'sto-3g': os.path.join(wmmeDir
-                                              + '/bases/emsl_sto3g.libmol'),
-                       'sto-6g': os.path.join(wmmeDir
-                                              + '/bases/emsl_sto6g.libmol'),
-                       'cc-pVDZ': os.path.join(wmmeDir
-                                               + '/bases/emsl_cc-pVDZ.libmol'),
-                       'cc-pVTZ': os.path.join(wmmeDir
-                                               + '/bases/emsl_cc-pVTZ.libmol')}
-        cmd = [os.path.join(wmmeDir + 'wmme')]
-        cmd.extend(['--basis-fit', "univ-JKFIT"])
+        cmd = [os.path.join(wmme_dir + 'wmme')]
+        cmd.extend(['--basis-fit', self.basis_fit])
         cmd.extend(['--basis-orb', self.basis_set])
-        cmd.extend(['--basis-lib', basis_files[self.basis_set]])
-        cmd.extend(['--basis-lib',
-                    os.path.join(wmmeDir + '/bases/def2-nzvpp-jkfit.libmol')])
+        cmd.extend(['--basis-lib', basis_file(self.basis_set,
+                                              self.mol_geo,
+                                              wmme_dir,
+                                              try_getting_it=True)])
+        cmd.extend(['--basis-lib', basis_file(self.basis_fit,
+                                              self.mol_geo,
+                                              wmme_dir,
+                                              try_getting_it=True)])
         cmd.extend(['--atoms-au', wmme_xyz_file])
         cmd.extend(['--save-coreh', wmme_coreh_file])
         cmd.extend(['--save-overlap', wmme_overlap_file])
