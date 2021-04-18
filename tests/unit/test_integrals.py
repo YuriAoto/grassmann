@@ -6,7 +6,11 @@ import unittest
 
 import tests
 from integrals.integrals import (_check_basis, _fetch_from_basis_set_exchange,
+<<<<<<< HEAD
                                  _write_basis, _from_molpro_to_wmme, _from_json_to_wmme,
+=======
+                                 _write_basis,
+>>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
                                  basis_file, BasisSetError, BasisInfo)
 from molecular_geometry.molecular_geometry import MolecularGeometry, Atom
 
@@ -69,6 +73,7 @@ class WriteBasisFileTestCase(unittest.TestCase):
         self.wmme_dir = os.environ['GR_IR_WMME_DIR']
     
     def test_write_1(self):
+<<<<<<< HEAD
         basisname = 'asdfg+(**)+'
         info = [BasisInfo(name=basisname, atom=2,
                           basis=('! helium (a) -> [c]\n'
@@ -101,6 +106,37 @@ class WriteBasisFileTestCase(unittest.TestCase):
                          + 'The basis asdfg+(**)+ for 6\nThe basis asdfg+(**)+ for 6\n')
         os.remove(os.path.join(self.wmme_dir, 'bases/emsl_asdfgpllbrststrbrpl.libmol'))
 
+=======
+        info = [BasisInfo(name='asdfg', atom=2,
+                          basis=('! helium (a) -> [c]\n'
+                                 +'The basis asdfg for 2\nThe basis asdfg for 2\n')),
+                BasisInfo(name='asdfg', atom=1,
+                          basis=('! hydrogen (a) -> [c]\n'
+                                 +'The basis asdfg for 1\nThe basis asdfg for 1\n')),
+                BasisInfo(name='asdfg', atom=6,
+                          basis=('! carbon (a) -> [c]\n'
+                                 +'The basis asdfg for 6\nThe basis asdfg for 6\n'))
+        ]
+        _write_basis(info, self.wmme_dir)
+        info = [BasisInfo(name='asdfg', atom=3,
+                          basis=('! lithium (a) -> [c]\n'
+                                 +'The basis asdfg for 3\nThe basis asdfg for 3\n'))
+        ]
+        _write_basis(info, self.wmme_dir)
+        self.assertTrue(os.path.isfile(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol')))
+        with open(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol'), 'r') as f:
+            all_lines = f.readlines()
+        self.assertEqual(''.join(all_lines),
+                        '! hydrogen (a) -> [c]\n'
+                        + 'The basis asdfg for 1\nThe basis asdfg for 1\n'
+                        + '! helium (a) -> [c]\n'
+                        + 'The basis asdfg for 2\nThe basis asdfg for 2\n'
+                        + '! lithium (a) -> [c]\n'
+                        + 'The basis asdfg for 3\nThe basis asdfg for 3\n'
+                        + '! carbon (a) -> [c]\n'
+                        + 'The basis asdfg for 6\nThe basis asdfg for 6\n')
+        os.remove(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol'))
+>>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
 
 @tests.category('SHORT')
 class BasisFileTestCase(unittest.TestCase):
@@ -136,6 +172,7 @@ class BasisFileTestCase(unittest.TestCase):
         with self.assertRaises(BasisSetError) as bserror:
             basis_file(basis, self.mol_geom, self.wmme_dir, try_getting_it=False)
         self.assertIn('We do not have the basis', str(bserror.exception))
+<<<<<<< HEAD
 
 
 @tests.category('SHORT')
@@ -175,3 +212,5 @@ class FromMolprotoWMME(unittest.TestCase):
         self.assertEqual(_from_json_to_wmme(basis_json).replace(' ', '').replace('\n', ''),
                          basis_wmme.replace(' ', '').replace('\n', ''))
 
+=======
+>>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
