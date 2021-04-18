@@ -93,7 +93,8 @@ def min_dist_jac_hess(double[:, :] wf,
     """
     cdef double[:] J
     cdef double[:, :] H
-    cdef int pos = 0, pos2, n_alpha, n_beta, nvirt_1
+    cdef int pos = 0, pos2 = 0, nvirt_1 = 0
+    cdef int n_alpha, n_beta
     cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
     cdef DoubleExc double_exc
@@ -204,13 +205,8 @@ def min_dist_jac_hess(double[:, :] wf,
                             + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
-                    if a_irrep == b_irrep:
-                        nvirt_1 = virt_orb[a_spirrep] - 1
-                        double_exc.b = double_exc.a
-##################                        WRONG???
-                    else:
-                        double_exc.b = (orbs_before[b_irrep]
-                                        + corr_orb[b_spirrep])
+                    nvirt_1 = virt_orb[a_spirrep] - 1
+                    double_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
                             J[pos] = term1_aa(double_exc,
@@ -218,9 +214,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                               wf_cc,
                                               alpha_string_graph,
                                               occ_buff_a, exc_occ_buff_a)
-                            diag = term2_diag_aa(double_exc,
-                                                 wf_cc,
-                                                 occ_buff_a)
+                            diag = term2_diag_aa(double_exc, wf_cc, occ_buff_a)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
                                 J[pos] /= diag
@@ -241,8 +235,7 @@ def min_dist_jac_hess(double[:, :] wf,
                             J[pos] = -J[pos - (a-b)*nvirt_1]
                             if not diag_hess:
                                 for pos2 in range(pos+1, n_ampl):
-                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1,
-                                                      pos2]
+                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1, pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
@@ -250,8 +243,7 @@ def min_dist_jac_hess(double[:, :] wf,
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
                         J[pos] = -J[pos_ini[b_irrep]
-                                    + n_from_rect(
-                                        b, a, virt_orb[a_spirrep])]
+                                    + n_from_rect(b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
@@ -279,13 +271,8 @@ def min_dist_jac_hess(double[:, :] wf,
                             + corr_orb[a_spirrep])
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
-                    if a_irrep == b_irrep:
-                        nvirt_1 = virt_orb[a_spirrep] - 1
-                        double_exc.b = double_exc.a
-##############                        WRONG???
-                    else:
-                        double_exc.b = (orbs_before[b_irrep]
-                                        + corr_orb[b_spirrep])
+                    nvirt_1 = virt_orb[a_spirrep] - 1
+                    double_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
                     for b in range(virt_orb[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
                             J[pos] = term1_bb(double_exc,
@@ -293,9 +280,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                               wf_cc,
                                               beta_string_graph,
                                               occ_buff_b, exc_occ_buff_b)
-                            diag = term2_diag_bb(double_exc,
-                                                 wf_cc,
-                                                 occ_buff_b)
+                            diag = term2_diag_bb(double_exc, wf_cc, occ_buff_b)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
                                 J[pos] /= diag
@@ -316,8 +301,7 @@ def min_dist_jac_hess(double[:, :] wf,
                             J[pos] = -J[pos - (a-b)*nvirt_1]
                             if not diag_hess:
                                 for pos2 in range(pos+1, n_ampl):
-                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1,
-                                                      pos2]
+                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1, pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
@@ -325,8 +309,7 @@ def min_dist_jac_hess(double[:, :] wf,
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
                         J[pos] = -J[pos_ini[b_irrep]
-                                    + n_from_rect(
-                                        b, a, virt_orb[a_spirrep])]
+                                    + n_from_rect(b, a, virt_orb[a_spirrep])]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
@@ -347,11 +330,9 @@ def min_dist_jac_hess(double[:, :] wf,
                 irrep_product[i.spirrep, j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep + n_irrep
-            double_exc.a = (orbs_before[a_irrep]
-                            + corr_orb[a_spirrep])
+            double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
             for a in range(virt_orb[a_spirrep]):
-                double_exc.b = (orbs_before[b_irrep]
-                                + corr_orb[b_spirrep])
+                double_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
                 for b in range(virt_orb[b_spirrep]):
                     J[pos] = term1_ab(double_exc,
                                       wf,
@@ -360,9 +341,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                       beta_string_graph,
                                       occ_buff_a, exc_occ_buff_a,
                                       occ_buff_b, exc_occ_buff_b)
-                    diag = term2_diag_ab(double_exc,
-                                         wf_cc,
-                                         occ_buff_a, occ_buff_b)
+                    diag = term2_diag_ab(double_exc, wf_cc, occ_buff_a, occ_buff_b)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
                         J[pos] /= diag
@@ -382,7 +361,6 @@ def min_dist_jac_hess(double[:, :] wf,
                     pos += 1
                     double_exc.b += 1
                 double_exc.a += 1
-                
         i.next_()
         if not i.alive:
             j.next_()
@@ -433,15 +411,33 @@ def min_dist_jac_hess_num(wf,
     Note that what is returned from min_dist_jac_hess is half of this.
     
     """
-    cdef int pos, a_irrep, b_irrep, a_spirrep, b_spirrep
+    cdef int a_irrep, b_irrep, a_spirrep, b_spirrep
+    cdef int nvirt_1 = 0, pos = 0, pos_transp
     cdef int[8] pos_ini  # assuming no more than 8 irreps in a point group!
     cdef double[:] f_p, f_m
     cdef double[:] jac
     cdef double[:, :] hess
     cdef double f, f_pp, f_mm
     cdef int n_irrep_or_0
+    wf.set_max_coincidence_orbitals()
     
     def Func(x):
+        """The square of distance from x and wf
+        
+        Parameters:
+        -----------
+        x (IntermNormWaveFunction)
+            The wave function whose distance to wf is to be measured
+        
+        Observation:
+        ------------
+        x will be transformed to a FCI wave function with the orbitals
+        ordered as maximum coincidence with the reference, as it is wf
+        in the main function. Calculations can be carried out too
+        with wf having the convention of ordered orbitals. In such case,
+        the following line should be added after contructing wf_as_fci:
+            wf_as_fci.set_ordered_orbitals()
+        """
         wf_as_fci = FCIWaveFunction.from_int_norm(x)
         d = wf.dist_to(wf_as_fci,
                        metric='IN',
@@ -471,14 +467,16 @@ def min_dist_jac_hess_num(wf,
         n_irrep_or_0 = 0 if is_alpha else n_irrep
         while j.alive:
             for a_irrep in range(n_irrep):
-                b_irrep = irrep_product[
-                    irrep_product[i.spirrep - n_irrep_or_0,
-                                  j.spirrep - n_irrep_or_0], a_irrep]
-                a_spirrep = a_irrep + n_irrep_or_0
-                b_spirrep = b_irrep + n_irrep_or_0
-                pos_ini[a_irrep] = (pos
-                                    + virt_orb[a_spirrep]
-                                    * virt_orb[b_spirrep])
+                if a_irrep == 0:
+                    pos_ini[a_irrep] = pos
+                else:
+                    b_irrep = irrep_product[
+                        irrep_product[i.spirrep - n_irrep_or_0,
+                                      j.spirrep - n_irrep_or_0], a_irrep]
+                    a_spirrep = a_irrep + n_irrep_or_0
+                    b_spirrep = b_irrep + n_irrep_or_0
+                    pos_ini[a_irrep] = (pos_ini[a_irrep-1]
+                                        + virt_orb[a_spirrep-1]*virt_orb[b_spirrep-1])
             for a_irrep in range(n_irrep):
                 b_irrep = irrep_product[
                     irrep_product[i.spirrep - n_irrep_or_0,

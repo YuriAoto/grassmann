@@ -18,7 +18,7 @@ from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.fci import FCIWaveFunction, contribution_from_clusters
 
 logger = logging.getLogger(__name__)
-
+loglevel = logging.getLogger().getEffectiveLevel()
 
 _str_excitation_list = ['R',
                         'S',
@@ -234,20 +234,11 @@ def calc_dist_to_cc_manifold(wf,
     converged = False
     normZ = normJ = 1.0
     if ini_wf is None:
-        cc_wf = vertical_proj_to_cc_manifold(
-            wf,
-            level=level,
-            recipes_f=recipes_f,
-            coeff_thr=coeff_thr).wave_function
+        cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
-        cc_wf = ini_wf.vertical_proj_to_cc_manifold(
-            wf,
-            level=level,
-            recipes_f=recipes_f,
-            coeff_thr=coeff_thr).wave_function
+        cc_wf = IntermNormWaveFunction.from_projected_fci(ini_wf, 'CC' + level)
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
-        cc_wf = IntermNormWaveFunction.similar_to(
-            wf, 'CC' + level, restricted=False)
+        cc_wf = IntermNormWaveFunction.similar_to(wf, 'CC' + level, restricted=False)
     elif isinstance(ini_wf, IntermNormWaveFunction):
         cc_wf = copy.deepcopy(ini_wf)
     else:
@@ -295,7 +286,7 @@ def calc_dist_to_cc_manifold(wf,
                 z = Jac
                 normJ = Hess[0, 0]
             else:
-                if logger.loglevel <= 1:
+                if loglevel <= 1:
                     logger.log(1, 'Jacobian:\n%r', np.array(Jac))
                     logger.log(1, 'Hessian:\n%r', np.array(Hess))
                 with logtime('Calculating z: Solving linear system.'):
