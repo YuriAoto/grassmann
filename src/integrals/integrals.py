@@ -244,7 +244,7 @@ def _write_basis(info, wmme_dir):
     """
     for x in info:
         try:
-            with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'r') as f:
+            with open(_basis_filename(x.name, wmme_dir), 'r') as f:
                 file_content = f.readlines()
         except OSError:
             file_content = []
@@ -255,7 +255,7 @@ def _write_basis(info, wmme_dir):
                 pos_new_at = i
                 break
         file_content.insert(pos_new_at, x.basis)
-        with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'w') as f:
+        with open(_basis_filename(x.name, wmme_dir), 'w') as f:
             f.write(''.join(file_content))
 
 
@@ -337,7 +337,7 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
             atoms.append(at.atomic_number)
     if basis == 'univ-JKFIT':
         return os.path.join(wmme_dir, 'bases/def2-nzvpp-jkfit.libmol')
-    file_name = os.path.join(wmme_dir, f'bases/emsl_{basis}.libmol')
+    file_name = _basis_filename(basis, wmme_dir)
     _check_basis(file_name, atoms)
     if atoms:
         if try_getting_it:
