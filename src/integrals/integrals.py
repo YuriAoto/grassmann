@@ -26,10 +26,7 @@ loglevel = logging.getLogger().getEffectiveLevel()
 
 BasisInfo = namedtuple('BasisInfo', ['name', 'atom', 'basis'])
 
-<<<<<<< HEAD
 _l_of = 'spdfghijkl'
-=======
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
 
 class BasisSetError(Exception):
     
@@ -40,8 +37,6 @@ class BasisSetError(Exception):
     
     def __str__(self):
         return (super().__str__() + '\n' + 'Basis set: ' + self.basis)
-
-<<<<<<< HEAD
     
 def _basis_filename(basis, wmme_dir):
     """The actual file name for the basis set
@@ -61,9 +56,6 @@ def _basis_filename(basis, wmme_dir):
                      replace(')', 'rbr'))
     return os.path.join(wmme_dir, f'bases/emsl_{replaced_name}.libmol')
 
-=======
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
-
 def _get_atomic_number_of_line(line):
     """Get the atomic number from a line '! <ELEMENT_NAME> (xxx) -> [XXX]' """
     rematch = re.match('^!\s*([a-zA-Z]+)\s*\(.+\)\s*->\s*\[.+\]', line)
@@ -72,7 +64,6 @@ def _get_atomic_number_of_line(line):
     return rematch
 
 
-<<<<<<< HEAD
 def _get_n_func(shells):
     """Helper for _from_json_to_wmme: number of pritives and contractions"""
     n_prim = [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -205,8 +196,6 @@ def _from_molpro_to_wmme(basis):
     return '\n'.join(newb) + '\n\n'
 
 
-=======
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
 def _check_basis(file_name, atoms):
     """Check if basis is in there
     
@@ -255,11 +244,7 @@ def _write_basis(info, wmme_dir):
     """
     for x in info:
         try:
-<<<<<<< HEAD
-            with open(_basis_filename(x.name, wmme_dir), 'r') as f:
-=======
             with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'r') as f:
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
                 file_content = f.readlines()
         except OSError:
             file_content = []
@@ -270,11 +255,7 @@ def _write_basis(info, wmme_dir):
                 pos_new_at = i
                 break
         file_content.insert(pos_new_at, x.basis)
-<<<<<<< HEAD
-        with open(_basis_filename(x.name, wmme_dir), 'w') as f:
-=======
         with open(os.path.join(wmme_dir, f'bases/emsl_{x.name}.libmol'), 'w') as f:
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
             f.write(''.join(file_content))
 
 
@@ -356,34 +337,22 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
             atoms.append(at.atomic_number)
     if basis == 'univ-JKFIT':
         return os.path.join(wmme_dir, 'bases/def2-nzvpp-jkfit.libmol')
-<<<<<<< HEAD
-    file_name = _basis_filename(basis, wmme_dir)
-    _check_basis(file_name, atoms)
-    if atoms:
-        if try_getting_it:
-            b = _fetch_from_basis_set_exchange(basis, atoms)
-=======
     file_name = os.path.join(wmme_dir, f'bases/emsl_{basis}.libmol')
     _check_basis(file_name, atoms)
     if atoms:
         if try_getting_it:
-            raise NotImplementedError('Automatic fetch of basis set not implemented!')
-            _write_basis(_fetch_from_basis_set_exchange(basis, atoms), wmme_dir)
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
+            b = _fetch_from_basis_set_exchange(basis, atoms)
         else:
             raise BasisSetError(
                 f'We do not have the basis {basis} for these atoms:\n'
                 + ' '.join(map(lambda x: ATOMS[x], atoms)),
                 basis)
-<<<<<<< HEAD
         newb = []
         for at in b:
             newb.append(BasisInfo(name=at[0],
                                   atom=at[1],
                                   basis=_from_molpro_to_wmme(at[2])))
         _write_basis(newb, wmme_dir)
-=======
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
     return file_name
 
 class Integrals():
@@ -396,15 +365,7 @@ class Integrals():
         Name of the basis set to be used
 
     mol_geo (MolecularGeometry)
-<<<<<<< HEAD
-<<<<<<< HEAD
         A MolecularGeometry object containing all molecular data
-=======
-        A MolecularGeometry object conatining all molecular data
->>>>>>> 13792f443e9ff0b612aec97b65cf6cb3aea771bd
-=======
-        A MolecularGeometry object conatining all molecular data
->>>>>>> 0523449 (Partially add the possibility to get basis set from basissetexchange)
 
     n_func (int)
         Number of contracted functions in the basis set ((??check))
