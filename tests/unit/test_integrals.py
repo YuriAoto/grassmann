@@ -6,7 +6,7 @@ import unittest
 
 import tests
 from integrals.integrals import (_check_basis, _fetch_from_basis_set_exchange,
-                                 _write_basis, _from_molpro_to_wmme,
+                                 _write_basis, _from_molpro_to_wmme, _from_json_to_wmme,
                                  basis_file, BasisSetError, BasisInfo)
 from molecular_geometry.molecular_geometry import MolecularGeometry, Atom
 
@@ -69,35 +69,38 @@ class WriteBasisFileTestCase(unittest.TestCase):
         self.wmme_dir = os.environ['GR_IR_WMME_DIR']
     
     def test_write_1(self):
-        info = [BasisInfo(name='asdfg', atom=2,
+        basisname = 'asdfg+(**)+'
+        info = [BasisInfo(name=basisname, atom=2,
                           basis=('! helium (a) -> [c]\n'
-                                 +'The basis asdfg for 2\nThe basis asdfg for 2\n')),
-                BasisInfo(name='asdfg', atom=1,
+                                 + 'The basis asdfg+(**)+ for 2\nThe basis asdfg+(**)+ for 2\n')),
+                BasisInfo(name=basisname, atom=1,
                           basis=('! hydrogen (a) -> [c]\n'
-                                 +'The basis asdfg for 1\nThe basis asdfg for 1\n')),
-                BasisInfo(name='asdfg', atom=6,
+                                 + 'The basis asdfg+(**)+ for 1\nThe basis asdfg+(**)+ for 1\n')),
+                BasisInfo(name=basisname, atom=6,
                           basis=('! carbon (a) -> [c]\n'
-                                 +'The basis asdfg for 6\nThe basis asdfg for 6\n'))
+                                 + 'The basis asdfg+(**)+ for 6\nThe basis asdfg+(**)+ for 6\n'))
         ]
         _write_basis(info, self.wmme_dir)
-        info = [BasisInfo(name='asdfg', atom=3,
+        info = [BasisInfo(name=basisname, atom=3,
                           basis=('! lithium (a) -> [c]\n'
-                                 +'The basis asdfg for 3\nThe basis asdfg for 3\n'))
+                                 + 'The basis asdfg+(**)+ for 3\nThe basis asdfg+(**)+ for 3\n'))
         ]
         _write_basis(info, self.wmme_dir)
-        self.assertTrue(os.path.isfile(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol')))
-        with open(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol'), 'r') as f:
+        self.assertTrue(os.path.isfile(
+            os.path.join(self.wmme_dir, 'bases/emsl_asdfgpllbrststrbrpl.libmol')))
+        with open(os.path.join(self.wmme_dir, 'bases/emsl_asdfgpllbrststrbrpl.libmol'), 'r') as f:
             all_lines = f.readlines()
         self.assertEqual(''.join(all_lines),
-                        '! hydrogen (a) -> [c]\n'
-                        + 'The basis asdfg for 1\nThe basis asdfg for 1\n'
-                        + '! helium (a) -> [c]\n'
-                        + 'The basis asdfg for 2\nThe basis asdfg for 2\n'
-                        + '! lithium (a) -> [c]\n'
-                        + 'The basis asdfg for 3\nThe basis asdfg for 3\n'
-                        + '! carbon (a) -> [c]\n'
-                        + 'The basis asdfg for 6\nThe basis asdfg for 6\n')
-        os.remove(os.path.join(self.wmme_dir, f'bases/emsl_asdfg.libmol'))
+                         '! hydrogen (a) -> [c]\n'
+                         + 'The basis asdfg+(**)+ for 1\nThe basis asdfg+(**)+ for 1\n'
+                         + '! helium (a) -> [c]\n'
+                         + 'The basis asdfg+(**)+ for 2\nThe basis asdfg+(**)+ for 2\n'
+                         + '! lithium (a) -> [c]\n'
+                         + 'The basis asdfg+(**)+ for 3\nThe basis asdfg+(**)+ for 3\n'
+                         + '! carbon (a) -> [c]\n'
+                         + 'The basis asdfg+(**)+ for 6\nThe basis asdfg+(**)+ for 6\n')
+        os.remove(os.path.join(self.wmme_dir, 'bases/emsl_asdfgpllbrststrbrpl.libmol'))
+
 
 @tests.category('SHORT')
 class BasisFileTestCase(unittest.TestCase):
@@ -135,7 +138,6 @@ class BasisFileTestCase(unittest.TestCase):
         self.assertIn('We do not have the basis', str(bserror.exception))
 
 
-
 @tests.category('SHORT')
 class FromMolprotoWMME(unittest.TestCase):
 
@@ -153,7 +155,7 @@ class FromMolprotoWMME(unittest.TestCase):
             basis_json = ''.join(f.readlines())
         with open(os.path.join(tests.main_files_dir, 'ccpVDZ_Na_wmme'), 'r') as f:
             basis_wmme = ''.join(f.readlines())
-        self.assertEqual(_from_json_to_wmme(basis_josn).replace(' ', '').replace('\n', ''),
+        self.assertEqual(_from_json_to_wmme(basis_json).replace(' ', '').replace('\n', ''),
                          basis_wmme.replace(' ', '').replace('\n', ''))
 
     def test_molpro_2(self):
@@ -165,11 +167,11 @@ class FromMolprotoWMME(unittest.TestCase):
                          basis_wmme.replace(' ', '').replace('\n', ''))
 
     @unittest.skip('Conversion from JSON not implemented')
-    def test_json_1(self):
+    def test_json_2(self):
         with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_json'), 'r') as f:
             basis_json = ''.join(f.readlines())
         with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_wmme'), 'r') as f:
             basis_wmme = ''.join(f.readlines())
-        self.assertEqual(_from_json_to_wmme(basis_josn).replace(' ', '').replace('\n', ''),
+        self.assertEqual(_from_json_to_wmme(basis_json).replace(' ', '').replace('\n', ''),
                          basis_wmme.replace(' ', '').replace('\n', ''))
 
