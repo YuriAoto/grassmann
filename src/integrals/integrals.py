@@ -26,6 +26,7 @@ loglevel = logging.getLogger().getEffectiveLevel()
 
 BasisInfo = namedtuple('BasisInfo', ['name', 'atom', 'basis'])
 
+_l_of = 'spdfghijkl'
 
 class BasisSetError(Exception):
     
@@ -44,6 +45,138 @@ def _get_atomic_number_of_line(line):
     if rematch:
         rematch = ATOMS_NAME.index(rematch.group(1).lower())
     return rematch
+
+
+def _get_n_func(shells):
+    """Helper for _from_json_to_wmme: number of pritives and contractions"""
+    n_prim = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    n_contr = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    for sh in shells:
+        if len (sh['angular_momentum']) == 1:
+            ang_mom = sh['angular_momentum'][0]
+            n_prim[ang_mom] += len(sh['exponents'])
+            n_contr[ang_mom] += len(sh['coefficients'])
+        else:
+            for i, ang_mom in enumerate(sh['angular_momentum']):
+                n_prim[ang_mom] += len(sh['exponents'])
+                n_contr[ang_mom] += len(sh['coefficients'][i])
+    return [x for x in n_prim if x], [x for x in n_contr if x]
+
+
+def _from_json_to_wmme(basis):
+    """Transform from JSON format to the wmme format
+    
+    The JSON for the basis is as coming from the basissetexchange webpage
+    and the wmme is, as far as I can see, the internal format of Molpro.
+    
+    Parameters:
+    -----------
+    basis (str)
+        A string with the basis in the JSON format.
+    
+    Return:
+    -------
+    A string with the basis in the IR-WMME/Molpro format
+    
+    """
+    raise NotImplementedError('Conversion from json not ready')
+    b = json.loads(basis)
+    newb = []
+    basis_name = b['names'][0]
+    elements = b['elements']
+    ctr_fmt = '{0}  {1}  {2} :  {3}   {4}'
+    for at, at_basis in b['elements'].items():
+        n_prim, n_contr = _get_n_func(at_basis['electron_shells'])
+        fmt_nprim = ','.join([n + _l_of[i]
+                              for i, n in enumerate(map(str, n_prim))])
+        fmt_ncontr = ','.join([n + _l_of[i]
+                               for i, n in enumerate(map(str, n_contr))])
+        newb.append(
+            f'! {ATOMS_NAME[int(at)].upper()}      ({fmt_nprim}) -> [{fmt_ncontr}]')
+        for ang_mom, n in enumerate(zip(n_prim, n_contr)):
+            np , nc = n
+            contr_info = ctr_fmt.format(ATOMS[int(at)].upper(),
+                                        _l_of[ang_mom].upper(),
+                                        basis_name,
+                                        np, nc)
+            contr_info += '    THE CONTRACTION \n'
+            newb.append(contr_info)
+            all_exp = []
+            all_coef = []
+            for sh in at_basis['electron_shells']:
+                if ang_mom in sh['angular_momentum']:
+                    all_exp.extend(sh['exponents'])
+                    for c in sh['coefficients']:
+                        all_coef.extend(c)
+            for i, x in enumerate(all_exp + all_coef):
+                pt_pos = x.index('.')
+                if i % 5 == 0:
+                    newb.append(' '*(8-pt_pos) + x + ' '*(20-len(x)+pt_pos))
+                else:
+                    newb[-1] += ' '*(8-pt_pos) + x + ' '*(20-len(x)+pt_pos)
+
+    return '\n'.join(newb)
+
+
+def _from_molpro_to_wmme(basis):
+    """Transform from (input's) molpro format to the wmme format
+    
+    The format coming from basissetexchange is what we put in the molpro input,
+    that is different (essentially a transposision) than the internal format of
+    Molpro, used by IR-WMME.
+    
+    Parameters:
+    -----------
+    basis (str)
+        A string with the basis in the Molpro format.
+    
+    Return:
+    -------
+    A string with the basis in the IR-WMME/Molpro format
+    
+    """
+    b = basis.split('\n')
+    newb = []
+    basisname = ''
+    all_coef = []
+    all_contractions = []
+    for line in b:
+        rematch = re.match('^!\s*Basis set:\s*(.+)$', line)
+        if rematch:
+            basisname = rematch.group(1)
+        if _get_atomic_number_of_line(line):
+            newb.append(line)
+            continue
+        try:
+            comment_pos = line.index('!')
+        except ValueError:
+            pass
+        else:
+            line = line[:comment_pos]
+        lspl = list(map(lambda x: x.strip(), line.split(',')))
+        if not line or 'basis={' == line:
+            continue
+        if lspl[0] == 'c':
+            all_coef.extend(lspl[2:])
+            all_contractions.append(lspl[1])
+        else:
+            if all_contractions:
+                basis_descr += f'   {len(all_exp)}   {len(all_contractions)}   '
+                basis_descr += '   '.join(all_contractions) + '\n'
+                newb.append(basis_descr)
+                for i, x in enumerate(all_exp + all_coef):
+                    pt_pos = x.index('.')
+                    if i % 5 == 0:
+                        newb.append(' '*(8-pt_pos) + x + ' '*(20-len(x)+pt_pos))
+                    else:
+                        newb[-1] += ' '*(8-pt_pos) + x + ' '*(20-len(x)+pt_pos)
+            if line == '}':
+                break
+            basis_descr = f'{lspl[1]}  {lspl[0].upper()}  {basisname} :'
+            all_exp = lspl[2:]
+            all_contractions = []
+            all_coef = []    
+    return '\n'.join(newb) + '\n\n'
 
 
 def _check_basis(file_name, atoms):
@@ -191,13 +324,18 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
     _check_basis(file_name, atoms)
     if atoms:
         if try_getting_it:
-            raise NotImplementedError('Automatic fetch of basis set not implemented!')
-            _write_basis(_fetch_from_basis_set_exchange(basis, atoms), wmme_dir)
+            b = _fetch_from_basis_set_exchange(basis, atoms)
         else:
             raise BasisSetError(
                 f'We do not have the basis {basis} for these atoms:\n'
                 + ' '.join(map(lambda x: ATOMS[x], atoms)),
                 basis)
+        newb = []
+        for at in b:
+            newb.append(BasisInfo(name=at[0],
+                                  atom=at[1],
+                                  basis=_from_molpro_to_wmme(at[2])))
+        _write_basis(newb, wmme_dir)
     return file_name
 
 class Integrals():

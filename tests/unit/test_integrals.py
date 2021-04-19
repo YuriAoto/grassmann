@@ -6,7 +6,7 @@ import unittest
 
 import tests
 from integrals.integrals import (_check_basis, _fetch_from_basis_set_exchange,
-                                 _write_basis,
+                                 _write_basis, _from_molpro_to_wmme,
                                  basis_file, BasisSetError, BasisInfo)
 from molecular_geometry.molecular_geometry import MolecularGeometry, Atom
 
@@ -133,3 +133,43 @@ class BasisFileTestCase(unittest.TestCase):
         with self.assertRaises(BasisSetError) as bserror:
             basis_file(basis, self.mol_geom, self.wmme_dir, try_getting_it=False)
         self.assertIn('We do not have the basis', str(bserror.exception))
+
+
+
+@tests.category('SHORT')
+class FromMolprotoWMME(unittest.TestCase):
+
+    def test_molpro_1(self):
+        with open(os.path.join(tests.main_files_dir, 'ccpVDZ_Na_molpro'), 'r') as f:
+            basis_molpro = ''.join(f.readlines())
+        with open(os.path.join(tests.main_files_dir, 'ccpVDZ_Na_wmme'), 'r') as f:
+            basis_wmme = ''.join(f.readlines())
+        self.assertEqual(_from_molpro_to_wmme(basis_molpro).replace(' ', '').replace('\n', ''),
+                         basis_wmme.replace(' ', '').replace('\n', ''))
+
+    @unittest.skip('Conversion from JSON not implemented')
+    def test_json_1(self):
+        with open(os.path.join(tests.main_files_dir, 'ccpVDZ_Na_json'), 'r') as f:
+            basis_json = ''.join(f.readlines())
+        with open(os.path.join(tests.main_files_dir, 'ccpVDZ_Na_wmme'), 'r') as f:
+            basis_wmme = ''.join(f.readlines())
+        self.assertEqual(_from_json_to_wmme(basis_josn).replace(' ', '').replace('\n', ''),
+                         basis_wmme.replace(' ', '').replace('\n', ''))
+
+    def test_molpro_2(self):
+        with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_molpro'), 'r') as f:
+            basis_molpro = ''.join(f.readlines())
+        with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_wmme'), 'r') as f:
+            basis_wmme = ''.join(f.readlines())
+        self.assertEqual(_from_molpro_to_wmme(basis_molpro).replace(' ', '').replace('\n', ''),
+                         basis_wmme.replace(' ', '').replace('\n', ''))
+
+    @unittest.skip('Conversion from JSON not implemented')
+    def test_json_1(self):
+        with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_json'), 'r') as f:
+            basis_json = ''.join(f.readlines())
+        with open(os.path.join(tests.main_files_dir, '6311ppGst_Fe_wmme'), 'r') as f:
+            basis_wmme = ''.join(f.readlines())
+        self.assertEqual(_from_json_to_wmme(basis_josn).replace(' ', '').replace('\n', ''),
+                         basis_wmme.replace(' ', '').replace('\n', ''))
+
