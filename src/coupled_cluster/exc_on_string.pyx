@@ -47,8 +47,11 @@ cdef int exc_on_string(int i, int a, int[:] I, int[:] new_I):
     -------
         If the excitation i->a annihilates the Slater determinant,
         namelly, if i does not belong to I or a does belong, return 0.
-        Otherwise, the sign that arises after putting the
-        orbitals in the correct order is returned.
+        Otherwise, return 1
+        Obs: the sign that arises after putting the orbitals in the
+             correct order can be returned, if the last line is
+             uncommented. By using the maximum coincidence order, however,
+             it is not needed is returned.
     """
     cdef int n = I.shape[0]
     cdef int pos, i_pos, a_pos
@@ -83,4 +86,4 @@ cdef int exc_on_string(int i, int a, int[:] I, int[:] new_I):
             return 0
         new_I[a_pos+1: i_pos+1] = I[a_pos: i_pos]
         new_I[a_pos] = a
-    return 1 - 2*(abs(a_pos - i_pos) % 2)
+    return 1 # To give the sign (not needed currently): - 2*(abs(a_pos - i_pos) % 2)

@@ -208,14 +208,14 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                        self.wf, self.wf_cc,
                                        self.alpha_str_gr,
                                        self.occ_a, self.exc_occ_a),
-                               0.44)
+                               -0.2)
         single_exc.i = 0
         single_exc.a = 3
         self.assertAlmostEqual(term1_a(single_exc,
                                        self.wf, self.wf_cc,
                                        self.alpha_str_gr,
                                        self.occ_a, self.exc_occ_a),
-                               1.3)
+                               -1.3)
         single_exc.i = 1
         single_exc.a = 2
         self.assertAlmostEqual(term1_a(single_exc,
@@ -229,7 +229,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                        self.wf, self.wf_cc,
                                        self.alpha_str_gr,
                                        self.occ_a, self.exc_occ_a),
-                               0.79)
+                               1.25)
         single_exc.i = 0
         single_exc.a = 1
         self.assertAlmostEqual(term1_b(single_exc,
@@ -265,7 +265,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               -0.06)
+                               0.14)
         double_exc.i = 0
         double_exc.a = 2
         double_exc.j = 0
@@ -275,7 +275,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               -1.44)
+                               1.56)
         double_exc.i = 0
         double_exc.a = 3
         double_exc.j = 0
@@ -285,7 +285,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               0.14)
+                               -0.14)
         double_exc.i = 0
         double_exc.a = 3
         double_exc.j = 0
@@ -295,7 +295,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               -0.34)
+                               0.34)
         double_exc.i = 1
         double_exc.a = 2
         double_exc.j = 0
@@ -325,7 +325,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               0.04)
+                               -0.24)
         double_exc.i = 1
         double_exc.a = 3
         double_exc.j = 0
@@ -335,7 +335,7 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.alpha_str_gr, self.beta_str_gr,
                                         self.occ_a, self.exc_occ_a,
                                         self.occ_b, self.exc_occ_b),
-                               -0.69)
+                               -1.11)
         
     # def test_term2_diag_singles(self):
     #     self.assertAlmostEqual(_term2_diag(int_array(0, 2),

@@ -33,6 +33,7 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     
     """
     wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=allE))
+    wf.set_max_coincidence_orbitals()
     wf.normalise(mode='intermediate')
     cc_wf = IntermNormWaveFunction.similar_to(wf, wf_type=wf_type, restricted=False)
     cc_wf.amplitudes *= factor
@@ -85,12 +86,12 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    factor=0.6)
         self.assertEqual(J, JNum)
         # self.assertEqual(H, HNum)
-        # J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
-        #                                            allE=False,
-        #                                            wf_type='CCSD',
-        #                                            factor=5.0)
-        # self.assertEqual(J, JNum)
-        # # self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=False,
+                                                   wf_type='CCSD',
+                                                   factor=5.0)
+        self.assertEqual(J, JNum)
+        # self.assertEqual(H, HNum)
         # J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
         #                                            allE=False,
         #                                            wf_type='CCD',
