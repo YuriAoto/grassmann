@@ -169,14 +169,11 @@ def calc_dist_to_cc_manifold(wf,
                              coeff_thr=1.0E-10):
     """Calculate the distance to the coupled cluster manifold
 
-    Attention:
-    ----------
-    For the result (the distance in the intermediate
-    normalisation) to be meaningful, this wave function should
-    be in the intermediate normalisation.
-    This is not checked or tested! The user is responsible to transform
-    (if desired) the wave function first
-    (using normalise(mode='intermediate')).
+    Side Effects:
+    -------------
+    The wave function wf is put in the intermediate normalisation and
+    with the convention of orbitals with maximum coincidence for the signs
+    of the determinants
 
     Parameters:
     -----------
@@ -231,6 +228,7 @@ def calc_dist_to_cc_manifold(wf,
 
     """
     wf.normalise(mode='intermediate')
+    wf.set_max_coincidence_orbitals()
     converged = False
     normZ = normJ = 1.0
     if ini_wf is None:
@@ -240,7 +238,7 @@ def calc_dist_to_cc_manifold(wf,
     elif isinstance(ini_wf, FCIWaveFunction) and not use_FCI_directly:
         cc_wf = IntermNormWaveFunction.similar_to(wf, 'CC' + level, restricted=False)
     elif isinstance(ini_wf, IntermNormWaveFunction):
-        cc_wf = copy.deepcopy(ini_wf)
+        cc_wf = IntermNormWaveFunction.unrestrict(ini_wf)
     else:
         raise ValueError('Unknown type of initial wave function')
     n_ampl = len(cc_wf)

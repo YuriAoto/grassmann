@@ -25,7 +25,6 @@ def assert_arrays(array1, array2, msg=None):
             and not np.allclose(array1, array2,
                                 rtol=assert_arrays_rtol,
                                 atol=assert_arrays_atol)):
-        print('----->', assert_arrays_atol)
         raise unittest.TestCase.failureException(
             '\n' + str(array1) + '\n!=\n' + str(array2))
     return True
