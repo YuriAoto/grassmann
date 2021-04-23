@@ -16,7 +16,7 @@ from tests import FCI_file
 import tests
 
 
-fout = None #sys.stdout
+fout = sys.stdout
 
 
 @tests.category('SHORT')
@@ -688,6 +688,15 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
     @tests.category('LONG')
     def test_li2_sto3g_c2v_allel(self):
         res, right_ampl = _calc_mindist('Li2__5__sto3g__C2v',
+                                        level='D', diag_hess=False,
+                                        allE=True)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('LONG')
+    def test_be_sto3g_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
                                         level='D', diag_hess=False,
                                         allE=True)
         self.assertEqual(res.n_iter, 1)
