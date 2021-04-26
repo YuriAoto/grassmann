@@ -148,18 +148,23 @@ cdef double term2_aa(DoubleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha, i_exc_alpha
     cdef int i_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_alpha in range(nstr_alpha):
         next_str(occ)
-        if not exc_on_string(exc.j, exc.b, occ, exc_occ):
+        sign = exc_on_string(exc.j, exc.b, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_alpha = get_index(exc_occ, string_graph)
         with nogil:
             for i_beta in range(nstr_beta):
-                S += wf[i_exc_alpha, i_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_exc_alpha, i_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -175,18 +180,23 @@ cdef double term2_bb(DoubleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha
     cdef int i_beta, i_exc_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_beta in range(nstr_beta):
         next_str(occ)
-        if not exc_on_string(exc.j, exc.b, occ, exc_occ):
+        sign = exc_on_string(exc.j, exc.b, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_beta = get_index(exc_occ, string_graph)
         with nogil:
             for i_alpha in range(nstr_alpha):
-                S += wf[i_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_alpha, i_exc_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -202,20 +212,26 @@ cdef double term2_aaa(TripleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha, i_exc_alpha
     cdef int i_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_alpha in range(nstr_alpha):
         next_str(occ)
-        if not exc_on_string(exc.j, exc.b, occ, exc_occ):
+        sign = exc_on_string(exc.j, exc.b, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.k, exc.c, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.k, exc.c, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_alpha = get_index(exc_occ, string_graph)
         with nogil:
             for i_beta in range(nstr_beta):
-                S += wf[i_exc_alpha, i_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_exc_alpha, i_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -231,20 +247,26 @@ cdef double term2_bbb(TripleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha
     cdef int i_beta, i_exc_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_beta in range(nstr_beta):
         next_str(occ)
-        if not exc_on_string(exc.j, exc.b, occ, exc_occ):
+        sign = exc_on_string(exc.j, exc.b, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.k, exc.c, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.k, exc.c, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_beta = get_index(exc_occ, string_graph)
         with nogil:
             for i_alpha in range(nstr_beta):
-                S += wf[i_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_alpha, i_exc_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -260,22 +282,29 @@ cdef double term2_aaaa(QuadrupleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha, i_exc_alpha
     cdef int i_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_alpha in range(nstr_alpha):
         next_str(occ)
-        if not exc_on_string(exc.k, exc.c, occ, exc_occ):
+        sign = exc_on_string(exc.k, exc.c, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.l, exc.d, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.l, exc.d, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.b, exc.j, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.b, exc.j, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_alpha = get_index(exc_occ, string_graph)
         with nogil:
             for i_beta in range(nstr_beta):
-                S += wf[i_exc_alpha, i_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_exc_alpha, i_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -291,22 +320,29 @@ cdef double term2_bbbb(QuadrupleExc exc,
     cdef int nstr_beta = wf.shape[1]
     cdef int i_alpha
     cdef int i_beta, i_exc_beta
+    cdef int sign
     cdef double S = 0.0
     ini_str(occ)
     for i_beta in range(nstr_beta):
         next_str(occ)
-        if not exc_on_string(exc.k, exc.c, occ, exc_occ):
+        sign = exc_on_string(exc.k, exc.c, occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.l, exc.d, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.l, exc.d, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.b, exc.j, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.b, exc.j, exc_occ, exc_occ)
+        if sign == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ, exc_occ):
+        sign *= exc_on_string(exc.a, exc.i, exc_occ, exc_occ)
+        if sign == 0:
             continue
         i_exc_beta = get_index(exc_occ, string_graph)
         with nogil:
             for i_alpha in range(nstr_alpha):
-                S += wf[i_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+                S += (sign
+                      * wf[i_alpha, i_exc_beta]
+                      * wf[i_alpha, i_beta])
     return S
 
 
@@ -323,22 +359,26 @@ cdef double term2_ab(DoubleExc exc,
     """(alpha->alpha)^+ (beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.a, exc.i, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.a, exc.i, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.j, exc.b, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.j, exc.b, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -355,24 +395,29 @@ cdef double term2_aab(TripleExc exc,
     """(alpha->alpha)^+ (alpha->alpha)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.j, exc.b, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.j, exc.b, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.k, exc.c, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.k, exc.c, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -389,24 +434,29 @@ cdef double term2_abb(TripleExc exc,
     """(alpha->alpha)^+ (beta->beta)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.a, exc.i, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.a, exc.i, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.j, exc.b, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.j, exc.b, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.k, exc.c, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.k, exc.c, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -423,26 +473,32 @@ cdef double term2_aaab(QuadrupleExc exc,
     """{(alpha->alpha)(alpha->alpha)}^+ (alpha->alpha)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.k, exc.c, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.k, exc.c, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.b, exc.j, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.b, exc.j, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.l, exc.d, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.l, exc.d, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -459,26 +515,32 @@ cdef double term2_aabb(QuadrupleExc exc,
     """{(alpha->alpha)(alpha->alpha)}^+ (beta->beta)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.a, exc.i, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.a, exc.i, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.b, exc.j, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.b, exc.j, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.k, exc.c, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.k, exc.c, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.l, exc.d, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.l, exc.d, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -495,26 +557,32 @@ cdef double term2_abbb(QuadrupleExc exc,
     """{(alpha->alpha)(beta->beta)}^+ (beta->beta)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.a, exc.i, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.a, exc.i, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.b, exc.j, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.b, exc.j, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.k, exc.c, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.k, exc.c, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.l, exc.d, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.l, exc.d, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -531,24 +599,29 @@ cdef double term2_baa(TripleExc exc,
     """(beta->beta)^+ (alpha->alpha)(alpha->alpha)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.j, exc.b, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.j, exc.b, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.k, exc.c, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.k, exc.c, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.a, exc.i, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.a, exc.i, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -565,24 +638,29 @@ cdef double term2_bab(TripleExc exc,
     """(beta->beta)^+ (alpha->alpha)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.j, exc.b, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.j, exc.b, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.k, exc.c, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.k, exc.c, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.a, exc.i, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.a, exc.i, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -599,26 +677,32 @@ cdef double term2_bbab(QuadrupleExc exc,
     """{(beta->beta)(beta->beta)}^+ (alpha->alpha)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.k, exc.c, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.k, exc.c, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.l, exc.d, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.l, exc.d, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.a, exc.i, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.a, exc.i, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.b, exc.j, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.b, exc.j, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
 
 
@@ -635,24 +719,30 @@ cdef double term2_abab(QuadrupleExc exc,
     """{(alpha->alpha)(beta->beta)}^+ (alpha->alpha)(beta->beta)"""
     cdef int nstr_alpha = wf.shape[0]
     cdef int nstr_beta = wf.shape[1]
-    cdef int i_alpha, i_exc_alpha
-    cdef int i_beta, i_exc_beta
+    cdef int i_alpha, i_exc_alpha, sign_a
+    cdef int i_beta, i_exc_beta, sign_b
     cdef double S = 0.0
     ini_str(occ_a)
     for i_alpha in range(nstr_alpha):
         next_str(occ_a)
-        if not exc_on_string(exc.k, exc.c, occ_a, exc_occ_a):
+        sign_a = exc_on_string(exc.k, exc.c, occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
-        if not exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a):
+        sign_a *= exc_on_string(exc.a, exc.i, exc_occ_a, exc_occ_a)
+        if sign_a == 0:
             continue
         i_exc_alpha = get_index(exc_occ_a, alpha_string_graph)
         ini_str(occ_b)
         for i_beta in range(nstr_beta):
             next_str(occ_b)
-            if not exc_on_string(exc.l, exc.d, occ_b, exc_occ_b):
+            sign_b = exc_on_string(exc.l, exc.d, occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
-            if not exc_on_string(exc.b, exc.j, exc_occ_b, exc_occ_b):
+            sign_b *= exc_on_string(exc.b, exc.j, exc_occ_b, exc_occ_b)
+            if sign_b == 0:
                 continue
             i_exc_beta = get_index(exc_occ_b, beta_string_graph)
-            S += wf[i_exc_alpha, i_exc_beta] * wf[i_alpha, i_beta]
+            S += (sign_a * sign_b
+                  * wf[i_exc_alpha, i_exc_beta]
+                  * wf[i_alpha, i_beta])
     return S
