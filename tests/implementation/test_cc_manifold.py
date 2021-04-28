@@ -34,9 +34,12 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     """
     wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=allE))
     wf.normalise(mode='intermediate')
-    cc_wf = IntermNormWaveFunction.similar_to(wf, wf_type=wf_type, restricted=False)
+    wf.set_max_coincidence_orbitals()
+    cc_wf = IntermNormWaveFunction.from_projected_fci(wf, wf_type=wf_type)
     cc_wf.amplitudes *= factor
     cc_wf_as_fci = FCIWaveFunction.from_int_norm(cc_wf)
+    cc_wf_as_fci.set_ordered_orbitals()
+    wf.set_ordered_orbitals()
     Jac, Hess = min_dist_jac_hess(
         wf._coefficients,
         cc_wf_as_fci._coefficients,
@@ -55,7 +58,8 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
         len(cc_wf),
         wf.orbs_before,
         wf.corr_orb.as_array(),
-        wf.virt_orb.as_array())
+        wf.virt_orb.as_array(),
+        eps = 0.0002)
     return np.array(Jac), np.array(JacNum)/2, np.array(Hess), np.array(HessNum)/2
 
 
@@ -156,9 +160,6 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        for i in range(H.shape[0]):
-            for j in range(H.shape[1]):
-                print(i, j, H[i,j], HNum[i,j], H[i,j]-HNum[i,j])
         self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=True,
@@ -179,7 +180,7 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
         self.assertEqual(J, JNum)
         self.assertEqual(H, HNum)
         
-    @tests.category('SHORT')
+    @tests.category('VERY LONG')
     def test_li2_sto3g_c2v_ccd_allel(self):
         mol_system = 'Li2__5__sto3g__D2h'
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
@@ -221,19 +222,19 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCSD',
                                                    factor=0.2)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCSD',
                                                    factor=0.6)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCSD',
                                                    factor=5.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
     
     @tests.category('SHORT')
     def test_he2_631g_d2h_ccd(self):
@@ -243,25 +244,53 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=0.2)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=0.6)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=5.0)
-        # self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v_ccd(self):
+        mol_system = 'He2__1.5__631g__C2v'
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=False,
+                                                   wf_type='CCD',
+                                                   factor=1.0)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=False,
+                                                   wf_type='CCD',
+                                                   factor=0.2)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=False,
+                                                   wf_type='CCD',
+                                                   factor=0.6)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=False,
+                                                   wf_type='CCD',
+                                                   factor=5.0)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
     
     @tests.category('LONG')
     def test_h2o_sto3g_c2v_ccsd(self):
@@ -271,25 +300,25 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCSD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCSD',
                                                    factor=0.2)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCSD',
                                                    factor=0.6)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCSD',
                                                    factor=5.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
     
     @tests.category('LONG')
     def test_h2o_sto3g_c2v_ccd(self):
@@ -299,22 +328,22 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=0.2)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=0.6)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
                                                    wf_type='CCD',
                                                    factor=5.0)
         self.assertEqual(J, JNum)
-        # self.assertEqual(H, HNum)
+        self.assertEqual(H, HNum)

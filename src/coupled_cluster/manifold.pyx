@@ -35,10 +35,12 @@ def min_dist_jac_hess(double[:, :] wf,
     -----------
     wf
         The wave function, as a matrix of alpha and beta strings
+        It should be with ordered orbitals.
     
     wf_cc
         The coupled cluster wave function, as a matrix of alpha
         and beta strings
+        It should be with ordered orbitals.
     
     n_ampl
         The total number of amplitudes
@@ -93,7 +95,7 @@ def min_dist_jac_hess(double[:, :] wf,
     """
     cdef double[:] J
     cdef double[:, :] H
-    cdef int pos = 0, pos2 = 0, nvirt_1 = 0
+    cdef int pos = 0, pos2 = 0, nvirt_1 = 0, pos_transp
     cdef int n_alpha, n_beta
     cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
@@ -234,18 +236,24 @@ def min_dist_jac_hess(double[:, :] wf,
                                           alpha_string_graph,
                                           beta_string_graph)
                         elif a > b:
-                            J[pos] = -J[pos - (a-b)*nvirt_1]
+                            pos_transp = pos - (a-b)*nvirt_1
+                            J[pos] = -J[pos_transp]
                             if not diag_hess:
-                                for pos2 in range(pos+1, n_ampl):
-                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1, pos2]
+                                for pos2 in range(pos + 1, n_ampl):
+                                    H[pos, pos2] = -H[pos_transp, pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
             else:  # and a_irrep > b_irrep
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
-                        J[pos] = -J[pos_ini[b_irrep]
-                                    + n_from_rect(b, a, virt_orb[a_spirrep])]
+                        pos_transp = (pos_ini[b_irrep]
+                                      + n_from_rect(
+                                          b, a, virt_orb[a_spirrep]))
+                        J[pos] = -J[pos_transp]
+                        if not diag_hess:
+                            for pos2 in range(pos + 1, n_ampl):
+                                H[pos, pos2] = -H[pos_transp, pos2]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
@@ -302,18 +310,24 @@ def min_dist_jac_hess(double[:, :] wf,
                                           alpha_string_graph,
                                           beta_string_graph)
                         elif a > b:
-                            J[pos] = -J[pos - (a-b)*nvirt_1]
+                            pos_transp = pos - (a-b)*nvirt_1
+                            J[pos] = -J[pos_transp]
                             if not diag_hess:
-                                for pos2 in range(pos+1, n_ampl):
-                                    H[pos, pos2] = -H[pos - (a-b)*nvirt_1, pos2]
+                                for pos2 in range(pos + 1, n_ampl):
+                                    H[pos, pos2] = -H[pos_transp, pos2]
                         pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
             else:  # and a_irrep > b_irrep
                 for a in range(virt_orb[a_spirrep]):
                     for b in range(virt_orb[b_spirrep]):
-                        J[pos] = -J[pos_ini[b_irrep]
-                                    + n_from_rect(b, a, virt_orb[a_spirrep])]
+                        pos_transp = (pos_ini[b_irrep]
+                                      + n_from_rect(
+                                          b, a, virt_orb[a_spirrep]))
+                        J[pos] = -J[pos_transp]
+                        if not diag_hess:
+                            for pos2 in range(pos + 1, n_ampl):
+                                H[pos, pos2] = -H[pos_transp, pos2]
                         pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
@@ -622,20 +636,20 @@ def min_dist_jac_hess_num(wf,
                     i2.rewind()
                 else:
                     i2.next_()
-            # --- pos2: alpha, beta -> alpha, beta
-            while pos2 < n_ampl:
-                cc_wf.amplitudes[pos] += eps
-                cc_wf.amplitudes[pos2] += eps
-                f_pp = Func(cc_wf)
-                cc_wf.amplitudes[pos] -= 2*eps
-                cc_wf.amplitudes[pos2] -= 2*eps
-                f_mm = Func(cc_wf)
-                cc_wf.amplitudes[pos] += eps
-                cc_wf.amplitudes[pos2] += eps
-                H[pos, pos2] = _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
-                pos2 += 1
-            if pos2 != n_ampl:
-                raise Exception(str(pos2) + ' = pos2 != n_ampl = ' + str(n_ampl))
+        # --- pos2: alpha, beta -> alpha, beta
+        while pos2 < n_ampl:
+            cc_wf.amplitudes[pos] += eps
+            cc_wf.amplitudes[pos2] += eps
+            f_pp = Func(cc_wf)
+            cc_wf.amplitudes[pos] -= 2*eps
+            cc_wf.amplitudes[pos2] -= 2*eps
+            f_mm = Func(cc_wf)
+            cc_wf.amplitudes[pos] += eps
+            cc_wf.amplitudes[pos2] += eps
+            H[pos, pos2] = _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
+            pos2 += 1
+        if pos2 != n_ampl:
+            raise Exception(str(pos2) + ' = pos2 != n_ampl = ' + str(n_ampl))
         pos += 1
     ini_pos_aabb = pos
     # --- pos: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
@@ -708,11 +722,7 @@ def min_dist_jac_hess_num(wf,
                                                                           if a2_irrep == b2_irrep else
                                                                           pos2_ini[b2_irrep] + n_from_rect(
                                                                               b2, a2, virt_orb[a2_spirrep]))
-                                                            if pos2 < pos:
-                                                                continue
-                                                            if pos2 == pos:
-                                                                H[pos, pos] = (f_p[pos] - 2*f + f_m[pos]) / eps**2
-                                                            else:
+                                                            if pos2 > pos:
                                                                 cc_wf.amplitudes[pos] += eps
                                                                 cc_wf.amplitudes[pos_transp] -= eps
                                                                 cc_wf.amplitudes[pos2] += eps
@@ -762,14 +772,14 @@ def min_dist_jac_hess_num(wf,
                                     H[pos, pos2] = _df2_dxdy(
                                         f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
                                     pos2 += 1
-                                    if pos2 != n_ampl:
-                                        raise Exception(str(pos2)
-                                                        + ' = pos2 != n_ampl = '
-                                                        + str(n_ampl))
+                                if pos2 != n_ampl:
+                                    raise Exception(str(pos2)
+                                                    + ' = pos2 != n_ampl = '
+                                                    + str(n_ampl))
                             elif a > b:
                                 pos_transp = pos - (a-b)*nvirt_1
-                                for pos2 in range(pos, n_ampl):
-                                    H[pos, pos2] = -H[pos, pos2]
+                                for pos2 in range(pos + 1, n_ampl):
+                                    H[pos, pos2] = -H[pos_transp, pos2]
                             pos += 1
                 else:  # and a_irrep > b_irrep
                     for a in range(virt_orb[a_spirrep]):
@@ -777,8 +787,8 @@ def min_dist_jac_hess_num(wf,
                             pos_transp = (pos_ini[b_irrep]
                                           + n_from_rect(
                                               b, a, virt_orb[a_spirrep]))
-                            for pos2 in range(pos, n_ampl):
-                                H[pos, pos2] = -H[pos, pos2]
+                            for pos2 in range(pos + 1, n_ampl):
+                                H[pos, pos2] = -H[pos_transp, pos2]
                             pos += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
                 j.next_()

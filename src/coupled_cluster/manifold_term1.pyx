@@ -1,6 +1,6 @@
 """Core functions to optimise the distance to the CC manifold
 
-The term <\Psi - \Psi_cc | \tau_\rho | \Psi_cc>
+The term <\Psi_cc - \Psi | \tau_\rho | \Psi_cc>
 
 Where \tau_\rho may be up to quadruple excitations
 
