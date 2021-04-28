@@ -75,6 +75,12 @@ def _parser():
     parser.add_argument('--HF_orb',
                         help='Hartree-Fock orbitals'
                         + ' (as Molpro\'s "put" xml file)')
+    parser.add_argument('--restricted',
+                        help='Restricted calculation.',
+                        action='store_true')
+    parser.add_argument('--ms2',
+                        help='The MS of Hartree-Fock calculation.',
+                        type=int)
     parser.add_argument('--method',
                         help='The method.')
     parser.add_argument('--WF_orb',
@@ -330,7 +336,7 @@ def _parse_files_in_sys_argv(sysargv=None):
     Parameters:
     -----------
     sysargv (list of str or None)
-        Is None, use sys.argv. Otherwise use this to extrac the arguments
+        Is None, use sys.argv. Otherwise use this to extract the arguments
     
     Return:
     -------

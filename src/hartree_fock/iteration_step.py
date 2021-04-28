@@ -1,4 +1,4 @@
-"""Class to run a iteration step in a Hartree Fock optimisation
+"""Class to run an iteration step in Hartree Fock optimisation
 
 
 """
@@ -22,6 +22,8 @@ class HartreeFockStep():
     def __init__(self):
         self.n_DIIS = 0
         self.n_occ = 0
+        self.n_occ_alpha = 0
+        self.n_occ_beta = 0
         self.integrals = None
         self.orb = None
         self.energy = None
@@ -29,7 +31,26 @@ class HartreeFockStep():
         self.Dmat = None
         self.Fock = None
         self.gradNorm = None
-    
+
+    def initialise(self, step_type):
+        if step_type == 'RH-SCF':
+            self.i_DIIS = -1
+            self.grad = np.zeros((self.n_occ_alpha,
+                                     len(self.orb) - self.n_occ_alpha,
+                                     max(self.n_DIIS, 1)))
+            self.Dmat = np.zeros((len(self.orb),
+                                     len(self.orb),
+                                     max(self.n_DIIS, 1)))
+        elif step_type == 'densMat-SCF':
+            pass
+        elif step_type == 'Absil':
+            pass    
+        elif step_type == 'orb_rot-Newton':
+            pass
+        else:
+            raise ValueError("Unknown type of Hartree-Fock step: "
+                             + step_type)
+        
     def roothan_hall(self, i_SCF):
         """Roothan-Hall procedure as described, e.g, in Szabo
         

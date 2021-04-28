@@ -29,7 +29,7 @@ class Integrals():
         Name of the basis set to be used
 
     mol_geo (MolecularGeometry)
-        A MolecuarGeometry object conatining all molecular data
+        A MolecularGeometry object containing all molecular data
 
     n_func (int)
         Number of contracted functions in the basis set ((??check))

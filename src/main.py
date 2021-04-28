@@ -22,7 +22,7 @@ def main_grassmann(args, f_out):
     Parameters:
     ---------
     args (argparse.Namespace)
-        The parsed information. See parse for more information
+        The parsed information. See parse (input_output/parse.py) for more information
     
     f_out (file)
         Where the output goes

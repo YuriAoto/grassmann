@@ -311,13 +311,17 @@ class MolecularOrbitals():
 #        return self._integrals.basis_set 
 
     @classmethod
-    def from_eig_h(cls, intgrls, basis_name=''):
+    def from_eig_h(cls, intgrls, basis_name='', restricted=True):
         h_orth = intgrls.X.T @ intgrls.h @ intgrls.X
         logger.debug('h_orth:\n%r', h_orth)
         e, C = eigh(h_orth)
-        return cls.from_array(intgrls.X @ C, 1,
-                              integrals=intgrls)
-    
+        if restricted:
+            return cls.from_array(intgrls.X @ C, 1,
+                                  integrals=intgrls)
+        else:
+            return cls.from_array([intgrls.X @ C, intgrls.X @ C], 1,
+                                  integrals=intgrls, restricted=False)
+        
     @classmethod
     def from_array(cls, C, n_irrep,
                    name='Coefficients from array',
