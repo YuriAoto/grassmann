@@ -228,7 +228,6 @@ def calc_dist_to_cc_manifold(wf,
 
     """
     wf.normalise(mode='intermediate')
-    wf.set_max_coincidence_orbitals()
     converged = False
     normZ = normJ = 1.0
     if ini_wf is None:
@@ -241,11 +240,12 @@ def calc_dist_to_cc_manifold(wf,
         cc_wf = IntermNormWaveFunction.unrestrict(ini_wf)
     else:
         raise ValueError('Unknown type of initial wave function')
+    wf.set_ordered_orbitals()
+    logger.debug('The FCI Wave Function:\n%s', wf)
     n_ampl = len(cc_wf)
     corr_orb = wf.corr_orb.as_array()
     virt_orb = wf.virt_orb.as_array()
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
-#    logger.info('Wave Function, before iterations:\n%s', wf)
     if f_out is not None:
         f_out.write(
             'it.   dist      |Z|       |J|        time in iteration\n')
@@ -257,10 +257,11 @@ def calc_dist_to_cc_manifold(wf,
                 cc_wf_as_fci._coefficients[:] = ini_wf._coefficients
             else:
                 with logtime('Transforming CC wave function to FCI-like'):
-                    cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
-#            logger.info('Wave Function, at iteration %d:\n%s',
-#                        i_iteration,
-#                        cc_wf_as_fci)
+                    cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf,
+                                                                   ordered_orbitals=True)
+            logger.debug('Wave Function, at iteration %d:\n%s',
+                         i_iteration,
+                         cc_wf_as_fci)
             with logtime('Distance to current CC wave function'):
                 dist = wf.dist_to(cc_wf_as_fci, metric='IN')
             if (i_iteration > 0

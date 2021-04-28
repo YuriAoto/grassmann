@@ -234,6 +234,7 @@ class FCIWaveFunction(WaveFunction):
         self._n_beta_str = None
         self.ref_det = None
         self._ordered_orbs = True
+        self._sign_change_orbs = None
         self._normalisation = 'unnormalised'
     
     def __len__(self):
@@ -281,46 +282,71 @@ class FCIWaveFunction(WaveFunction):
     def ordered_orbs(self):
         return self._ordered_orbs
     
-    def change_orbital_order(self):
-        """Change the sign of coefficients as if orbital order were changed
-        
-        THIS DESCRIPTION SHOULD BE UPDATED!
-        The reference Slater determinant might not be
-        that with all occupied orbitals first. This causes some sign problems
-        in the cluster decomposition of the wave function, and thus this
-        subroutine changes the sign of the determinants as if the orbitals
-        were reordered with all occupied orbitals in the reference coming
-        first. However, the order of the orbitals (and thus of the alpha
-        and beta strings) are not really changed!
-        If the wave function is to be used again after decompose, this method
-        has to be called again to change back the signs!
-        
-        See strings_rev_lexical_order.sign_relative_to_ref
+    def calc_sign_change_orbs(self):
+        """Calculate signs for changing coefficients according to orbital ordering
         
         TODO:
         -----
         Can we avoid calling sign_put_max_coincidence for each string,
         but obtain the sign from the previous using the reverse lexical
         ordering?
-        
         """
-        sign_beta = np.empty(self._coefficients.shape[1], dtype=int_dtype)
+        self._sign_change_orbs = (np.empty(self._coefficients.shape[0],
+                                           dtype=int_dtype),
+                                  np.empty(self._coefficients.shape[1],
+                                           dtype=int_dtype))
         occ_b = np.empty(self.n_corr_beta, dtype=int_dtype)
         occ_a = np.empty(self.n_corr_alpha, dtype=int_dtype)
-        str_order.ini_str(occ_b)
         str_order.ini_str(occ_a)
-        for ib in range(self._coefficients.shape[1]):
-            str_order.next_str(occ_b)
-            sign_beta[ib] = str_order.sign_put_max_coincidence(
-                self.ref_det.beta_occ,
-                occ_b, self.n_corr_beta)
         for ia in range(self._coefficients.shape[0]):
             str_order.next_str(occ_a)
-            sign_alpha = str_order.sign_put_max_coincidence(
+            self._sign_change_orbs[0][ia] = str_order.sign_put_max_coincidence(
                 self.ref_det.alpha_occ,
                 occ_a, self.n_corr_alpha)
+        str_order.ini_str(occ_b)
+        for ib in range(self._coefficients.shape[1]):
+            str_order.next_str(occ_b)
+            self._sign_change_orbs[1][ib] = str_order.sign_put_max_coincidence(
+                self.ref_det.beta_occ,
+                occ_b, self.n_corr_beta)
+    
+    def change_orbital_order(self):
+        """Change the sign of coefficients as if orbital order were changed
+        
+        Orbitals are always ordered in the Slater determinants are assumed
+        with "alpha comes first", but within the alpha and beta blocks the
+        orbitals are assumed to be ordered in one of two possible ways:
+        
+        a) In ascending order:
+        Thus |1 3 5 7> is how orbitals would be (within say alpha part).
+        This is universal and it is used to calculate the position of the alpha
+        and beta strings in the reverse lexical order, used in the matrix
+        coefficients.
+        
+        b) With maximum coincidence relative to the reference Slater
+        determinant, such that the "particles", that is, the occupied virtual
+        orbitals, are in ascending orders.
+        Thus, if |0 1 2 3> is the reference determinant, |5 1 7 3> is how
+        orbitals would be ordered. This is not universal, as it depends on the
+        reference determinant. Note that, because of symmetry, |0 1 ... N> is not
+        necessarily the reference determinant.
+        
+        Alghouth the first case is always used to find the position of the
+        coefficient of a determinant in the matrix of coefficients, the
+        coefficients themselves can be associated to one or the other, with
+        a sign change for some determinants to pass from one to another.
+        
+        This method does this change sign.
+        This method is also a wrapper for set_ordered_orbitals and
+        set_max_coincidence_orbitals.
+        
+        """
+        if self._sign_change_orbs is None:
+            self.calc_sign_change_orbs()
+        for ia in range(self._coefficients.shape[0]):
             for ib in range(self._coefficients.shape[1]):
-                self._coefficients[ia, ib] *= sign_alpha * sign_beta[ib]
+                self._coefficients[ia, ib] *= (self._sign_change_orbs[0][ia]
+                                               * self._sign_change_orbs[1][ib])
         self._ordered_orbs = not self._ordered_orbs
     
     def set_ordered_orbitals(self):
@@ -594,10 +620,12 @@ class FCIWaveFunction(WaveFunction):
         new_wf = super().similar_to(wf, restricted=restricted)
         new_wf.initialize_coeff_matrix()
         new_wf.set_ref_det_from_corr_orb()
+        if isinstance(wf, FCIWaveFunction) and wf._sign_change_orbs is not None:
+            new_wf._sign_change_orbs = wf._sign_change_orbs
         return new_wf
 
     @classmethod
-    def from_int_norm(cls, wf, restricted=None):
+    def from_int_norm(cls, wf, restricted=None, ordered_orbitals=False):
         """Construct the wave function from wf in intermediate normalisation
         
         This constructor returns an instance of cls that represents
@@ -615,7 +643,7 @@ class FCIWaveFunction(WaveFunction):
         new_wf = cls.similar_to(wf, restricted=False)  # Because proj to interm norm requires false...restricted)
         new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
-        new_wf.get_coefficients_from_int_norm_wf(wf)
+        new_wf.get_coefficients_from_int_norm_wf(wf, ordered_orbitals)
         return new_wf
     
     @classmethod
@@ -637,7 +665,7 @@ class FCIWaveFunction(WaveFunction):
                                      zero_coefficients=zero_coefficients)
         return new_wf
     
-    def get_coefficients_from_int_norm_wf(self, wf):
+    def get_coefficients_from_int_norm_wf(self, wf, ordered_orbitals=False):
         """Get coefficients from a wave function in the int. normalisation
         
         Parameters:
@@ -655,6 +683,7 @@ class FCIWaveFunction(WaveFunction):
         self._ordered_orbs = False
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed_det(det):
+                self._coefficients[ia, ib] = 0.0
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
@@ -666,6 +695,8 @@ class FCIWaveFunction(WaveFunction):
                 self._coefficients[ia, ib] = contribution_from_clusters(
                     alpha_hp, beta_hp, wf, level)
         self._normalisation = 'intermediate'
+        if ordered_orbitals:
+            self.set_ordered_orbitals()
         self.set_coeff_ref_det()
     
     def get_coeff_from_molpro(self, molpro_output,
