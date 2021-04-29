@@ -11,6 +11,22 @@ from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
 from coupled_cluster.manifold import min_dist_jac_hess, min_dist_jac_hess_num
 
+def _print_hess(H, Hnum):
+    for i in range(H.shape[0]):
+        for j in range(H.shape[1]):
+            print(f'{i:3d} {j:3d} : {H[i, j]:20.10f}  {HNum[i, j]:20.10f}'
+                  + f'  {H[i, j]-HNum[i, j]:20.10f}')
+
+
+def _print_coef(wf):
+    print('---------------')
+    print('wf coef:')
+    for i in range(wf._coefficients.shape[0]):
+        for j in range(wf._coefficients.shape[1]):
+            print(f' {cc_wf_as_fci._coefficients[i, j]:12.7f} ', end='')
+        print()
+    print('---------------')
+
 
 def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     """Helper to calculate compare analitical and numerical Jacobian and Hessian
@@ -34,35 +50,16 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     """
     wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=allE))
     wf.normalise(mode='intermediate')
-    # print('========================')
-    # print('wf from Molpro, interm norm ')
-    # print(wf)
-    # for i in range(wf._coefficients.shape[0]):
-    #     for j in range(wf._coefficients.shape[1]):
-    #         print(f' {wf._coefficients[i, j]:12.7f} ', end='')
-    #     print()
-    # print('========================')
+    tests.logger.info('wf from Molpro, interm norm:\n%s', wf)
+    # _print_coef(wf)
     wf.set_max_coincidence_orbitals()
-    # print('========================')
-    # print('wf with max coincidence orbs')
-    # print(wf)
-    # for i in range(wf._coefficients.shape[0]):
-    #     for j in range(wf._coefficients.shape[1]):
-    #         print(f' {wf._coefficients[i, j]:12.7f} ', end='')
-    #     print()
-    # print('========================')
+    tests.logger.info('wf with max coincidence orbitals:\n%s', wf)
+    # _print_coef(wf)
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, wf_type=wf_type)
     cc_wf.amplitudes *= factor
     cc_wf_as_fci = FCIWaveFunction.from_int_norm(cc_wf, ordered_orbitals=True)
-    # print(cc_wf)
-    # print('========================')
-    # print('cc wf')
+    tests.logger.info('cc wf:\n%s\nas FCI\n%s', cc_wf, cc_wf_as_fci)
     # print(cc_wf_as_fci)
-    # for i in range(wf._coefficients.shape[0]):
-    #     for j in range(wf._coefficients.shape[1]):
-    #         print(f' {cc_wf_as_fci._coefficients[i, j]:12.7f} ', end='')
-    #     print()
-    # print('========================')
     wf.set_ordered_orbitals()
     Jac, Hess = min_dist_jac_hess(
         wf._coefficients,
@@ -83,9 +80,10 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
         wf.orbs_before,
         wf.corr_orb.as_array(),
         wf.virt_orb.as_array(),
+        np.array(Jac)*2,
+        np.array(Hess)*2,
         eps = 0.0002)
     return np.array(Jac), np.array(JacNum)/2, np.array(Hess), np.array(HessNum)/2
-
 
 class CheckNumAnalJacHessTestCase(unittest.TestCase):
     
@@ -206,13 +204,43 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
         
     @tests.category('VERY LONG')
     def test_li2_sto3g_c2v_ccd_allel(self):
+        mol_system = 'Li2__5__sto3g__C2v'
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=True,
+                                                   wf_type='CCD',
+                                                   factor=3.0)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        return
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=True,
+                                                   wf_type='CCD',
+                                                   factor=0.2)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=True,
+                                                   wf_type='CCD',
+                                                   factor=0.6)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+        J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
+                                                   allE=True,
+                                                   wf_type='CCD',
+                                                   factor=5.0)
+        self.assertEqual(J, JNum)
+        self.assertEqual(H, HNum)
+    
+    @tests.category('VERY LONG')
+    def test_li2_sto3g_d2h_ccd_allel(self):
         mol_system = 'Li2__5__sto3g__D2h'
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=True,
                                                    wf_type='CCD',
-                                                   factor=1.0)
+                                                   factor=3.0)
         self.assertEqual(J, JNum)
         self.assertEqual(H, HNum)
+        return
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=True,
                                                    wf_type='CCD',
@@ -268,9 +296,6 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        # for i in range(H.shape[0]):
-        #     for j in range(H.shape[1]):
-        #         print(f'{i:3d} {j:3d} : {H[i, j]:20.10f}  {HNum[i, j]:20.10f}  {H[i, j]-HNum[i, j]:20.10f}')
         self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
@@ -299,9 +324,6 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    wf_type='CCD',
                                                    factor=1.0)
         self.assertEqual(J, JNum)
-        # for i in range(H.shape[0]):
-        #     for j in range(H.shape[1]):
-        #         print(f'{i:3d} {j:3d} : {H[i, j]:20.10f}  {HNum[i, j]:20.10f}  {H[i, j]-HNum[i, j]:20.10f}')
         self.assertEqual(H, HNum)
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=False,
