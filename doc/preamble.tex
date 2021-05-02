@@ -219,6 +219,89 @@
 \newcommand*{\ampl}[2]{\ensuremath{t_{\colororbindices{#1}}^{\colororbindices{#2}}}}
 \newcommand*{\uampl}[2]{\ensuremath{u_{\colororbindices{#1}}^{\colororbindices{#2}}}}
 
+% To format our code.
+% See https://en.wikibooks.org/wiki/LaTeX/Source_Code_Listings
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Code}% Listing -> Code
+\renewcommand{\lstlistlistingname}{List of \lstlistingname s}
+\newcommand{\pythonprompt}{>>>}
+\newcommand{\pythonexec}{python3}
+\newcommand\numberwithprompt[1]{\footnotesize\ttfamily \pythonprompt}
+\newcommand{\shellprompt}{\$}
+\newcommand\numberwithpromptSH[1]{\footnotesize\ttfamily \shellprompt}
+\usepackage{color}
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+\lstdefinestyle{pysty}{
+  language=python,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue},
+  commentstyle=\color{red},
+  stringstyle=\color{mymauve},
+  identifierstyle=\color{black},
+  numberstyle=\tiny\color{black},
+  breaklines=true,
+  frame=L,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  extendedchars=true,
+  rulecolor=\color{black},
+  title=\lstname,
+  numbers=left,
+  numbersep=10pt,
+  stepnumber=1,
+  backgroundcolor=\color{white},
+}
+\lstdefinestyle{pystyint}{
+  language=python,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue},
+  commentstyle=\color{red},
+  stringstyle=\color{mymauve},
+  identifierstyle=\color{black},
+  breaklines=true,
+%  captionpos=b,
+  frame=none,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  extendedchars=true,
+  rulecolor=\color{black},
+  title=\lstname,
+  backgroundcolor=\color{white},
+  numbers=left,
+  numberstyle=\numberwithprompt,
+}
+\newcommand{\shPr}{\$}
+\lstdefinestyle{shstyint}{
+%  language=bash,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue},
+  commentstyle=\color{red},
+  stringstyle=\color{mymauve},
+  identifierstyle=\color{black},
+  breaklines=true,
+  frame=TB,
+  captionpos=tb,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  extendedchars=true,
+  rulecolor=\color{black},
+  title=\lstname,
+  backgroundcolor=\color{white},
+  escapechar=@
+%%  numbers=left,
+%%  numberstyle=\numberwithpromptSH,
+}
 
 
 
