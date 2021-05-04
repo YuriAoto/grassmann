@@ -446,7 +446,7 @@ cdef double term1_aaab(QuadrupleExc exc,
                        int[:] exc_occ_a,
                        int[:] occ_b,
                        int[:] exc_occ_b):
-    """(alpha->alpha)(alpha->alpha)(beta->beta)"""
+    """(alpha->alpha)(alpha->alpha)(alpha->alpha)(beta->beta)"""
     cdef int nalpha = occ_a.shape[0]
     cdef int nbeta = occ_b.shape[0]
     cdef int nstr_alpha = wf.shape[0]

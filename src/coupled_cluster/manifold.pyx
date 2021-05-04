@@ -199,12 +199,10 @@ def min_dist_jac_hess(double[:, :] wf,
     while j.alive:
         for a_irrep in range(n_irrep):
             pos_ini[a_irrep] = pos
-            b_irrep = irrep_product[
-                irrep_product[i.spirrep, j.spirrep], a_irrep]
+            b_irrep = irrep_product[irrep_product[i.spirrep, j.spirrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep
-            double_exc.a = (orbs_before[a_irrep]
-                            + corr_orb[a_spirrep])
+            double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
                     nvirt_1 = virt_orb[a_spirrep] - 1
@@ -272,13 +270,11 @@ def min_dist_jac_hess(double[:, :] wf,
     while j.alive:
         for a_irrep in range(n_irrep):
             pos_ini[a_irrep] = pos
-            b_irrep = irrep_product[
-                irrep_product[i.spirrep - n_irrep,
-                              j.spirrep - n_irrep], a_irrep]
+            b_irrep = irrep_product[irrep_product[i.spirrep - n_irrep,
+                                                  j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep + n_irrep
             b_spirrep = b_irrep + n_irrep
-            double_exc.a = (orbs_before[a_irrep]
-                            + corr_orb[a_spirrep])
+            double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
                     nvirt_1 = virt_orb[a_spirrep] - 1
@@ -344,8 +340,8 @@ def min_dist_jac_hess(double[:, :] wf,
     double_exc.j = j.orb
     while j.alive:
         for a_irrep in range(n_irrep):
-            b_irrep = irrep_product[
-                irrep_product[i.spirrep, j.spirrep - n_irrep], a_irrep]
+            b_irrep = irrep_product[irrep_product[i.spirrep,
+                                                  j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep + n_irrep
             double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
