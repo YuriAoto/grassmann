@@ -9,6 +9,7 @@ import coupled_cluster.coupled_cluster as ccsd
 
 def cc_closed_shell(hf_energy,
                     mol_orb,
+                    atom_int,
                     wf_ini=None,
                     preserve_wf_ini=False,
                     level='SD',
@@ -21,9 +22,11 @@ def cc_closed_shell(hf_energy,
     hf_energy (float)
         The energy of the slater determinant reference
 
-    mol_orb (Integrals)
-        #TODO: CHANGE!! The molecular orbitals with the associated Integrals and MolecularGeometry
-        properly setted.
+    mol_orb (MolecularOrbital)
+        The molecular orbitals 
+
+    atom_int (Integrals)
+        Integrals from atomic basis set with the associated MolecularGeometry properly setted.
 
     wf_ini (IntermNormWaveFunction, optional, default=None)
         A previous wf can be used as initial guess, if None a new one is generated
@@ -44,7 +47,7 @@ def cc_closed_shell(hf_energy,
         point_group = 'C1'
         orb_dim = OrbitalsSets([len(mol_orb)],
                                occ_type='R')
-        ref_occ = OrbitalsSets([mol_orb._integrals.mol_geo.n_elec],
+        ref_occ = OrbitalsSets([atom_int.mol_geo.n_elec],
                                occ_type='R')
         core_orb = OrbitalsSets([0],
                                 occ_type='R')
@@ -58,6 +61,7 @@ def cc_closed_shell(hf_energy,
     else:
         raise ValueError(
             'wf_ini must be an instance of IntermNormWaveFunction.')
+    mol_orb.molecular_integrals_gen(atom_int)
     F = ccsd.make_F(mol_orb.molecular_integrals.h,mol_orb.molecular_integrals.g._integrals,len(wave_function.ref_orb)//2)
     omega = None
 

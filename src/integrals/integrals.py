@@ -363,7 +363,7 @@ class Integrals():
     Parameters:
     -----------
     
-    basis_set (int)
+    basis_set (str)
         Name of the basis set to be used
 
     mol_geo (MolecularGeometry)
