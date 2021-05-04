@@ -51,7 +51,7 @@ Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file), from bo
 \begin{lstlisting}[style=shstyint]
 @\shPr{}@ cat myfile.inp
 method =Hartree_Fock # method
-@\shPr{}@ @\grassmannexec{}@ myfile.inp --gemetry H2.xyz
+@\shPr{}@ @\grassmannexec{}@ myfile.inp --geometry H2.xyz
 \end{lstlisting}
 
 Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file),
@@ -62,7 +62,7 @@ for the key geometry, this is what Grassmann uses:
 @\shPr{}@ cat myfile.inp
 method =Hartree_Fock # method
 geometry = whatever
-@\shPr{}@ @\grassmannexec{}@ myfile.inp --gemetry H2.xyz
+@\shPr{}@ @\grassmannexec{}@ myfile.inp --geometry H2.xyz
 \end{lstlisting}
 
 Error (assuming that there is no file named ``\verb+whatever+''),
@@ -71,7 +71,7 @@ because \verb+H2.xyz+ is passed before the file, that contains \verb+whatever+ f
 @\shPr{}@ cat myfile.inp
 method =Hartree_Fock # method
 geometry = whatever
-@\shPr{}@ @\grassmannexec{}@ --gemetry H2.xyz myfile.inp
+@\shPr{}@ @\grassmannexec{}@ --geometry H2.xyz myfile.inp
 \end{lstlisting}
 
 
@@ -86,8 +86,7 @@ Optionally, a number can be put together with the element symbol to differentiat
 among atoms of the same element.
 
 Example:
-\begin{lstlisting}[style=shstyint]
-@\shPr{}@ cat H2.xyz
+\begin{lstlisting}[style=filestyint]
 2
 The hydrogen molecule
 H1   0.0     0.0    0.0
@@ -215,6 +214,7 @@ In the following, all arguments of Grassmann are described.
 
 
 \section{Environment variables}
+\label{sec:envvar}
 
 Grassmann is affected by the following environment variables:
 \begin{itemize}

@@ -5,13 +5,51 @@
 \chapterauthor{}
 
 
-
 \section{Molpro}
 
+Grassmann can read orbitals and some wave functions from \href{https://www.molpro.net/}{Molpro}.
+For this to work correctly, some keywords should be added to Molpro's input to trigger the printing
+of the desired information.
+
+\subsection{Orbitals}
+
+After the orbital is calculated, it can be exported to an xml file,
+with the following line in the Molpro input:
+\begin{lstlisting}[style=filestyint]
+{put,xml,@\emph{\textrm{name}}@.xml; orbital,@\emph{\textrm{record}}@; nosort; novariables}
+\end{lstlisting}
+Here, \emph{name} is the base name for the xml file
+(recall that Molpro will transform it to lower case)
+and \emph{record} is the record where the orbitals are saved.
+The part ``\verb+orbital,+\emph{record}\verb+;+'' is optional.
+If omitted, the last orbitals will be used.
+
+
+\subsection{Full CI wave function}
+
+All coefficients of the full CI wave functions must be written to the output.
+This could be be achieved after changing the Molpro source code only,
+by manually setting the variable \verb+thrres+ to zero, in the file \verb+b/src/fci/fci.F+.
+
+
+\subsection{CCSD and CISD wave functions}
+
+All amplitudes of the coupled-cluster and configurations interaction wave functions must be written
+to the output, what can be achieved with the following line in the beginning of the Molpro input
+(just after memory specification):
+\begin{lstlisting}[style=filestyint]
+gthresh,thrprint=0,printci=0.0
+\end{lstlisting}
 
 \section{Integrals from Knizia's IR-WMME}
 \label{sec:irwmme}
 
+Molecular integrals are not calculated in Grassmann,
+but they are read from the output of the IR-WMME code (see Sect.~\ref{sec:envvar}).
+This program is called by Grassmann, and thus it must know where IR-WMME is located.
+This is passed to Grassmann through the environment variable \verb+GR_IR_WMME_DIR+.
+If the program is correctly compiled and this environment variable is set,
+Grassmann should be able to deal with it automatically.
 
 %%% Local Variables:
 %%% mode: latex
