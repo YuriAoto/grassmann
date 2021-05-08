@@ -751,7 +751,50 @@ class MinDistCCDwfCCDOptTestCase(unittest.TestCase):
                                         allE=True)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
-
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_ccpvdz_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__ccpVDZ__D2h',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v_allel(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
 
 @unittest.skip('DiagHess approximation not working')
 class MinDistCCDwfCCDOptDiagHessTestCase(unittest.TestCase):

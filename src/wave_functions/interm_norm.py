@@ -24,6 +24,7 @@ from wave_functions.slater_det import get_slater_det_from_excitation
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.occ_orbitals import OccOrbital
 from coupled_cluster.cluster_decomposition import cluster_decompose
+from coupled_cluster.manifold import update_indep_amplitudes
 
 
 # from wave_functions.singles_doubles import (
@@ -487,6 +488,7 @@ class IntermNormWaveFunction(WaveFunction):
         self.first_bb_pair = None
         self.first_ab_pair = None
         self._n_ampl = None
+        self._n_indep_ampl = None
     
     def __repr__(self):
         """Return representation of the wave function."""
@@ -602,7 +604,45 @@ class IntermNormWaveFunction(WaveFunction):
         if self._n_ampl is None:
             self._calc_ini_blocks()
         return self._n_ampl
-
+    
+    @property
+    def n_indep_ampl(self):
+        """Number of independent amplitudes
+        
+        For alpha/alpha and beta/beta, t_ij^ab = -t_ji^ba and thus they are
+        not independentcount. This property gives the total number of
+        independent amplitudes.
+        
+        For restricted, this is just the number of entries in amplitudes,
+        that equals the len.
+        
+        For unrestricted it is smaller (or equal) than len.
+        
+        """
+        n_ampl = len(self)
+        virt_orb = self.virt_orb.as_array()
+        if self._n_indep_ampl is None:
+            if self.restricted:
+                self._n_indep_ampl = n_ampl
+            else:
+                self._n_indep_ampl = self.ini_blocks_D[0, 0]
+                for exc_type in [EXC_TYPE_AA, EXC_TYPE_BB]:
+                    n_irrep_or_0 = 0 if exc_type == EXC_TYPE_A else self.n_irrep
+                    for i, j in self.occupied_pairs(exc_type):
+                        for a_irrep in range(self.n_irrep):
+                            b_irrep = irrep_product[
+                                irrep_product[i.spirrep - n_irrep_or_0,
+                                              j.spirrep - n_irrep_or_0], a_irrep]
+                            a_spirrep = a_irrep + n_irrep_or_0,
+                            b_spirrep = b_irrep + n_irrep_or_0
+                            if a_irrep < b_irrep:
+                                self._n_indep_ampl += (virt_orb[a_spirrep]
+                                                       * virt_orb[b_spirrep])
+                            elif a_irrep == b_irrep:
+                                self._n_indep_ampl += triangular(virt_orb[a_spirrep] - 1)
+                self._n_indep_ampl += n_ampl - self.ini_blocks_D[self.first_ab_pair, 0]
+        return self._n_indep_ampl
+    
     def occupied_pairs(self, exc_type=EXC_TYPE_ALL):
         """Generator for all pairs i,j
         
@@ -926,7 +966,7 @@ class IntermNormWaveFunction(WaveFunction):
         self._set_memory('Amplitudes array in IntermNormWaveFunction')
         self.amplitudes = np.zeros(len(self))
     
-    def update_amplitudes(self, z):
+    def update_amplitudes(self, z, mode='direct'):
         """Update the amplitudes by z
         
         Parameters:
@@ -934,11 +974,33 @@ class IntermNormWaveFunction(WaveFunction):
         z (np.array, same len as self.amplitudes)
             The update for the amplitudes.
         
+        mode (str, optional, default='direct')
+            How amplitudes are updated.
+            For 'direct', z should have the same size of z
+            and it is just added on the array amplitudes.
+            For 'indep ampl', the size of z should be n_indep_ampl,
+            and it should have only independent amplitudes (see n_indep_ampl).
+            Whenever redundant amplitudes occur, both are updated.
         """
-        if len(z) != len(self):
-            raise ValueError(
-                'Update vector does not have same length as amplitude.')
-        self.amplitudes += z
+        if mode == 'direct':
+            if len(z) != len(self):
+                raise ValueError('Update vector does not have same length as amplitude.')
+            self.amplitudes += z
+        elif mode == 'indep ampl':
+            if len(z) != self.n_indep_ampl:
+                raise ValueError('Update vector does not have same length'
+                                 ' as the number of independent amplitude.')
+            update_indep_amplitudes(self.amplitudes,
+                                    z,
+                                    self.n_irrep,
+                                    self.ini_blocks_D[0, 0],
+                                    len(self),
+                                    self.n_indep_ampl,
+                                    self.orbs_before,
+                                    self.corr_orb.as_array(),
+                                    self.virt_orb.as_array())
+        else:
+            raise ValueError('Unknown mode!')
     
     @classmethod
     def similar_to(cls, wf, wf_type, restricted):

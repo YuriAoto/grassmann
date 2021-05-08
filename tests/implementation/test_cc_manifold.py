@@ -61,10 +61,13 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     tests.logger.info('cc wf:\n%s\nas FCI\n%s', cc_wf, cc_wf_as_fci)
     # print(cc_wf_as_fci)
     wf.set_ordered_orbitals()
-    Jac, Hess = min_dist_jac_hess(
+    Jac = np.empty(cc_wf.n_indep_ampl)
+    Hess = np.empty((cc_wf.n_indep_ampl, cc_wf.n_indep_ampl))
+    min_dist_jac_hess(
         wf._coefficients,
         cc_wf_as_fci._coefficients,
-        len(cc_wf),
+        Jac,
+        Hess,
         wf.orbs_before,
         wf.corr_orb.as_array(),
         wf.virt_orb.as_array(),
@@ -75,8 +78,6 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     JacNum, HessNum = min_dist_jac_hess_num(
         wf,
         cc_wf,
-        cc_wf.ini_blocks_D[0, 0],
-        len(cc_wf),
         wf.orbs_before,
         wf.corr_orb.as_array(),
         wf.virt_orb.as_array(),

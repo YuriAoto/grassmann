@@ -21,7 +21,8 @@ from wave_functions.fci import FCIWaveFunction
 
 def min_dist_jac_hess(double[:, :] wf,
                       double[:, :] wf_cc,
-                      int n_ampl,
+                      double[:] J,
+                      double[:, :] H,
                       int[:] orbs_before,
                       int[:] corr_orb,
                       int[:] virt_orb,
@@ -42,8 +43,12 @@ def min_dist_jac_hess(double[:, :] wf,
         and beta strings
         It should be with ordered orbitals.
     
-    n_ampl
-        The total number of amplitudes
+    J
+        Will be filled with the Jacobian, or with the z vector (diag_hess=True)
+    
+    H
+        Will be filled with the Hessian, or its first entry with the norm of
+        the Jacobian (diag_hess=True)
     
     orbs_before
         The number of orbitals before each irreducible representation,
@@ -86,21 +91,19 @@ def min_dist_jac_hess(double[:, :] wf,
     
     Return:
     -------
+    Does not return anything, but the arguments J and H are filled up:
     If diag_hess:
-        The z vector (that updates the amplitudes),
-        and the norm of the Jacobian
+        J recieves the z vector (that updates the amplitudes),
+        and H[0,0] the norm of the Jacobian
     else:
-        The Jacobian and the Hessian matrices
+        J and H receive the Jacobian and the Hessian matrices
     
     """
-    cdef double[:] J
-    cdef double[:, :] H
-    cdef int pos = 0, pos2 = 0, nvirt_1 = 0, pos_transp
-    cdef int n_alpha, n_beta
+    cdef int pos = 0, pos2 = 0
+    cdef int n_alpha, n_beta, n_indep_ampl
     cdef int n_irrep, spirrep, irrep, a_irrep, b_irrep, a, b, ii, jj
     cdef SingleExc single_exc
     cdef DoubleExc double_exc
-    cdef int[8] pos_ini  # assuming no more than 8 irreps in a point group!
     cdef int pos_ini_exc_type
     cdef OccOrbital i, j
     cdef int[:] occ_buff_a = np.empty(alpha_string_graph.shape[1],
@@ -111,11 +114,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                       dtype=int_dtype)
     cdef int[:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1],
                                           dtype=int_dtype)
-    J = np.zeros(n_ampl)
-    if diag_hess:
-        H = np.zeros((1, 1))
-    else:
-        H = np.zeros((n_ampl, n_ampl))
+    n_indep_ampl = J.shape[0]
     n_alpha = alpha_string_graph.shape[1]
     n_beta = beta_string_graph.shape[1]
     n_irrep = orbs_before.size - 1
@@ -198,19 +197,15 @@ def min_dist_jac_hess(double[:, :] wf,
     double_exc.j = j.orb
     while j.alive:
         for a_irrep in range(n_irrep):
-            pos_ini[a_irrep] = pos
             b_irrep = irrep_product[irrep_product[i.spirrep, j.spirrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep
             double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
-                    nvirt_1 = virt_orb[a_spirrep] - 1
                     double_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
                     for b in range(virt_orb[b_spirrep]):
-                        if a_irrep == b_irrep and a == b:
-                            H[pos, pos] = 1.0
-                        elif a_irrep < b_irrep or a < b:
+                        if a_irrep < b_irrep or a < b:
                             J[pos] = term1_aa(double_exc,
                                               wf,
                                               wf_cc,
@@ -233,26 +228,9 @@ def min_dist_jac_hess(double[:, :] wf,
                                           virt_orb,
                                           alpha_string_graph,
                                           beta_string_graph)
-                        elif a > b:
-                            pos_transp = pos - (a-b)*nvirt_1
-                            J[pos] = -J[pos_transp]
-                            if not diag_hess:
-                                for pos2 in range(pos, n_ampl):
-                                    H[pos, pos2] = -H[pos_transp, pos2]
-                        pos += 1
+                            pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
-            else:  # and a_irrep > b_irrep
-                for a in range(virt_orb[a_spirrep]):
-                    for b in range(virt_orb[b_spirrep]):
-                        pos_transp = (pos_ini[b_irrep]
-                                      + n_from_rect(
-                                          b, a, virt_orb[a_spirrep]))
-                        J[pos] = -J[pos_transp]
-                        if not diag_hess:
-                            for pos2 in range(pos, n_ampl):
-                                H[pos, pos2] = -H[pos_transp, pos2]
-                        pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
             i.rewind()
@@ -269,7 +247,6 @@ def min_dist_jac_hess(double[:, :] wf,
     double_exc.j = j.orb
     while j.alive:
         for a_irrep in range(n_irrep):
-            pos_ini[a_irrep] = pos
             b_irrep = irrep_product[irrep_product[i.spirrep - n_irrep,
                                                   j.spirrep - n_irrep], a_irrep]
             a_spirrep = a_irrep + n_irrep
@@ -277,12 +254,9 @@ def min_dist_jac_hess(double[:, :] wf,
             double_exc.a = orbs_before[a_irrep] + corr_orb[a_spirrep]
             if a_irrep <= b_irrep:
                 for a in range(virt_orb[a_spirrep]):
-                    nvirt_1 = virt_orb[a_spirrep] - 1
                     double_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
                     for b in range(virt_orb[b_spirrep]):
-                        if a_irrep == b_irrep and a == b:
-                            H[pos, pos] = 1.0
-                        elif a_irrep < b_irrep or a < b:
+                        if a_irrep < b_irrep or a < b:
                             J[pos] = term1_bb(double_exc,
                                               wf,
                                               wf_cc,
@@ -305,26 +279,9 @@ def min_dist_jac_hess(double[:, :] wf,
                                           virt_orb,
                                           alpha_string_graph,
                                           beta_string_graph)
-                        elif a > b:
-                            pos_transp = pos - (a-b)*nvirt_1
-                            J[pos] = -J[pos_transp]
-                            if not diag_hess:
-                                for pos2 in range(pos, n_ampl):
-                                    H[pos, pos2] = -H[pos_transp, pos2]
-                        pos += 1
+                            pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
-            else:  # and a_irrep > b_irrep
-                for a in range(virt_orb[a_spirrep]):
-                    for b in range(virt_orb[b_spirrep]):
-                        pos_transp = (pos_ini[b_irrep]
-                                      + n_from_rect(
-                                          b, a, virt_orb[a_spirrep]))
-                        J[pos] = -J[pos_transp]
-                        if not diag_hess:
-                            for pos2 in range(pos, n_ampl):
-                                H[pos, pos2] = -H[pos_transp, pos2]
-                        pos += 1
         if i.pos_in_occ == j.pos_in_occ - 1:
             j.next_()
             i.rewind()
@@ -381,16 +338,233 @@ def min_dist_jac_hess(double[:, :] wf,
             i.rewind()
             double_exc.j = j.orb
         double_exc.i = i.orb
-    if pos != n_ampl:
-        raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
+    if pos != n_indep_ampl:
+        raise Exception(str(pos) + ' = pos != n_indep_ampl = ' + str(n_indep_ampl))
     if not diag_hess:
-        for pos in range(n_ampl):
+        for pos in range(n_indep_ampl):
             for pos2 in range(pos):
                 H[pos, pos2] = H[pos2, pos]
     return J, H
 
 
-def _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos_2, eps_2_2):
+cdef inline int _transp(int a,
+                        int b,
+                        int a_irrep,
+                        int b_irrep,
+                        int pos_ampl,
+                        int a_virt,
+                        int b_pos_ini):
+    """The position of the transpose of t^ab (t^ba, that is -t^ab)
+    
+    The position is relative to the "full" amplitudes array, that includes both
+    t^ab an t^ba
+    
+    Parameters:
+    -----------
+    a, b
+        The indices of virtual orbitals
+    
+    a_irrep, b_irrep,
+        Irreps of a and b
+    
+    pos_ampl
+        Position of t_ij^ab in the amplitudes array
+    
+    a_virt
+        Number of virtual orbitals of same spirrep of a
+    
+    b_pos_ini
+        Initial position of irrep associated to b (see _fill_pos_ini)
+    """
+    return (pos_ampl + (b - a)*(a_virt - 1)
+            if a_irrep == b_irrep else
+            b_pos_ini + n_from_rect(b, a, a_virt))
+
+
+cdef _fill_pos_ini(int n_irrep,
+                   int i_spirrep,
+                   int j_spirrep,
+                   int pos_ampl,
+                   int n_irrep_or_0,
+                   int [:] pos_ini,
+                   int [:] virt_orb):
+    """Fill in the initial position for each irrep block
+    
+    The array pos_ini is filled, with the position (in the full
+    amplitudes array) of the first element of each irrep for a fixed
+    pair of occupied orbitals (not given explicitly)
+    
+    Paramaters:
+    -----------
+    n_irrep
+        Number of irreps
+    
+    i_spirrep, j_spirrep
+        The spirrep of both occupied orbitals
+    
+    pos_ampl
+        The position of the first amplitude for that pair of occupied
+        orbitals
+    
+    n_irrep_or_0
+        n_irrep if beta/beta or 0 if alpha/alpha
+    
+    pos_ini
+        The array that will be filled up with the initial positions
+    
+    virt_orb
+        The number of virtual orbitals for each spirrep
+    """
+    cdef int a_irrep, b_irrep, a_spirrep, b_spirrep
+    for a_irrep in range(n_irrep):
+        if a_irrep == 0:
+            pos_ini[a_irrep] = pos_ampl
+        else:
+            b_irrep = irrep_product[
+                irrep_product[i_spirrep - n_irrep_or_0,
+                              j_spirrep - n_irrep_or_0], a_irrep]
+            a_spirrep = a_irrep + n_irrep_or_0
+            b_spirrep = b_irrep + n_irrep_or_0
+            pos_ini[a_irrep] = (pos_ini[a_irrep - 1]
+                                + virt_orb[a_spirrep - 1]
+                                * virt_orb[b_spirrep - 1])
+
+
+cpdef inline (int, int, int) _sp_irreps(int a_irrep,
+                                        int i_spirrep,
+                                        int j_spirrep,
+                                        int n_irrep_or_0):
+    """Return b_irrep, a_spirrep and b_spirrep
+    
+    For a (non-vanishing-by-symmetry) amplitude t_ij^ab,
+    return the irrep of b and the spirreps of a and b
+    
+    Parameters:
+    -----------
+    a_irrep
+        Irrep of orbital a
+    
+    i_spirrep, j_spirrep
+        Spirreps of i and j
+    
+    n_irrep_or_0
+        n_irrep if beta/beta or 0 if alpha/alpha
+    
+    TODO:
+    -----
+    This might go well in WaveFunction too
+    """
+    b_irrep = irrep_product[irrep_product[i_spirrep - n_irrep_or_0,
+                                          j_spirrep - n_irrep_or_0], a_irrep]
+    return (b_irrep,
+            a_irrep + n_irrep_or_0,
+            b_irrep + n_irrep_or_0)
+
+def update_indep_amplitudes(double [:] amplitudes,
+                            double [:] z,
+                            int n_irrep,
+                            int n_singles,
+                            int n_ampl,
+                            int n_indep_ampl,
+                            int [:] orbs_before,
+                            int [:] corr_orb,
+                            int [:] virt_orb):
+    """Does amplitudes += z considering only independent amplitudes in z
+    
+    The amplitudes are updated by z, for the case where the array amplitudes
+    stores both t_ij^ab and t_ij^ba for alpha/alpha and beta/beta excitations,
+    whereas z store only one (with a<b).
+    
+    Paramaters:
+    -----------
+    amplitudes
+        The amplitudes as stored in IntermNormWaveFunction, with
+        (for alpha/alpha and beta/beta) both t_ij^ab and t_ij^ba = -t_ij^ba
+        This array will be changed.
+    
+    z
+        The update, with (for alpha/alpha and beta/beta) only t_ij^ab with a<b
+    
+    n_irrep
+        Number of irreps
+    
+    n_singles
+        Number of singles
+    
+    n_ampl
+        Number of amplitudes
+    
+    n_indep_ampl
+        Number of independent amplitudes
+    
+    orbs_before, corr_orb, virt_orb
+        See min_dist_jac_hess
+    
+    Return:
+    -------
+    Does not return anything, but the array amplitudes is updated.
+    """
+    cdef int pos = 0, pos_ampl
+    cdef int a, a_irrep, a_spirrep
+    cdef int b, b_irrep, b_spirrep
+    cdef int n_irrep_or_0
+    cdef bint is_alpha
+    cdef int[8] pos_ini
+    cdef OccOrbital i, j
+    pos = 0
+    # singles
+    while pos < n_singles:
+        amplitudes[pos] += z[pos]
+        pos += 1
+    pos_ampl = pos
+    # alpha/alpha and beta/beta
+    for is_alpha in [True, False]:
+        i = OccOrbital(corr_orb, orbs_before, is_alpha)
+        j = OccOrbital(corr_orb, orbs_before, is_alpha)
+        j.next_()
+        n_irrep_or_0 = 0 if is_alpha else n_irrep
+        while j.alive:
+            _fill_pos_ini(n_irrep,
+                          i.spirrep,
+                          j.spirrep,
+                          pos_ampl,
+                          n_irrep_or_0,
+                          pos_ini,
+                          virt_orb)
+            for a_irrep in range(n_irrep):
+                b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
+                                                           i.spirrep,
+                                                           j.spirrep,
+                                                           n_irrep_or_0)
+                for a in range(virt_orb[a_spirrep]):
+                    for b in range(virt_orb[b_spirrep]):
+                        if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
+                            amplitudes[pos_ampl] += z[pos]
+                            pos += 1
+                        elif a_irrep > b_irrep or a > b:
+                            pos_transp = _transp(a, b, a_irrep, b_irrep,
+                                                 pos_ampl,
+                                                 virt_orb[a_spirrep],
+                                                 pos_ini[b_irrep])
+                            amplitudes[pos_ampl] = -amplitudes[pos_transp]
+                        pos_ampl += 1
+            if i.pos_in_occ == j.pos_in_occ - 1:
+                j.next_()
+                i.rewind()
+            else:
+                i.next_()
+    # alpha/beta
+    while pos < n_indep_ampl:
+        amplitudes[pos_ampl] += z[pos]
+        pos += 1
+        pos_ampl += 1
+    if pos != n_indep_ampl:
+        raise Exception(str(pos) + ' = pos != n_indep_ampl = ' + str(n_indep_ampl))
+    if pos_ampl != n_ampl:
+        raise Exception(str(pos_ampl) + ' = pos_ampl != n_ampl = ' + str(n_ampl))
+
+
+cdef inline double _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos_2, eps_2_2):
     return (f_pp - f_p[pos] - f_p[pos_2] + 2*f - f_m[pos] - f_m[pos_2] + f_mm) / eps_2_2
 
 
@@ -412,8 +586,6 @@ cdef _compare_hess(int pos, int pos2, double [:, :] H, double [:, :] Hanal):
 
 def min_dist_jac_hess_num(wf,
                           cc_wf,
-                          int n_singles,
-                          int n_ampl,
                           int[:] orbs_before,
                           int[:] corr_orb,
                           int[:] virt_orb,
@@ -432,9 +604,6 @@ def min_dist_jac_hess_num(wf,
     cc_wf (IntermNormWaveFunction)
         The wave function at the CC manifold, where the jacobian will
         be calculated
-    
-    n_singles (int)
-        number of singles amplitudes
     
     orbs_before, corr_orb, virt_orb
         See min_dist_jac_hess
@@ -472,13 +641,17 @@ def min_dist_jac_hess_num(wf,
     cdef int a, b, a2, b2
     cdef int a_irrep, b_irrep, a_spirrep, b_spirrep
     cdef int a2_irrep, b2_irrep, a2_spirrep, b2_spirrep
-    cdef int nvirt_1, nvirt2_1, n_irrep_or_0, n_irrep_or_02
-    cdef int pos, pos2, pos_transp, pos2_transp
+    cdef int n_irrep_or_0, n_irrep_or_02
+    cdef int pos, pos2  # For the position in J or H
+    cdef int pos_ampl, pos2_ampl  # For the position in cc_wf.amplitudes
+    cdef int pos_transp, pos2_transp  # For the position of transpose of pos_ampl, pos2_ampl
     cdef int[8] pos_ini, pos2_ini  # assuming no more than 8 irreps in a point group!
+    cdef int n_singles, n_ampl, n_indep_ampl
     cdef double[:] f_p, f_m
     cdef double[:] J
     cdef double[:, :] H
     cdef double f, f_pp, f_mm
+    cdef OccOrbital i, j
     wf.set_max_coincidence_orbitals()
     
     def Func(x):
@@ -504,23 +677,28 @@ def min_dist_jac_hess_num(wf,
                        normalise=False)**2
         return d
     
+    n_singles = cc_wf.ini_blocks_D[0, 0]
+    n_ampl = len(cc_wf)
+    n_indep_ampl = cc_wf.n_indep_ampl
     f = Func(cc_wf)
-    f_p = np.zeros(len(cc_wf))
-    f_m = np.zeros(len(cc_wf))
-    J = np.zeros(len(cc_wf))
-    H = np.zeros((len(cc_wf), len(cc_wf)))
+    f_p = np.zeros(n_indep_ampl)
+    f_m = np.zeros(n_indep_ampl)
+    J = np.zeros(n_indep_ampl)
+    H = np.zeros((n_indep_ampl, n_indep_ampl))
     n_irrep = orbs_before.size - 1
     pos = 0
+    pos_ampl = 0
     # --- alpha -> alpha and beta -> beta
     while pos < n_singles:
-        cc_wf.amplitudes[pos] += eps
+        cc_wf.amplitudes[pos_ampl] += eps
         f_p[pos] = Func(cc_wf)
-        cc_wf.amplitudes[pos] -= 2*eps
+        cc_wf.amplitudes[pos_ampl] -= 2*eps
         f_m[pos] = Func(cc_wf)
-        cc_wf.amplitudes[pos] += eps
+        cc_wf.amplitudes[pos_ampl] += eps
         J[pos] = (f_p[pos] - f_m[pos])/(2*eps)
         _compare_jac(pos, J, Janal)
         pos += 1
+        pos_ampl += 1
     # --- alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
     for is_alpha in [True, False]:
         i = OccOrbital(corr_orb, orbs_before, is_alpha)
@@ -528,82 +706,84 @@ def min_dist_jac_hess_num(wf,
         j.next_()
         n_irrep_or_0 = 0 if is_alpha else n_irrep
         while j.alive:
+            _fill_pos_ini(n_irrep,
+                          i.spirrep,
+                          j.spirrep,
+                          pos_ampl,
+                          n_irrep_or_0,
+                          pos_ini,
+                          virt_orb)
             for a_irrep in range(n_irrep):
-                if a_irrep == 0:
-                    pos_ini[a_irrep] = pos
-                else:
-                    b_irrep = irrep_product[
-                        irrep_product[i.spirrep - n_irrep_or_0,
-                                      j.spirrep - n_irrep_or_0], a_irrep]
-                    a_spirrep = a_irrep + n_irrep_or_0
-                    b_spirrep = b_irrep + n_irrep_or_0
-                    pos_ini[a_irrep] = (pos_ini[a_irrep-1]
-                                        + virt_orb[a_spirrep-1]*virt_orb[b_spirrep-1])
-            for a_irrep in range(n_irrep):
-                b_irrep = irrep_product[
-                    irrep_product[i.spirrep - n_irrep_or_0,
-                                  j.spirrep - n_irrep_or_0], a_irrep]
-                a_spirrep = a_irrep + n_irrep_or_0
-                b_spirrep = b_irrep + n_irrep_or_0
+                b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
+                                                           i.spirrep,
+                                                           j.spirrep,
+                                                           n_irrep_or_0)
                 for a in range(virt_orb[a_spirrep]):
-                    nvirt_1 = virt_orb[a_spirrep] - 1
                     for b in range(virt_orb[b_spirrep]):
-                        if a_irrep != b_irrep or a != b:
-                            pos_transp = (pos + (b-a)*nvirt_1
-                                          if a_irrep == b_irrep else
-                                          pos_ini[b_irrep] + n_from_rect(
-                                              b, a, virt_orb[a_spirrep]))
-                            cc_wf.amplitudes[pos] += eps
+                        if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
+                            pos_transp = _transp(a, b, a_irrep, b_irrep,
+                                                 pos_ampl,
+                                                 virt_orb[a_spirrep],
+                                                 pos_ini[b_irrep])
+                            cc_wf.amplitudes[pos_ampl] += eps
                             cc_wf.amplitudes[pos_transp] -= eps
                             f_p[pos] = Func(cc_wf)
-                            cc_wf.amplitudes[pos] -= 2*eps
+                            cc_wf.amplitudes[pos_ampl] -= 2*eps
                             cc_wf.amplitudes[pos_transp] += 2*eps
                             f_m[pos] = Func(cc_wf)
-                            cc_wf.amplitudes[pos] += eps
+                            cc_wf.amplitudes[pos_ampl] += eps
                             cc_wf.amplitudes[pos_transp] -= eps
                             J[pos] = (f_p[pos] - f_m[pos])/(2*eps)
-                        else:
-                            J[pos] = 0.0
-                        _compare_jac(pos, J, Janal)
-                        pos += 1
+                            _compare_jac(pos, J, Janal)
+                            pos += 1
+                        pos_ampl += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
                 j.next_()
                 i.rewind()
             else:
                 i.next_()
     # alpha, beta -> alpha, beta
-    while pos < n_ampl:
-        cc_wf.amplitudes[pos] += eps
+    while pos < n_indep_ampl:
+        cc_wf.amplitudes[pos_ampl] += eps
         f_p[pos] = Func(cc_wf)
-        cc_wf.amplitudes[pos] -= 2*eps
+        cc_wf.amplitudes[pos_ampl] -= 2*eps
         f_m[pos] = Func(cc_wf)
-        cc_wf.amplitudes[pos] += eps
+        cc_wf.amplitudes[pos_ampl] += eps
         J[pos] = (f_p[pos] - f_m[pos])/(2*eps)
         _compare_jac(pos, J, Janal)
         pos += 1
-    if pos != n_ampl:
-        raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
+        pos_ampl += 1
+    if pos != n_indep_ampl:
+        raise Exception(str(pos) + ' = pos != n_indep_ampl = ' + str(n_indep_ampl))
+    if pos_ampl != n_ampl:
+        raise Exception(str(pos_ampl) + ' = pos_ampl != n_ampl = ' + str(n_ampl))
     # =================
     # The Hessian:
     pos = 0
+    pos_ampl = 0
     eps22 = 2 * eps**2
     # --- pos: alpha -> alpha and beta -> beta
     while pos < n_singles:
         H[pos, pos] = (f_p[pos] - 2*f + f_m[pos]) / eps**2
         pos2 = pos + 1
+        pos2_ampl = pos_ampl + 1
         # --- pos2: alpha -> alpha and beta -> beta
         while pos2 < n_singles:
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
             f_pp = Func(cc_wf)
-            cc_wf.amplitudes[pos] -= 2*eps
-            cc_wf.amplitudes[pos2] -= 2*eps
+            cc_wf.amplitudes[pos_ampl] -= 2*eps
+            cc_wf.amplitudes[pos2_ampl] -= 2*eps
             f_mm = Func(cc_wf)
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
-            H[pos, pos2] = _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
+            H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                     f_p, f_m,
+                                     f,
+                                     pos, pos2, eps22)
             _compare_hess(pos, pos2, H, Hanal)
             pos2 += 1
+            pos2_ampl += 1
         # --- pos2: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
         for is_alpha2 in [True, False]:
             i2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
@@ -611,69 +791,68 @@ def min_dist_jac_hess_num(wf,
             j2.next_()
             n_irrep_or_02 = 0 if is_alpha2 else n_irrep
             while j2.alive:
+                _fill_pos_ini(n_irrep,
+                              i2.spirrep,
+                              j2.spirrep,
+                              pos2_ampl,
+                              n_irrep_or_02,
+                              pos2_ini, virt_orb)
                 for a2_irrep in range(n_irrep):
-                    if a2_irrep == 0:
-                        pos2_ini[a2_irrep] = pos2
-                    else:
-                        b2_irrep = irrep_product[
-                            irrep_product[i2.spirrep - n_irrep_or_02,
-                                          j2.spirrep - n_irrep_or_02], a2_irrep]
-                        a2_spirrep = a2_irrep + n_irrep_or_02
-                        b2_spirrep = b2_irrep + n_irrep_or_02
-                        pos2_ini[a2_irrep] = (pos2_ini[a2_irrep-1]
-                                              + virt_orb[a2_spirrep-1]*virt_orb[b2_spirrep-1])
-                for a2_irrep in range(n_irrep):
-                    b2_irrep = irrep_product[
-                        irrep_product[i2.spirrep - n_irrep_or_02,
-                                      j2.spirrep - n_irrep_or_02], a2_irrep]
-                    a2_spirrep = a2_irrep + n_irrep_or_02
-                    b2_spirrep = b2_irrep + n_irrep_or_02
+                    b2_irrep, a2_spirrep, b2_spirrep = _sp_irreps(a2_irrep,
+                                                                  i2.spirrep,
+                                                                  j2.spirrep,
+                                                                  n_irrep_or_02)
                     for a2 in range(virt_orb[a2_spirrep]):
-                        nvirt2_1 = virt_orb[a2_spirrep] - 1
                         for b2 in range(virt_orb[b2_spirrep]):
-                            if a2_irrep != b2_irrep or a2 != b2:
-                                pos2_transp = (pos2 + (b2-a2)*nvirt2_1
-                                                if a2_irrep == b2_irrep else
-                                                pos2_ini[b2_irrep] + n_from_rect(
-                                                    b2, a2, virt_orb[a2_spirrep]))
-                                cc_wf.amplitudes[pos] += eps
-                                cc_wf.amplitudes[pos2] += eps
+                            if a2_irrep < b2_irrep or (a2_irrep == b2_irrep and a2 < b2):
+                                pos2_transp = _transp(a2, b2, a2_irrep, b2_irrep,
+                                                      pos2_ampl,
+                                                      virt_orb[a2_spirrep],
+                                                      pos2_ini[b2_irrep])
+                                cc_wf.amplitudes[pos_ampl] += eps
+                                cc_wf.amplitudes[pos2_ampl] += eps
                                 cc_wf.amplitudes[pos2_transp] -= eps
                                 f_pp = Func(cc_wf)
-                                cc_wf.amplitudes[pos] -= 2*eps
-                                cc_wf.amplitudes[pos2] -= 2*eps
+                                cc_wf.amplitudes[pos_ampl] -= 2*eps
+                                cc_wf.amplitudes[pos2_ampl] -= 2*eps
                                 cc_wf.amplitudes[pos2_transp] += 2*eps
                                 f_mm = Func(cc_wf)
-                                cc_wf.amplitudes[pos] += eps
-                                cc_wf.amplitudes[pos2] += eps
+                                cc_wf.amplitudes[pos_ampl] += eps
+                                cc_wf.amplitudes[pos2_ampl] += eps
                                 cc_wf.amplitudes[pos2_transp] -= eps
-                                H[pos, pos2] = _df2_dxdy(
-                                    f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
-                            else:
-                                H[pos, pos2] = 0.0
-                            _compare_hess(pos, pos2, H, Hanal)
-                            pos2 += 1
+                                H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                                         f_p, f_m,
+                                                         f,
+                                                         pos, pos2, eps22)
+                                _compare_hess(pos, pos2, H, Hanal)
+                                pos2 += 1
+                            pos2_ampl += 1
                 if i2.pos_in_occ == j2.pos_in_occ - 1:
                     j2.next_()
                     i2.rewind()
                 else:
                     i2.next_()
         # --- pos2: alpha, beta -> alpha, beta
-        while pos2 < n_ampl:
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
+        while pos2 < n_indep_ampl:
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
             f_pp = Func(cc_wf)
-            cc_wf.amplitudes[pos] -= 2*eps
-            cc_wf.amplitudes[pos2] -= 2*eps
+            cc_wf.amplitudes[pos_ampl] -= 2*eps
+            cc_wf.amplitudes[pos2_ampl] -= 2*eps
             f_mm = Func(cc_wf)
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
-            H[pos, pos2] = _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
+            H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                     f_p, f_m,
+                                     f,
+                                     pos, pos2, eps22)
             _compare_hess(pos, pos2, H, Hanal)
             pos2 += 1
-        if pos2 != n_ampl:
-            raise Exception(str(pos2) + ' = pos2 != n_ampl = ' + str(n_ampl))
+            pos2_ampl += 1
+        if pos2_ampl != n_ampl:
+            raise Exception(str(pos2_ampl) + ' = pos2_ampl != n_ampl = ' + str(n_ampl))
         pos += 1
+        pos_ampl += 1
     ini_pos_aabb = pos
     # --- pos: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
     for is_alpha in [True, False]:
@@ -682,34 +861,29 @@ def min_dist_jac_hess_num(wf,
         j.next_()
         n_irrep_or_0 = 0 if is_alpha else n_irrep
         while j.alive:
+            _fill_pos_ini(n_irrep,
+                          i.spirrep,
+                          j.spirrep,
+                          pos_ampl,
+                          n_irrep_or_0,
+                          pos_ini,
+                          virt_orb)
             for a_irrep in range(n_irrep):
-                if a_irrep == 0:
-                    pos_ini[a_irrep] = pos
-                else:
-                    b_irrep = irrep_product[
-                        irrep_product[i.spirrep - n_irrep_or_0,
-                                      j.spirrep - n_irrep_or_0], a_irrep]
-                    a_spirrep = a_irrep + n_irrep_or_0
-                    b_spirrep = b_irrep + n_irrep_or_0
-                    pos_ini[a_irrep] = (pos_ini[a_irrep-1]
-                                        + virt_orb[a_spirrep-1]*virt_orb[b_spirrep-1])
-            for a_irrep in range(n_irrep):
-                b_irrep = irrep_product[
-                    irrep_product[i.spirrep - n_irrep_or_0,
-                                  j.spirrep - n_irrep_or_0], a_irrep]
-                a_spirrep = a_irrep + n_irrep_or_0
-                b_spirrep = b_irrep + n_irrep_or_0
+                b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
+                                                           i.spirrep,
+                                                           j.spirrep,
+                                                           n_irrep_or_0)
                 for a in range(virt_orb[a_spirrep]):
-                    nvirt_1 = virt_orb[a_spirrep] - 1
                     for b in range(virt_orb[b_spirrep]):
-                        if a_irrep != b_irrep or a != b:
-                            pos_transp = (pos + (b-a)*nvirt_1
-                                          if a_irrep == b_irrep else
-                                          pos_ini[b_irrep] + n_from_rect(
-                                              b, a, virt_orb[a_spirrep]))
+                        if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
+                            pos_transp = _transp(a, b, a_irrep, b_irrep,
+                                                 pos_ampl,
+                                                 virt_orb[a_spirrep],
+                                                 pos_ini[b_irrep])
                             H[pos, pos] = (f_p[pos] - 2*f + f_m[pos]) / eps**2
                             _compare_hess(pos, pos, H, Hanal)
                             pos2 = ini_pos_aabb
+                            pos2_ampl = ini_pos_aabb
                             # --- pos2: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
                             for is_alpha2 in [True, False]:
                                 i2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
@@ -717,114 +891,111 @@ def min_dist_jac_hess_num(wf,
                                 j2.next_()
                                 n_irrep_or_02 = 0 if is_alpha2 else n_irrep
                                 while j2.alive:
+                                    _fill_pos_ini(n_irrep,
+                                                  i2.spirrep,
+                                                  j2.spirrep,
+                                                  pos2_ampl,
+                                                  n_irrep_or_02,
+                                                  pos2_ini,
+                                                  virt_orb)
                                     for a2_irrep in range(n_irrep):
-                                        if a2_irrep == 0:
-                                            pos2_ini[a2_irrep] = pos2
-                                        else:
-                                            b2_irrep = irrep_product[
-                                                irrep_product[i2.spirrep - n_irrep_or_02,
-                                                              j2.spirrep - n_irrep_or_02], a2_irrep]
-                                            a2_spirrep = a2_irrep + n_irrep_or_02
-                                            b2_spirrep = b2_irrep + n_irrep_or_02
-                                            pos2_ini[a2_irrep] = (pos2_ini[a2_irrep-1]
-                                                                  + virt_orb[a2_spirrep-1]*virt_orb[b2_spirrep-1])
-                                    for a2_irrep in range(n_irrep):
-                                        b2_irrep = irrep_product[
-                                            irrep_product[i2.spirrep - n_irrep_or_02,
-                                                          j2.spirrep - n_irrep_or_02], a2_irrep]
-                                        a2_spirrep = a2_irrep + n_irrep_or_02
-                                        b2_spirrep = b2_irrep + n_irrep_or_02
+                                        b2_irrep, a2_spirrep, b2_spirrep = _sp_irreps(a2_irrep,
+                                                                                      i2.spirrep,
+                                                                                      j2.spirrep,
+                                                                                      n_irrep_or_02)
                                         for a2 in range(virt_orb[a2_spirrep]):
-                                            nvirt2_1 = virt_orb[a2_spirrep] - 1
                                             for b2 in range(virt_orb[b2_spirrep]):
-                                                if pos2 > pos:
-                                                    if a2_irrep != b2_irrep or a2 != b2:
-                                                        pos2_transp = (pos2 + (b2-a2)*nvirt2_1
-                                                                       if a2_irrep == b2_irrep else
-                                                                       pos2_ini[b2_irrep] + n_from_rect(
-                                                                           b2, a2, virt_orb[a2_spirrep]))
-                                                        cc_wf.amplitudes[pos] += eps
+                                                if a2_irrep < b2_irrep or (a2_irrep == b2_irrep and a2 < b2):
+                                                    if pos2 > pos:
+                                                        pos2_transp = _transp(a2, b2, a2_irrep, b2_irrep,
+                                                                              pos2_ampl,
+                                                                              virt_orb[a2_spirrep],
+                                                                              pos2_ini[b2_irrep])
+                                                        cc_wf.amplitudes[pos_ampl] += eps
                                                         cc_wf.amplitudes[pos_transp] -= eps
-                                                        cc_wf.amplitudes[pos2] += eps
+                                                        cc_wf.amplitudes[pos2_ampl] += eps
                                                         cc_wf.amplitudes[pos2_transp] -= eps
                                                         f_pp = Func(cc_wf)
-                                                        cc_wf.amplitudes[pos] -= 2*eps
+                                                        cc_wf.amplitudes[pos_ampl] -= 2*eps
                                                         cc_wf.amplitudes[pos_transp] += 2*eps
-                                                        cc_wf.amplitudes[pos2] -= 2*eps
+                                                        cc_wf.amplitudes[pos2_ampl] -= 2*eps
                                                         cc_wf.amplitudes[pos2_transp] += 2*eps
                                                         f_mm = Func(cc_wf)
-                                                        cc_wf.amplitudes[pos] += eps
+                                                        cc_wf.amplitudes[pos_ampl] += eps
                                                         cc_wf.amplitudes[pos_transp] -= eps
-                                                        cc_wf.amplitudes[pos2] += eps
+                                                        cc_wf.amplitudes[pos2_ampl] += eps
                                                         cc_wf.amplitudes[pos2_transp] -= eps
-                                                        H[pos, pos2] = _df2_dxdy(
-                                                            f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
-                                                    else:
-                                                        H[pos, pos2] = 0.0
-                                                    _compare_hess(pos, pos2, H, Hanal)
-                                                pos2 += 1
+                                                        H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                                                                 f_p, f_m,
+                                                                                 f,
+                                                                                 pos, pos2, eps22)
+                                                        _compare_hess(pos, pos2, H, Hanal)
+                                                    pos2 += 1
+                                                pos2_ampl += 1
                                     if i2.pos_in_occ == j2.pos_in_occ - 1:
                                         j2.next_()
                                         i2.rewind()
                                     else:
                                         i2.next_()
                             # --- pos2: alpha, beta -> alpha, beta
-                            while pos2 < n_ampl:
-                                cc_wf.amplitudes[pos] += eps
+                            while pos2 < n_indep_ampl:
+                                cc_wf.amplitudes[pos_ampl] += eps
                                 cc_wf.amplitudes[pos_transp] -= eps
-                                cc_wf.amplitudes[pos2] += eps
+                                cc_wf.amplitudes[pos2_ampl] += eps
                                 f_pp = Func(cc_wf)
-                                cc_wf.amplitudes[pos] -= 2*eps
+                                cc_wf.amplitudes[pos_ampl] -= 2*eps
                                 cc_wf.amplitudes[pos_transp] += 2*eps
-                                cc_wf.amplitudes[pos2] -= 2*eps
+                                cc_wf.amplitudes[pos2_ampl] -= 2*eps
                                 f_mm = Func(cc_wf)
-                                cc_wf.amplitudes[pos] += eps
+                                cc_wf.amplitudes[pos_ampl] += eps
                                 cc_wf.amplitudes[pos_transp] -= eps
-                                cc_wf.amplitudes[pos2] += eps
-                                H[pos, pos2] = _df2_dxdy(
-                                    f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
+                                cc_wf.amplitudes[pos2_ampl] += eps
+                                H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                                         f_p, f_m,
+                                                         f,
+                                                         pos, pos2, eps22)
                                 _compare_hess(pos, pos2, H, Hanal)
                                 pos2 += 1
-                            if pos2 != n_ampl:
-                                raise Exception(str(pos2)
-                                                + ' = pos2 != n_ampl = '
-                                                + str(n_ampl))
-                        else:
-                            H[pos, pos] = 2.0
-                            _compare_hess(pos, pos, H, Hanal)
-                            for pos2 in range(pos + 1, n_ampl):
-                                H[pos, pos2] = 0.0
-                                _compare_hess(pos, pos2, H, Hanal)
-                        pos += 1
+                                pos2_ampl += 1
+                            if pos2_ampl != n_ampl:
+                                raise Exception(str(pos2_ampl) + ' = pos2_ampl != n_ampl = ' + str(n_ampl))
+                            pos += 1
+                        pos_ampl += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
                 j.next_()
                 i.rewind()
             else:
                 i.next_()
     # --- pos: alpha, beta -> alpha, beta
-    while pos < n_ampl:
+    while pos < n_indep_ampl:
         H[pos, pos] = (f_p[pos] - 2*f + f_m[pos]) / eps**2
         _compare_hess(pos, pos, H, Hanal)
         pos2 = pos + 1
+        pos2_ampl = pos_ampl + 1
         # --- pos2: alpha, beta -> alpha, beta
-        while pos2 < n_ampl:
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
+        while pos2 < n_indep_ampl:
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
             f_pp = Func(cc_wf)
-            cc_wf.amplitudes[pos] -= 2*eps
-            cc_wf.amplitudes[pos2] -= 2*eps
+            cc_wf.amplitudes[pos_ampl] -= 2*eps
+            cc_wf.amplitudes[pos2_ampl] -= 2*eps
             f_mm = Func(cc_wf)
-            cc_wf.amplitudes[pos] += eps
-            cc_wf.amplitudes[pos2] += eps
-            H[pos, pos2] = _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos2, eps22)
+            cc_wf.amplitudes[pos_ampl] += eps
+            cc_wf.amplitudes[pos2_ampl] += eps
+            H[pos, pos2] = _df2_dxdy(f_pp, f_mm,
+                                     f_p, f_m,
+                                     f,
+                                     pos, pos2, eps22)
             _compare_hess(pos, pos2, H, Hanal)
             pos2 += 1
-        if pos2 != n_ampl:
-            raise Exception(str(pos2) + ' = pos2 != n_ampl = ' + str(n_ampl))
+            pos2_ampl += 1
+        if pos2_ampl != n_ampl:
+            raise Exception(str(pos2_ampl) + ' = pos2_ampl != n_ampl = ' + str(n_ampl))
         pos += 1
-    if pos != n_ampl:
-        raise Exception(str(pos) + ' = pos != n_ampl = ' + str(n_ampl))
-    for pos in range(len(cc_wf)):
+        pos_ampl += 1
+    if pos_ampl != n_ampl:
+        raise Exception(str(pos_ampl) + ' = pos_ampl != n_ampl = ' + str(n_ampl))
+    for pos in range(n_indep_ampl):
         for pos2 in range(pos):
             H[pos, pos2] = H[pos2, pos]
     return J, H

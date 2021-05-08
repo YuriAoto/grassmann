@@ -4,7 +4,6 @@
 
 
 """
-import copy
 import math
 import logging
 
@@ -242,7 +241,11 @@ def calc_dist_to_cc_manifold(wf,
         raise ValueError('Unknown type of initial wave function')
     wf.set_ordered_orbitals()
     logger.debug('The FCI Wave Function:\n%s', wf)
-    n_ampl = len(cc_wf)
+    Jac = np.empty(cc_wf.n_indep_ampl)
+    if diag_hess:
+        Hess = np.empty((1, 1))
+    else:
+        Hess = np.empty((cc_wf.n_indep_ampl, cc_wf.n_indep_ampl))
     corr_orb = wf.corr_orb.as_array()
     virt_orb = wf.virt_orb.as_array()
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
@@ -270,10 +273,11 @@ def calc_dist_to_cc_manifold(wf,
                 converged = True
                 break
             with logtime('Making Jacobian and approximate Hessian'):
-                Jac, Hess = cc_manifold.min_dist_jac_hess(
+                cc_manifold.min_dist_jac_hess(
                     wf._coefficients,
                     cc_wf_as_fci._coefficients,
-                    n_ampl,
+                    Jac,
+                    Hess,
                     wf.orbs_before,
                     corr_orb,
                     virt_orb,
@@ -286,14 +290,27 @@ def calc_dist_to_cc_manifold(wf,
                 normJ = Hess[0, 0]
             else:
                 if loglevel <= 1:
-                    logger.log(1, 'Jacobian:\n%r', np.array(Jac))
-                    logger.log(1, 'Hessian:\n%r', np.array(Hess))
+                    to_log = ['Jacobian:\n']
+                    for iH in range(Jac.shape[0]):
+                        to_log.append(f'{iH:3d} {Jac[iJ]:8.5f}\n')
+                    to_log.append('\n\nHessian:\n')
+                    to_log.append('    ')
+                    for jH in range(Hess.shape[1]):
+                        to_log.append(f' {jH:8d} ')
+                    to_log.append('\n')
+                    for iH in range(Hess.shape[0]):
+                        to_log.append(f'{iH:3d} ')
+                        for jH in range(Hess.shape[1]):
+                            to_log.append(f' {Hess[iH, jH]:8.5f} ')
+                        to_log.append('\n')
+                    to_log.append('\n')
+                    logger.log(1, '%s', ''.join(to_log))
                 with logtime('Calculating z: Solving linear system.'):
                     z = -linalg.solve(Hess, Jac)
                 normJ = linalg.norm(Jac)
             logger.log(1, 'Update vector z:\n%r', z)
             normZ = linalg.norm(z)
-            cc_wf.update_amplitudes(z)
+            cc_wf.update_amplitudes(z, mode='indep ampl')
         if f_out is not None:
             f_out.write(f' {i_iteration:<4} {dist:7.5}  {normZ:6.4}'
                         f'  {normJ:6.4}   {T_iter.elapsed_time}\n')
