@@ -212,7 +212,6 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    factor=3.0)
         self.assertEqual(J, JNum)
         self.assertEqual(H, HNum)
-        return
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=True,
                                                    wf_type='CCD',
@@ -241,7 +240,6 @@ class CheckNumAnalJacHessTestCase(unittest.TestCase):
                                                    factor=3.0)
         self.assertEqual(J, JNum)
         self.assertEqual(H, HNum)
-        return
         J, JNum, H, HNum = _calc_anal_num_jac_hess(mol_system,
                                                    allE=True,
                                                    wf_type='CCD',

@@ -4,6 +4,8 @@
 import cython
 import numpy as np
 
+from libc.math cimport sqrt
+
 from orbitals.occ_orbitals cimport OccOrbital
 # from orbitals.occ_orbitals import OccOrbital
 from util.array_indices cimport n_from_rect
@@ -118,6 +120,8 @@ def min_dist_jac_hess(double[:, :] wf,
     n_alpha = alpha_string_graph.shape[1]
     n_beta = beta_string_graph.shape[1]
     n_irrep = orbs_before.size - 1
+    if diag_hess:
+        H[0, 0] = 0.0
     if level == 'SD':
         # --- alpha -> alpha
         for irrep in range(n_irrep):
@@ -136,7 +140,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                         occ_buff_a)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
-                        J[pos] /= diag
+                        J[pos] /= -diag
                     else:
                         H[pos, pos] = diag
                         calc_H_a(H[pos, pos:],
@@ -171,7 +175,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                         occ_buff_b)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
-                        J[pos] /= diag
+                        J[pos] /= -diag
                     else:
                         H[pos, pos] = diag
                         calc_H_b(H[pos, pos:],
@@ -214,7 +218,7 @@ def min_dist_jac_hess(double[:, :] wf,
                             diag = term2_diag_aa(double_exc, wf_cc, occ_buff_a)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
-                                J[pos] /= diag
+                                J[pos] /= -diag
                             else:
                                 H[pos, pos] = diag
                                 calc_H_aa(H[pos, pos:],
@@ -265,7 +269,7 @@ def min_dist_jac_hess(double[:, :] wf,
                             diag = term2_diag_bb(double_exc, wf_cc, occ_buff_b)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
-                                J[pos] /= diag
+                                J[pos] /= -diag
                             else:
                                 H[pos, pos] = diag
                                 calc_H_bb(H[pos, pos:],
@@ -315,7 +319,7 @@ def min_dist_jac_hess(double[:, :] wf,
                     diag = term2_diag_ab(double_exc, wf_cc, occ_buff_a, occ_buff_b)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
-                        J[pos] /= diag
+                        J[pos] /= -diag
                     else:
                         H[pos, pos] = diag
                         calc_H_ab(H[pos, pos:],
@@ -340,11 +344,12 @@ def min_dist_jac_hess(double[:, :] wf,
         double_exc.i = i.orb
     if pos != n_indep_ampl:
         raise Exception(str(pos) + ' = pos != n_indep_ampl = ' + str(n_indep_ampl))
-    if not diag_hess:
+    if diag_hess:
+        H[0, 0] = sqrt(H[0, 0])
+    else:
         for pos in range(n_indep_ampl):
             for pos2 in range(pos):
                 H[pos, pos2] = H[pos2, pos]
-    return J, H
 
 
 cdef inline int _transp(int a,
