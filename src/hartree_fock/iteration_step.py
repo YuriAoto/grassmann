@@ -36,15 +36,16 @@ class HartreeFockStep():
         if step_type == 'RH-SCF':
             self.i_DIIS = -1
             self.grad = np.zeros((self.n_occ_alpha,
-                                     len(self.orb) - self.n_occ_alpha,
-                                     max(self.n_DIIS, 1)))
+                                  len(self.orb) - self.n_occ_alpha,
+                                  max(self.n_DIIS, 1)))
             self.Dmat = np.zeros((len(self.orb),
-                                     len(self.orb),
-                                     max(self.n_DIIS, 1)))
+                                  len(self.orb),
+                                  max(self.n_DIIS, 1)))
         elif step_type == 'densMat-SCF':
             pass
         elif step_type == 'Absil':
-            pass    
+            self.grad = np.zeros((len(self.orb),
+                                  self.n_occ))
         elif step_type == 'orb_rot-Newton':
             pass
         else:
@@ -129,11 +130,44 @@ class HartreeFockStep():
             # ----- Back to the AO basis
             self.orb[0][:, :] = self.integrals.X @ C
 
-    def density_matrix_scf(i_SCF):
+    def density_matrix_scf(self, i_SCF):
         raise NotImplementedError("Density matrix based SCF")
 
-    def newton_absil(i_SCF):
-        raise NotImplementedError("Caio, this is up to you!")
+    def newton_absil(self, i_SCF):
+        N = self.n_occ
+        n = len(self.orb)
+        Gh = np.zeros((n, N)) # parte de um elétron do gradiente
+        Gg = np.zeros((len(self.orb), # parte de dois elétrons do gradiente
+                       self.n_occ))
+        GEij = np.zeros((n,N)) # derivada direcional na direção E_{ij}
+        D = np.zeros((n*N,n*N)) # a matriz da derivada direcional em si
+        X = self.orb[0][0][:,:self.n_occ] # ponto inicial
+        col = 0
+        
+        for a in range(0,n):
+            for b in range(0,N):
+                for k in range(0,n):
+                    Gh[a][b] += X[k][b]*(self.integrals.h[a][k] + self.integrals.h[k][a]) # parte de um elétron do gradiente
+                for i in range(0,n):
+                    for j in range(0,N):
+                        if i == a and j == b:
+                            GEij[i][j] += 2*self.integrals.h[a][a]
+                            
+                D[:,[col]] = np.reshape(GEij, (n*N,1), 'F')
+                GEij = np.zeros((n,N))
+                col += 1
+                
+        self.grad = Gh + Gg
+        R = (np.identity(n) - X @ np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X)) @ self.grad
+        R = np.reshape(R, (n*N, 1), 'F')
+        eta = np.linalg.solve(D,R)
+        eta = np.reshape(eta, (n,N), 'F')
+        u, s, v = np.linalg.svd(eta, full_matrices=False)
+        X = X @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
+        self.gradNorm = np.linalg.norm(self.grad[:,:])
+        self.energy = 0.0
+        
+        #raise NotImplementedError("Caio, this is up to you!")
     
-    def newton_orb_rot(i_SCF):
+    def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")

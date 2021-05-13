@@ -30,19 +30,19 @@ def Restricted_Closed_Shell_SCF(integrals,
 
     
     integrals (Integrals)
-		The molecular integrals in the basis
+        The molecular integrals in the basis
 
     nucl_rep (float)
-		The nuclear repulsion
+        The nuclear repulsion
 
     n_elec (int)
-	    The number of electrons (must be even)
+    	The number of electrons (must be even)
 
     max_iter (int, optional, default=20)
-		Maximum number of iterations
+	Maximum number of iterations
     
     grad_thresh (float, optional, default=1.0E-5)
-		Threshold for the norn of the gradient
+	Threshold for the norn of the gradient
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
@@ -158,7 +158,7 @@ def Unrestricted_SCF(integrals,
                      grad_thresh=1.0E-5,
                      f_out=sys.stdout,
                      n_DIIS=0,
-                     HF_step_type=lambda **x: "RH-SCF",
+                     HF_step_type=lambda **x: "Absil",
                      ini_orb=None):
     """An Unrestricted Closed Shell SCF Hartree-Fock procedure
     
@@ -171,23 +171,23 @@ def Unrestricted_SCF(integrals,
 	The nuclear repulsion
 
     n_elec (int)
-	    The number of electrons
+	The number of electrons
 
     ms2 (int)
-            Two times MS (n alpha minus n beta)
-
+        Two times MS (n alpha minus n beta)
+    
     max_iter (int, optional, default=20)
-		Maximum number of iterations
+	Maximum number of iterations
     
     grad_thresh (float, optional, default=1.0E-5)
-		Threshold for the norn of the gradient
+	Threshold for the norm of the gradient
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
         If None the iterations are not printed.
     
     n_DIIS (int, optional, default=0)
-        maximum diminsion of the iterative subspace in DIIS
+        Maximum dimension of the iterative subspace in DIIS
         0 means that DIIS is not used
     
     HF_step_type (callable, optional, default=lambda x:"RH-SCF")
@@ -211,6 +211,7 @@ def Unrestricted_SCF(integrals,
     hf_step.integrals = integrals
     hf_step.n_occ_alpha = (n_elec + ms2) // 2
     hf_step.n_occ_beta = (n_elec - ms2) // 2
+    hf_step.n_occ = n_elec
     if hf_step.n_occ_alpha < 0 or hf_step.n_occ_beta < 0:
         raise ValueError(
             'Number of electrons not compatible with MS.')
@@ -235,11 +236,11 @@ def Unrestricted_SCF(integrals,
             raise ValueError('Initial orbitals should be of unrestricted type.')
         hf_step.orb = MolecularOrbitals(ini_orb)
         hf_step.orb.orthogonalise(X=integrals.X)
-    logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
+        logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     if loglevel <= logging.DEBUG:
         assert hf_step.orb.is_orthonormal(
             integrals.S), "Orbitals are not orthonormal"
-        
+
     hf_step.initialise(HF_step_type(i_SCF=0))
     
     if f_out is not None:
@@ -279,7 +280,7 @@ def Unrestricted_SCF(integrals,
             converged = True
             break
 
-    hf_step.orb.name = 'RHF'
+    hf_step.orb.name = 'UHF'
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
     res.orbitals = hf_step.orb

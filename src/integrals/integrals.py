@@ -222,7 +222,7 @@ class Two_Elec_Int():
 
 
     def transform_to_ijkl(self):
-        """Transform integrals in tho ijkl format"""
+        """Transform integrals to ijkl format"""
         n_g = self.n_func * (self.n_func + 1) // 2
         n_g = n_g * (n_g + 1) // 2
         g_in_new_format = np.zeros(n_g)
