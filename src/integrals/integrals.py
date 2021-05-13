@@ -247,10 +247,34 @@ class Two_Elec_Int():
                             g_in_new_format[ijkl] += Ffit[i][j] * Ffit[k][l]
         self._integrals = g_in_new_format
 
+    def transform_to_ijkl_caio(self):
+        """Transform integrals to ijkl format in Caio's way"""
+        n_g = self.n_func
+        g_in_new_format = np.zeros((n_g, n_g, n_g, n_g))
+        ij = -1
+        for i in range(self.n_func):
+            for j in range(self.n_func):
+                if i < j:
+                    continue
+                ij += 1
+                kl = -1
+                for k in range(self.n_func):
+                    for l in range(self.n_func):
+                        if k < l:
+                            continue
+                        kl += 1
+                        if ij < kl:
+                            continue
+                        ijkl = (kl + ij * (ij + 1) // 2
+                            if ij >= kl else
+                            ij + kl * (kl + 1) // 2)
+                        for Ffit in self._integrals:
+                            g_in_new_format[i][j][k][l] += Ffit[i][j] * Ffit[k][l]
+        self._integrals = g_in_new_format
+                            
 
 
-
-#####OLD####
+#####OLD#####
 def _from_1e_atomic_to_molecular(atomic_matrix, molecular, n_func):
     mol_int = np.zeros(len(atomic_matrix))
     for i in range(n_func):

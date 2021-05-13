@@ -46,6 +46,7 @@ class HartreeFockStep():
         elif step_type == 'Absil':
             self.grad = np.zeros((len(self.orb),
                                   self.n_occ))
+            self.integrals.g.transform_to_ijkl()
         elif step_type == 'orb_rot-Newton':
             pass
         else:
@@ -141,19 +142,77 @@ class HartreeFockStep():
                        self.n_occ))
         GEij = np.zeros((n,N)) # derivada direcional na direção E_{ij}
         D = np.zeros((n*N,n*N)) # a matriz da derivada direcional em si
-        X = self.orb[0][0][:,:self.n_occ] # ponto inicial
+        X = self.orb[0][0][:,:self.n_occ]
+        # ponto inicial
         col = 0
+        aux = np.zeros((n,n)) # matriz com os termos c_{qk}*c_{sk} do gradiente de dois elétrons
+        tmp = 0
+        self.energy = 0
         
         for a in range(0,n):
-            for b in range(0,N):
-                for k in range(0,n):
-                    Gh[a][b] += X[k][b]*(self.integrals.h[a][k] + self.integrals.h[k][a]) # parte de um elétron do gradiente
+            for b in range(0,N):                
+                for p in range(0,n):
+                    Gh[a][b] += X[p][b]*(self.integrals.h[a][p] + self.integrals.h[p][a]) # parte de um elétron do gradiente
+                    self.energy += X[a][b]*X[p][b]*self.integrals.h[a][p]
+
+                for q in range(0,n):
+                    for s in range(0,n):
+                        for k in range(0,N):
+                            if k != b:
+                                aux[q][s] += X[q][k]*X[s][k]
+                        tmp += (aux[q][s] *
+                                (self.integrals.g[a,q,a,s]
+                                - self.integrals.g[a,q,s,a]))
+                        for j in range(k+1,N):
+                            self.energy += (X[a][k]*X[b][j]*X[q][k]*X[s][j]*
+                                            (self.integrals.g[a,b,q,s]
+                                             - self.integrals.g[a,b,s,q]))
+                            
+                tmp2 = tmp
+                tmp *= 2*X[a][b]
+                tmp3 = 0
+
+                for p in range(0,n):
+                    if p != a:
+                        for q in range(0,n):
+                            for s in range(0,n):
+                                tmp += (X[p][b] * aux[q][s] *
+                                        (2*self.integrals.g[a,q,p,s]
+                                         - self.integrals.g[a,q,s,p]
+                                         - self.integrals.g[p,q,s,a]))
+                                tmp3 += tmp / X[p][b]
+
+                Gg[a][b] = tmp
+                tmp = 0
+                
                 for i in range(0,n):
                     for j in range(0,N):
                         if i == a and j == b:
-                            GEij[i][j] += 2*self.integrals.h[a][a]
+                            GEij[i][j] += 2*self.integrals.h[a][a] + 2*tmp2
+                        if i != a and j == b:
+                            GEij[i][j] += self.integrals.h[a][i]+self.integrals.h[i][a]+tmp3
+                        if j != b:
+                            GEij[i][j] += (4*X[a][b]*X[i][j] *
+                                           self.integrals.g[a,i,a,i]
+                                           - self.integrals.g[a,i,i,a])
+                            for q in range(0,n):
+                                if q != i:
+                                    GEij[i][j] += (2*X[a][b]*X[q][j]*
+                                                   (2*self.integrals.g[a,i,a,q]
+                                                    - self.integrals.g[a,i,q,a]
+                                                    - self.integrals.g[a,q,i,a]))
+                            for p in range(0,n):
+                                if p != a:
+                                    for q in range(0,n):
+                                        GEij[i][j] += (X[p][b]*X[q][j]*
+                                                (2*self.integrals.g[a,i,p,q]
+                                                 - self.integrals.g[a,i,q,p]
+                                                 - self.integrals.g[p,i,q,a]
+                                                 + 2*self.integrals.g[a,q,p,i]
+                                                 - self.integrals.g[a,q,i,p]
+                                                 - self.integrals.g[p,q,i,a]))
                             
-                D[:,[col]] = np.reshape(GEij, (n*N,1), 'F')
+                D[:,[col]] = np.reshape(GEij, (n*N,1), 'F') # pode dar erro se fizer com 'F', mas deveria ser o jeito correto pois estou mantendo esse padrão em todos os lugares
                 GEij = np.zeros((n,N))
                 col += 1
                 
@@ -163,9 +222,10 @@ class HartreeFockStep():
         eta = np.linalg.solve(D,R)
         eta = np.reshape(eta, (n,N), 'F')
         u, s, v = np.linalg.svd(eta, full_matrices=False)
+        s = np.diag(s)
         X = X @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
+        self.orb[0][0][:,:self.n_occ] = X
         self.gradNorm = np.linalg.norm(self.grad[:,:])
-        self.energy = 0.0
         
         #raise NotImplementedError("Caio, this is up to you!")
     
