@@ -319,7 +319,7 @@ class MolecularOrbitals():
             return cls.from_array(intgrls.X @ C, 1,
                                   integrals=intgrls)
         else:
-            return cls.from_array([intgrls.X @ C, intgrls.X @ C], 1,
+            return cls.from_array((intgrls.X @ C, intgrls.X @ C), 1,
                                   integrals=intgrls, restricted=False)
         
     @classmethod
@@ -353,7 +353,7 @@ class MolecularOrbitals():
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
-        
+
         if isinstance(C, tuple):
             for Ci in C:
                 new_orbitals._coefficients.append(np.array(Ci, dtype=float))

@@ -245,6 +245,7 @@ class Two_Elec_Int():
                                 ij + kl * (kl + 1) // 2)
                         for Ffit in self._integrals:
                             g_in_new_format[ijkl] += Ffit[i][j] * Ffit[k][l]
+        self._format = 'ijkl'
         self._integrals = g_in_new_format
 
     def transform_to_ijkl_caio(self):

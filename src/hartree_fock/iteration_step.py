@@ -135,86 +135,121 @@ class HartreeFockStep():
         raise NotImplementedError("Density matrix based SCF")
 
     def newton_absil(self, i_SCF):
-        N = self.n_occ
+        N_alpha = self.n_occ_alpha
+        N_beta = self.n_occ_beta
+        N = N_alpha + N_beta
         n = len(self.orb)
         Gh = np.zeros((n, N)) # parte de um elétron do gradiente
         Gg = np.zeros((len(self.orb), # parte de dois elétrons do gradiente
                        self.n_occ))
         GEij = np.zeros((n,N)) # derivada direcional na direção E_{ij}
         D = np.zeros((n*N,n*N)) # a matriz da derivada direcional em si
-        X = self.orb[0][0][:,:self.n_occ]
-        # ponto inicial
+        X = self.orb[0][:,:self.n_occ_alpha] # ponto inicial
+        Y = self.orb[1][:,:self.n_occ_beta]
         col = 0
         aux = np.zeros((n,n)) # matriz com os termos c_{qk}*c_{sk} do gradiente de dois elétrons
         tmp = 0
         self.energy = 0
-        
-        for a in range(0,n):
-            for b in range(0,N):                
-                for p in range(0,n):
-                    Gh[a][b] += X[p][b]*(self.integrals.h[a][p] + self.integrals.h[p][a]) # parte de um elétron do gradiente
-                    self.energy += X[a][b]*X[p][b]*self.integrals.h[a][p]
 
+        for j in range(0,N//2):
+            for p in range(0,n):
                 for q in range(0,n):
-                    for s in range(0,n):
-                        for k in range(0,N):
-                            if k != b:
-                                aux[q][s] += X[q][k]*X[s][k]
-                        tmp += (aux[q][s] *
-                                (self.integrals.g[a,q,a,s]
-                                - self.integrals.g[a,q,s,a]))
-                        for j in range(k+1,N):
-                            self.energy += (X[a][k]*X[b][j]*X[q][k]*X[s][j]*
-                                            (self.integrals.g[a,b,q,s]
-                                             - self.integrals.g[a,b,s,q]))
-                            
-                tmp2 = tmp
-                tmp *= 2*X[a][b]
-                tmp3 = 0
-
+                    self.energy += X[p][j]*X[q][j]*self.integrals.h[p][q]
+                    self.energy += Y[p][j]*Y[q][j]*self.integrals.h[p][q]
+        print(f"um elétron: {self.energy}")
+        tmp = self.energy
+        for j in range(0,N//2):
+            for k in range(j+1,N//2):
                 for p in range(0,n):
-                    if p != a:
-                        for q in range(0,n):
+                    for q in range(0,n):
+                        for r in range(0,n):
                             for s in range(0,n):
-                                tmp += (X[p][b] * aux[q][s] *
-                                        (2*self.integrals.g[a,q,p,s]
-                                         - self.integrals.g[a,q,s,p]
-                                         - self.integrals.g[p,q,s,a]))
-                                tmp3 += tmp / X[p][b]
+                                self.energy += (X[p][j]*X[q][k]*X[r][j]
+                                                *X[s][k]*
+                                                (self.integrals.g[p,r,q,s] -
+                                                self.integrals.g[p,s,q,r]))
+                                self.energy += (Y[p][j]*Y[q][k]*Y[r][j]
+                                                *Y[s][k]*
+                                                (self.integrals.g[p,r,q,s] -
+                                                 self.integrals.g[p,s,q,r]))
+            for k in range(0,N//2):
+                for p in range(0,n):
+                    for q in range(0,n):
+                        for r in range(0,n):
+                            for s in range(0,n):
+                                self.energy += (X[p][j]*Y[q][k]
+                                                *X[r][j]*Y[s][k]
+                                                *self.integrals.g[p,r,q,s])
+                                
+        print(f"dois elétrons: {self.energy-tmp}")
+        tmp = 0
+        print(self.energy)
+        # for a in range(0,n):
+        #     for b in range(0,N):                
+        #         for p in range(0,n):
+        #             Gh[a][b] += X[p][b]*(self.integrals.h[a][p] + self.integrals.h[p][a]) # parte de um elétron do gradiente
+        #             self.energy += X[a][b]*X[p][b]*self.integrals.h[a][p]
 
-                Gg[a][b] = tmp
-                tmp = 0
-                
-                for i in range(0,n):
-                    for j in range(0,N):
-                        if i == a and j == b:
-                            GEij[i][j] += 2*self.integrals.h[a][a] + 2*tmp2
-                        if i != a and j == b:
-                            GEij[i][j] += self.integrals.h[a][i]+self.integrals.h[i][a]+tmp3
-                        if j != b:
-                            GEij[i][j] += (4*X[a][b]*X[i][j] *
-                                           self.integrals.g[a,i,a,i]
-                                           - self.integrals.g[a,i,i,a])
-                            for q in range(0,n):
-                                if q != i:
-                                    GEij[i][j] += (2*X[a][b]*X[q][j]*
-                                                   (2*self.integrals.g[a,i,a,q]
-                                                    - self.integrals.g[a,i,q,a]
-                                                    - self.integrals.g[a,q,i,a]))
-                            for p in range(0,n):
-                                if p != a:
-                                    for q in range(0,n):
-                                        GEij[i][j] += (X[p][b]*X[q][j]*
-                                                (2*self.integrals.g[a,i,p,q]
-                                                 - self.integrals.g[a,i,q,p]
-                                                 - self.integrals.g[p,i,q,a]
-                                                 + 2*self.integrals.g[a,q,p,i]
-                                                 - self.integrals.g[a,q,i,p]
-                                                 - self.integrals.g[p,q,i,a]))
+        #         for q in range(0,n):
+        #             for s in range(0,n):
+        #                 for k in range(0,N):
+        #                     if k != b:
+        #                         aux[q][s] += X[q][k]*X[s][k]
+        #                 tmp += (aux[q][s] *
+        #                         (self.integrals.g[a,q,a,s]
+        #                         - self.integrals.g[a,q,s,a]))
+        #                 for j in range(k+1,N):
+        #                     self.energy += (X[a][k]*X[b][j]*X[q][k]*X[s][j]*
+        #                                     (self.integrals.g[a,b,q,s]
+        #                                      - self.integrals.g[a,b,s,q]))
                             
-                D[:,[col]] = np.reshape(GEij, (n*N,1), 'F') # pode dar erro se fizer com 'F', mas deveria ser o jeito correto pois estou mantendo esse padrão em todos os lugares
-                GEij = np.zeros((n,N))
-                col += 1
+        #         tmp2 = tmp
+        #         tmp *= 2*X[a][b]
+        #         tmp3 = 0
+
+        #         for p in range(0,n):
+        #             if p != a:
+        #                 for q in range(0,n):
+        #                     for s in range(0,n):
+        #                         tmp += (X[p][b] * aux[q][s] *
+        #                                 (2*self.integrals.g[a,q,p,s]
+        #                                  - self.integrals.g[a,q,s,p]
+        #                                  - self.integrals.g[p,q,s,a]))
+        #                         tmp3 += tmp / X[p][b]
+
+        #         Gg[a][b] = tmp
+        #         tmp = 0
+                
+        #         for i in range(0,n):
+        #             for j in range(0,N):
+        #                 if i == a and j == b:
+        #                     GEij[i][j] += 2*self.integrals.h[a][a] + 2*tmp2
+        #                 if i != a and j == b:
+        #                     GEij[i][j] += self.integrals.h[a][i]+self.integrals.h[i][a]+tmp3
+        #                 if j != b:
+        #                     GEij[i][j] += (4*X[a][b]*X[i][j] *
+        #                                    self.integrals.g[a,i,a,i]
+        #                                    - self.integrals.g[a,i,i,a])
+        #                     for q in range(0,n):
+        #                         if q != i:
+        #                             GEij[i][j] += (2*X[a][b]*X[q][j]*
+        #                                            (2*self.integrals.g[a,i,a,q]
+        #                                             - self.integrals.g[a,i,q,a]
+        #                                             - self.integrals.g[a,q,i,a]))
+        #                     for p in range(0,n):
+        #                         if p != a:
+        #                             for q in range(0,n):
+        #                                 GEij[i][j] += (X[p][b]*X[q][j]*
+        #                                         (2*self.integrals.g[a,i,p,q]
+        #                                          - self.integrals.g[a,i,q,p]
+        #                                          - self.integrals.g[p,i,q,a]
+        #                                          + 2*self.integrals.g[a,q,p,i]
+        #                                          - self.integrals.g[a,q,i,p]
+        #                                          - self.integrals.g[p,q,i,a]))
+                            
+        #         D[:,[col]] = np.reshape(GEij, (n*N,1), 'F') # pode dar erro se fizer com 'F', mas deveria ser o jeito correto pois estou mantendo esse padrão em todos os lugares
+        #         GEij = np.zeros((n,N))
+        #         col += 1
                 
         self.grad = Gh + Gg
         R = (np.identity(n) - X @ np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X)) @ self.grad
