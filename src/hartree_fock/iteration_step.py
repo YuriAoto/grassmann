@@ -10,6 +10,7 @@ from scipy import linalg
 from util.variables import sqrt2
 from input_output.log import logtime
 from . import util
+from . import absil
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -44,7 +45,7 @@ class HartreeFockStep():
         elif step_type == 'densMat-SCF':
             pass
         elif step_type == 'Absil':
-            self.grad = np.zeros((len(self.orb),
+            self.grad = np.zeros((2*len(self.orb),
                                   self.n_occ))
             self.integrals.g.transform_to_ijkl()
         elif step_type == 'orb_rot-Newton':
@@ -139,9 +140,6 @@ class HartreeFockStep():
         N_beta = self.n_occ_beta
         N = N_alpha + N_beta
         n = len(self.orb)
-        Gh = np.zeros((n, N)) # parte de um elétron do gradiente
-        Gg = np.zeros((len(self.orb), # parte de dois elétrons do gradiente
-                       self.n_occ))
         GEij = np.zeros((n,N)) # derivada direcional na direção E_{ij}
         D = np.zeros((n*N,n*N)) # a matriz da derivada direcional em si
         X = self.orb[0][:,:self.n_occ_alpha] # ponto inicial
@@ -149,41 +147,88 @@ class HartreeFockStep():
         col = 0
         aux = np.zeros((n,n)) # matriz com os termos c_{qk}*c_{sk} do gradiente de dois elétrons
         tmp = 0
-        self.energy = 0
-
-        for j in range(0,N//2):
-            for p in range(0,n):
-                for q in range(0,n):
-                    self.energy += X[p][j]*X[q][j]*self.integrals.h[p][q]
-                    self.energy += Y[p][j]*Y[q][j]*self.integrals.h[p][q]
-        print(f"um elétron: {self.energy}")
-        tmp = self.energy
-        for j in range(0,N//2):
-            for k in range(j+1,N//2):
-                for p in range(0,n):
-                    for q in range(0,n):
-                        for r in range(0,n):
-                            for s in range(0,n):
-                                self.energy += (X[p][j]*X[q][k]*X[r][j]
-                                                *X[s][k]*
-                                                (self.integrals.g[p,r,q,s] -
-                                                self.integrals.g[p,s,q,r]))
-                                self.energy += (Y[p][j]*Y[q][k]*Y[r][j]
-                                                *Y[s][k]*
-                                                (self.integrals.g[p,r,q,s] -
-                                                 self.integrals.g[p,s,q,r]))
-            for k in range(0,N//2):
-                for p in range(0,n):
-                    for q in range(0,n):
-                        for r in range(0,n):
-                            for s in range(0,n):
-                                self.energy += (X[p][j]*Y[q][k]
-                                                *X[r][j]*Y[s][k]
-                                                *self.integrals.g[p,r,q,s])
+        T = np.zeros((2*n*N,1))
+        Z = np.zeros((2*n,N))
+        Z[:n,:N_alpha] = X
+        Z[n:,N_alpha:] = Y
+        self.energy = absil.energy(N_alpha, N_beta, n, Z,
+                                   self.integrals.g._integrals,
+                                   self.integrals.h)
+        Gh_alpha, Gh_beta = absil.gradone(N_alpha, N_beta, n, X, Y, self.integrals.h)
+        self.grad[:n,:N_alpha] = Gh_alpha
+        self.grad[n:,N_alpha:] = Gh_beta
+        self.grad += absil.gradtwo(N_alpha, N_beta, n, X, Y, self.integrals.g._integrals)
+        self.gradNorm = np.linalg.norm(self.grad)
+        print(self.gradNorm)
+        self.grad = np.zeros((2*n,N))
+        self.grad[:n,:N_alpha] = Gh_alpha
+        self.grad[n:,N_alpha:] = Gh_beta
+        self.grad += absil.gradtwot(N_alpha, N_beta, n, X, Y, self.integrals.g._integrals)
+        self.gradNorm = np.linalg.norm(self.grad)
+        print(self.gradNorm)
+        
+        for i in range(0,2*n*N):
+            Z = np.reshape(Z, (2*n*N,1), 'F')
+            Z[i] += 0.001
+            Z = np.reshape(Z, (2*n,N), 'F')
+            energyplus = absil.energy(N_alpha, N_beta, n, Z,
+                                      self.integrals.g._integrals,
+                                      self.integrals.h)
+            Z = np.reshape(Z, (2*n*N,1), 'F')
+            Z[i] -= 0.002
+            Z = np.reshape(Z, (2*n,N), 'F')
+            energyminus = absil.energy(N_alpha, N_beta, n, Z,
+                                       self.integrals.g._integrals,
+                                       self.integrals.h)
+            gradiente = np.reshape(self.grad, (2*n*N,1), 'F')
+            T[i] = (energyplus - energyminus) / 0.002 - gradiente[i]
+            Z[:n,:N_alpha] = X
+            Z[n:,N_alpha:] = Y
+            
+        T = np.reshape(T, (2*n,N), 'F')
+        print(T)
+        
+        R = (np.identity(n) - X @ np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X)) @ self.grad
+        R = np.reshape(R, (n*N, 1), 'F')
+        eta = np.linalg.solve(D,R)
+        eta = np.reshape(eta, (n,N), 'F')
+        u, s, v = np.linalg.svd(eta, full_matrices=False)
+        s = np.diag(s)
+        X = X @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
+        self.orb[0][0][:,:self.n_occ] = X
+        
+        # for j in range(0,N//2):
+        #     for p in range(0,n):
+        #         for q in range(0,n):
+        #             self.energy += X[p][j]*X[q][j]*self.integrals.h[p][q]
+        #             self.energy += Y[p][j]*Y[q][j]*self.integrals.h[p][q]
+        # print(f"um elétron: {self.energy}")
+        # tmp = self.energy
+        # for j in range(0,N//2):
+        #     for k in range(j+1,N//2):
+        #         for p in range(0,n):
+        #             for q in range(0,n):
+        #                 for r in range(0,n):
+        #                     for s in range(0,n):
+        #                         self.energy += (X[p][j]*X[q][k]*X[r][j]
+        #                                         *X[s][k]*
+        #                                         (self.integrals.g[p,r,q,s] -
+        #                                         self.integrals.g[p,s,q,r]))
+        #                         self.energy += (Y[p][j]*Y[q][k]*Y[r][j]
+        #                                         *Y[s][k]*
+        #                                         (self.integrals.g[p,r,q,s] -
+        #                                          self.integrals.g[p,s,q,r]))
+        #     for k in range(0,N//2):
+        #         for p in range(0,n):
+        #             for q in range(0,n):
+        #                 for r in range(0,n):
+        #                     for s in range(0,n):
+        #                         self.energy += (X[p][j]*Y[q][k]
+        #                                         *X[r][j]*Y[s][k]
+        #                                         *self.integrals.g[p,r,q,s])
                                 
-        print(f"dois elétrons: {self.energy-tmp}")
-        tmp = 0
-        print(self.energy)
+        # print(f"dois elétrons: {self.energy-tmp}")
+        # tmp = 0
         # for a in range(0,n):
         #     for b in range(0,N):                
         #         for p in range(0,n):
@@ -250,18 +295,7 @@ class HartreeFockStep():
         #         D[:,[col]] = np.reshape(GEij, (n*N,1), 'F') # pode dar erro se fizer com 'F', mas deveria ser o jeito correto pois estou mantendo esse padrão em todos os lugares
         #         GEij = np.zeros((n,N))
         #         col += 1
-                
-        self.grad = Gh + Gg
-        R = (np.identity(n) - X @ np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X)) @ self.grad
-        R = np.reshape(R, (n*N, 1), 'F')
-        eta = np.linalg.solve(D,R)
-        eta = np.reshape(eta, (n,N), 'F')
-        u, s, v = np.linalg.svd(eta, full_matrices=False)
-        s = np.diag(s)
-        X = X @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
-        self.orb[0][0][:,:self.n_occ] = X
-        self.gradNorm = np.linalg.norm(self.grad[:,:])
-        
+                        
         #raise NotImplementedError("Caio, this is up to you!")
     
     def newton_orb_rot(self, i_SCF):

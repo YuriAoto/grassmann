@@ -260,7 +260,6 @@ def Unrestricted_SCF(integrals,
                 hf_step.density_matrix_scf(i_SCF)
                 
             elif step_type == 'Absil':
-                print(nucl_rep)
                 hf_step.newton_absil(i_SCF)
                 
             elif step_type == 'orb_rot-Newton':

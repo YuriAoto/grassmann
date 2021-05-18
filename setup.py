@@ -25,7 +25,9 @@ extensions = [
     Extension("src.util.array_indices",
               ["src/util/array_indices.pyx"]),
     Extension("src.integrals.integrals_cy",
-              ["src/integrals/integrals_cy.pyx"])
+              ["src/integrals/integrals_cy.pyx"]),
+    Extension("src.hartree_fock.absil",
+              ["src/hartree_fock/absil.pyx"])
 ]
 
 requires=['numpy',
