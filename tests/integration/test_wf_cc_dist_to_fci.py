@@ -229,6 +229,15 @@ class VertDistCCSDwfCCSDTestCase(unittest.TestCase):
                 self.assertEqual(res.right_dir[k][0], res.right_dir[k][1])
         self.assertAlmostEqual(res.distance, 0.0, places=9)
         self.assertAlmostEqual(explicitly_dist, 0.0, places=9)
+    
+    @tests.category('VERY LONG')
+    def test_hclplus_631g_c2v(self):
+        res, explicitly_dist = _calc_vertdist('HCl_plus__1.5__631g__C2v', level='SD')
+        for k in res.right_dir:
+            with self.subTest(rank=k):
+                self.assertEqual(res.right_dir[k][0], res.right_dir[k][1])
+        self.assertAlmostEqual(res.distance, 0.0, places=9)
+        self.assertAlmostEqual(explicitly_dist, 0.0, places=9)
 
 
 def _calc_mindist_twoel(molsys, level, diag_hess=False, factor=None):
@@ -717,6 +726,7 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
         res, right_ampl = _calc_mindist('Be__at__ccpVDZ__D2h',
                                         level='D', diag_hess=False,
                                         allE=True)
+        self.assertEqual(res.n_iter, 1)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
     
@@ -724,6 +734,7 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
     def test_h2o_15_sto3g_c2v(self):
         res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
                                         level='D', diag_hess=False)
+        self.assertEqual(res.n_iter, 1)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
     
@@ -732,8 +743,18 @@ class MinDistCCDwfCCDTestCase(unittest.TestCase):
         res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
                                         level='D', diag_hess=False,
                                         allE=True)
+        self.assertEqual(res.n_iter, 1)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='D', diag_hess=False)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+
 
 class MinDistCCDwfCCDOptTestCase(unittest.TestCase):
     """The minimun distance from a CCD wave function to the CCD manifold
@@ -823,6 +844,14 @@ class MinDistCCDwfCCDOptTestCase(unittest.TestCase):
                                         level='D', diag_hess=False,
                                         factor=self.factor,
                                         allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='D', diag_hess=False,
+                                        factor=self.factor)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
     
@@ -918,6 +947,14 @@ class MinDistCCDwfCCDOptDiagHessTestCase(unittest.TestCase):
                                         allE=True)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='D', diag_hess=True,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
 
 
 class MinDistCCSDwfCCSDTestCase(unittest.TestCase):
@@ -964,6 +1001,65 @@ class MinDistCCSDwfCCSDTestCase(unittest.TestCase):
         res, right_ampl = _calc_mindist('Li2__5__sto3g__C2v',
                                         level='SD', diag_hess=False,
                                         allE=True)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=False)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('LONG')
+    def test_be_sto3g_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=False,
+                                        allE=True)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_ccpvdz_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__ccpVDZ__D2h',
+                                        level='SD', diag_hess=False,
+                                        allE=True)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=False)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v_allel(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=False,
+                                        allE=True)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='SD', diag_hess=False)
+        self.assertEqual(res.n_iter, 1)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('VERY LONG')
+    def test_hclplus_631g_c2v(self):
+        res, right_ampl = _calc_mindist('HCl_plus__1.5__631g__C2v',
+                                        level='SD', diag_hess=False)
         self.assertEqual(res.n_iter, 1)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
@@ -1016,6 +1112,65 @@ class MinDistCCSDwfCCSDOptTestCase(unittest.TestCase):
                                         allE=True)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_ccpvdz_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__ccpVDZ__D2h',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v_allel(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('VERY LONG')
+    def test_hclplus_631g_c2v(self):
+        res, right_ampl = _calc_mindist('HCl_plus__1.5__631g__C2v',
+                                        level='SD', diag_hess=False,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
 
 
 class MinDistCCSDwfCCSDOptDiagHessTestCase(unittest.TestCase):
@@ -1066,3 +1221,63 @@ class MinDistCCSDwfCCSDOptDiagHessTestCase(unittest.TestCase):
                                         allE=True)
         self.assertAlmostEqual(res.distance, 0.0)
         self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_sto3g_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__sto3g__D2h',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_be_ccpvdz_d2h_allel(self):
+        res, right_ampl = _calc_mindist('Be__at__ccpVDZ__D2h',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_h2o_15_sto3g_c2v_allel(self):
+        res, right_ampl = _calc_mindist('h2o__1.5__sto3g__C2v',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor,
+                                        allE=True)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('SHORT')
+    def test_he2_631g_c2v(self):
+        res, right_ampl = _calc_mindist('He2__1.5__631g__C2v',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+    
+    @tests.category('VERY LONG')
+    def test_hclplus_631g_c2v(self):
+        res, right_ampl = _calc_mindist('HCl_plus__1.5__631g__C2v',
+                                        level='SD', diag_hess=True,
+                                        factor=self.factor)
+        self.assertAlmostEqual(res.distance, 0.0)
+        self.assertEqual(res.wave_function.amplitudes, right_ampl)
+
