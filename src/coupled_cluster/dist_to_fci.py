@@ -292,7 +292,7 @@ def calc_dist_to_cc_manifold(wf,
                 if loglevel <= 1:
                     to_log = ['Jacobian:\n']
                     for iH in range(Jac.shape[0]):
-                        to_log.append(f'{iH:3d} {Jac[iJ]:8.5f}\n')
+                        to_log.append(f'{iH:3d} {Jac[iH]:8.5f}\n')
                     to_log.append('\n\nHessian:\n')
                     to_log.append('    ')
                     for jH in range(Hess.shape[1]):
