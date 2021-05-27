@@ -149,35 +149,26 @@ class HartreeFockStep():
         Z[:n,:N_alpha] = X
         Z[n:,N_alpha:] = Y
 
-        # self.energy = absil.energy(N_alpha, N_beta, n, Z,
-                                   # self.integrals.g._integrals,
-                                   # self.integrals.h)
-        alpha, beta = absil.gradone(N_alpha, N_beta, n, X, Y,
-                                          self.integrals.h)
-        self.grad[:n,:N_alpha] = alpha
-        self.grad[n:,N_alpha:] = beta
-        print(self.grad, np.linalg.norm(self.grad))
-        print(absil.verificagradone(n, N_alpha, N_beta,
-                                self.integrals.g._integrals,
-                                self.integrals.h, self.grad, Z, self.integrals.X))
-        self.grad += absil.gradtwo(N_alpha, N_beta, n, X, Y,
-                                   self.integrals.g._integrals)
-        print(self.grad, np.linalg.norm(self.grad))
-        print(absil.verificagrad(n, N_alpha, N_beta,
-                                 self.integrals.g._integrals,
-                                 self.integrals.h, self.grad, Z, self.integrals.X))
-        exit()
-        print(np.linalg.norm(self.grad))
-        
-        
-        R = (np.identity(n) - X @ np.linalg.inv(np.transpose(X) @ X) @ np.transpose(X)) @ self.grad
-        R = np.reshape(R, (n*N, 1), 'F')
+        self.grad = (absil.gradone(N_alpha, N_beta, n, X, Y,
+                                   self.integrals.h)
+                     + absil.gradtwo(N_alpha, N_beta, n, X, Y,
+                                     self.integrals.g._integrals))
+        R = ((np.identity(2*n) - Z @ np.linalg.inv(np.transpose(Z) @ Z) @ np.transpose(Z))
+                     @ self.grad)
+        R = np.reshape(R, (2*n*N, 1), 'F')
+        D = absil.directionalderivative(n, N_alpha, N_beta, self.integrals.g._integrals,
+                                        self.integrals.h, X, Y)
         eta = np.linalg.solve(D,R)
-        eta = np.reshape(eta, (n,N), 'F')
+        eta = np.reshape(eta, (2*n, N), 'F')
         u, s, v = np.linalg.svd(eta, full_matrices=False)
         s = np.diag(s)
-        X = X @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
-        self.orb[0][0][:,:self.n_occ] = X
+        Z = Z @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
+        X = Z[:n,:N_alpha]
+        Y = Z[n:,N_alpha:]
+        self.orb[0][:,:self.n_occ_alpha] = X# ponto inicial
+        self.orb[1][:,:self.n_occ_beta] = Y
+        self.energy = absil.energy(N_alpha, N_beta, n, Z, self.integrals.g._integrals,
+                                   self.integrals.h)
     
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
