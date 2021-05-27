@@ -109,6 +109,11 @@ def _parser():
                         + ' iteration of the optimisation, in the files'
                         + 'orb_it_<i_it>.npz',
                         action='store_true')
+    parser.add_argument('--cc_diag_hess',
+                        help='If set, use the diagonal approximation to'
+                        + ' the Hessian in the optimisation of the distance'
+                        + ' to the CC manifold',
+                        action='store_true')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',

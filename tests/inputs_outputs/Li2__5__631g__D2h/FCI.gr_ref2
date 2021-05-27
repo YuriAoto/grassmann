@@ -1,0 +1,26 @@
+Grassmann
+Exploring the geometry of the electronic wave functions space
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: d08f010b2b9fea125a521ca84f2602dc10a6d81e
+
+Directory:
+/home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/Li2__5__631g__D2h
+
+Command:
+../../../Grassmann --method CCSD_mani_minD --molpro_output FCI.out
+
+Starting at 26 May 2021 - 20:40
+
+it.   dist      |Z|       |J|        time in iteration
+ 0    0.31822   0.318  0.3182   0:00:00.020876
+ 1    0.0028443  0.002859  0.00283   0:00:00.026019
+ 2    4.0411e-06  4.063e-06  4.021e-06   0:00:00.025912
+ 3    3.2743e-12  3.293e-12  3.257e-12   0:00:00.025577
+D(FCI, CCSD manifold) = 0.00000000
+
+Memory usage:
+   Max. allocation: 2.0 kB
+   Max. used: 4.3671875 kB
+Ending at 26 May 2021 - 20:40
+Total time: 0:00:00.123986
