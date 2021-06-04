@@ -54,7 +54,8 @@ def main_grassmann(args, f_out):
         elif args.method == 'Hartree_Fock':
             main_hf(args, f_out)
         elif args.method in ('CCD_mani_vert', 'CCSD_mani_vert',
-                             'CCD_mani_minD', 'CCSD_mani_minD'):
+                             'CCD_mani_minD', 'CCSD_mani_minD',
+                             'CCD_full_analysis', 'CCSD_full_analysis'):
             main_cc(args, f_out)
         else:
             raise ValueError('Unknown method: ' + args.method)

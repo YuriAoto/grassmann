@@ -2,6 +2,7 @@
 
 """
 import unittest
+import math
 
 import numpy as np
 
@@ -1751,6 +1752,29 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         wf = FCIWaveFunction.from_int_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
         self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+
+
+@tests.category('SHORT')
+class He2MethodsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.He2_CCwf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('He2__1.5__631g__D2h'))
+    
+    def test_dist_to(self):
+        other_wf = IntermNormWaveFunction.similar_to(self.He2_CCwf,
+                                                     wf_type='CCSD',
+                                                     restricted=self.He2_CCwf.restricted)
+        d = 0.0
+        for t in self.He2_CCwf.amplitudes:
+            d += t**2
+        d = math.sqrt(d)
+        self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), d)
+        other_wf = IntermNormWaveFunction.restrict(self.He2_CCwf)
+        self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), 0.0)
+        other_wf.amplitudes[0] -= 1.0
+        self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), 1.0)
 
 
 @tests.category('SHORT')

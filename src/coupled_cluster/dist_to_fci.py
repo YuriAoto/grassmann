@@ -1,6 +1,7 @@
 """The distance between the CC manifold and and arbitrary (FCI) wave function
 
-
+This module contains functions to calculate the distance among a number of
+points in the space of wave functions.
 
 
 """
@@ -11,7 +12,7 @@ import numpy as np
 from numpy import linalg
 
 from input_output.log import logtime
-from util.results import Results, OptResults
+from util.results import Results, OptResults, inside_box
 from coupled_cluster import manifold as cc_manifold
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.fci import FCIWaveFunction, contribution_from_clusters
@@ -28,6 +29,80 @@ _str_excitation_list = ['R',
 
 def _str_excitation(x):
     return _str_excitation_list[x] if x < 5 else str(x)
+
+
+class DistResults(Results):
+    """Results of calculations of distances to the CC manifold
+    
+    Extra attributes:
+    -----------------
+    distance (float)
+        The distance from the wave function to the CC manifold,
+        in the metric induced by intermediate normalisation.
+    
+    wave_function_as_fci (FCIWaveFunction)
+        The wave function as FCIWaveFunction. It is a property, that is
+        calculated if requested.
+    
+    level (str, 'D' or 'SD')
+        The coupled cluster level.
+    
+    """
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
+        self._wave_function_as_fci = None
+    
+    @inside_box
+    def __str__(self):
+        x = [super().__str__()]
+        x.append(f'D(FCI, CC{self.level} manifold) = {self.distance:.8f}\n')
+        return '\n'.join(x)
+    
+    @property
+    def wave_function_as_fci(self):
+        if self._wave_function_as_fci is None:
+            self._wave_function_as_fci = FCIWaveFunction.from_int_norm(self.wave_function)
+        return self._wave_function_as_fci
+
+
+
+class VertDistResults(DistResults):
+    """Store the results from vertical_dist_to_cc_manifold
+    
+    Extra attributes:
+    -----------------    
+    wave_function (IntermNormWaveFunction)
+        the wave function at the CC manifold. It is obtained by
+        IntermNormWaveFunction.from_projected_fci
+    
+    distance_ci (float)
+        The verical distance from the wave function to the CI manifold,
+        in the metric induced by intermediate normalisation.
+    
+    right_dir (dictionary)
+        Indicates how many coefficients are in the "right direction" compared
+        to the CC manifold. The keys are the ranks, and the values are 2-tuples,
+        that show at [0] how many directions are curved towards the wave
+        function and at [1] the total number of such directions. Example:
+        
+        {'T': (10,12),
+        'Q': (5,5),
+        '5': (1,1)}
+        
+        Means:
+        10 out of 12 triples are in the right direction
+        5 out of 5 quadruples are in the right direction
+        1 out of 1 quintuples are in the right direction
+    
+    """
+    @inside_box
+    def __str__(self):
+        x = [super().__str__().replace('D(FCI', 'D_vert(FCI')]
+        x.append('Number of excitations where the CC manifold\n'
+                 + '   curves towards the wave function:')
+        for rank, n in self.right_dir.items():
+            x.append(f'{rank}: {n[0]} of {n[1]}')
+        return '\n'.join(x)
 
 
 def vertical_dist_to_cc_manifold(wf,
@@ -61,7 +136,7 @@ def vertical_dist_to_cc_manifold(wf,
     Side Effects:
     ------------
     The wave function wf is put in the intermediate normalisation
-    and the sign of the coefficients should be associated to the determinants
+    and the sign of the coefficients are associated to the determinants
     in the maximum coincidence order.
     
     Parameters:
@@ -82,23 +157,7 @@ def vertical_dist_to_cc_manifold(wf,
     
     Return:
     -------
-    An instance of Results.
-    Some attributes:
-    distance: the "vertical" distance between wf and the CC manifold,
-              in the metric induced by intermediate normalisation.
-    wave_function: the wave function at the CC manifold, as an instace
-                   of IntermNormWaveFunction. It is obtained by
-                   IntermNormWaveFunction.from_projected_fci
-    right_dir: a dictionary, with keys as ranks, and values as 2-tuples,
-               that show [0] how many directions are curved towards wf
-               and [1] the total number of such directions. Example:
-               {'T': (10,12),
-                'Q': (5,5),
-                '5': (1,1)}
-                10 out of 12 triples are in the right direction
-                5 out of 5 quadruples are in the right direction
-                1 out of 1 quintuples are in the right direction
-    
+    An instance of VertDistResults.    
     """
     logfmt = '\n'.join(['det = %s',
                         'C dec = %s',
@@ -110,6 +169,7 @@ def vertical_dist_to_cc_manifold(wf,
     wf.normalise(mode='intermediate')
     wf.set_max_coincidence_orbitals()
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
+    norm_ci = 0.0
     norm = 0.0
     right_dir = {}
     for det in wf:
@@ -124,6 +184,7 @@ def vertical_dist_to_cc_manifold(wf,
                 and (level == 'SD' or rank % 2 == 0)):
             C = contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
             norm_contribution = (det.c - C)**2
+            norm_ci += det.c**2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution
             rank = _str_excitation(rank)
@@ -141,18 +202,26 @@ def vertical_dist_to_cc_manifold(wf,
                         cc_towards_wf)
         elif rank > 2 or (rank, level) == (1, 'D'):
             norm += det.c**2
+            norm_ci += det.c**2
             logger.info('Adding .c² to the norm: det = %s', det)
-
     tolog = ['Number of excitations where the CC manifold\n'
              + '   curves towards the wave function:']
     for rank, n in right_dir.items():
         tolog.append(f'{rank}: {n[0]} of {n[1]}')
     logger.info('\n'.join(tolog))
-    res = Results('Vertical distance to CC manifold')
+    res = VertDistResults(f'Vertical distance to CC{level} manifold')
+    res.success = True
+    res.level = level
     res.distance = math.sqrt(norm)
+    res.distance_ci = math.sqrt(norm_ci)
     res.wave_function = cc_wf
     res.right_dir = right_dir
     return res
+
+
+class MinDistResults(OptResults, DistResults):
+    """Store the results from calc_dist_to_cc_manifold"""
+    pass
 
 
 def calc_dist_to_cc_manifold(wf,
@@ -160,6 +229,7 @@ def calc_dist_to_cc_manifold(wf,
                              maxiter=10,
                              f_out=None,
                              diag_hess=True,
+                             save_as_fci_wf=False,
                              thrsh_Z=1.0E-8,
                              thrsh_J=1.0E-8,
                              ini_wf=None,
@@ -192,6 +262,10 @@ def calc_dist_to_cc_manifold(wf,
     diag_hess (bool, optional, default=True)
         Use approximate Hessian (only diagonal elements)
 
+    save_as_fci_wf (bool, optional, default=False)
+        If True, save the final cc_wf as a FCI wave function too,
+        in the attribute wave_function_as_fci of the result
+
     thrsh_Z (float, optional, default=1.0E-8)
         Convergence threshold for z
 
@@ -220,11 +294,11 @@ def calc_dist_to_cc_manifold(wf,
     coeff_thr (float, optional, default=1.0E-10)
         Slater determinants with coefficients lower than this
         threshold value are ignored in the analysis
-
+    
     Return:
     -------
-    An instance of OptResults.
-
+    An instance of MinDistResults.
+    
     """
     wf.normalise(mode='intermediate')
     converged = False
@@ -251,7 +325,9 @@ def calc_dist_to_cc_manifold(wf,
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
     if f_out is not None:
         f_out.write(
-            'it.   dist      |Z|       |J|        time in iteration\n')
+            '------------------------------------------------------------\n'
+            '         Optimising the distance to the CC manifold\n'
+            ' it  distance    |Z|         |J|          time in iteration\n')
     for i_iteration in range(maxiter):
         with logtime(f'Starting iteration {i_iteration}') as T_iter:
             if (i_iteration == 0
@@ -312,15 +388,231 @@ def calc_dist_to_cc_manifold(wf,
             normZ = linalg.norm(z)
             cc_wf.update_amplitudes(z, mode='indep ampl')
         if f_out is not None:
-            f_out.write(f' {i_iteration:<4} {dist:7.5}  {normZ:6.4}'
-                        f'  {normJ:6.4}   {T_iter.elapsed_time}\n')
+            f_out.write(f' {i_iteration:>2d}  {dist:<9.6f}   {normZ:<10.3e}'
+                        f'  {normJ:<10.3e}   {T_iter.elapsed_time}\n')
             f_out.flush()
-    res = OptResults('Minimun distance to CC manifold')
+    if f_out is not None:
+        f_out.write('-----------------------------------------------------------\n\n')
+    res = MinDistResults(f'Minimun distance to CC{level} manifold')
+    res.level = level
     res.success = converged
     if not converged:
         res.error = 'Optimisation did not converge'
     res.distance = dist
     res.wave_function = cc_wf
+    if save_as_fci_wf:
+        res.wave_function_as_fci = cc_wf_as_fci
     res.norm = (normZ, normJ)
     res.n_iter = i_iteration
+    return res
+
+
+_wf_space_graph_full = """
+
+                          CC manifold
+                            /
+                    FCI    /
+                          minD CC   CC wave function
+                         /          closest to FCI
+                        /
+                       CC    regular CC
+                      /      wave function
+                     /
+                    vert CC  the vertical projection
+                   /         into the CC manifold
+                  /
+                 /
+                /        the regular CI wave function
+ -------------------x---CI---------------
+CI manifold         ^
+                 vert CI   the vertical projection
+                           into the CI manifold
+"""
+
+_wf_space_graph_no_ci = """
+
+                          CC manifold
+                            /
+                    FCI    /
+                          minD CC   CC wave function
+                         /          closest to FCI
+                        /
+                       CC    regular CC
+                      /      wave function
+                     /
+                    vert CC  the vertical projection
+                   /         into the CC manifold
+                  /
+                 /
+                /
+ -------------------x--------------------
+CI manifold         ^
+                 vert CI   the vertical projection
+                           into the CI manifold
+"""
+
+_wf_space_graph_no_cc = """
+
+                          CC manifold
+                            /
+                    FCI    /
+                          minD CC   CC wave function
+                         /          closest to FCI
+                        /
+                       /
+                      /
+                     /
+                    vert CC  the vertical projection
+                   /         into the CC manifold
+                  /
+                 /
+                /        the regular CI wave function
+ -------------------x---CI---------------
+CI manifold         ^
+                 vert CI   the vertical projection
+                           into the CI manifold
+"""
+
+_wf_space_graph_no_cc_ci = """
+
+                          CC manifold
+                            /
+                    FCI    /
+                          minD CC   CC wave function
+                         /          closest to FCI
+                        /
+                       /
+                      /
+                     /
+                    vert CC  the vertical projection
+                   /         into the CC manifold
+                  /
+                 /
+                /
+ -------------------x--------------------
+CI manifold         ^
+                 vert CI   the vertical projection
+                           into the CI manifold
+"""
+
+
+class AllDistResults(Results):
+    """Store the results from calc_all_distances
+    
+    Extra attributes:
+    -----------------
+    full_names (bool)
+        If True, print the full(er) names of points
+    
+    Several floats that store the distances among main points at the
+    CI and CC manifolds. These are XX__YY and XX__YY_ampl, with the
+    distance between XX and YY, in the metric of the intermediate
+    normalisation (in the full space) and in the parameter space of
+    the amplitudes (whenever possible). These attributes are:
+    
+    fci__min_d
+    fci__vert
+    fci__cc
+    fci__vert_ci
+    fci__ci
+    min_d__vert
+    min_d__vert_ampl
+    cc__vert
+    cc__vert_ampl
+    cc__min_d
+    cc__min_d_ampl
+    
+    
+    """
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
+        self.has_ci = False
+        self.has_cc = False
+        
+    @inside_box
+    def __str__(self):
+        x = []
+        x.append(f'D(FCI, minD CC) = {self.fci__min_d:.5f}')
+        x.append(f'D(FCI, vert CC) = {self.fci__vert:.5f}')
+        x.append(f'D(FCI, vert CI) = {self.fci__vert_ci:.5f}')
+        if self.has_cc:
+            x.append(f'D(FCI, CC)      = {self.fci__cc:.5f}')
+        if self.has_ci:
+            x.append(f'D(FCI, CI)      = {self.fci__ci:.5f}')
+        x.append('')
+        if self.has_ci and self.has_cc:
+            x.append(f'D(CC, CI)           = {self.ci__cc:.5f} ')
+        x.append('')
+        x.append(f'D(minD CC, vert CC) = {self.min_d__vert:.5f} '
+                 + f'({self.min_d__vert_ampl:.5f} in ampl space)')
+        if self.has_cc:
+            x.append(f'D(CC, vert CC)      = {self.cc__vert:.5f} '
+                     + f'({self.cc__vert_ampl:.5f} in ampl space)')
+            x.append(f'D(CC, minD CC)      = {self.cc__min_d:.5f} '
+                     + f'({self.cc__min_d_ampl:.5f} in ampl space)')
+
+        return (super().__str__() + '\n'
+                + (_wf_space_graph_full
+                   if (self.has_ci and self.has_cc) else
+                   (_wf_space_graph_no_cc
+                    if self.has_ci else
+                    (_wf_space_graph_no_ci
+                     if self.has_cc else
+                     _wf_space_graph_no_cc_ci))) + '\n'
+                + '\n'.join(x))
+
+
+def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level):
+    """Calculate all distances among main points in the CC and CI manifolds
+    
+    
+    Parameters:
+    -----------
+    fci_wf (FCIWaveFunction)
+        The FCI wave function
+    
+    res_vert (VertDistResults)
+        The results of the vertical_dist_to_cc_manifold
+    
+    res_min_d (MinDistResults)
+        The results of the calc_dist_to_cc_manifold
+    
+    cc_wf (IntermNormWaveFunction)
+        The CC wave function (optimised, that solves the CC equations)
+        If None distances to it are not calculated
+    
+    ci_wf (IntermNormWaveFunction)
+        The CI wave function (optimised, that solves the CI equations)
+        If None distances to it are not calculated
+    
+    level (str, 'D' or 'SD')
+        The level of excitations used in the CC wave functions
+    
+    Results:
+    --------
+    An instance of AllDistResults
+    
+    """
+    res = AllDistResults(f'Distances among CC{level}/CI{level} wave functions')
+    res.fci__min_d = res_min_d.distance
+    res.fci__vert = res_vert.distance
+    res.fci__vert_ci = res_vert.distance_ci
+    res.min_d__vert_ampl = res_min_d.wave_function.dist_to(res_vert.wave_function)
+    res.min_d__vert = res_min_d.wave_function_as_fci.dist_to(
+        res_vert.wave_function_as_fci)
+    if cc_wf is not None:
+        res.has_cc = True
+        cc_as_fci = FCIWaveFunction.from_int_norm(cc_wf)
+        res.fci__cc = cc_as_fci.dist_to(fci_wf)
+        res.cc__min_d_ampl = cc_wf.dist_to(res_min_d.wave_function)
+        res.cc__min_d = cc_as_fci.dist_to(res_min_d.wave_function_as_fci)
+        res.cc__vert_ampl = cc_wf.dist_to(res_vert.wave_function)
+        res.cc__vert = cc_as_fci.dist_to(res_vert.wave_function_as_fci)
+    if ci_wf is not None:
+        res.has_ci = True
+        ci_as_fci = FCIWaveFunction.from_int_norm(ci_wf)
+        res.fci__ci = ci_as_fci.dist_to(fci_wf)
+        if cc_wf is not None:
+            res.ci__cc = ci_as_fci.dist_to(cc_as_fci)
+    res.success = True
     return res

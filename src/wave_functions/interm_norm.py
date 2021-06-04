@@ -9,6 +9,7 @@ import copy
 import logging
 
 import numpy as np
+from scipy.spatial import distance
 
 from util.array_indices import (triangular,
                                 n_from_triang_with_diag,
@@ -604,6 +605,38 @@ class IntermNormWaveFunction(WaveFunction):
         if self._n_ampl is None:
             self._calc_ini_blocks()
         return self._n_ampl
+    
+    def dist_to(self, other):
+        """The distance, in the amplitudes spaces, to another wave function
+        
+        
+        
+        Parameters:
+        -----------
+        other (IntermNormWaveFunction)
+            The other wave function to which the distance is to be calculated
+        
+        Return:
+        -------
+        A float, the (Euclidean) distance between the amplitudes of self
+        and other
+        
+        Raise:
+        ------
+        ValueError, if other is not compatible with self to calculate
+        the distance.
+        
+        """
+        if (self.orb_dim != other.orb_dim
+            or self.ref_orb != other.ref_orb
+            or self.n_alpha != other.n_alpha
+                or self.n_beta != other.n_beta):
+            raise ValueError('The other wave function is not compatible!')
+        if len(self) != len(other):
+            raise NotImplementedError(
+                'Wave functions have amplitude vectors of different sizes.'
+                ' we cannot calculate their distance.')
+        return distance.euclidean(self.amplitudes, other.amplitudes)
     
     @property
     def n_indep_ampl(self):
