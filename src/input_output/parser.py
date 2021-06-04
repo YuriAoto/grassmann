@@ -61,6 +61,10 @@ def _parser():
         ''')))
     parser.add_argument('--molpro_output',
                         help='Molpro output with the correlated wave function')
+    parser.add_argument('--cc_wf',
+                        help='Molpro output with the CC wave function')
+    parser.add_argument('--ci_wf',
+                        help='Molpro output with the CI wave function')
     parser.add_argument('--geometry',
                         help='A xyz geometry file')
     parser.add_argument('--memory', default='100.0kB',

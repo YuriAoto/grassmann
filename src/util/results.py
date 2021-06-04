@@ -2,6 +2,18 @@
 
 """
 
+
+_res_box_string = '\n============================================================\n'
+
+def inside_box(func):
+    def wrapper_res_box(*args, **kargs):
+        x = func(*args, **kargs)
+        return ''.join([_res_box_string,
+                        x.replace(_res_box_string, ''),
+                        _res_box_string])
+    return wrapper_res_box
+
+
 class Results:
     """Class to store results
     
@@ -32,6 +44,7 @@ class Results:
         self.error = None
         self.warning = None
     
+    @inside_box
     def __str__(self):
         x = ['Results for ' + self.kind + ':']
         x.append('Success = ' + str(self.success))
@@ -81,10 +94,10 @@ class OptResults(Results):
         self.orbitals = None
         self.n_iter = None
         self.conv_norm = None
-    
+
+    @inside_box
     def __str__(self):
         x = [super().__str__()]
-        x.append('==========================')
         if self.energy is not None:
             x.append('Energy = ' + str(self.energy))
         if self.distance is not None:
