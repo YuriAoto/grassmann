@@ -31,6 +31,7 @@ import re
 import argparse
 import textwrap
 import logging
+from glob import glob
 
 _loglevels = {'critical': logging.CRITICAL,
               'error': logging.ERROR,
@@ -173,6 +174,13 @@ def _assert_molpro_output(file,
             raise ParseError('File ' + file + ' is not a Molpro output!')
 
 
+def _glob_file(fname):
+    """Glob the file name and return. Raise ParseError if does not lead a unique file"""
+    x = glob(fname)
+    if len(x) != 1:
+        raise ParseError(f'{fname} does not represent a single file!')
+    return x[0]
+
 def _check(args):
     """Check if all arguments are OK and improve them, modifying args"""
     if args.output is not None:
@@ -253,6 +261,9 @@ def _check(args):
                                  + args.loglevel)
     else:
         args.loglevel = logging.WARNING
+    args.molpro_output = _glob_file(args.molpro_output)
+    args.cc_wf = _glob_file(args.cc_wf)
+    args.ci_wf = _glob_file(args.ci_wf)
 
 
 def _argvise_file(filename, files_content, indentation):

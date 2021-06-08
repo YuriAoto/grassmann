@@ -66,7 +66,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_631g_d2h,
                                 allE=True,
-                                memory='300.0')) as run_gr:
+                                memory='20.0MB')) as run_gr:
             self.assertEqual(run_gr, run_gr.output + '_ref1')
 
     def test_Li2_sto3g_c2v(self):
@@ -149,7 +149,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_631g_d2h,
                                 allE=True,
-                                memory='300.0')) as run_gr:
+                                memory='20.0MB')) as run_gr:
             self.assertEqual(run_gr, run_gr.output + '_ref2')
 
     def test_Li2_sto3g_c2v(self):

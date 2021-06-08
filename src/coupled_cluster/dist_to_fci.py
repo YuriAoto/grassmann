@@ -434,13 +434,13 @@ _wf_space_graph_no_ci = """
                           CC manifold
                             /
                     FCI    /
-                          minD CC   CC wave function
+                          minD_CC   CC wave function
                          /          closest to FCI
                         /
                        CC    regular CC
                       /      wave function
                      /
-                    vert CC  the vertical projection
+                    vert_CC  the vertical projection
                    /         into the CC manifold
                   /
                  /
@@ -456,20 +456,20 @@ _wf_space_graph_no_cc = """
                           CC manifold
                             /
                     FCI    /
-                          minD CC   CC wave function
+                          minD_CC   CC wave function
                          /          closest to FCI
                         /
                        /
                       /
                      /
-                    vert CC  the vertical projection
+                    vert_CC  the vertical projection
                    /         into the CC manifold
                   /
                  /
                 /        the regular CI wave function
  -------------------x---CI---------------
 CI manifold         ^
-                 vert CI   the vertical projection
+                 vert_CI   the vertical projection
                            into the CI manifold
 """
 
@@ -478,20 +478,20 @@ _wf_space_graph_no_cc_ci = """
                           CC manifold
                             /
                     FCI    /
-                          minD CC   CC wave function
+                          minD_CC   CC wave function
                          /          closest to FCI
                         /
                        /
                       /
                      /
-                    vert CC  the vertical projection
+                    vert_CC  the vertical projection
                    /         into the CC manifold
                   /
                  /
                 /
  -------------------x--------------------
 CI manifold         ^
-                 vert CI   the vertical projection
+                 vert_CI   the vertical projection
                            into the CI manifold
 """
 
@@ -532,9 +532,9 @@ class AllDistResults(Results):
     @inside_box
     def __str__(self):
         x = []
-        x.append(f'D(FCI, minD CC) = {self.fci__min_d:.5f}')
-        x.append(f'D(FCI, vert CC) = {self.fci__vert:.5f}')
-        x.append(f'D(FCI, vert CI) = {self.fci__vert_ci:.5f}')
+        x.append(f'D(FCI, minD_CC) = {self.fci__min_d:.5f}')
+        x.append(f'D(FCI, vert_CC) = {self.fci__vert:.5f}')
+        x.append(f'D(FCI, vert_CI) = {self.fci__vert_ci:.5f}')
         if self.has_cc:
             x.append(f'D(FCI, CC)      = {self.fci__cc:.5f}')
         if self.has_ci:
@@ -543,12 +543,12 @@ class AllDistResults(Results):
         if self.has_ci and self.has_cc:
             x.append(f'D(CC, CI)           = {self.ci__cc:.5f} ')
         x.append('')
-        x.append(f'D(minD CC, vert CC) = {self.min_d__vert:.5f} '
+        x.append(f'D(minD_CC, vert_CC) = {self.min_d__vert:.5f} '
                  + f'({self.min_d__vert_ampl:.5f} in ampl space)')
         if self.has_cc:
-            x.append(f'D(CC, vert CC)      = {self.cc__vert:.5f} '
+            x.append(f'D(CC, vert_CC)      = {self.cc__vert:.5f} '
                      + f'({self.cc__vert_ampl:.5f} in ampl space)')
-            x.append(f'D(CC, minD CC)      = {self.cc__min_d:.5f} '
+            x.append(f'D(CC, minD_CC)      = {self.cc__min_d:.5f} '
                      + f'({self.cc__min_d_ampl:.5f} in ampl space)')
 
         return (super().__str__() + '\n'
