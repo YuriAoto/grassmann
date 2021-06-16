@@ -139,35 +139,39 @@ class HartreeFockStep():
         N_alpha, N_beta = self.n_occ_alpha, self.n_occ_beta
         N = N_alpha + N_beta
         n = len(self.orb)
-        GEij = np.zeros((n,N)) # derivada direcional na direção E_{ij}
-        D = np.zeros((n*N,n*N)) # a matriz da derivada direcional em si
+        D = np.zeros((2*n*N, 2*n*N)) # a matriz da derivada direcional em si
         X = self.orb[0][:,:self.n_occ_alpha] # ponto inicial
         Y = self.orb[1][:,:self.n_occ_beta]
         col, tmp = 0, 0
-        aux = np.zeros((n,n)) # matriz c/ os termos c_{qk}*c_{sk} do gradiente de dois elétrons
-        Z = np.zeros((2*n,N))
+        Z = np.zeros((2*n, N))
         Z[:n,:N_alpha] = X
         Z[n:,N_alpha:] = Y
+        overlap = np.zeros((2*n, 2*n))
+        overlap[:n,:n] = self.integrals.S
+        overlap[n:,n:] = self.integrals.S
 
-        self.grad = (absil.gradone(N_alpha, N_beta, n, X, Y,
-                                   self.integrals.h)
-                     + absil.gradtwo(N_alpha, N_beta, n, X, Y,
-                                     self.integrals.g._integrals))
-        R = ((np.identity(2*n) - Z @ np.linalg.inv(np.transpose(Z) @ Z) @ np.transpose(Z))
+        self.grad = absil.grad(N_alpha, N_beta, n, X, Y,
+                                             self.integrals.g._integrals,
+                                             self.integrals.h)
+        R = ((np.identity(2*n) - Z @ np.transpose(Z) @ overlap)
                      @ self.grad)
         R = np.reshape(R, (2*n*N, 1), 'F')
-        D = absil.directionalderivative(n, N_alpha, N_beta, self.integrals.g._integrals,
-                                        self.integrals.h, X, Y)
-        eta = np.linalg.solve(D,R)
+        D = absil.directionalderivative(n, N_alpha, N_beta,
+                                        self.integrals.g._integrals,
+                                        self.integrals.h,
+                                        Z, overlap, self.grad)
+        eta = np.linalg.solve(D, R)
         eta = np.reshape(eta, (2*n, N), 'F')
         u, s, v = np.linalg.svd(eta, full_matrices=False)
         s = np.diag(s)
         Z = Z @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
         X = Z[:n,:N_alpha]
         Y = Z[n:,N_alpha:]
-        self.orb[0][:,:self.n_occ_alpha] = X# ponto inicial
+        self.orb[0][:,:self.n_occ_alpha] = X # ponto inicial
         self.orb[1][:,:self.n_occ_beta] = Y
-        self.energy = absil.energy(N_alpha, N_beta, n, Z, self.integrals.g._integrals,
+        self.gradNorm = np.linalg.norm(self.grad)
+        self.energy = absil.energy(N_alpha, N_beta, n, Z,
+                                   self.integrals.g._integrals,
                                    self.integrals.h)
     
     def newton_orb_rot(self, i_SCF):
