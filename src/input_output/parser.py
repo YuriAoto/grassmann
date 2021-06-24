@@ -176,6 +176,8 @@ def _assert_molpro_output(file,
 
 def _glob_file(fname):
     """Glob the file name and return. Raise ParseError if does not lead a unique file"""
+    if fname is None:
+        return None
     x = glob(fname)
     if len(x) != 1:
         raise ParseError(f'{fname} does not represent a single file!')
