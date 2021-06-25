@@ -2090,10 +2090,13 @@ class IntermNormWaveFunction(WaveFunction):
             elif dbl_found:
                 lspl = line.split()
                 if len(lspl) == 7:
-                    (Molpros_i, Molpros_j,
-                     irrep_a, irrep_b,
-                     a, b) = map(
-                         lambda x: int(x) - 1, lspl[0:-1])
+                    try:
+                        (Molpros_i, Molpros_j,
+                         irrep_a, irrep_b,
+                         a, b) = map(
+                             lambda x: int(x) - 1, lspl[0:-1])
+                    except ValueError:
+                        continue
                     C = float(lspl[-1])
                     if exc_type[0] == 'a':
                         a -= new_wf.act_orb[irrep_a]

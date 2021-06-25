@@ -126,7 +126,7 @@ def Restricted_Closed_Shell_SCF(integrals,
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
                                  + step_type)
-            
+        
         if f_out is not None:
             f_out.write(util.fmt_HF_iter_general.format(
                 i_SCF, nucl_rep + hf_step.energy,
@@ -160,7 +160,7 @@ def Unrestricted_SCF(integrals,
                      n_DIIS=0,
                      HF_step_type=lambda **x: "Absil",
                      ini_orb=None):
-    """An Unrestricted Closed Shell SCF Hartree-Fock procedure
+    """Unrestricted Closed Shell SCF Hartree-Fock procedure
     
 
     
@@ -235,7 +235,6 @@ def Unrestricted_SCF(integrals,
         if ini_orb.restricted:
             raise ValueError('Initial orbitals should be of unrestricted type.')
         hf_step.orb = MolecularOrbitals(ini_orb)
-        hf_step.orb.orthogonalise(X=integrals.X)
         logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     if loglevel <= logging.DEBUG:
         assert hf_step.orb.is_orthonormal(

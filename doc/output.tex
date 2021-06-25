@@ -1,0 +1,79 @@
+\hypertarget{chap:output}{}
+\chapter{Output and log}
+\label{sec:output}
+\chaptermark{Output and log}
+\chapterauthor{}
+
+
+Grassmann prints main information, such as the final results, in an output file.
+Depending on the request and on the calculation,
+it may also print extra information in a log file and create extra files in an output directory.
+If the output file, the log file, or the output directory already exist,
+Grassmann uses the same strategy as Molpro,
+renaming these files, appending an ``\verb+_+\emph{X}'' to their names,
+where \emph{X} is the lowest positive integer such that nothing is overwritten.
+
+\section{File names}
+\label{sec:outname}
+
+The names of the files and directory that Grassmann creates
+are determined in the following way:
+It can be given with the option \verb+--output+;
+Otherwise, if an input file is given, they have the same base name of the input.
+Otherwise, if a geometry file is given,
+they have the same base name of this geometry file
+Otherwise, if a Molpro output file is given,
+they have the same base name of this Molpro file.
+
+The output file has the extension \verb+.gr+,
+the log file has the extension \verb+.grlog+
+and the output directory has the extension \verb+.grdir+, by default.
+These extensions can be changed with the options \verb+--out_extension+,
+\verb+--log_extension+, and \verb+--dir_extension+.
+
+\section{Controlling log}
+\label{sec:controllog}
+
+Logs are printed depending on the log level,
+that can be defined by the user with the option \verb+--loglevel+.
+The value for this option may be an integer
+or a string that represents a numeric value for the log level,
+according to the following table.
+The interpretation of these strings is case insensitive
+and follow the convention of Python's logging module.
+
+\begin{center}
+  \begin{tabular}{lc}
+    \hline
+    level name & numeric value\\
+    \hline
+    \verb+critical+ & 50 \\
+    \verb+error+ & 40\\
+    \verb+warning+ & 30\\
+    \verb+info+ & 20\\
+    \verb+debug+& 10\\
+    \hline
+  \end{tabular}
+\end{center}
+
+Default value is \verb+warning+,
+meaning that all logs that have level higher or equal 30 are printed to the log file.
+If you decrease the log level, more information is sent to log;
+If you increase the log level, less information is sent to log.
+For production run, \verb+warning+ is the appropriate choice.
+Level \verb+info+ will show some extra information, such as timings,
+and might be useful for some initial testing and exploration.
+The \verb+debug+ level sends to log extra detailed information on the calculations;
+it might be too large.
+A log level above warning should be avoided, as it will hide error logs.
+
+In case you want to log what comes from one or few specific function only,
+a regular expression can be passed with the option \verb+logfilter+,
+and only logs from functions whose name that satisfy this regular expression are tracked.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
+
+

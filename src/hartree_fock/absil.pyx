@@ -3,6 +3,7 @@ cimport cython
 import numpy as np
 from scipy import linalg
 
+
 cdef int getindex(int i, int j, int k, int l) nogil:
     cdef int ij, kl, ijkl
     
@@ -13,7 +14,6 @@ cdef int getindex(int i, int j, int k, int l) nogil:
             ij + kl * (kl + 1) // 2)
     
     return ijkl
-
 
 def energy(int N_alpha, int N_beta, int n, double[:,:] Z, double[:] g, double[:,:] h):
     cdef int j, k, p, q, r, s
@@ -119,7 +119,6 @@ def gradtwo(int N_alpha, int N_beta, int n, double[:,:] X, double[:,:] Y, double
     Gg[:n,:N_alpha] = Gg_alpha
     Gg[n:,N_alpha:] = Gg_beta
     return np.array(Gg)
-
 
 def directionalderivative(int n, int N_alpha, int N_beta, double[:] g,
                           double[:,:] h, double[:,:] Z, double[:,:] S,
@@ -352,13 +351,8 @@ def directionalderivative(int n, int N_alpha, int N_beta, double[:] g,
     return np.array(D)
 
 
-def grad(int N_alpha,
-                       int N_beta,
-                       int n,
-                       double[:,:] X,
-                       double[:,:] Y,
-                       double[:] g,
-                       double[:,:] h):
+def grad(int N_alpha, int N_beta, int n, double[:,:] X, double[:,:] Y,
+         double[:] g, double[:,:] h):
     cdef int a, b, p, q, s, k, N = N_alpha + N_beta
     cdef double[:,:] G_alpha = np.zeros((n, N_alpha))
     cdef double[:,:] G_beta = np.zeros((n, N_beta))
@@ -420,6 +414,26 @@ def grad(int N_alpha,
 
 
 def verificagrad(int n, int N_alpha, int N_beta, double[:] g, double [:,:] h,
+                 double [:,:] grad, double[:,:] Z, double[:,:] overlap):
+    cdef int i, j
+    cdef int N = N_alpha + N_beta
+    cdef double energyplus, energyminus
+    cdef double[:,:] M = np.zeros((2*n, N))
+
+    for i in range(2*n):
+        for j in range(N):
+            Z[i,j] += 0.0001
+            energyplus = energy(N_alpha, N_beta, n, Z, g, h)
+            energyplus /= np.trace(np.transpose(Z) @ overlap @ Z)
+            Z[i,j] -= 0.0002
+            energyminus = energy(N_alpha, N_beta, n, Z, g, h)
+            energyminus /= np.trace(np.transpose(Z) @ overlap @ Z)
+            M[i,j] = (energyplus - energyminus) / 0.0002 - grad[i,j]
+            Z[i,j] += 0.0001
+            
+    return np.array(M)
+
+def verificagradone(int n, int N_alpha, int N_beta, double[:] g, double [:,:] h,
                  double [:,:] grad, double[:,:] Z):
     cdef int i, j
     cdef int N = N_alpha + N_beta
@@ -429,27 +443,9 @@ def verificagrad(int n, int N_alpha, int N_beta, double[:] g, double [:,:] h,
     for i in range(2*n):
         for j in range(N):
             Z[i,j] += 0.001
-            energyplus, y, z = energy(N_alpha, N_beta, n, Z, g, h)
+            energyplus = energy(N_alpha, N_beta, n, Z, g, h)
             Z[i,j] -= 0.002
-            energyminus, y, z = energy(N_alpha, N_beta, n, Z, g, h)
-            M[i,j] = (energyplus - energyminus) / 0.002 - grad[i,j]
-            Z[i,j] += 0.001
-            
-    return np.array(M)
-
-def verificagradone(int n, int N_alpha, int N_beta, double[:] g, double [:,:] h,
-                 double [:,:] grad, double[:,:] Z, double[:,:] C):
-    cdef int i, j
-    cdef int N = N_alpha + N_beta
-    cdef double energyplus, energyminus
-    cdef double[:,:] M = np.zeros((2*n,N))
-    
-    for i in range(2*n):
-        for j in range(N):
-            Z[i,j] += 0.001
-            x, energyplus, z = energy(N_alpha, N_beta, n, Z, g, h)
-            Z[i,j] -= 0.002
-            x, energyminus, z = energy(N_alpha, N_beta, n, Z, g, h)
+            energyminus = energy(N_alpha, N_beta, n, Z, g, h)
             M[i,j] = (energyplus - energyminus) / 0.002 - grad[i,j]
             Z[i,j] += 0.001
             

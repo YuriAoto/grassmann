@@ -208,8 +208,8 @@ class MolecularOrbitals():
     
     There are n_irrep (restricted=True) or 2*n_irrep (restricted=False)
     such np.ndarray, each of shape (basis lenght, n orb of irrep).
-    For unrestricted orbitals, all alpha orbitals for all irreps come first,
-    followed by the beta orbitals:
+    For unrestricted orbitals, all alpha orbitals for all irreps come
+    first, followed by the beta orbitals:
     
     Restricted:
     [np.ndarray for irrep 1, ..., np.ndarray for irrep (n_irrep-1)]
@@ -245,10 +245,12 @@ class MolecularOrbitals():
         Store the orbital energies
     
     _integrals (Integrals)
-        Contains the information about the orbitals space, size and atomic integrals.
+        Contains the information about the orbitals space, size and atomic
+        integrals.
  
     molecular_integrals (Integrals)
-        Contains the one- and two-electron integrals in the molecular orbital basis set.
+        Contains the one- and two-electron integrals in the molecular orbital
+        basis set.
 
     Data model:
     -----------
@@ -266,7 +268,8 @@ class MolecularOrbitals():
         if source is None:
             self.name = ''
 #            self._basis_len = 0
-            self._integrals = Integrals(None, None, method=None, orth_method=None)
+            self._integrals = Integrals(None, None, method=None,
+                                        orth_method=None)
             self.n_irrep = None
             self.restricted = True
             self._coefficients = None
@@ -311,16 +314,16 @@ class MolecularOrbitals():
 #        return self._integrals.basis_set 
 
     @classmethod
-    def from_eig_h(cls, intgrls, basis_name='', restricted=True):
-        h_orth = intgrls.X.T @ intgrls.h @ intgrls.X
+    def from_eig_h(cls, integrals, basis_name='', restricted=True):
+        h_orth = integrals.X.T @ integrals.h @ integrals.X
         logger.debug('h_orth:\n%r', h_orth)
         e, C = eigh(h_orth)
         if restricted:
-            return cls.from_array(intgrls.X @ C, 1,
-                                  integrals=intgrls)
+            return cls.from_array(integrals.X @ C, 1,
+                                  integrals=integrals)
         else:
-            return cls.from_array((intgrls.X @ C, intgrls.X @ C), 1,
-                                  integrals=intgrls, restricted=False)
+            return cls.from_array((integrals.X @ C, integrals.X @ C), 1,
+                                  integrals=integrals, restricted=False)
         
     @classmethod
     def from_array(cls, C, n_irrep,
@@ -345,11 +348,12 @@ class MolecularOrbitals():
         new_orbitals.n_irrep = n_irrep
         if isinstance(integrals, Integrals):
             new_orbitals._integrals = integrals
-        elif integrals == None:
+        elif integrals is None:
             pass
         else:
             raise ValueError(
-                'The basis set informations of the molecular orbital must be given as an Integrals object.')
+                'The basis set informations of the molecular orbital must be \
+                given as an Integrals object.')
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
@@ -367,6 +371,14 @@ class MolecularOrbitals():
 #        else:
 #            new_orbitals._basis_len = new_orbitals._coefficients[0].shape[0]
         return new_orbitals
+
+    @classmethod
+    def unrestrict(cls, other):
+        return cls.from_array((other._coefficients[0],
+                               other._coefficients[0]),
+                              1,
+                              integrals=other._integrals,
+                              restricted=False)
     
     @classmethod
     def from_file(cls, file_name):

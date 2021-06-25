@@ -29,6 +29,12 @@ def main(args, f_out):
 						    f_out=f_out,
 						    n_DIIS=0)
     else:
+        HF = optimiser.Restricted_Closed_Shell_SCF(molecular_system.integrals,
+                                                   molecular_system.nucl_rep,
+						   molecular_system.n_elec,
+						   f_out=f_out,
+                                                   n_DIIS=0)
+        orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
         HF = optimiser.Unrestricted_SCF(molecular_system.integrals,
 					molecular_system.nucl_rep,
 					molecular_system.n_elec,

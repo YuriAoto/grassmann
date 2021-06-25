@@ -45,7 +45,7 @@ class HartreeFockStep():
         elif step_type == 'densMat-SCF':
             pass
         elif step_type == 'Absil':
-            self.grad = np.zeros((2*len(self.orb),
+            self.grad = np.zeros((2 * len(self.orb),
                                   self.n_occ))
             self.integrals.g.transform_to_ijkl()
         elif step_type == 'orb_rot-Newton':
@@ -136,43 +136,54 @@ class HartreeFockStep():
         raise NotImplementedError("Density matrix based SCF")
 
     def newton_absil(self, i_SCF):
+        """Hartree-Fock using Newton Method as it's in Absil.
+        
+        """
         N_alpha, N_beta = self.n_occ_alpha, self.n_occ_beta
         N = N_alpha + N_beta
         n = len(self.orb)
-        D = np.zeros((2*n*N, 2*n*N)) # a matriz da derivada direcional em si
-        X = self.orb[0][:,:self.n_occ_alpha] # ponto inicial
+        D = np.zeros((2*n*N, 2*n*N))
+        X = self.orb[0][:,:self.n_occ_alpha]
         Y = self.orb[1][:,:self.n_occ_beta]
-        col, tmp = 0, 0
         Z = np.zeros((2*n, N))
-        Z[:n,:N_alpha] = X
-        Z[n:,N_alpha:] = Y
+        Z[:n,:N_alpha], Z[n:,N_alpha:] = X, Y
         overlap = np.zeros((2*n, 2*n))
-        overlap[:n,:n] = self.integrals.S
-        overlap[n:,n:] = self.integrals.S
-
-        self.grad = absil.grad(N_alpha, N_beta, n, X, Y,
-                                             self.integrals.g._integrals,
-                                             self.integrals.h)
-        R = ((np.identity(2*n) - Z @ np.transpose(Z) @ overlap)
-                     @ self.grad)
-        R = np.reshape(R, (2*n*N, 1), 'F')
-        D = absil.directionalderivative(n, N_alpha, N_beta,
-                                        self.integrals.g._integrals,
-                                        self.integrals.h,
-                                        Z, overlap, self.grad)
-        eta = np.linalg.solve(D, R)
-        eta = np.reshape(eta, (2*n, N), 'F')
-        u, s, v = np.linalg.svd(eta, full_matrices=False)
-        s = np.diag(s)
-        Z = Z @ np.transpose(v) @ np.cos(s) + u @ np.sin(s)
-        X = Z[:n,:N_alpha]
-        Y = Z[n:,N_alpha:]
-        self.orb[0][:,:self.n_occ_alpha] = X # ponto inicial
-        self.orb[1][:,:self.n_occ_beta] = Y
-        self.gradNorm = np.linalg.norm(self.grad)
+        overlap[:n,:n], overlap[n:,n:] = self.integrals.S, self.integrals.S
+        Sqrt = np.zeros((2*n, 2*n))
+        Sqrt[:n,:n], Sqrt[n:,n:] = self.integrals.X, self.integrals.X
+        
         self.energy = absil.energy(N_alpha, N_beta, n, Z,
                                    self.integrals.g._integrals,
                                    self.integrals.h)
+        self.grad = absil.grad(N_alpha, N_beta, n, X, Y,
+                               self.integrals.g._integrals,
+                               self.integrals.h)
+        self.grad *= np.trace(Z.T @ overlap @ Z)
+        self.grad -= self.energy * (overlap @ Z + overlap.T @ Z)
+        self.grad /= np.trace(Z.T @ overlap @ Z) ** 2
+        teste = absil.verificagrad(n, N_alpha, N_beta,
+                                   self.integrals.g._integrals,
+                                   self.integrals.h,
+                                   self.grad,
+                                   Z,
+                                   overlap)
+        print(linalg.norm(teste))
+        print(teste)
+        R = -(np.identity(2*n) - (Z @ Z.T @ overlap)) @ self.grad
+        self.gradNorm = linalg.norm(R)
+        # R = np.reshape(R, (2*n*N, 1), 'F')
+        # D = absil.directionalderivative(n, N_alpha, N_beta,
+        #                                 self.integrals.g._integrals,
+        #                                 self.integrals.h,
+        #                                 Z, overlap, self.grad)
+        # eta = np.linalg.solve(D, R)
+        # eta = np.reshape(eta, (2*n, N), 'F')
+        u, s, v = linalg.svd(R, full_matrices=False)
+        s = np.diag(s)
+        Z = Z @ v.T @ np.cos(0.5 * s) @ v + u @ np.sin(0.5 * s) @ v
+        self.orb[0][:,:self.n_occ_alpha] = Z[:n,:N_alpha] # ponto inicial
+        self.orb[1][:,:self.n_occ_beta] = Z[n:,N_alpha:]
+        
     
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
