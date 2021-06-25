@@ -155,21 +155,23 @@ class HartreeFockStep():
         self.energy = absil.energy(N_alpha, N_beta, n, Z,
                                    self.integrals.g._integrals,
                                    self.integrals.h)
-        self.grad = absil.grad(N_alpha, N_beta, n, X, Y,
-                               self.integrals.g._integrals,
-                               self.integrals.h)
-        self.grad *= np.trace(Z.T @ overlap @ Z)
-        self.grad -= self.energy * (overlap @ Z + overlap.T @ Z)
-        self.grad /= np.trace(Z.T @ overlap @ Z) ** 2
+        self.grad = absil.gradone(N_alpha, N_beta, n, X, Y,
+                                  self.integrals.h)
+        # self.grad *= np.trace(Z.T @ overlap @ Z) # provavelmente desnecessário
+        # self.grad -= self.energy * (overlap @ Z + overlap.T @ Z)
+        # self.grad /= np.trace(Z.T @ overlap @ Z) ** 2
         teste = absil.verificagrad(n, N_alpha, N_beta,
                                    self.integrals.g._integrals,
                                    self.integrals.h,
                                    self.grad,
                                    Z,
                                    overlap)
-        print(linalg.norm(teste))
         print(teste)
-        R = -(np.identity(2*n) - (Z @ Z.T @ overlap)) @ self.grad
+        # print(self.grad)
+        # print(Z)
+        R = - (np.identity(2*n) - (Z @ Z.T @ overlap)) @ self.grad
+        # print(R)
+        print(R.T @ overlap @ Z)
         self.gradNorm = linalg.norm(R)
         # R = np.reshape(R, (2*n*N, 1), 'F')
         # D = absil.directionalderivative(n, N_alpha, N_beta,
@@ -180,7 +182,7 @@ class HartreeFockStep():
         # eta = np.reshape(eta, (2*n, N), 'F')
         u, s, v = linalg.svd(R, full_matrices=False)
         s = np.diag(s)
-        Z = Z @ v.T @ np.cos(0.5 * s) @ v + u @ np.sin(0.5 * s) @ v
+        Z = Z @ v.T @ np.cos(0.5 * s) + u @ np.sin(0.5 * s)
         self.orb[0][:,:self.n_occ_alpha] = Z[:n,:N_alpha] # ponto inicial
         self.orb[1][:,:self.n_occ_beta] = Z[n:,N_alpha:]
         

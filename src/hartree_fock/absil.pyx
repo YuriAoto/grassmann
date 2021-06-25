@@ -45,7 +45,8 @@ def energy(int N_alpha, int N_beta, int n, double[:,:] Z, double[:] g, double[:,
                                           * (g[getindex(p,r,q,s)]
                                              - g[getindex(p,s,q,r)]))
 
-    energy = one_elec + two_elec
+    # energy = one_elec + two_elec
+    energy = one_elec
     return energy
 
 def gradone(int N_alpha, int N_beta, int n, double[:,:] X, double[:,:] Y, double[:,:] h):
@@ -424,10 +425,8 @@ def verificagrad(int n, int N_alpha, int N_beta, double[:] g, double [:,:] h,
         for j in range(N):
             Z[i,j] += 0.0001
             energyplus = energy(N_alpha, N_beta, n, Z, g, h)
-            energyplus /= np.trace(np.transpose(Z) @ overlap @ Z)
             Z[i,j] -= 0.0002
             energyminus = energy(N_alpha, N_beta, n, Z, g, h)
-            energyminus /= np.trace(np.transpose(Z) @ overlap @ Z)
             M[i,j] = (energyplus - energyminus) / 0.0002 - grad[i,j]
             Z[i,j] += 0.0001
             
