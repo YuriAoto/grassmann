@@ -24,7 +24,7 @@ from util.memory import mem_of_floats
 from wave_functions.general import WaveFunction
 from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
-from coupled_cluster.cluster_decomposition import cluster_decompose
+from coupled_cluster.cluster_decomposition import cluster_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 from orbitals.symmetry import OrbitalsSets
@@ -52,7 +52,7 @@ def contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
         The level of the decomposition: 'D' or 'SD'
     
     """
-    decomposition = cluster_decompose(alpha_hp, beta_hp, mode=level)
+    decomposition = cluster_dec.decompose(alpha_hp, beta_hp, mode=level)
     C = 0.0
     for d in decomposition:
         new_contribution = d[0]

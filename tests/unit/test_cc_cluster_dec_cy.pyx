@@ -9,8 +9,46 @@ import numpy as np
 import tests
 from util.other import int_array
 from wave_functions.slater_det import SlaterDet
-from coupled_cluster.cluster_decomposition_old import cluster_decompose, str_dec
+from coupled_cluster.cluster_decomposition import ClusterDecomposition, str_dec
+from coupled_cluster.cluster_decomposition cimport ClusterDecomposition
 from wave_functions.slater_det import get_slater_det_from_excitation
+
+
+@tests.category('SHORT', 'ESSENTIAL')
+class InnerClusterDecTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+
+    def test_1(self):
+        cdef ClusterDecomposition cluster_dec
+        cluster_dec = ClusterDecomposition()
+        recipe = cluster_dec.select_recipe(2)
+        self.assertEqual(np.array(recipe),
+                         int_array([[-1, 1, 2, 0, 1, 2, 3, 0],
+                                    [-1, 2, 1, 0, 2, 1, 1, 3],
+                                    [+1, 2, 1, 0, 3, 1, 1, 2]]))
+
+    def test_2(self):
+        cdef ClusterDecomposition cluster_dec
+        cluster_dec = ClusterDecomposition()
+        recipe = cluster_dec.select_recipe(3)
+        self.assertEqual(np.array(recipe),
+                         int_array([[-1, 3, 1, 0, 3, 1, 1, 4, 1, 2, 5],
+                                    [+1, 3, 1, 0, 3, 1, 1, 5, 1, 2, 4],
+                                    [+1, 3, 1, 0, 4, 1, 1, 3, 1, 2, 5],
+                                    [-1, 3, 1, 0, 4, 1, 1, 5, 1, 2, 3],
+                                    [-1, 3, 1, 0, 5, 1, 1, 3, 1, 2, 4],
+                                    [+1, 3, 1, 0, 5, 1, 1, 4, 1, 2, 3],
+                                    [-1, 2, 1, 0, 3, 2, 1, 2, 4, 5, 0],
+                                    [+1, 2, 1, 0, 4, 2, 1, 2, 3, 5, 0],
+                                    [-1, 2, 1, 0, 5, 2, 1, 2, 3, 4, 0],
+                                    [+1, 2, 1, 1, 3, 2, 0, 2, 4, 5, 0],
+                                    [-1, 2, 1, 1, 4, 2, 0, 2, 3, 5, 0],
+                                    [+1, 2, 1, 1, 5, 2, 0, 2, 3, 4, 0],
+                                    [-1, 2, 1, 2, 3, 2, 0, 1, 4, 5, 0],
+                                    [+1, 2, 1, 2, 4, 2, 0, 1, 3, 5, 0],
+                                    [-1, 2, 1, 2, 5, 2, 0, 1, 3, 4, 0]]))
 
 
 @tests.category('SHORT', 'ESSENTIAL')
@@ -22,7 +60,8 @@ class ClusterDecTestCase(unittest.TestCase):
             c=0.0,
             alpha_occ=int_array(0,1,2,3,4,5,6),
             beta_occ=int_array(0,1,2,3,4,5,6))
-    
+        self.cluster_dec = ClusterDecomposition()
+
     def test_1(self):
         """-c_{0 1}^{7 8}   (all in alpha)
         
@@ -31,7 +70,7 @@ class ClusterDecTestCase(unittest.TestCase):
         + t_0^8 t_1^7
         """
         tests.logger.info('ref det: %s', self.ref_det)
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0, 1), int_array(7, 8)),
             (int_array(), int_array()),
             mode='SD')
@@ -65,7 +104,7 @@ class ClusterDecTestCase(unittest.TestCase):
         - t_3^9 t_5^12
         + t_3^12 t_5^9
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(3, 5), int_array(9, 12)),
             (int_array(), int_array()),
             mode='SD')
@@ -98,7 +137,7 @@ class ClusterDecTestCase(unittest.TestCase):
         + t_{0 2}^{7 8} t_{1 3}^{9 10}
         
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0, 1, 2, 3), int_array(7, 8, 9, 10)),
             (int_array(), int_array()))
         dec = []
@@ -132,7 +171,7 @@ class ClusterDecTestCase(unittest.TestCase):
         - t_0^7 t_{2 3}^{8 9}
         + t_0^9 t_{0 2}^{7 8}
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0, 1, 2), int_array(7, 8, 9)),
             (int_array(), int_array()),
             mode='SD')
@@ -176,7 +215,7 @@ class ClusterDecTestCase(unittest.TestCase):
         - t_{0a 0b}^{7a 7b}
         - t_0a^7a t_0b^7b
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0), int_array(7)),
             (int_array(0), int_array(7)),
             mode='SD')
@@ -202,7 +241,7 @@ class ClusterDecTestCase(unittest.TestCase):
         - t_{0a 3b}^{9a 7b}
         - t_0a^9a t_3b^7b
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0), int_array(9)),
             (int_array(3), int_array(7)),
             mode='SD')
@@ -222,7 +261,6 @@ class ClusterDecTestCase(unittest.TestCase):
         self.assertEqual(dec[1][2].alpha_occ, int_array(0,1,2,3,4,5,6))
         self.assertEqual(dec[1][2].beta_occ, int_array(0,1,2,4,5,6,7))
 
-
     def test_7(self):
         """-c_{3 5}^{9 12}    (all in beta)
         
@@ -230,7 +268,7 @@ class ClusterDecTestCase(unittest.TestCase):
         - t_3^9 t_5^12
         + t_3^12 t_5^9
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(), int_array()),
             (int_array(3, 5), int_array(9, 12)),
             mode='SD')
@@ -269,7 +307,7 @@ class ClusterDecTestCase(unittest.TestCase):
         + t_{0a 3b}^{8a 10b} t_{1a 2b}^{7a 9b}
         
         """
-        dec_exc = cluster_decompose(
+        dec_exc = self.cluster_dec.decompose(
             (int_array(0, 1), int_array(7, 8)),
             (int_array(2, 3), int_array(9, 10)))
         dec = []

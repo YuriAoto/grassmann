@@ -21,7 +21,8 @@ all_cython_files = ["src/integrals/integrals_cy",
                     "src/wave_functions/singles_doubles",
                     "src/wave_functions/strings_rev_lexical_order",
                     "src/orbitals/occ_orbitals",
-                    "src/util/array_indices"]
+                    "src/util/array_indices",
+                    "src/coupled_cluster/cluster_decomposition"]
 
 ###                    "tests/speed/cc_manifold_term1",
     

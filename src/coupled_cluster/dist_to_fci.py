@@ -114,7 +114,7 @@ def vertical_dist_to_cc_manifold(wf,
     This function is intended to compare the wave function to the
     CCD or CCSD manifold by a "vertical "projection". It writes several
     information to the logfile (at info level). These are:
-
+    
     For every triple, quadruple, ..., and octuple excitation,
     compares the coefficient of the excitation to the sum of product of
     the coefficients given by the cluster decomposition of that excitation.
@@ -166,6 +166,7 @@ def vertical_dist_to_cc_manifold(wf,
                         'same sign = %s'])
     if level not in ['D', 'SD']:
         raise ValueError('Possible values for level are "S" and "SD"')
+    level_is_sd = level == 'SD'
     wf.normalise(mode='intermediate')
     wf.set_max_coincidence_orbitals()
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
@@ -176,31 +177,31 @@ def vertical_dist_to_cc_manifold(wf,
         if not wf.symmetry_allowed_det(det):
             continue
         rank, alpha_hp, beta_hp = wf.get_exc_info(det)
-        if rank == 1 and level == 'SD':
+        if rank == 1 and level_is_sd:
             if cc_wf[rank, alpha_hp, beta_hp] != det.c:
                 raise Exception('Not consistent!!')
-        if (abs(det.c) > coeff_thr
-            and rank > 2
-                and (level == 'SD' or rank % 2 == 0)):
+        if rank > 2 and (level_is_sd or rank % 2 == 0):
             C = contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
             norm_contribution = (det.c - C)**2
             norm_ci += det.c**2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution
-            rank = _str_excitation(rank)
-            if rank not in right_dir:
-                right_dir[rank] = [0, 1]
-            else:
-                right_dir[rank][1] += 1
-            if cc_towards_wf:
-                right_dir[rank][0] += 1
+            if abs(det.c) > coeff_thr:
+                rank = _str_excitation(rank)
+                if rank not in right_dir:
+                    right_dir[rank] = [0, 1]
+                else:
+                    right_dir[rank][1] += 1
+                if cc_towards_wf:
+                    right_dir[rank][0] += 1
             logger.info(logfmt,
                         det,
                         C,
-                        C/det.c,
+                        C/det.c if (abs(det.c) > coeff_thr) else f'{C}/{det.c}',
                         norm_contribution,
                         cc_towards_wf)
-        elif rank > 2 or (rank, level) == (1, 'D'):
+        elif (not level_is_sd) and rank % 2 == 1:
+            #  rank > 2 or (rank, level) == (1, 'D'):
             norm += det.c**2
             norm_ci += det.c**2
             logger.info('Adding .c² to the norm: det = %s', det)

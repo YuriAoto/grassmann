@@ -6,3 +6,4 @@ pyximport.install(setup_args = {"script_args" : ["--force"]},
 # so tests can be discovered by unittest
 from tests.unit.test_cc_manifold_cy import *
 from tests.unit.test_cc_exc_on_str import *
+from tests.unit.test_cc_cluster_dec_cy import *

@@ -24,7 +24,7 @@ from wave_functions.general import WaveFunction
 from wave_functions.slater_det import get_slater_det_from_excitation
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.occ_orbitals import OccOrbital
-from coupled_cluster.cluster_decomposition import cluster_decompose
+from coupled_cluster.cluster_decomposition import cluster_dec
 from coupled_cluster.manifold import update_indep_amplitudes
 
 
@@ -103,7 +103,7 @@ def singles_contr_from_clusters_fci(alpha_hp, beta_hp, fci_wf):
     from a fci wave function, whereas there it comes from a IntermNormWaveFunction
     If the access is unified, this can be joined.
     """
-    decomposition = cluster_decompose(alpha_hp, beta_hp, mode='SD')
+    decomposition = cluster_dec.decompose(alpha_hp, beta_hp, mode='SD')
     C = 0.0
     for d in decomposition[1:]:  # skipping first contribution: it is the double.
         new_contribution = d[0]
