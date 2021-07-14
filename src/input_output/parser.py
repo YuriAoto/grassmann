@@ -33,12 +33,7 @@ import textwrap
 import logging
 from glob import glob
 
-_loglevels = {'critical': logging.CRITICAL,
-              'error': logging.ERROR,
-              'warning': logging.WARNING,
-              'info': logging.INFO,
-              'debug': logging.DEBUG,
-              'notset': logging.NOTSET}
+from input_output.log import loglevel_from_str
 
 
 class ParseError(Exception):
@@ -253,14 +248,7 @@ def _check(args):
         args.logfilter = re.compile(args.logfilter)
     args.state = args.state if args.state is not None else ''
     if args.loglevel is not None:
-        try:
-            args.loglevel = int(args.loglevel)
-        except ValueError:
-            try:
-                args.loglevel = _loglevels[args.loglevel.lower()]
-            except KeyError:
-                raise ParseError('This is not a valid log level: '
-                                 + args.loglevel)
+        args.loglevel = loglevel_from_str(args.loglevel)
     else:
         args.loglevel = logging.WARNING
     args.molpro_output = _glob_file(args.molpro_output)
