@@ -17,6 +17,8 @@ _loglevels = {'critical': logging.CRITICAL,
 
 def loglevel_from_str(x):
     """Transform a string to a loglevel"""
+    if x is None:
+        return logging.WARNING
     try:
         return int(x)
     except ValueError:

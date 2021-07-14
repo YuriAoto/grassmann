@@ -9,9 +9,12 @@ import os
 import sys
 import logging
 import traceback
+from datetime import datetime as dt
 
-from input_output.log import LogFilter
-from util.memory import MemoryExceededError
+import git
+
+from input_output.log import LogFilter, logtime
+from util import memory
 from input_output import parser
 from main import main_grassmann
 from input_output.molpro import MolproInputError
@@ -56,15 +59,39 @@ for handler in logging.root.handlers:
 
 with_error = False
 with open(args.output, 'w') as f_out:
+    def toout(x='', add_new_line=True):
+        f_out.write(x + ('\n' if add_new_line else ''))
+
     try:
-        main_grassmann(args, f_out)
+        grassmann_dir = os.path.dirname(os.path.abspath(__file__))
+        if 'src' in grassmann_dir[-4:]:
+            grassmann_dir = os.path.normpath(os.path.join(grassmann_dir, '..'))
+        git_repo = git.Repo(grassmann_dir)
+        git_sha = git_repo.head.object.hexsha
+        memory.set_total_memory(args.memory[0], unit=args.memory[1])
+        toout('Grassmann')
+        toout('Exploring the geometry of the electronic wave functions space')
+        toout('Yuri Aoto - 2018, 2019, 2020')
+        toout()
+        toout('Current git commit: ' + git_sha)
+        toout()
+        toout('Directory:\n' + args.wdir)
+        toout()
+        toout('Command:\n' + ' '.join(args.sys_argv))
+        if args.files_content:
+            toout()
+            toout(''.join(args.files_content))
+        toout()
+        with logtime('Main program') as T:
+            toout(f'Starting at {dt.fromtimestamp(T.ini_time):%d %b %Y - %H:%M}\n')
+            main_grassmann(args, f_out)
     except MolproInputError as e:
         with_error = True
         error_msg = ('Error in Molpro file ' + str(e.file_name)
                      + ', line number ' + str(e.line_number) + ':\n'
                      + str(e.line) + '\n' + e.msg)
         stdout_error_msg = error_msg
-    except MemoryExceededError as e:
+    except memory.MemoryExceededError as e:
         with_error = True
         error_msg = ('The memory limit of {0} {1} has been exceeded:'
                      + '\nAt "{2}" we needed {3} {1},'
@@ -83,6 +110,10 @@ with open(args.output, 'w') as f_out:
     finally:
         if with_error and f_out is not None:
             f_out.write('\n' + error_msg)
+        f_out.write('\nMemory usage:\n')
+        f_out.write(memory.show_status() + '\n')
+        f_out.write(f'Ending at {dt.fromtimestamp(T.end_time):%d %b %Y - %H:%M}\n')
+        f_out.write(f'Total time: {T.elapsed_time}\n')
         if with_error:
             sys.exit(stdout_error_msg)
-exit()
+sys.exit()
