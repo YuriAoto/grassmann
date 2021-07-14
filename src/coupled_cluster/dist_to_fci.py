@@ -534,7 +534,15 @@ class AllDistResults(Results):
     def __str__(self):
         x = []
         x.append(f'D(FCI, minD_CC) = {self.fci__min_d:.5f}')
+        try:
+            x.append(f'D(FCI, minD_CC) = {self.fci__min_d_expl:.5f} (explicit calculation)')
+        except AttributeError:
+            pass
         x.append(f'D(FCI, vert_CC) = {self.fci__vert:.5f}')
+        try:
+            x.append(f'D(FCI, vert_CC) = {self.fci__vert_expl:.5f} (explicit calculation)')
+        except AttributeError:
+            pass
         x.append(f'D(FCI, vert_CI) = {self.fci__vert_ci:.5f}')
         if self.has_cc:
             x.append(f'D(FCI, CC)      = {self.fci__cc:.5f}')
@@ -563,7 +571,8 @@ class AllDistResults(Results):
                 + '\n'.join(x))
 
 
-def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level):
+def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
+                       explicit_calcs=False):
     """Calculate all distances among main points in the CC and CI manifolds
     
     
@@ -589,6 +598,11 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level):
     level (str, 'D' or 'SD')
         The level of excitations used in the CC wave functions
     
+    explicit_calcs (bool, optional, default=False)
+        Explicitly calculate the distances between fci and the wave functions
+        in res_min_d and res_vert. This should be the same as stored
+        in these variables.
+    
     Results:
     --------
     An instance of AllDistResults
@@ -596,7 +610,11 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level):
     """
     res = AllDistResults(f'Distances among CC{level}/CI{level} wave functions')
     res.fci__min_d = res_min_d.distance
+    if explicit_calcs:
+        res.fci__min_d_expl = res_min_d.wave_function_as_fci.dist_to(fci_wf)
     res.fci__vert = res_vert.distance
+    if explicit_calcs:
+        res.fci__vert_expl = res_vert.wave_function_as_fci.dist_to(fci_wf)
     res.fci__vert_ci = res_vert.distance_ci
     res.min_d__vert_ampl = res_min_d.wave_function.dist_to(res_vert.wave_function)
     res.min_d__vert = res_min_d.wave_function_as_fci.dist_to(

@@ -1362,8 +1362,14 @@ class FCIWaveFunction(WaveFunction):
         Side Effect:
         ------------
         If normalise is True, the wave function is changed!
+        The wave function self might change its convention for orbital
+        ordering to be the same as other
         
         """
+        if other.ordered_orbs and not self.ordered_orbs:
+            self.set_ordered_orbitals()
+        elif not other.ordered_orbs and self.ordered_orbs:
+            self.set_max_coincidence_orbitals()
         if normalise:
             if metric == 'IN':
                 self.normalise(mode='intermediate')
