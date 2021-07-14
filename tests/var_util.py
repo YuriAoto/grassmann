@@ -4,7 +4,7 @@ import logging
 import unittest
 
 from util import memory
-
+from input_output.log import loglevel_from_str
 
 init_random_state = 1234
 
@@ -13,7 +13,7 @@ log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
 logging.basicConfig(filename='testing.log',
                     format=log_format,
                     filemode='w',
-                    level=logging.WARNING)
+                    level=loglevel_from_str(os.getenv('GR_LOGLEVEL')))
 logger = logging.getLogger(__name__)
 
 
