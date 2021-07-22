@@ -169,11 +169,13 @@ def _assert_molpro_output(file,
             raise ParseError('File ' + file + ' is not a Molpro output!')
 
 
-def _glob_file(fname):
+def _glob_file(fname, empty_is_none=False):
     """Glob the file name and return. Raise ParseError if does not lead a unique file"""
     if fname is None:
         return None
     x = glob(fname)
+    if empty_is_none and len(x) == 0:
+        return None
     if len(x) != 1:
         raise ParseError(f'{fname} does not represent a single file!')
     return x[0]
@@ -252,8 +254,8 @@ def _check(args):
     else:
         args.loglevel = logging.WARNING
     args.molpro_output = _glob_file(args.molpro_output)
-    args.cc_wf = _glob_file(args.cc_wf)
-    args.ci_wf = _glob_file(args.ci_wf)
+    args.cc_wf = _glob_file(args.cc_wf, empty_is_none=True)
+    args.ci_wf = _glob_file(args.ci_wf, empty_is_none=True)
 
 
 def _argvise_file(filename, files_content, indentation):

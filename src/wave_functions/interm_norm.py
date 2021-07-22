@@ -1562,6 +1562,8 @@ class IntermNormWaveFunction(WaveFunction):
         sgl_found = False
         dbl_found = False
         MP2_step_passed = True
+        if molpro_output is None:
+            raise ValueError('Parameter molpro_output cannot be None')
         if isinstance(molpro_output, str):
             f = open(molpro_output, 'r')
             f_name = molpro_output

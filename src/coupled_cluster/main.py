@@ -53,18 +53,24 @@ def main(args, f_out):
     
     if args.method in ('CCD_full_analysis', 'CCSD_full_analysis'):
         with logtime('Calculating all distances for CC/CI manifolds'):
+            try:
+                ccwf = IntermNormWaveFunction.unrestrict(
+                    IntermNormWaveFunction.from_Molpro(args.cc_wf))
+            except (OSError, ValueError) as exc:
+                logger.warning(f'Error when reading cc wave function: {exc}')
+                ccwf = None
+            try:
+                ciwf = IntermNormWaveFunction.unrestrict(
+                    IntermNormWaveFunction.from_Molpro(args.ci_wf))
+            except (OSError, ValueError) as exc:
+                logger.warning(f'Error when reading ci wave function: {exc}')
+                ciwf = None
             res_all_dists = calc_all_distances(
                 fci_wf,
                 res_vert,
                 res_min_d,
-                cc_wf=(None
-                       if args.cc_wf is None else
-                       IntermNormWaveFunction.unrestrict(
-                           IntermNormWaveFunction.from_Molpro(args.cc_wf))),
-                ci_wf=(None
-                       if args.ci_wf is None else
-                       IntermNormWaveFunction.unrestrict(
-                           IntermNormWaveFunction.from_Molpro(args.ci_wf))),
+                cc_wf=ccwf,
+                ci_wf=ciwf,
                 level=level)
         f_out.write(str(res_all_dists))
     
