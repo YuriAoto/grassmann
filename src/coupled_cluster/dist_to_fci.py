@@ -242,7 +242,7 @@ def calc_dist_to_cc_manifold(wf,
     Side Effects:
     -------------
     The wave function wf is put in the intermediate normalisation and
-    with the convention of orbitals with maximum coincidence for the signs
+    with the convention of ordered orbitals for the signs
     of the determinants
 
     Parameters:
@@ -606,6 +606,10 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
     Results:
     --------
     An instance of AllDistResults
+    
+    TODO:
+    -----
+    calculate distance from vert(CI) to vert(CC)
     
     """
     res = AllDistResults(f'Distances among CC{level}/CI{level} wave functions')

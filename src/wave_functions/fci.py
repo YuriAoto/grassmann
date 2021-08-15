@@ -673,6 +673,10 @@ class FCIWaveFunction(WaveFunction):
         wf (IntermNormWaveFunction)
             wave function in intermediate normalisation
         
+        ordered_orbitals (bool, optional, default=False)
+            If True, the wave function is put in the convention
+            of ordered orbitals
+        
         TODO:
         -----
         If self.restricted, the code can be improved to exploit the
