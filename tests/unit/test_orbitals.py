@@ -2,6 +2,7 @@
 
 """
 import unittest
+import cProfile
 
 from scipy import linalg
 import numpy as np
@@ -9,6 +10,19 @@ import numpy as np
 import tests
 from orbitals import orbitals
 from orbitals.symmetry import OrbitalsSets
+
+
+class ProfileTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.prng = np.random.RandomState(tests.init_random_state)
+
+    def test_constr_1(self):
+        orb_dim = OrbitalsSets([2], occ_type='R')
+        U = [np.zeros((2, 1))]
+        U[0][0, 0] = 1.0
+        cProfile.runctx('orbitals.complete_orb_space(U, orb_dim)', globals(), locals())
 
 
 @tests.category('SHORT', 'ESSENTIAL')

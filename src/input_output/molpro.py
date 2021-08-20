@@ -5,7 +5,7 @@
 import re
 
 from wave_functions import norm_ci, int_norm, cisd
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 from molecular_geometry.symmetry import number_of_irreducible_repr
 
 CISD_header = (
@@ -106,8 +106,9 @@ def get_orb_info(line, line_number, n_irrep, occ_type):
             re_orb = re_orb[:n_irrep]
         if occ_type == 'F':
             re_orb += re_orb
-        return OrbitalsSets(re_orb, occ_type=occ_type)
-    except Exception:
+        return OrbitalSpace(dim=re_orb, orb_type=occ_type)
+    except Exception as exc:
+        print(exc)
         raise MolproInputError('Problems reading orbital information.',
                                line=line, line_number=line_number)
 

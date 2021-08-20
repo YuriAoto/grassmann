@@ -2,6 +2,12 @@
 
 
 """
+import copy
+
+import numpy as np
+
+from orbitals.orbital_space cimport FullOrbitalSpace
+
 cdef class OccOrbital:
     """Class to run over occupied orbitals
 
@@ -52,14 +58,13 @@ cdef class OccOrbital:
 
     """
     def __cinit__(self,
-                  int[:] corr_orb,
-                  int[:] orbs_before,
+                  FullOrbitalSpace orbspace,
                   bint is_alpha):
         cdef int irrep, spirrep
-        self._n_irrep = orbs_before.shape[0] - 1
+        self._n_irrep = orbspace.n_irrep
         self.is_alpha = is_alpha
-        self._corr_orb = corr_orb
-        self._orbs_before = orbs_before
+        self._corr_orb = orbspace.corr.as_array()
+        self._orbs_before = orbspace.orbs_before
         self._n_occ = 0
         self.spirrep = 0 if is_alpha else self._n_irrep
         spirrep = self.spirrep

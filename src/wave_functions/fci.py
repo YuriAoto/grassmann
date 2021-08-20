@@ -29,7 +29,7 @@ from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
 from coupled_cluster.cluster_decomposition import cluster_decompose, str_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 
 logger = logging.getLogger(__name__)
 
@@ -578,7 +578,7 @@ class FCIWaveFunction(WaveFunction):
                     # might not have the same ref_orb (per spirrep) as
                     # the True reference determinant... I think that this
                     # is not a real problem
-                    self.ref_orb = OrbitalsSets(
+                    self.ref_orb = OrbitalSpace(
                         list(map(len, get_SD_old(
                             line, self.orb_dim, self.froz_orb,
                             self.n_irrep, self.Ms).occupation)))
@@ -632,7 +632,7 @@ class FCIWaveFunction(WaveFunction):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
-        self.ref_orb = OrbitalsSets(
+        self.ref_orb = OrbitalSpace(
             list(map(len, get_SD_old(
                 line_ref, self.orb_dim, self.froz_orb,
                 self.n_irrep, self.Ms).occupation)))
@@ -647,7 +647,7 @@ class FCIWaveFunction(WaveFunction):
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
+        self.act_orb = OrbitalSpace(np.zeros(self.n_irrep),
                                     occ_type='A')
         if active_el_in_out + len(self.froz_orb) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'

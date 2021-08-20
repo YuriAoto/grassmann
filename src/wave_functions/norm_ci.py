@@ -23,7 +23,7 @@ from util.variables import int_dtype
 from util import memory
 from input_output import molpro
 from wave_functions.general import WaveFunction
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 from orbitals.orbitals import calc_U_from_z
 
 logger = logging.getLogger(__name__)
@@ -82,10 +82,10 @@ def _get_Slater_Det_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
         The line with a configuration, from the FCI program in Molpro
         to be converted to a Slater Determinant.
     
-    orb_dim (OrbitalsSets)
+    orb_dim (OrbitalSpace)
         Dimension of orbital space
     
-    froz_orb (OrbitalsSets)
+    froz_orb (OrbitalSpace)
         Dimension of frozen orbitals space
     
     n_irrep (int)
@@ -561,7 +561,7 @@ class NormCI_WaveFunction(WaveFunction):
         if isinstance(molpro_output, str):
             f.close()
         self.get_i_max_coef(set_i_ref=True)
-        self.ref_orb = OrbitalsSets(
+        self.ref_orb = OrbitalSpace(
             list(map(len, self[self.i_ref].occupation)))
         if not found_orbital_source:
             raise molpro.MolproInputError(
@@ -569,7 +569,7 @@ class NormCI_WaveFunction(WaveFunction):
         if abs(self.Ms) > 0.001:
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
-        self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
+        self.act_orb = OrbitalSpace(np.zeros(self.n_irrep),
                                     occ_type='A')
         if active_el_in_out + len(self.froz_orb) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'

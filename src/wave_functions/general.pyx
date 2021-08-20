@@ -1,4 +1,4 @@
-"""Abstract base class for electronic wave functions
+"""base class for electronic wave functions
 
 All wave functions should inherit from this class.
 
@@ -195,22 +195,35 @@ WaveFunction
 
 """
 import copy
-from abc import ABC, abstractmethod
+#from abc import ABC, abstractmethod
 
 import numpy as np
+from libc.stdlib cimport free
 
 from util.variables import int_dtype
 from util import memory
 from molecular_geometry.symmetry import (number_of_irreducible_repr,
                                          irrep_product)
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space cimport FullOrbitalSpace
+#from orbitals.orbital_space import FullOrbitalSpace
 
 
-class WaveFunction(ABC):
-    """An abstract base class for electronic wave functions
+cdef class WaveFunction:
+    """To be used as base class for electronic wave functions
     
-    Atributes:
-    ----------
+    Atributes (and attributes-like methods):
+    ----------------------------------------
+    
+    In the following you will also read about methods that could
+    have been made as @property, but were not to avoid interaction
+    with python. These are indicated by "()", and thus you must call
+    them as methods.
+    
+    wf_type (str)
+       Type of wave function
+    
+    source (str)
+        The source of this wave function
     
     restricted (bool)
         Restricted (alpha and beta parameters are the same) or
@@ -219,63 +232,33 @@ class WaveFunction(ABC):
     point_group (str)
         The point group
     
-    n_irrep (int, property)
+    n_irrep (int)
         The number of irreducible representations
     
-    irrep (int, property)
+    irrep (int)
         The irreducible representation that this wave function belong
     
-    orb_dim (OrbitalsSets)
-        Dimension of the orbital space of each irrep ("R" type)
+    orbspace (FullOrbitalSpace)
+        The dimensions of the orbital space and its relevant subspaces
     
-    froz_orb (OrbitalsSets)
-        Number of frozen orbitals per irrep ("R" type)
-    
-    act_orb (OrbitalsSets)
-        Number of active orbitals per irrep ("A" type)
-    
-    ref_orb (OrbitalsSets)
-        Number of occupied orbitals per spirrep in reference determinant
-    
-    virt_orb, corr_orb (OrbitalsSets)
-        virt_orb = orb_dim - ref_orb
-        corr_orb = ref_orb - froz_orb
-    
-    orbs_before (np.array of int)
-        The number of orbitals (without frozen orbitals) before each irrep.
-        orbs_before[irrep] = sum(corr_orb[:irrep]) + sum(virt_orb[:irrep])
-    
-    corr_orbs_before (np.array of int)
-        The number of correlated orbitals before each irrep.
-        corr_orbs_before[irrep] = sum(corr_orb[:irrep])
-    
-    n_alpha, n_beta, n_elec, n_corr_alpha, n_corr_beta, n_corr_elec (int)
+    n_alpha, n_beta, n_elec,
+    n_corr_alpha, n_corr_beta, n_corr_elec (int)
         Number of alpha, beta, total, correlated alpha, correlated beta,
         and total correlated electrons, respectively
     
-    n_orb n_orb_nofrozen (int)
-        Number of spatial orbitals (with and without frozen orbitals
+    TODO:
+    Do we have to deallocate orbspace in __dealloc__??
     
-    wf_type (str)
-       Type of wave function
-    
-    source (str)
-        The source of this wave function
     """
     
+    def __cinit__(self):
+        self.orbspace = FullOrbitalSpace()
+        
     def __init__(self):
-        self.restricted = None
         self.point_group = None
-        self._irrep = None
-        self.Ms = None
-        self.orb_dim = None
-        self.froz_orb = None
-        self.ref_orb = None
-        self.act_orb = None
-        self._orbs_before = None
-        self._corr_orbs_before = None
-        self.wf_type = None
         self.source = None
+        self.wf_type = None
+        self._irrep = -1
         self.mem = 0.0
     
     def __repr__(self):
@@ -284,10 +267,7 @@ class WaveFunction(ABC):
         x.append('-' * 50)
         x.append('point group: {}'.format(self.point_group))
         x.append('n irrep: {}'.format(self.n_irrep))
-        x.append('orb dim: {}'.format(self.orb_dim))
-        x.append('n frozen: {}'.format(self.froz_orb))
-        x.append('n act: {}'.format(self.act_orb))
-        x.append('ref occ: {}'.format(self.ref_orb))
+        x.append('Orbital space:\n {}'.format(repr(self.orb)))
         x.append('irrep: {}'.format(self.irrep))
         x.append('Ms: {}'.format(self.Ms))
         x.append('restricted: {}'.format(self.restricted))
@@ -302,7 +282,7 @@ class WaveFunction(ABC):
     def __del__(self):
         memory.free(self.mem)
     
-    def _set_memory(self, destination=None, calc_args=()):
+    def _set_memory(self, object destination=None, object calc_args=()):
         """Set the amount of memory used by this wave function
         
         If the new amount of memory does not exceed available
@@ -330,12 +310,11 @@ class WaveFunction(ABC):
         if destination is None:
             destination = "For wave function {} from {}".format(
                 self.wf_type, self.source)
-        new_mem = self.calc_memory(*calc_args)
+        new_mem = self.calc_memory(calc_args)
         memory.allocate(new_mem, destination)
         self.mem = new_mem
     
-    @abstractmethod
-    def calc_memory(self):
+    def calc_memory(self, calc_args):
         """Calculate and return the memory used (or to be used)
         
         This method shall not store the needed or used memory,
@@ -347,10 +326,9 @@ class WaveFunction(ABC):
         Optionally, add extra arguments to this method, that should
         be given to _set_memory through calc_args
         """
-        pass
+        raise NotImplementedError('Implement it for the subclass!')
     
     @classmethod
-    @abstractmethod
     def similar_to(cls, wf, restricted=None):
         """Constructs a WaveFunction with same basic attributes as wf
         
@@ -362,14 +340,14 @@ class WaveFunction(ABC):
         
         """
         new_wf = cls()
-        new_wf.get_parameters_from(wf, restricted=restricted)
+        new_wf.get_attributes_from(wf, restricted)
         new_wf.mem = 0.0
         return new_wf
     
-    def get_parameters_from(self, wf, restricted=None):
+    def get_attributes_from(self, WaveFunction wf, restricted=None):
         """Get parameters from wf
         
-        Derived classes may call super() to copy further attributes
+        Derived classes may call super() and copy further attributes
         
         Parameters:
         -----------
@@ -388,47 +366,14 @@ class WaveFunction(ABC):
               has different any alpha and beta dimensions, ValueError is raised
         
         """
+        self.restricted = wf.restricted if restricted is None else restricted
         self.point_group = wf.point_group
         self.Ms = wf.Ms
-        self.orb_dim = wf.orb_dim
-        self.froz_orb = wf.froz_orb
-        self._orbs_before = wf._orbs_before
-        self._corr_orbs_before = None
-        if restricted is None:
-            self.restricted = wf.restricted
-            self.ref_orb = wf.ref_orb
-            self.act_orb = wf.act_orb
-        elif restricted:
-            self.restricted = True
-            if np.any(wf.act_orb.as_array()):
+        self.orbspace.get_attributes_from(wf.orbspace)
+        if restricted is not None and restricted:
+            if np.any(wf.orbspace.act.as_array()):
                 raise ValueError(
                     'act_orb is not empty, cannot be of restricted type!')
-            self.act_orb = wf.act_orb
-            self.ref_orb = copy.deepcopy(wf.ref_orb)
-            self.ref_orb.restrict_it()
-        else:
-            self.restricted = False
-            self.act_orb = wf.act_orb
-            self.ref_orb = wf.ref_orb
-    
-    def initialize_orbitals_sets(self):
-        """Initialize all orbitals sets
-        
-        Initialize orb_dim, froz_orb, ref_orb, and act_orb
-        
-        Point group must be already set, otherwise the number
-        or irreps is not known.
-        """
-        if self.point_group is None:
-            raise ValueError('I still do not know the point group!')
-        self.orb_dim = OrbitalsSets(self.n_irrep,
-                                    occ_type='R')
-        self.ref_orb = OrbitalsSets(self.n_irrep,
-                                    occ_type='F')
-        self.froz_orb = OrbitalsSets(self.n_irrep,
-                                     occ_type='R')
-        self.act_orb = OrbitalsSets(self.n_irrep,
-                                    occ_type='A')
     
     def spirrep_blocks(self, restricted=None):
         """Yield the possible spin and irreps, as a single integer.
@@ -453,7 +398,7 @@ class WaveFunction(ABC):
                                        2)):
             yield i
     
-    def get_orb_irrep(self, orb):
+    def get_orb_irrep(self, int orb):
         """Return the irrep of orb.
         
         Parameters:
@@ -466,11 +411,12 @@ class WaveFunction(ABC):
         The integer of that irrep
         
         """
-        for i_irrep in self.spirrep_blocks(restricted=True):
-            if orb < self.orbs_before[i_irrep+1]:
-                return i_irrep
+        cdef int irrep
+        for irrep in self.spirrep_blocks(restricted=True):
+            if orb < self.orbspace.orbs_before[irrep + 1]:
+                return irrep
     
-    def get_local_index(self, p, alpha_orb):
+    def get_local_index(self, int p, bint alpha_orb):
         """Return index of p within its block of corr. or virtual orbitals
 
         Given the global index of an orbital, calculates its index within
@@ -484,13 +430,14 @@ class WaveFunction(ABC):
 
 
         """
+        cdef int irrep, spirrep
         irrep = self.get_orb_irrep(p)
-        p -= self.orbs_before[irrep]
+        p -= self.orbspace.orbs_before[irrep]
         spirrep = irrep + (0
                            if alpha_orb or self.restricted else
                            self.n_irrep)
-        if p >= self.corr_orb[spirrep]:
-            p -= self.corr_orb[spirrep]
+        if p >= self.orbspace.corr[spirrep]:
+            p -= self.orbspace.corr[spirrep]
         return p, irrep
     
     def get_absolute_index(self, p, irrep, occupied, alpha_orb):
@@ -512,7 +459,7 @@ class WaveFunction(ABC):
         """
         p += self.orbs_before[irrep]
         if occupied:
-            p += self.corr_orb[
+            p += self.orbspace.corr[
                 irrep + (0
                          if alpha_orb or self.restricted else
                          self.n_irrep)]
@@ -539,7 +486,7 @@ class WaveFunction(ABC):
             irrep
             + (0 if alpha_orb or self.restricted else
                self.n_irrep)]
-                
+
     @property
     def n_irrep(self):
         """Number or irreducible representations"""
@@ -547,7 +494,6 @@ class WaveFunction(ABC):
             return None
         return number_of_irreducible_repr[self.point_group]
     
-    @property
     def irrep(self):
         """The irreducible representation that this wave function belong"""
         if self._irrep is None:
@@ -555,122 +501,57 @@ class WaveFunction(ABC):
                 self._irrep = 0
             total_irrep = 0
             for irrep in self.spirrep_blocks(restricted=True):
-                n_extra = abs(self.ref_orb[irrep]
-                              - self.ref_orb[irrep + self.n_irrep])
+                n_extra = abs(self.orbspace.ref[irrep]
+                              - self.orbspace.ref[irrep + self.n_irrep])
                 if n_extra % 2 == 1:
                     total_irrep = irrep_product[total_irrep, irrep]
             self._irrep = total_irrep
         return self._irrep
     
-    @property
-    def virt_orb(self):
-        """Virtual orbitals per spirrep"""
-        if (self.orb_dim is None
-                or self.ref_orb is None):
-            return None
-        else:
-            return self.orb_dim - self.ref_orb
-    
-    @property
-    def corr_orb(self):
-        """Correlated orbitals per spirrep"""
-        if (self.ref_orb is None
-                or self.froz_orb is None):
-            return None
-        else:
-            return self.ref_orb - self.froz_orb
-    
-    @property
     def n_alpha(self):
         """Number of alpha electrons"""
-        if self.ref_orb is None:
+        if not self.orbspace.n_irrep:
             return None
-        if self.restricted and self.ref_orb.occ_type == 'R':
-            return len(self.ref_orb) // 2
-        if self.ref_orb.occ_type == 'F':
-            return sum([self.ref_orb[i] for i in range(self.n_irrep)])
-        len_act_orb = len(self.act_orb)
-        return len_act_orb + (len(self.ref_orb) - len_act_orb) // 2
+        if self.restricted and self.orbspace.ref.orb_type == 'R':
+            return len(self.orbspace.ref) // 2
+        if self.orbspace.ref.orb_type == 'F':
+            return sum([self.orbspace.ref[i] for i in range(self.n_irrep)])
+        len_act_orb = len(self.orbspace.act)
+        return len_act_orb + (len(self.orbspace.ref) - len_act_orb) // 2
     
-    @property
     def n_beta(self):
         """Number of beta electrons"""
-        if self.ref_orb is None:
+        if not self.orbspace.n_irrep:
             return None
-        if self.restricted and self.ref_orb.occ_type == 'R':
-            return len(self.ref_orb) // 2
-        if self.ref_orb.occ_type == 'F':
-            return sum([self.ref_orb[i]
+        if self.restricted and self.ref_orb.orb_type == 'R':
+            return len(self.orbspace.ref) // 2
+        if self.ref_orb.orb_type == 'F':
+            return sum([self.orbspace.ref[i]
                         for i in range(self.n_irrep, 2 * self.n_irrep)])
-        return (len(self.ref_orb) - len(self.act_orb)) // 2
+        return (len(self.orbspace.ref) - len(self.orbspace.act)) // 2
     
-    @property
     def n_elec(self):
         """Number of electrons"""
-        if self.ref_orb is None:
+        if not self.orbspace.n_irrep:
             return None
-        return len(self.ref_orb)
-    
-    @property
-    def n_orb(self):
-        """Number of (spatial) orbitals"""
-        if self.orb_dim is None:
-            return None
-        return len(self.orb_dim) // 2
-    
-    @property
-    def n_orb_nofrozen(self):
-        """Number of (spatial) orbitals without frozen orbitals"""
-        if self.orb_dim is None or self.froz_orb is None:
-            return None
-        return len(self.orb_dim - self.froz_orb) // 2
-    
-    @property
+        return len(self.orbspace.ref)
+        
     def n_corr_alpha(self):
         """Number of correlated alpha electrons"""
-        if (self.n_alpha is None
-                or self.corr_orb is None):
+        if not self.orbspace.n_irrep:
             return None
-        return self.n_alpha - len(self.froz_orb) // 2
+        return self.n_alpha() - len(self.orbspace.froz) // 2
     
-    @property
     def n_corr_beta(self):
         """Number of correlated beta electrons"""
-        if (self.n_beta is None
-                or self.corr_orb is None):
+        if not self.orbspace.n_irrep:
             return None
-        return self.n_beta - len(self.froz_orb) // 2
+        return self.n_beta - len(self.orbspace.froz) // 2
     
     @property
     def n_corr_elec(self):
-        """Number od correlated electrons"""
-        corr_orb = self.corr_orb
-        if corr_orb is None:
+        """Number of correlated electrons"""
+        if not self.orbspace.n_irrep:
             return None
-        return len(corr_orb)
+        return len(self.orbspace.corr)
     
-    @property
-    def orbs_before(self):
-        """Number of orbitals (without frozens) before each irrep"""
-        if self._orbs_before is None:
-            self._orbs_before = [0]
-            for irrep in self.spirrep_blocks(restricted=True):
-                self._orbs_before.append(self._orbs_before[irrep]
-                                         + self.corr_orb[irrep]
-                                         + self.virt_orb[irrep])
-            self._orbs_before = np.array(self._orbs_before, dtype=int_dtype)
-        return self._orbs_before
-    
-    @property
-    def corr_orbs_before(self):
-        """Number of correlated orb. (without frozens) before each spirrep"""
-        if self._corr_orbs_before is None:
-            _corr_orbs_before = [0]
-            for irrep in self.spirrep_blocks():
-                if irrep == self.n_irrep - 1:
-                    _corr_orbs_before.append(0)
-                else:
-                    _corr_orbs_before.append(_corr_orbs_before[irrep]
-                                             + self.corr_orb[irrep])
-            self._corr_orbs_before = np.array(_corr_orbs_before)
-        return self._corr_orbs_before
