@@ -267,7 +267,7 @@ cdef class WaveFunction:
         x.append('-' * 50)
         x.append('point group: {}'.format(self.point_group))
         x.append('n irrep: {}'.format(self.n_irrep))
-        x.append('Orbital space:\n {}'.format(repr(self.orb)))
+        x.append('Orbital space:\n {}'.format(repr(self.orbspace)))
         x.append('irrep: {}'.format(self.irrep))
         x.append('Ms: {}'.format(self.Ms))
         x.append('restricted: {}'.format(self.restricted))
@@ -457,7 +457,7 @@ cdef class WaveFunction:
 
 
         """
-        p += self.orbs_before[irrep]
+        p += self.orbspace.orbs_before[irrep]
         if occupied:
             p += self.orbspace.corr[
                 irrep + (0
@@ -482,7 +482,7 @@ cdef class WaveFunction:
         
         
         """
-        return p + self.corr_orbs_before[
+        return p + self.orbspace.corr_orbs_before[
             irrep
             + (0 if alpha_orb or self.restricted else
                self.n_irrep)]
@@ -494,9 +494,10 @@ cdef class WaveFunction:
             return None
         return number_of_irreducible_repr[self.point_group]
     
+    @property
     def irrep(self):
         """The irreducible representation that this wave function belong"""
-        if self._irrep is None:
+        if self._irrep == -1:
             if self.restricted:
                 self._irrep = 0
             total_irrep = 0
@@ -508,6 +509,7 @@ cdef class WaveFunction:
             self._irrep = total_irrep
         return self._irrep
     
+    @property
     def n_alpha(self):
         """Number of alpha electrons"""
         if not self.orbspace.n_irrep:
@@ -519,29 +521,33 @@ cdef class WaveFunction:
         len_act_orb = len(self.orbspace.act)
         return len_act_orb + (len(self.orbspace.ref) - len_act_orb) // 2
     
+    @property
     def n_beta(self):
         """Number of beta electrons"""
         if not self.orbspace.n_irrep:
             return None
-        if self.restricted and self.ref_orb.orb_type == 'R':
+        if self.restricted and self.orbspace.ref._type == 'R':
             return len(self.orbspace.ref) // 2
-        if self.ref_orb.orb_type == 'F':
+        if self.orbspace.ref._type == 'F':
             return sum([self.orbspace.ref[i]
                         for i in range(self.n_irrep, 2 * self.n_irrep)])
         return (len(self.orbspace.ref) - len(self.orbspace.act)) // 2
-    
+
+    @property
     def n_elec(self):
         """Number of electrons"""
         if not self.orbspace.n_irrep:
             return None
         return len(self.orbspace.ref)
         
+    @property
     def n_corr_alpha(self):
         """Number of correlated alpha electrons"""
         if not self.orbspace.n_irrep:
             return None
-        return self.n_alpha() - len(self.orbspace.froz) // 2
+        return self.n_alpha - len(self.orbspace.froz) // 2
     
+    @property
     def n_corr_beta(self):
         """Number of correlated beta electrons"""
         if not self.orbspace.n_irrep:

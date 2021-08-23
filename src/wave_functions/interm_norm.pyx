@@ -412,7 +412,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
     
     def __str__(self):
         """Return string version the wave function."""
-        cdef int irrep, spirrep, ia_bl, ia, ij, i, j
+        cdef int irrep, spirrep, ia_bl, ia, ij
+        cdef OccOrbital i, j
         def get_all_doubl_ij(int ij, int irrep_ij, int exc_type):
             """The doubles for pair ij, whose irrep product is irrep_ij
             
@@ -939,7 +940,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         ):
             raise ValueError(
                 'alpha,alpha and beta,beta singles are not the same!')
-        n_corr = ur_wf.n_corr_alpha()
+        n_corr = ur_wf.n_corr_alpha
         for i, j in ur_wf.occupied_pairs(EXC_TYPE_AB):
             pos_ij = (ur_wf.first_ab_pair
                       + n_from_rect(j.pos_in_occ,
@@ -1032,7 +1033,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         ij_diff = 0
         first_bb_ampl = (ur_wf.ini_blocks_D[ur_wf.first_bb_pair, 0]
                          - ur_wf.ini_blocks_D[0, 0])
-        n_corr = r_wf.n_corr_alpha()
+        n_corr = r_wf.n_corr_alpha
         for i, j in r_wf.occupied_pairs(EXC_TYPE_ALL):
             for irrep_a in range(r_wf.n_irrep):
                 irrep_b = irrep_product[

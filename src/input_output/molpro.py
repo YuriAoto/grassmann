@@ -4,7 +4,7 @@
 """
 import re
 
-from wave_functions import norm_ci, int_norm, cisd
+from wave_functions import cisd
 from orbitals.orbital_space import OrbitalSpace
 from molecular_geometry.symmetry import number_of_irreducible_repr
 
@@ -114,7 +114,6 @@ def get_orb_info(line, line_number, n_irrep, occ_type):
 
 
 def load_wave_function(molpro_output,
-                       WF_templ=None,
                        state='1.1',
                        method=None,
                        ith=0,
@@ -136,16 +135,6 @@ def load_wave_function(molpro_output,
     molpro_output (str, a file name)
         The file with the molpro output, where the wave function will be
         read from
-    
-    WF_templ (str, a file name, optional, default=None)
-        If not None, should be the file name of a Molpro output with
-        a wave function (of FCI type), where the structure will be read.
-        In this case, the coefficients of the wave function at
-        molpro_output will be put in the "template" read in this file.
-        If passed, it is assumed that the wave function to be used
-        as a template is the first FCI wave function of the file WF_templ.
-        That is, options such as state, method, or ith do not affect
-        the reading of the template.
     
     state (str, optional, default=None)
         If not None, it should be the designation of a electronic state,
@@ -197,15 +186,6 @@ def load_wave_function(molpro_output,
     
     """
     point_group = None
-    if WF_templ is not None:
-        wf = load_wave_function(WF_templ,
-                                WF_templ=None,
-                                state='1.1',
-                                method='FCI',
-                                ith=0,
-                                _zero_coefficients=True,
-                                _change_structure=True,
-                                _use_structure=False)
     this_ith = 0
     with open(molpro_output, 'r') as f:
         for line_number, line in enumerate(f, start=1):
@@ -248,8 +228,10 @@ def load_wave_function(molpro_output,
                     continue
                 wf_type = line[11:15]
                 if line == FCI_header:
-                    if WF_templ is None:
-                        wf = norm_ci.NormCI_WaveFunction()
+                    raise Exception('This was with NormCI_WaveFunction'
+                                    ' and has been removed. TODO: implement'
+                                    ' with FCIWaveFunction')
+                    ##wf = norm_ci.NormCI_WaveFunction()
                     wf.WF_type = 'FCI'
                     wf.point_group = point_group
                     wf.source = 'From file ' + molpro_output
@@ -262,21 +244,21 @@ def load_wave_function(molpro_output,
                         change_structure=_change_structure,
                         use_structure=_use_structure)
                 else:
-                    wf_int_norm = int_norm.IntermNormWaveFunction.from_Molpro(
-                        f, start_line_number=line_number-1,
-                        wf_type=wf_type,
-                        point_group=point_group)
+                    raise Exception('This was with int_norm'
+                                    ' and has been removed. TODO: implement'
+                                    ' with interm_norm')
+#                    wf_int_norm = int_norm.IntermNormWaveFunction.from_Molpro(
+#                        f, start_line_number=line_number-1,
+#                        wf_type=wf_type,
+#                        point_group=point_group)
                     wf_int_norm.use_CISD_norm = use_CISD_norm
                     wf_int_norm.source = 'From file ' + molpro_output
-                    if WF_templ is not None:
-                        wf.get_coeff_from_int_norm_WF(wf_int_norm,
-                                                      change_structure=False,
-                                                      use_structure=True)
-                    else:
-                        wf = wf_int_norm
-                        if wf_obj_type == 'cisd':
-                            wf = cisd.CISD_WaveFunction.from_int_norm(wf)
-                        elif wf_obj_type == 'fci':
-                            wf = norm_ci.NormCI_WaveFunction.from_int_norm(wf)
+                    wf = wf_int_norm
+                    if wf_obj_type == 'cisd':
+                        wf = cisd.CISD_WaveFunction.from_int_norm(wf)
+                    elif wf_obj_type == 'fci':
+                        raise Exception('This was with NormCI_WaveFunction'
+                                        ' and has been removed. TODO: implement'
+                                        ' with FCIWaveFunction')
                 break
     return wf
