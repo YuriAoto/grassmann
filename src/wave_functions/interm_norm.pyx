@@ -1,3 +1,5 @@
+# cython: profile=False
+
 """An wave function in the intermediate normalisation
 
 Classes:
@@ -10,10 +12,10 @@ import logging
 
 import numpy as np
 
-from util.array_indices import (triangular,
-                                n_from_triang_with_diag,
-                                n_from_triang,
-                                n_from_rect)
+from util.array_indices cimport (triangular,
+                                 n_from_triang_with_diag,
+                                 n_from_triang,
+                                 n_from_rect)
 from util.variables import int_dtype, zero
 from util.memory import mem_of_floats
 from input_output import molpro
@@ -26,18 +28,7 @@ from orbitals.orbital_space cimport FullOrbitalSpace
 from orbitals.orbital_space import FullOrbitalSpace
 
 
-# from wave_functions.singles_doubles import (
-#     EXC_TYPE_A, EXC_TYPE_B,
-#     EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
-EXC_TYPE_ALL = 0
-EXC_TYPE_A = 1
-EXC_TYPE_B = 2
-EXC_TYPE_AA = 3
-EXC_TYPE_AB = 4
-EXC_TYPE_BB = 5
-
-
-def _transpose(X, nrow, ncol):
+cdef double [:] _transpose(double [:] X, int nrow, int ncol):
     """Return the ravel form of the transpose of the (raveled) block
     
     Given X as a ravelled 2D array, return its transpose, also ravelled,
@@ -91,25 +82,32 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         first all singles (if present) followed by all doubles
         
-        For singles, t_i^a:
+        # For singles, t_i^a:
         
         These are stored in groups of spirrep.
         Recall that irrep(i) = irrep(a) for a nonzero amplitude.
-        There are, thus, self.orbspace.corr[spirrep]*self.orbspace.virt[spirrep]
+        There are, thus:
+        
+            self.orbspace.corr[spirrep]*self.orbspace.virt[spirrep]
+        
         amplitudes in each spirrep block.
         
-        If restricted:
+        * If restricted:
         first all amplitudes of {i, a} in irrep = 0,
         then all amplitudes of {i, a} in irrep = 1, etc.
         In each of these blocks, virtual orbital index runs faster:
         
         t_0^0, t_0^1, t_0^2, ..., t_0^{m-1}, t_1^0, ..., t_1^{m-1}, ...
         
-        If unrestricted:
+        * If unrestricted:
         similar to unrestricted, but all alpha first, then all beta.
         
         
-        For doubles:
+        To help finding the amplitude, the attribute ini_blocks_S is provided,
+        see its documentation
+        
+        
+        # For doubles:
         
         the amplitudes are stored in groups of {i, j} pairs and,
         in each of these pairs, in groups of irrep of a.
@@ -118,7 +116,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         irrep of a, the irrep of b is automatically determined.
         
         
-        If restricted:
+        * If restricted:
         i and j run over all occupied and correlated
         (spatial) orbitals, from the first to the last irrep,
         with the restriction i <= j for the absolute ordering.
@@ -164,7 +162,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                 t_{ij}^{{virt_orb[irrep_a]-1}{virt_orb[irrep_b]-1}}
                      
         
-        # For unrestricted wave functions:
+        * If unrestricted:
         i and j run first over alpha-alpha spin-orbitals,
         then over beta-beta spin-orbitals, and thus over alpha-beta
         spin-orbitals.
@@ -178,18 +176,18 @@ cdef class IntermNormWaveFunction(WaveFunction):
         beta-orbitals, is:
         
         
-        EXC_TYPE_AA (alpha-alpha):
+        ExcType.AA (alpha-alpha):
         0,1                    0
         0,2  1,2               1   2
         0,3  1,3  2,3          3   4   5
         0,4  1,4  2,4  3,4     6   7   8   9
         
-        EXC_TYPE_BB (beta-beta):
+        ExcType.BB (beta-beta):
         0,1                10
         0,2  1,2           11  12
         0,3  1,3  2,3      13  14  15
         
-        EXC_TYPE_AB (alpha-beta):
+        ExcType.AB (alpha-beta):
         0,0  1,0  2,0  3,0  4,0       16  17  18  19  20
         0,1  1,1  2,1  3,1  4,1       21  22  23  24  25
         0,2  1,2  2,2  3,2  4,2       26  27  28  29  30
@@ -203,6 +201,50 @@ cdef class IntermNormWaveFunction(WaveFunction):
         to store both amplitudes, and thus the last subblock is
         antisymmetric if irrep_a == irrep_b, or it is minus the
         transpose of another subblock.
+        
+        To help finding the amplitude, the attributes ini_blocks_D,
+        first_bb_pair, and first_ab_pair are provided, see its
+        documentation.
+        
+        Reading the code of __str__ is a good way to understand this
+        order convention.
+    
+    ini_blocks_S (1D array of int)
+        The position of the first amplitude of singles, for each
+        block of spirrep. For example, setting:
+        
+        inibl = self.ini_blocks_S[irrep]
+        n_corr = self.orbspace.corr[irrep]
+        n_virt = self.orbspace.virt[irrep]
+        
+        then
+        
+        self.amplitudes[inibl:inibl + n_corr*n_virt]
+        
+        gives the whole block of amplitudes associated to irrep
+    
+    ini_blocks_D (2D array of int)
+        The position of the first amplitude of doubles, for each
+        block of spirrep, for each pair of occupied orbitals.
+        For example, if the position of the pair of occupied orbitals
+        is ij, and the product of their irreps is irrep_ij, then setting:
+        
+        inibl = self.ini_blocks_D[ij, irrep_a]
+        n_virt_a = self.orbspace.virt[irrep_a]
+        n_virt_b = self.orbspace.virt[irrep_product[irrep_a, irrep_ij]]
+        
+        self.amplitudes[inibl:inibl + n_virt_a*n_virt_b]
+        
+        gives the whole block of amplitudes associated to this pair of
+        occupied orbitals, with the virtual belonging to irrep_a
+        (and the irrep of the second virtual, b, is automatically defined
+         by symmetry)
+    
+    first_bb_pair, first_ab_pair (int)
+        The index of first beta-beta or alpha-alpha pair. In the example
+        of ini_blocks_D, if ij is first_bb_pair or first_ab_pair, then
+        it represents the first pair of beta-beta or alpha-beta orbitals.
+        evidently 0 is the first pair of alpha-alpha orbitals.
         
     
     Data Model:
@@ -399,7 +441,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
     """
     def __init__(self):
         super().__init__()
-        self._norm = 0.0
+        self._norm = -1.0
         self.use_CISD_norm = True
         self.first_bb_pair = 0
         self.first_ab_pair = 0
@@ -419,8 +461,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
             
             """
             cdef int a_beta_shift, irrep_a, irrep_b, n_ampl, ini_bl, ab
-            a_beta_shift = self.n_irrep if exc_type == EXC_TYPE_BB else 0
-            b_beta_shift = 0 if exc_type == EXC_TYPE_AA else self.n_irrep
+            a_beta_shift = self.n_irrep if exc_type == ExcType.BB else 0
+            b_beta_shift = 0 if exc_type == ExcType.AA else self.n_irrep
             xx = []
             for irrep_a in range(self.n_irrep):
                 irrep_b = irrep_product[irrep_a, irrep_ij]
@@ -435,14 +477,15 @@ cdef class IntermNormWaveFunction(WaveFunction):
             return xx
             
         x = [super().__repr__()]
-        if self.ini_blocks_D[0,0] != 0:
+        if self.has_singles:
             x.append('Singles, t_i^a (a runs faster within each irrep)')
             if not self.restricted:
                 x.append(f'alpha -> alpha')
             for irrep in range(self.n_irrep):
                 x.append(f'irrep = {irrep}')
                 ia_bl = self.ini_blocks_S[irrep]
-                for ia in range(self.orbspace.corr[irrep] * self.orbspace.virt[irrep]):
+                for ia in range(self.orbspace.corr[irrep]
+                                * self.orbspace.virt[irrep]):
                     x.append(f'{self.amplitudes[ia_bl + ia]}')
             if not self.restricted:
                 x.append(f'beta -> beta')
@@ -456,39 +499,39 @@ cdef class IntermNormWaveFunction(WaveFunction):
         x.append('Doubles, t_{ij}^{ab} (b runs faster for each pair ij)')
         if self.restricted:
             ij = 0
-            for i, j in self.occupied_pairs(EXC_TYPE_ALL):
+            for i, j in self.occupied_pairs(ExcType.ALL):
                 all_dbl = get_all_doubl_ij(ij,
                                            irrep_product[i.spirrep,
                                                          j.spirrep],
-                                           EXC_TYPE_AA)
+                                           ExcType.AA)
                 if all_dbl:
                     x.append(f'Pair ij = {ij}: '
-                             + f' i=({i.orb}, irrep={i.spirrep})'
-                             + f' j=({j.orb}, irrep={j.spirrep})')
+                             f' i=({i.orb}, irrep={i.spirrep})'
+                             f' j=({j.orb}, irrep={j.spirrep})')
                     x.extend(all_dbl)
                 ij += 1
         else:
             ij = 0
             x.append('alpha, alpha -> alpha, alpha')
-            for i, j in self.occupied_pairs(EXC_TYPE_AA):
+            for i, j in self.occupied_pairs(ExcType.AA):
                 all_dbl = get_all_doubl_ij(ij,
                                            irrep_product[i.spirrep,
                                                          j.spirrep],
-                                           EXC_TYPE_AA)
+                                           ExcType.AA)
                 if all_dbl:
                     x.append(f'Pair ij = {ij}: '
-                             + f' i=({i.orb}, irrep={i.spirrep})'
-                             + f' j=({j.orb}, irrep={j.spirrep})')
+                             f' i=({i.orb}, irrep={i.spirrep})'
+                             f' j=({j.orb}, irrep={j.spirrep})')
                     x.extend(all_dbl)
                 ij += 1
             x.append('beta, beta -> beta, beta')
-            for i, j in self.occupied_pairs(EXC_TYPE_BB):
+            for i, j in self.occupied_pairs(ExcType.BB):
                 all_dbl = get_all_doubl_ij(ij,
                                            irrep_product[i.spirrep
                                                          - self.n_irrep,
                                                          j.spirrep
                                                          - self.n_irrep],
-                                           EXC_TYPE_BB)
+                                           ExcType.BB)
                 if all_dbl:
                     x.append(f'Pair ij = {ij}: '
                              + f' i=({i.orb}, irrep={i.spirrep-self.n_irrep})'
@@ -496,12 +539,12 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     x.extend(all_dbl)
                 ij += 1
             x.append('alpha, beta -> alpha, beta')
-            for i, j in self.occupied_pairs(EXC_TYPE_AB):
+            for i, j in self.occupied_pairs(ExcType.AB):
                 all_dbl = get_all_doubl_ij(ij,
                                            irrep_product[i.spirrep,
                                                          j.spirrep
                                                          - self.n_irrep],
-                                           EXC_TYPE_AB)
+                                           ExcType.AB)
                 if all_dbl:
                     x.append(f'Pair ij = {ij}: '
                              + f' i=({i.orb}, irrep={i.spirrep})'
@@ -524,7 +567,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
             self._calc_ini_blocks()
         return self._n_ampl
 
-    def occupied_pairs(self, exc_type=EXC_TYPE_ALL):
+    @property
+    def has_singles(self):
+        return self.ini_blocks_D[0,0] != 0
+
+    def occupied_pairs(self, exc_type=ExcType.ALL):
         """Generator for all pairs i,j
         
         """
@@ -546,7 +593,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                 else:
                     i.next_()
         else:
-            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_AA):
+            if exc_type in (ExcType.ALL, ExcType.AA):
                 i = OccOrbital(self.orbspace, True)
                 j = OccOrbital(self.orbspace, True)
                 j.next_()
@@ -557,7 +604,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         i.rewind()
                     else:
                         i.next_()
-            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_BB):
+            if exc_type in (ExcType.ALL, ExcType.BB):
                 i = OccOrbital(self.orbspace, False)
                 j = OccOrbital(self.orbspace, False)
                 j.next_()
@@ -568,7 +615,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         i.rewind()
                     else:
                         i.next_()
-            if exc_type in (EXC_TYPE_ALL, EXC_TYPE_AB):
+            if exc_type in (ExcType.ALL, ExcType.AB):
                 i = OccOrbital(self.orbspace, True)
                 j = OccOrbital(self.orbspace, False)
                 while j.alive:  # alpha, beta
@@ -578,20 +625,26 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         j.next_()
                         i.rewind()
 
-    def _calc_ini_blocks(self):
+    cdef int _add_block_for_calc_ini_blocks(self,
+                                            int i_in_D,
+                                            int spirrep_a,
+                                            int spirrep_b,
+                                            int [:] raveled_ini_blocks_D):
+        cdef int n
+        n = (raveled_ini_blocks_D[i_in_D]
+             + self.orbspace.virt[spirrep_a] * self.orbspace.virt[spirrep_b])
+        i_in_D += 1
+        if i_in_D < raveled_ini_blocks_D.size:
+            raveled_ini_blocks_D[i_in_D] = n
+        else:
+            self._n_ampl = n
+        return i_in_D
+
+    cdef void _calc_ini_blocks(self):
         """Calculate the arrays with the initial index of amplitude blocks"""
         cdef int spirrep, irrep_a, i_in_D
+        cdef int [:] raveled_ini_blocks_D
         cdef OccOrbital i, j
-        def add_block(int i_in_D, int spirrep_a, int spirrep_b):
-            cdef int n
-            n = (raveled_ini_blocks_D[i_in_D]
-                 + self.orbspace.virt[spirrep_a] * self.orbspace.virt[spirrep_b])
-            i_in_D += 1
-            if i_in_D < raveled_ini_blocks_D.size:
-                raveled_ini_blocks_D[i_in_D] = n
-            else:
-                self._n_ampl = n
-            return i_in_D
         n_occ_alpha = (self.orbspace.corr_orbs_before[self.n_irrep - 1]
                        + self.orbspace.corr[self.n_irrep - 1])
         n_occ_beta = self.orbspace.corr_orbs_before[2*self.n_irrep]
@@ -624,43 +677,47 @@ cdef class IntermNormWaveFunction(WaveFunction):
         if self.restricted:
             for i, j in self.occupied_pairs():
                 for irrep_a in range(self.n_irrep):
-                    i_in_D = add_block(
+                    i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
                         irrep_product[
                             irrep_a, irrep_product[i.spirrep,
-                                                   j.spirrep]])
+                                                   j.spirrep]],
+                        raveled_ini_blocks_D)
         else:
             self.first_bb_pair = 0
-            for i, j in self.occupied_pairs(EXC_TYPE_AA):
+            for i, j in self.occupied_pairs(ExcType.AA):
                 self.first_bb_pair += 1
                 for irrep_a in range(self.n_irrep):
-                    i_in_D = add_block(
+                    i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
                         irrep_product[irrep_a,
                                       irrep_product[i.spirrep,
-                                                    j.spirrep]])
+                                                    j.spirrep]],
+                        raveled_ini_blocks_D)
             self.first_ab_pair = self.first_bb_pair
-            for i, j in self.occupied_pairs(EXC_TYPE_BB):
+            for i, j in self.occupied_pairs(ExcType.BB):
                 self.first_ab_pair += 1
                 for irrep_a in range(self.n_irrep):
-                    i_in_D = add_block(
+                    i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a + self.n_irrep,
                         irrep_product[irrep_a,
                                       irrep_product[i.spirrep - self.n_irrep,
                                                     j.spirrep - self.n_irrep]]
-                        + self.n_irrep)
-            for i, j in self.occupied_pairs(EXC_TYPE_AB):
+                        + self.n_irrep,
+                        raveled_ini_blocks_D)
+            for i, j in self.occupied_pairs(ExcType.AB):
                 for irrep_a in range(self.n_irrep):
-                    i_in_D = add_block(
+                    i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
                         irrep_product[irrep_a,
                                       irrep_product[i.spirrep,
                                                     j.spirrep - self.n_irrep]]
-                        + self.n_irrep)
+                        + self.n_irrep,
+                        raveled_ini_blocks_D)
         self.ini_blocks_D = np.reshape(raveled_ini_blocks_D,
                                        (raveled_ini_blocks_D.size // self.n_irrep,
                                         self.n_irrep))
@@ -699,7 +756,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         """The position of that key in amplitudes vector"""
         if len(key) == 4:
             i, a, irrep, exc_type = key
-            if exc_type == EXC_TYPE_B and not self.restricted:
+            if exc_type == ExcType.B and not self.restricted:
                 irrep += self.n_irrep
             return (self.ini_blocks_S[irrep]
                     + n_from_rect(
@@ -707,9 +764,9 @@ cdef class IntermNormWaveFunction(WaveFunction):
         if len(key) == 8:
             i, j, a, b, irrep_i, irrep_j, irrep_a, exc_type = key
             i = self.get_abs_corr_index(i, irrep_i,
-                                        exc_type in (EXC_TYPE_AA, EXC_TYPE_AB))
+                                        exc_type in (ExcType.AA, ExcType.AB))
             j = self.get_abs_corr_index(j, irrep_j,
-                                        exc_type == EXC_TYPE_AA)
+                                        exc_type == ExcType.AA)
             ij = self.get_ij_pos_from_i_j(i, j, irrep_i, exc_type)
             return (self.ini_blocks_D[ij, irrep_a]
                     + n_from_rect(
@@ -719,7 +776,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                                         irrep_j]]]))
         raise KeyError('Key must have 4 (S) or 8 (D) entries!')
     
-    def get_ij_pos_from_i_j(self, i, j, irrep_i, exc_type):
+    cdef inline int get_ij_pos_from_i_j(self,
+                                        int i,
+                                        int j,
+                                        int irrep_i,
+                                        ExcType exc_type) except -1:
         """Get the position of pair i,j as stored in self.ini_blocks_D
         
         Parameters:
@@ -731,22 +792,26 @@ cdef class IntermNormWaveFunction(WaveFunction):
         irrep_i (int)
             The irreducible representation of orbital i
         
-        exc_type (int, an excitation type)
+        exc_type (ExcType)
             The excitation type
+        
+        Return:
+        -------
+        An integer, with the desired position
             
         """
         if self.restricted:
-            ij = n_from_triang_with_diag(i, j)
-        elif exc_type == EXC_TYPE_AA:
-            ij = n_from_triang(i, j)
-        elif exc_type == EXC_TYPE_BB:
-            ij = self.first_bb_pair + n_from_triang(i, j)
-        else:  # exc_type == EXC_TYPE_AB
-            ij = self.first_ab_pair + n_from_rect(
+            return n_from_triang_with_diag(i, j)
+        if exc_type == ExcType.AA:
+            return n_from_triang(i, j)
+        if exc_type == ExcType.BB:
+            return self.first_bb_pair + n_from_triang(i, j)
+        if exc_type == ExcType.AB:
+            return self.first_ab_pair + n_from_rect(
                 j, i,
                 self.orbspace.corr_orbs_before[self.n_irrep - 1]
                 + self.orbspace.corr[self.n_irrep - 1])
-        return ij
+        raise ValueError('Excitation type must be AA BB or AB')
 
     def pos_in_ampl_for_hp(self, key):
         """Get the position of amplitude(s) associated do key"""
@@ -759,7 +824,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
             (i, j, a, b,
              irrep_i, irrep_j, irrep_a,
              exc_type) = self.indices_of_doubles(key[1], key[2])
-            if exc_type in (EXC_TYPE_AA, EXC_TYPE_BB):
+            if exc_type in (ExcType.AA, ExcType.BB):
                 return (
                     self.pos_in_ampl((i, j, a, b,
                                       irrep_i, irrep_j,
@@ -780,14 +845,13 @@ cdef class IntermNormWaveFunction(WaveFunction):
         else:
             raise IndexError('Rank must be 1 or 2!')
 
-    
     def indices_of_singles(self, alpha_hp, beta_hp):
         """Return i, a, irrep, exc_type of single excitation"""
-        exc_type = (EXC_TYPE_A
+        exc_type = (ExcType.A
                     if alpha_hp[0].size == 1 else
-                    EXC_TYPE_B)
+                    ExcType.B)
         i, a = ((alpha_hp[0][0], alpha_hp[1][0])
-                if exc_type == EXC_TYPE_A else
+                if exc_type == ExcType.A else
                 (beta_hp[0][0], beta_hp[1][0]))
         irrep = self.get_orb_irrep(i)
         i -= self.orbspace.orbs_before[irrep]
@@ -795,13 +859,13 @@ cdef class IntermNormWaveFunction(WaveFunction):
         a -= self.orbspace.corr[
             irrep + (0
                      if (not self.restricted
-                         and exc_type == EXC_TYPE_A) else
+                         and exc_type == ExcType.A) else
                      self.n_irrep)]
         return i, a, irrep, exc_type
 
     def indices_of_doubles(self, alpha_hp, beta_hp):
         if alpha_hp[0].size == 1:
-            exc_type = EXC_TYPE_AB
+            exc_type = ExcType.AB
             i, irrep_i = self.get_local_index(alpha_hp[0][0], True)
             j, irrep_j = self.get_local_index(beta_hp[0][0], False)
             a, irrep_a = self.get_local_index(alpha_hp[1][0], True)
@@ -811,13 +875,13 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     i, irrep_i, j, irrep_j = j, irrep_j, i, irrep_i
                     a, irrep_a, b, irrep_b = b, irrep_b, a, irrep_a
         elif alpha_hp[0].size == 2:
-            exc_type = EXC_TYPE_AA
+            exc_type = ExcType.AA
             i, irrep_i = self.get_local_index(alpha_hp[0][0], True)
             j, irrep_j = self.get_local_index(alpha_hp[0][1], True)
             a, irrep_a = self.get_local_index(alpha_hp[1][0], True)
             b, irrep_b = self.get_local_index(alpha_hp[1][1], True)
         else:
-            exc_type = EXC_TYPE_BB
+            exc_type = ExcType.BB
             i, irrep_i = self.get_local_index(beta_hp[0][0], False)
             j, irrep_j = self.get_local_index(beta_hp[0][1], False)
             a, irrep_a = self.get_local_index(beta_hp[1][0], False)
@@ -836,10 +900,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
         """
         return mem_of_floats(len(self))
     
-    def initialize_amplitudes(self):
+    cdef int initialize_amplitudes(self) except -1:
         """Initialize the list for the amplitudes."""
         self._set_memory('Amplitudes array in IntermNormWaveFunction')
         self.amplitudes = np.zeros(len(self))
+        return 0
     
     def update_amplitudes(self, z):
         """Update the amplitudes by z
@@ -923,6 +988,12 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         """
         cdef IntermNormWaveFunction r_wf
+        cdef int iampl, n_corr, r_pos_ij, pos_ij, pos_ji, ij_ini, ji_ini
+        cdef int irrep_a, irrep_b, block_len
+        cdef double[:] a_block
+        cdef double[:] b_block
+        cdef OccOrbital i, j
+
         if ur_wf.restricted:
             return copy.deepcopy(ur_wf)
         if "S" in ur_wf.wf_type:
@@ -941,7 +1012,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
             raise ValueError(
                 'alpha,alpha and beta,beta singles are not the same!')
         n_corr = ur_wf.n_corr_alpha
-        for i, j in ur_wf.occupied_pairs(EXC_TYPE_AB):
+        for i, j in ur_wf.occupied_pairs(ExcType.AB):
             pos_ij = (ur_wf.first_ab_pair
                       + n_from_rect(j.pos_in_occ,
                                     i.pos_in_occ,
@@ -976,8 +1047,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         for iampl in range(block_len):
                             to_msg.append(
                                 f'{a_block[iampl]:10.7f}'
-                                + f'  {b_block[iampl]:10.7f}'
-                                + f'  {a_block[iampl]-b_block[iampl]}')
+                                f'  {b_block[iampl]:10.7f}'
+                                f'  {a_block[iampl]-b_block[iampl]}')
                         raise ValueError(
                             'alpha,beta with non equivalent blocks:\n'
                             + '\n'.join(to_msg))
@@ -986,7 +1057,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
             r_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]] = \
                 ur_wf.amplitudes[:ur_wf.ini_blocks_S[ur_wf.n_irrep]]
         r_pos_ij = 0
-        for i, j in ur_wf.occupied_pairs(EXC_TYPE_AB):
+        for i, j in ur_wf.occupied_pairs(ExcType.AB):
             pos_ij = (ur_wf.first_ab_pair
                       + n_from_rect(j.pos_in_occ,
                                     i.pos_in_occ,
@@ -1019,7 +1090,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
         a deepcopy is returned
         """
         cdef IntermNormWaveFunction ur_wf
-        cdef int iampl
+        cdef int iampl, ij, ij_diff, ji_ab_pos, first_bb_ampl, n_corr
+        cdef int irrep_a, irrep_b, block_len, ini_bl
+        cdef double[:] this_block, transp_block 
+        cdef OccOrbital i, j
         if not r_wf.restricted:
             return copy.deepcopy(r_wf)
         ur_wf = cls.similar_to(r_wf, r_wf.wf_type, False)
@@ -1034,7 +1108,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         first_bb_ampl = (ur_wf.ini_blocks_D[ur_wf.first_bb_pair, 0]
                          - ur_wf.ini_blocks_D[0, 0])
         n_corr = r_wf.n_corr_alpha
-        for i, j in r_wf.occupied_pairs(EXC_TYPE_ALL):
+        for i, j in r_wf.occupied_pairs(ExcType.ALL):
             for irrep_a in range(r_wf.n_irrep):
                 irrep_b = irrep_product[
                     irrep_a, irrep_product[i.spirrep,
@@ -1098,6 +1172,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
         function described using intermediate normalisation.
         """
         cdef IntermNormWaveFunction new_wf
+        cdef ExcType exc_type = ExcType.ALL
+        cdef int pos_ij, i, j, prev_Molpros_i, prev_Molpros_j
+        prev_Molpros_i = prev_Molpros_j = -1
+        pos_ij = i = j = -1
         new_wf = cls()
         new_wf.Ms = 0.0
         sgl_found = False
@@ -1172,7 +1250,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                          or 'Beta-Beta' in line)
                 if not new_wf._n_ampl:
                     new_wf.initialize_amplitudes()
-                exc_type = EXC_TYPE_B if 'Beta-Beta' in line else EXC_TYPE_A
+                exc_type = ExcType.B if 'Beta-Beta' in line else ExcType.A
             elif molpro.CC_dbl_str in line and MP2_step_passed:
                 dbl_found = True
                 prev_Molpros_i = prev_Molpros_j = -1
@@ -1197,17 +1275,17 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         new_wf.wf_type = 'CID'
                     new_wf.initialize_amplitudes()
                 if new_wf.restricted or 'Alpha-Alpha' in line:
-                    exc_type = EXC_TYPE_AA
+                    exc_type = ExcType.AA
                 elif 'Beta-Beta' in line:
-                    exc_type = EXC_TYPE_BB
+                    exc_type = ExcType.BB
                 elif 'Alpha-Beta' in line:
-                    exc_type = EXC_TYPE_AB
+                    exc_type = ExcType.AB
             elif dbl_found:
                 lspl = line.split()
                 if len(lspl) == 7:
                     all_indices = map(
                         lambda x: int(x) - 1, lspl[0:-1])
-                    if exc_type == EXC_TYPE_AB:
+                    if exc_type == ExcType.AB:
                         (Molpros_i, Molpros_j,
                          irrep_a, irrep_b,
                          a, b) = all_indices
@@ -1221,11 +1299,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                          irrep_b, irrep_a,
                          b, a) = all_indices
                     spirrep_b = irrep_b + (
-                        0 if exc_type == EXC_TYPE_AA else new_wf.n_irrep)
+                        0 if exc_type == ExcType.AA else new_wf.n_irrep)
                     C = float(lspl[-1])
-                    if exc_type in (EXC_TYPE_AA, EXC_TYPE_AB):
+                    if exc_type in (ExcType.AA, ExcType.AB):
                         a -= new_wf.orbspace.act[irrep_a]
-                    if exc_type == EXC_TYPE_AA:
+                    if exc_type == ExcType.AA:
                         b -= new_wf.orbspace.act[irrep_b]
                     if a < 0 or b < 0:
                         if abs(C) > zero:
@@ -1249,7 +1327,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         while (irrep_i < new_wf.n_irrep
                                and i >= new_wf.orbspace.corr_orbs_before[irrep_i + 1]):
                             irrep_i += 1
-                        if exc_type in (EXC_TYPE_AB, EXC_TYPE_BB):
+                        if exc_type in (ExcType.AB, ExcType.BB):
                             irrep_j = 0
                             while (irrep_j < new_wf.n_irrep
                                    and
@@ -1257,7 +1335,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                 irrep_j += 1
                             if irrep_j > 0:
                                 j -= sum(new_wf.orbspace.act[:irrep_j])
-                            if exc_type == EXC_TYPE_BB:
+                            if exc_type == ExcType.BB:
                                 if irrep_i > 0:
                                     i -= sum(new_wf.orbspace.act[:irrep_i])
                         pos_ij = new_wf.get_ij_pos_from_i_j(i, j,
@@ -1274,10 +1352,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                       lspl[0:-1])
                     C = float(lspl[-1])
                     spirrep = irrep + (0
-                                       if exc_type == EXC_TYPE_A else
+                                       if exc_type == ExcType.A else
                                        new_wf.n_irrep)
                     i -= new_wf.orbspace.corr_orbs_before[irrep]
-                    if exc_type == EXC_TYPE_A:
+                    if exc_type == ExcType.A:
                         a -= new_wf.orbspace.act[irrep]
                     if a < 0 or i >= new_wf.orbspace.corr[spirrep]:
                         if abs(C) > zero:
@@ -1307,3 +1385,33 @@ cdef class IntermNormWaveFunction(WaveFunction):
 
     def get_amplitudes(self):
         return np.array(self.amplitudes)
+
+    @property
+    def norm(self):
+        raise NotImplementedError('Do it')
+        if self._norm < 0:
+            if (self.wf_type == 'CISD'
+                or (self.wf_type in ('CCSD', 'BCCD', 'CCD')
+                    and self.use_CISD_norm)):
+                self._norm = 1.0
+                # S = 0.0
+                # for I in self.string_indices():
+                #     S += self[I]**2
+                # self._norm = math.sqrt(S)
+                # if self.wf_type != 'CISD':
+                #     logger.warning(
+                #         'We are calculating the CCSD norm'
+                #         + ' considering only SD determinants!!')
+            elif self.wf_type in ('CCSD', 'BCCD', 'CCD'):
+                self._norm = 1.0
+                logger.warning('CCSD norm set to 1.0!!')
+            else:
+                raise ValueError(
+                    'We do not know how to calculate the norm for '
+                    + self.wf_type + '!')
+        return self._norm
+        
+    @property
+    def C0(self):
+        """The coefficient of reference"""
+        return 1.0 / self.norm

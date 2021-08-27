@@ -9,12 +9,15 @@ import logging
 
 import numpy as np
 
-from util.array_indices import (triangular, n_from_triang, ij_from_triang,
-                                n_from_rect)
+from util.array_indices cimport (triangular, n_from_triang, ij_from_triang,
+                                 n_from_rect)
 from wave_functions.general cimport WaveFunction
 from wave_functions.general import WaveFunction
 from wave_functions.interm_norm cimport IntermNormWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
+from orbitals.occ_orbitals cimport OccOrbital
+from orbitals.occ_orbitals import OccOrbital
+from wave_functions.interm_norm cimport ExcType
 from util.memory import mem_of_floats
 
 logger = logging.getLogger(__name__)
@@ -69,7 +72,7 @@ cdef class CISDWaveFunction(WaveFunction):
         These are the coefficients of double excitations that are products
         of a single excitation in each spirrep.
         If irrep == irrep2, it is the coefficient of an alpha/beta excitation
-        If irrep != irrep2, it is the sum of alpha/alpha plus alpha/beta
+        If irrep != irrep2, it is the sum of alpha/alpha plus beta/beta
         excitation.
         
         Each entry is a 4D np.ndarray with shape
@@ -86,6 +89,10 @@ cdef class CISDWaveFunction(WaveFunction):
         Csd[1][0]  Csd[1][1]
         Csd[2][0]  Csd[2][1]  Csd[2][2]
         ....
+        
+        Note that the order convention here is different that what is
+        usually made in Grassmann. This should be corrected in the future
+    
     
     Data Model:
     -----------
@@ -129,7 +136,7 @@ cdef class CISDWaveFunction(WaveFunction):
                 + super().__repr__() + '\n'
                 + '\n'.join(x))
 
-    def calc_memory(self):
+    def calc_memory(self, calc_args):
         """Calculate memory used by the wave function"""
         n_floats = 0.0
         for irrep in self.spirrep_blocks(restricted=True):
@@ -243,11 +250,16 @@ cdef class CISDWaveFunction(WaveFunction):
     @classmethod
     def from_interm_norm(cls, IntermNormWaveFunction wf):
         """Load the wave function from a IntermNormWaveFunction."""
-        raise Exception('This has not been carefully checked/tested.'
-                        'It was originally from the old int_norm.')
+        cdef int irrep, irp, ii, inibl_D, inibl_i, inibl_j, a, b, ij
+        cdef int n_virt, n_virt_i, n_virt_j
+        cdef OccOrbital i, j
+        cdef CISDWaveFunction new_wf
         new_wf = cls()
-        new_wf.source = 'From int. norm. WF> ' + wf.source
+        new_wf.source = 'From IntermNormWaveFunction: ' + wf.source
         new_wf.restricted = wf.restricted
+        if not new_wf.restricted:
+            raise NotImplementedError(
+                'Currently for restricted wave functions only!')
         new_wf.point_group = wf.point_group
         new_wf.orbspace.get_attributes_from(wf.orbspace)
         if wf.wf_type == 'CISD':
@@ -266,65 +278,87 @@ cdef class CISDWaveFunction(WaveFunction):
             logger.warning(
                 'This is actually a CISD wave function using coefficients'
                 + ' from coupled-cluster amplitudes!!')
-        if not new_wf.restricted:
-            raise NotImplementedError(
-                'Currently for restricted wave functions only!')
         new_wf.initialize_SD_lists()
         new_wf.C0 = wf.C0
-        if wf.singles is not None:
-            for irrep in new_wf.spirrep_blocks(restricted=True):
-                new_wf.Cs[irrep] += wf.singles[irrep]
-                for i in range(new_wf.orbspace.corr[irrep]):
-                    if (new_wf.orbspace.corr[irrep] + i) % 2 == 0:
-                        new_wf.Cs[irrep][i, :] *= -1
-        for N, doubles in enumerate(wf.doubles):
-            i, j, i_irrep, j_irrep, exc_type = wf.ij_from_N(N)
-            if i_irrep != j_irrep:
-                new_wf.Csd[i_irrep][j_irrep][i, :, j, :] = \
-                    2 * doubles[i_irrep][:, :] - doubles[j_irrep][:, :].T
+        if wf.has_singles:
+            for irrep in range(new_wf.n_irrep):
+                new_wf.Cs[irrep] += wf.amplitudes[wf.ini_blocks_S[irrep]:
+                                                  wf.ini_blocks_S[irrep]+1]
+                for ii in range(new_wf.orbspace.corr[irrep]):
+                    if (new_wf.orbspace.corr[irrep] + ii) % 2 == 0:
+                        new_wf.Cs[irrep][ii, :] *= -1
+        ij = 0
+        #
+        # Order convention here is different that what is usually made
+        # in Grassmann. This should be corrected in the future
+        #
+        for j, i in wf.occupied_pairs(ExcType.ALL):
+            if i.spirrep != j.spirrep:
+                n_virt_i = wf.orbspace.virt[i.spirrep]
+                n_virt_j = wf.orbspace.virt[j.spirrep]
+                inibl_D = wf.ini_blocks_D[ij, i.spirrep]
+                new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] = \
+                    2 * np.reshape(np.array(wf.amplitudes[inibl_D:
+                                                          inibl_D + n_virt_i*n_virt_j]),
+                                   (n_virt_i,n_virt_j))
+                inibl_D = wf.ini_blocks_D[ij, j.spirrep]
+                new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] -= \
+                    np.reshape(np.array(wf.amplitudes[inibl_D:
+                                                      inibl_D + n_virt_i*n_virt_j]),
+                               (n_virt_j,n_virt_i)).T
                 if wf.wf_type == 'CCSD':
-                    new_wf.Csd[i_irrep][j_irrep][i, :, j, :] += (
-                        2 * np.outer(wf.singles[i_irrep][i, :],
-                                     wf.singles[j_irrep][j, :]))
-                if (i + new_wf.orbspace.ref[i_irrep]
-                      + j + new_wf.orbspace.ref[j_irrep]) % 2 == 1:
-                    new_wf.Csd[i_irrep][j_irrep][i, :, j, :] *= -1
+                    inibl_i = wf.ini_blocks_S[i.spirrep] + i.orbirp*n_virt_i
+                    inibl_j = wf.ini_blocks_S[j.spirrep] + j.orbirp*n_virt_j
+                    new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] += \
+                        2 * np.outer(wf.amplitudes[inibl_i:inibl_i+n_virt_i],
+                                     wf.amplitudes[inibl_j:inibl_j+n_virt_j])
+                if (i.orbirp + new_wf.orbspace.ref[i.spirrep]
+                      + j.orbirp + new_wf.orbspace.ref[j.spirrep]) % 2 == 1:
+                    new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] *= -1
             else:
                 # i_irrep == j_irrep
                 # and a_irrep == b_irrep, for this have only contrib from
                 # determinants with same occupation as the reference.
-                irp = i_irrep
-                if wf.singles is not None:
-                    singles = wf.singles[irp]
-                if i != j:
-                    ij = n_from_triang(j, i)
-                new_wf.Csd[irp][irp][i, :, j, :] += doubles[irp][:, :]
-                new_wf.Csd[irp][irp][j, :, i, :] += doubles[irp][:, :].T
+                irp = i.spirrep
+                inibl_D = wf.ini_blocks_D[ij, irp]
+                n_virt = new_wf.orbspace.virt[irp]
+                inibl_i = wf.ini_blocks_S[i.spirrep] + i.orbirp*n_virt
+                inibl_j = wf.ini_blocks_S[j.spirrep] + j.orbirp*n_virt
+                new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] += np.reshape(
+                    np.array(wf.amplitudes[inibl_D:inibl_D + n_virt*n_virt]),
+                    (n_virt,n_virt))
+                new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] += np.reshape(
+                    np.array(wf.amplitudes[inibl_D:inibl_D + n_virt*n_virt]),
+                    (n_virt,n_virt)).T
                 if wf.wf_type == 'CCSD':
-                    new_wf.Csd[irp][irp][i, :, j, :] += np.outer(singles[i, :],
-                                                                 singles[j, :])
-                    new_wf.Csd[irp][irp][j, :, i, :] += np.outer(singles[j, :],
-                                                                 singles[i, :])
-                if i == j:
-                    new_wf.Csd[irp][irp][i, :, i, :] /= 2
-                if i != j:
-                    for a in range(new_wf.orbspace.virt[irp]):
+                    new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] += np.outer(
+                        wf.amplitudes[inibl_i:inibl_i+n_virt],
+                        wf.amplitudes[inibl_j:inibl_j+n_virt])
+                    new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] += np.outer(
+                        wf.amplitudes[inibl_j:inibl_j+n_virt],
+                        wf.amplitudes[inibl_i:inibl_i+n_virt])
+                if i.orbirp == j.orbirp:
+                    new_wf.Csd[irp][irp][i.orbirp, :, i.orbirp, :] /= 2
+                if i.orbirp != j.orbirp:
+                    ij_Cd = n_from_triang(j.pos_in_occ, i.pos_in_occ)
+                    for a in range(n_virt):
                         for b in range(a):
                             # Increment ab instead?? Check the order
                             ab = n_from_triang(b, a)
-                            new_wf.Cd[irp][ij, ab] = (
-                                doubles[irp][b, a]
-                                - doubles[irp][a, b])
+                            new_wf.Cd[irp][ij_Cd, ab] = \
+                                wf.amplitudes[inibl_D + n_from_rect(b, a, n_virt)] \
+                                - wf.amplitudes[inibl_D + n_from_rect(a, b, n_virt)]
                             if wf.wf_type == 'CCSD':
-                                new_wf.Cd[irp][ij, ab] += (
-                                    wf.singles[irp][i, b]
-                                    * wf.singles[irp][j, a]
-                                    - wf.singles[irp][i, a]
-                                    * wf.singles[irp][j, b])
-                if (i + j) % 2 == 1:
-                    new_wf.Csd[irp][irp][i, :, j, :] *= -1
-                    new_wf.Csd[irp][irp][j, :, i, :] *= -1
-                    new_wf.Cd[irp][ij, :] *= -1
+                                new_wf.Cd[irp][ij_Cd, ab] += \
+                                    wf.amplitudes[inibl_i + b] \
+                                    * wf.amplitudes[inibl_j + b] \
+                                    - wf.amplitudes[inibl_i + a] \
+                                    * wf.amplitudes[inibl_j + b]
+                    if (i.orbirp + j.orbirp) % 2 == 1:
+                        new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] *= -1
+                        new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] *= -1
+                        new_wf.Cd[irp][ij_Cd, :] *= -1
+            ij += 1
         for irrep in new_wf.spirrep_blocks(restricted=True):
             new_wf.Cs[irrep] /= wf.norm
             new_wf.Cd[irrep] /= wf.norm

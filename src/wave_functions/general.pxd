@@ -8,7 +8,7 @@ cdef class WaveFunction:
     cdef public bint restricted
     cdef public int _irrep
     cdef public double Ms
-    cdef FullOrbitalSpace orbspace
+    cdef readonly FullOrbitalSpace orbspace
     cdef public double mem
 #    cdef public void _set_memory(self, object destination=*, object calc_args=*)
 #    cdef public double calc_memory(self, calc_args)

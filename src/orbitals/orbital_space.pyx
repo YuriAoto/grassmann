@@ -307,11 +307,15 @@ cdef class FullOrbitalSpace:
         self.act = OrbitalSpace(n_irrep=n_irrep)
 
     def __str__(OrbitalSpace self):
-        return '\n'.join([f'full:       {self.full}\n',
-                          f'virtual:    {self.virt}     reference: {self.ref}',
-                          f'correlated: {self.corr}     active:    {self.act}',
-                           '----',
-                          f'frozen:     {self.froz}'])
+        return (f'full:       {self.full}\n'
+                f'--------\n'
+                f'virtual:    {self.virt}\n'
+                f'correlated: {self.corr}\n\n'
+                f'reference:  {self.ref}\n'
+                f'active:     {self.act}\n'
+                f'========\n'
+                f'frozen:     {self.froz}\n')
+    
     cdef set_n_irrep(self, int n):
         self.n_irrep = n
         self.full._n_irrep = n

@@ -4,7 +4,7 @@ import copy
 
 from util.results import OptResults
 from wave_functions.interm_norm import IntermNormWaveFunction
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 import coupled_cluster.coupled_cluster as ccsd
 
 def cc_closed_shell(hf_energy,
@@ -45,11 +45,11 @@ def cc_closed_shell(hf_energy,
     """
     if wf_ini == None:
         point_group = 'C1'
-        orb_dim = OrbitalsSets([len(mol_orb)],
+        orb_dim = OrbitalSpace([len(mol_orb)],
                                occ_type='R')
-        ref_occ = OrbitalsSets([atom_int.mol_geo.n_elec],
+        ref_occ = OrbitalSpace([atom_int.mol_geo.n_elec],
                                occ_type='R')
-        core_orb = OrbitalsSets([0],
+        core_orb = OrbitalSpace([0],
                                 occ_type='R')
         wave_function = IntermNormWaveFunction.from_zero_amplitudes(
             point_group, ref_occ, orb_dim, core_orb, level=level)

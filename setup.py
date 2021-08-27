@@ -24,8 +24,6 @@ extensions = [
               ["src/wave_functions/interm_norm.pyx"]),
     Extension("src.wave_functions.cisd",
               ["src/wave_functions/cisd.pyx"]),
-    Extension("src.wave_functions.singles_doubles",
-              ["src/wave_functions/singles_doubles.pyx"]),
     Extension("src.wave_functions.strings_rev_lexical_order",
               ["src/wave_functions/strings_rev_lexical_order.pyx"]),
     Extension("src.orbitals.occ_orbitals",

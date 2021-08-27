@@ -267,7 +267,7 @@ cdef class WaveFunction:
         x.append('-' * 50)
         x.append('point group: {}'.format(self.point_group))
         x.append('n irrep: {}'.format(self.n_irrep))
-        x.append('Orbital space:\n {}'.format(repr(self.orbspace)))
+        x.append('Orbital space:\n{}'.format(str(self.orbspace)))
         x.append('irrep: {}'.format(self.irrep))
         x.append('Ms: {}'.format(self.Ms))
         x.append('restricted: {}'.format(self.restricted))

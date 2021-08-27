@@ -2,6 +2,9 @@
 
 """
 import unittest
+import cProfile
+import pstats
+from pstats import SortKey
 
 import numpy as np
 
@@ -2045,3 +2048,11 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertTrue(r_wf.restricted)
         self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
         
+    def test_profiling(self):
+        wf = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('N2__3__631g__D2h'))
+        self.assertTrue(wf.restricted)
+        cProfile.runctx('IntermNormWaveFunction.unrestrict(wf)', globals(), locals(), 'run_stats')
+        p = pstats.Stats('run_stats')
+        p.sort_stats(SortKey.TIME)
+        p.print_stats()

@@ -7,10 +7,7 @@ import numpy as np
 
 from wave_functions.strings_rev_lexical_order import get_index
 from wave_functions.strings_rev_lexical_order cimport next_str
-from wave_functions.singles_doubles cimport (
-    EXC_TYPE_ALL,
-    EXC_TYPE_A, EXC_TYPE_B,
-    EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+from wave_functions.interm_norm cimport ExcType
 from orbitals.occ_orbitals cimport OccOrbital
 #from orbitals.occ_orbitals import OccOrbital
 from util.variables import int_dtype
@@ -323,31 +320,31 @@ cdef double _term1(int[:] exc,
     """
     cdef DoubleExc double_exc
     cdef SingleExc single_exc
-    if exc_type == EXC_TYPE_A:
+    if exc_type == ExcType.A:
         single_exc.i = exc[0]
         single_exc.a = exc[1]
         return _term1_a(single_exc, wf, wf_cc,
                         alpha_string_graph)
-    if exc_type == EXC_TYPE_AA:
+    if exc_type == ExcType.AA:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
         double_exc.b = exc[3]
         return _term1_aa(double_exc, wf, wf_cc,
                          alpha_string_graph)
-    if exc_type == EXC_TYPE_B:
+    if exc_type == ExcType.B:
         single_exc.i = exc[0]
         single_exc.a = exc[1]
         return _term1_b(single_exc, wf, wf_cc,
                         beta_string_graph)
-    if exc_type == EXC_TYPE_BB:
+    if exc_type == ExcType.BB:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
         double_exc.b = exc[3]
         return _term1_bb(double_exc, wf, wf_cc,
                          beta_string_graph)
-    if exc_type == EXC_TYPE_AB:
+    if exc_type == ExcType.AB:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
@@ -375,27 +372,27 @@ cdef double _term2_diag(int[:] exc,
     """
     cdef DoubleExc double_exc
     cdef SingleExc single_exc
-    if exc_type == EXC_TYPE_A:
+    if exc_type == ExcType.A:
         single_exc.i = exc[0]
         single_exc.a = exc[1]
         return _term2_diag_a(single_exc, wf, alpha_nel)
-    if exc_type == EXC_TYPE_AA:
+    if exc_type == ExcType.AA:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
         double_exc.b = exc[3]
         return _term2_diag_aa(double_exc, wf, alpha_nel)
-    if exc_type == EXC_TYPE_B:
+    if exc_type == ExcType.B:
         single_exc.i = exc[0]
         single_exc.a = exc[1]
         return _term2_diag_b(single_exc, wf, beta_nel)
-    if exc_type == EXC_TYPE_BB:
+    if exc_type == ExcType.BB:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
         double_exc.b = exc[3]
         return _term2_diag_bb(double_exc, wf, beta_nel)
-    if exc_type == EXC_TYPE_AB:
+    if exc_type == ExcType.AB:
         double_exc.i = exc[0]
         double_exc.a = exc[1]
         double_exc.j = exc[2]
