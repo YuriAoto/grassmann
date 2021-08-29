@@ -220,32 +220,33 @@ cdef class FCIWaveFunction(WaveFunction):
     
     def __len__(self):
         try:
-            return self._coefficients.size
+            return self.coefficients.size
         except AttributeError:
             return 0
     
     def __getitem__(self, i):
-        return self._coefficients[i[0], i[1]]
-    
+        return self.coefficients[i[0], i[1]]
+
+    def __setitem__(self, i, value):
+        self.coefficients[i[0], i[1]] = value
+
     def __iter__(self):
         """Generator for determinants"""
         aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
-        for ia in range(self._coefficients.shape[0]):
+        for ia in range(self.coefficients.shape[0]):
             bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
-            for ib in range(self._coefficients.shape[1]):
-                yield SlaterDet(c=self._coefficients[ia, ib],
+            for ib in range(self.coefficients.shape[1]):
+                yield SlaterDet(c=self.coefficients[ia, ib],
                                 alpha_occ=aocc, beta_occ=bocc)
                 str_order.next_str(bocc)
             str_order.next_str(aocc)
         
-    def __eq__(self, other):
+    def __eq__(self, FCIWaveFunction other):
         """Checks if both wave functions are the same within
         TODO: compare all attributes
         """
-        global rtol
-        global atol
-        return np.allclose(self._coefficients, other._coefficients,
-                           rtol=rtol, atol=atol)
+        return np.allclose(self.coefficients, other.coefficients,
+                           rtol=self.rtol, atol=self.atol)
     
     def __str__(self):
         """Return a string version of the wave function."""
@@ -259,8 +260,12 @@ cdef class FCIWaveFunction(WaveFunction):
         x.append('-' * 50)
         return '\n'.join(x)
 
-    def get_coefficients(self):
-        return np.array(self._coefficients)
+    def __array__(self):
+        return np.array(self.coefficients)
+
+    @property
+    def shape(self):
+        return self.n_alpha_str, self.n_beta_str
 
     @property
     def alpha_string_graph(self):
@@ -281,10 +286,10 @@ cdef class FCIWaveFunction(WaveFunction):
             print((ia, ib) == wf.index(det)) # Should be always True
         """
         aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
-        for ia in range(self._coefficients.shape[0]):
+        for ia in range(self.coefficients.shape[0]):
             bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
-            for ib in range(self._coefficients.shape[1]):
-                yield ia, ib, SlaterDet(c=self._coefficients[ia, ib],
+            for ib in range(self.coefficients.shape[1]):
+                yield ia, ib, SlaterDet(c=self.coefficients[ia, ib],
                                         alpha_occ=aocc, beta_occ=bocc)
                 str_order.next_str(bocc)
             str_order.next_str(aocc)
@@ -316,7 +321,7 @@ cdef class FCIWaveFunction(WaveFunction):
         self._beta_string_graph = str_order.generate_graph(
             self.n_corr_beta, self.orbspace.n_orb_nofrozen)
         self._set_memory()
-        self._coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
+        self.coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
 
     def set_slater_det(self, det):
         """Set a the Slater Determinant coefficient to the wave function
@@ -331,10 +336,10 @@ cdef class FCIWaveFunction(WaveFunction):
         The index of this determinant
         """
         ii = self.index(det)
-        self._coefficients[ii[0], ii[1]] = det.c
+        self.coefficients[ii[0], ii[1]] = det.c
         return ii
     
-    def index(self, det):
+    cpdef (int, int) index(self,  det) except *:
         """Return the index of det in the coefficients matrix
         
         Parameters:
@@ -364,11 +369,11 @@ cdef class FCIWaveFunction(WaveFunction):
         If set_ref_det is True, also sets ref_det to the corresponding
         determinant (default=False)
         """
-        i_max = np.unravel_index(np.argmax(self._coefficients),
-                                 self._coefficients.shape)
+        i_max = np.unravel_index(np.argmax(self.coefficients),
+                                 self.coefficients.shape)
         if set_ref_det:
             self.ref_det = SlaterDet(
-                c=self[i_max],
+                c=self.coefficients[i_max],
                 alpha_occ=self.alpha_orb_occupation(i_max[0]),
                 beta_occ=self.beta_orb_occupation(i_max[1]))
         return i_max
@@ -422,7 +427,7 @@ cdef class FCIWaveFunction(WaveFunction):
         An instance of SlaterDet with the coefficient associated to ii
         and the alpha and beta occupation, without considering frozen orbitals
         """
-        return SlaterDet(c=self[ii],
+        return SlaterDet(c=self.coefficients[ii],
                          alpha_occ=self.alpha_orb_occupation(ii[0]),
                          beta_occ=self.beta_orb_occupation(ii[1]))
     
@@ -493,12 +498,12 @@ cdef class FCIWaveFunction(WaveFunction):
         """
         cdef int i, j
         if mode == 'unit':
-            S = norm(self._coefficients)
+            S = norm(self.coefficients)
         elif mode == 'intermediate':
             S = self.C0
         for i in range(self._n_alpha_str):
             for j in range(self._n_beta_str):
-                self._coefficients[i, j] /= S
+                self.coefficients[i, j] /= S
         self.set_coeff_ref_det()
     
     def set_ref_det_from_corr_orb(self):
@@ -518,7 +523,7 @@ cdef class FCIWaveFunction(WaveFunction):
     def set_coeff_ref_det(self):
         ia, ib = self.index(self.ref_det)
         self.ref_det = SlaterDet(
-            c=self[ia, ib],
+            c=self.coefficients[ia, ib],
             alpha_occ=self.ref_det.alpha_occ,
             beta_occ=self.ref_det.beta_occ)
     
@@ -592,17 +597,17 @@ cdef class FCIWaveFunction(WaveFunction):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
-                self._coefficients[ia, ib] = 1.0
+                self.coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                    or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
+                self.coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 decomposition = cluster_decompose(
                     alpha_hp, beta_hp, self.ref_det,
                     mode=level, recipes_f=None)
                 if (ia,ib) == _to_print:
                     print(str_dec(decomposition))
-                self._coefficients[ia, ib] = 0.0
+                self.coefficients[ia, ib] = 0.0
                 for d in decomposition:
                     if (ia,ib) == _to_print:
                         print('------ new!!')
@@ -620,7 +625,7 @@ cdef class FCIWaveFunction(WaveFunction):
                         if (ia,ib) == _to_print:
                             print(alpha_hp, beta_hp, wf[rank, alpha_hp, beta_hp])
                     if add_contr:
-                        self._coefficients[ia, ib] -= new_contribution
+                        self.coefficients[ia, ib] -= new_contribution
         self.set_coeff_ref_det()
     
     def get_coeff_from_molpro(self, molpro_output,
@@ -772,7 +777,7 @@ cdef class FCIWaveFunction(WaveFunction):
         if self.ref_det.c < 0:
             for i in range(self.n_alpha_str):
                 for j in range(self.n_beta_str):
-                    self._coefficients[i,j] *= -1
+                    self.coefficients[i,j] *= -1
             self.ref_det = SlaterDet(c=-self.ref_det.c,
                                      alpha_occ=self.ref_det.alpha_occ,
                                      beta_occ=self.ref_det.beta_occ)
@@ -1277,6 +1282,7 @@ cdef class FCIWaveFunction(WaveFunction):
         (or implement a referse function)
         
         """
+        cdef int ia, ib, i, j
         for ia, ib, det in self.enumerate():
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 2:
@@ -1286,8 +1292,9 @@ cdef class FCIWaveFunction(WaveFunction):
                 for d in decomposition[1:]:
                     singles_contr = d[0]
                     for cluster_det in d[1:]:
-                        singles_contr *= self[self.index(cluster_det)]
-                    self._coefficients[ia, ib] += singles_contr
+                        i, j = self.index(cluster_det)
+                        singles_contr *= self.coefficients[i, j]
+                    self.coefficients[ia, ib] += singles_contr
                     
     def _restore_S_to_D(self, recipes_f=None):
         """The reverse of _extract_S_from_D"""
@@ -1311,7 +1318,7 @@ cdef class FCIWaveFunction(WaveFunction):
         """
         for ia, ib, det in self.enumerate():
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
-            self._coefficients[ia, ib] *= (
+            self.coefficients[ia, ib] *= (
                 str_order.sign_relative_to_ref(alpha_hp[0],
                                                alpha_hp[1],
                                                self.ref_det.alpha_occ)
@@ -1319,7 +1326,7 @@ cdef class FCIWaveFunction(WaveFunction):
                                                  beta_hp[1],
                                                  self.ref_det.beta_occ))
     
-    def dist_to(self, other,
+    def dist_to(self, FCIWaveFunction other,
                 metric='IN',
                 normalise=True):
         """Distance between self and other
@@ -1357,8 +1364,8 @@ cdef class FCIWaveFunction(WaveFunction):
                 self.normalise(mode='unit')
                 other.normalise(mode='unit')
         if metric == 'IN':
-            return str_order.eucl_distance(self._coefficients,
-                                           other._coefficients)
+            return str_order.eucl_distance(self.coefficients,
+                                           other.coefficients)
     
     def symmetry_allowed(self, det):
         """Return True if this determinant is symmetry allowed"""

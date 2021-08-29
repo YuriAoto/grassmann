@@ -179,7 +179,7 @@ class AtomicToMolecularIntegralsTestCase(unittest.TestCase):
         g_corr = [1.85735,0,0.10245,0.37515,0,0.08095]
         for i in range(2):
             for j in range(2):
-                self.assertAlmostEqual(mol_orb.molecular_integrals.h[i,j],h_corr[i][j])
-                self.assertAlmostEqual(mol_orb.molecular_integrals.S[i,j],S_corr[i][j])
+                self.assertAlmostEqual(mol_orb._integrals.h[i,j],h_corr[i][j])
+                self.assertAlmostEqual(mol_orb._integrals.S[i,j],S_corr[i][j])
         for i in range(len(g_corr)):
-            self.assertAlmostEqual(mol_orb.molecular_integrals.g._integrals[i],g_corr[i])
+            self.assertAlmostEqual(mol_orb._integrals.g._integrals[i],g_corr[i])

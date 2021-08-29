@@ -12,6 +12,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
     cdef int first_bb_pair
     cdef int first_ab_pair
     cdef int _n_ampl
+    cdef double atol, rtol
     cdef int _add_block_for_calc_ini_blocks(self,
                                             int i_in_D,
                                             int spirrep_a,

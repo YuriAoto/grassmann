@@ -7,7 +7,6 @@ Classes:
 
 IntermNormWaveFunction
 """
-import copy
 import logging
 
 import numpy as np
@@ -439,6 +438,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         The number of (initialized) amplitudes
         
     """
+    
     def __init__(self):
         super().__init__()
         self._norm = -1.0
@@ -446,6 +446,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         self.first_bb_pair = 0
         self.first_ab_pair = 0
         self._n_ampl = 0
+        self.set_eq_tol()
     
     def __repr__(self):
         """Return representation of the wave function."""
@@ -567,6 +568,16 @@ cdef class IntermNormWaveFunction(WaveFunction):
             self._calc_ini_blocks()
         return self._n_ampl
 
+    def __eq__(self, IntermNormWaveFunction other):
+        """Check if amplitudes are almolst equal to amplitudes of other."""
+        return np.allclose(self.amplitudes, other.amplitudes,
+                           rtol=self.rtol,
+                           atol=self.atol)
+
+    def set_eq_tol(self, atol=1.0E-8, rtol=1.0E-5):
+        self.atol = atol
+        self.rtol = rtol
+
     @property
     def has_singles(self):
         return self.ini_blocks_D[0,0] != 0
@@ -579,12 +590,6 @@ cdef class IntermNormWaveFunction(WaveFunction):
         if self.restricted:
             i = OccOrbital(self.orbspace, True)
             j = OccOrbital(self.orbspace, True)
-            # i = OccOrbital(self.orbspace).corr.as_array(),
-            #                self.orbspace.orbs_before[:self.n_irrep+1],
-            #                True)
-            # j = OccOrbital(self.orbspace.corr.as_array(),
-            #                self.orbspace.orbs_before[:self.n_irrep+1],
-            #                True)
             while j.alive:
                 yield i, j
                 if i.pos_in_occ == j.pos_in_occ:
@@ -906,63 +911,63 @@ cdef class IntermNormWaveFunction(WaveFunction):
         self.amplitudes = np.zeros(len(self))
         return 0
     
-    def update_amplitudes(self, z):
+    def update_amplitudes(self, double[:] z, int start=0):
         """Update the amplitudes by z
         
         Parameters:
         -----------
-        z (np.array, same len as self.amplitudes)
+        z (iterable of (python) floats)
             The update for the amplitudes.
         
+        start (int)
+            The index to start the update
         """
-        if len(z) != len(self):
-            raise ValueError(
-                'Update vector does not have same length as amplitude.')
-        self.amplitudes += z
+        cdef int i
+        if start + len(z) > len(self):
+            raise ValueError('Update vector is too large.')
+        for i in range(len(z)):
+            self.amplitudes[start+i] += z[i]
     
     @classmethod
     def similar_to(cls, wf, wf_type, restricted):
+        cdef IntermNormWaveFunction new_wf
         new_wf = super().similar_to(wf, restricted=restricted)
         new_wf.wf_type = wf_type
         new_wf.initialize_amplitudes()
         return new_wf
     
     @classmethod
-    def from_zero_amplitudes(cls, point_group,
-                             ref_orb, orb_dim, froz_orb,
-                             level='SD', wf_type='CC'):
+    def from_zero_amplitudes(cls, point_group, orbspace,
+                             level='SD', wf_type='CC',
+                             restricted=True):
         """Construct a new wave function with all amplitudes set to zero
         
         Parameters:
         -----------
-        ref_orb (orbitals.symmetry.OrbitalsSets)
-            The reference occupation
-        
-        orb_dim (orbitals.symmetry.OrbitalsSets)
-            The dimension of orbital spaces
-        
-        froz_orb (orbitals.symmetry.OrbitalsSets)
-            The frozen orbitals
+        orbspace (orbitals.orbital_space.FullOrbitalSpace)
+            The orbital space
         
         Limitations:
         ------------
-        Only for restricted wave functions. Thus, ref_orb must be of 'R' type
+        Only for restricted wave functions. Thus, orbspace.ref must be of 'R' type
         
         """
+        cdef IntermNormWaveFunction new_wf
+        cdef int irrep
+        if not restricted:
+            NotImplementedError('Not implemented for unrestricted (sure?)')
         new_wf = cls()
-        new_wf.restricted = ref_orb.occ_type == 'R'
+        new_wf.restricted = restricted
         new_wf.wf_type = wf_type + level
         new_wf.point_group = point_group
-        new_wf.orbspace.set_full(orb_dim, update=False)
-        new_wf.orbspace.add_to_ref(ref_orb, add_to_full=False, update=False)
-        new_wf.orbspace.set_froz(froz_orb, add_to_full=False)
+        new_wf.orbspace.get_attributes_from(orbspace)
         if new_wf.restricted:
             new_wf.Ms = 0.0
         else:
             new_wf.Ms = 0
-            for irrep_i in range(new_wf.n_irrep):
-                new_wf.Ms += (new_wf.orbspace.ref[irrep_i]
-                              - new_wf.orbspace.ref[irrep_i + new_wf.n_irrep])
+            for irrep in range(new_wf.n_irrep):
+                new_wf.Ms += (new_wf.orbspace.ref[irrep]
+                              - new_wf.orbspace.ref[irrep + new_wf.n_irrep])
             new_wf.Ms /= 2
         new_wf.initialize_amplitudes()
         return new_wf
@@ -980,7 +985,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         -----------
         ur_wf (IntermNormWaveFunction)
         The wave function (in general of unrestricted type). If restricted,
-        a deepcopy  is returned
+        a copy  is returned
         
         Raise:
         ------
@@ -993,9 +998,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
         cdef double[:] a_block
         cdef double[:] b_block
         cdef OccOrbital i, j
-
         if ur_wf.restricted:
-            return copy.deepcopy(ur_wf)
+            r_wf = cls.similar_to(ur_wf, ur_wf.wf_type, True)
+            r_wf.amplitudes = np.array(ur_wf.amplitudes)
+            return r_wf
         if "S" in ur_wf.wf_type:
             if not np.allclose(
                     ur_wf.amplitudes[:ur_wf.ini_blocks_S[ur_wf.n_irrep]],
@@ -1087,7 +1093,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         -----------
         r_wf (IntermNormWaveFunction)
         The wave function (in general of restricted type). If unrestricted,
-        a deepcopy is returned
+        a copy is returned
         """
         cdef IntermNormWaveFunction ur_wf
         cdef int iampl, ij, ij_diff, ji_ab_pos, first_bb_ampl, n_corr
@@ -1095,7 +1101,9 @@ cdef class IntermNormWaveFunction(WaveFunction):
         cdef double[:] this_block, transp_block 
         cdef OccOrbital i, j
         if not r_wf.restricted:
-            return copy.deepcopy(r_wf)
+            ur_wf = cls.similar_to(r_wf, r_wf.wf_type, True)
+            ur_wf.amplitudes = np.array(r_wf.amplitudes)
+            return ur_wf
         ur_wf = cls.similar_to(r_wf, r_wf.wf_type, False)
         if "S" in r_wf.wf_type:
             ur_wf.amplitudes[:r_wf.ini_blocks_D[0, 0]] = \

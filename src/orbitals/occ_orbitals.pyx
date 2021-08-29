@@ -68,7 +68,7 @@ cdef class OccOrbital:
         cdef int irrep, spirrep
         self._n_irrep = orbspace.n_irrep
         self.is_alpha = is_alpha
-        self._corr_orb = orbspace.corr.as_array()
+        self._corr_orb = np.array(orbspace.corr)
         self._orbs_before = orbspace.orbs_before
         self._n_occ = 0
         self.spirrep = 0 if is_alpha else self._n_irrep

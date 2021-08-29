@@ -1980,7 +1980,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CISD_file(dir_name))
@@ -1989,7 +1989,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(dir_name, allE=True))
@@ -1998,7 +1998,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CISD_file(dir_name, allE=True))
@@ -2007,7 +2007,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
     
     def test_h2o_req_631g_c2v(self):
         dir_name = 'h2o__Req__631g__C2v'
@@ -2019,7 +2019,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CISD_file(dir_name))
@@ -2028,7 +2028,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(dir_name, allE=True))
@@ -2037,7 +2037,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         # -----------
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CISD_file(dir_name, allE=True))
@@ -2046,8 +2046,9 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertFalse(ur_wf.restricted)
         r_wf = IntermNormWaveFunction.restrict(ur_wf)
         self.assertTrue(r_wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), r_wf.get_amplitudes())
+        self.assertEqual(wf, r_wf)
         
+    @tests.category('PROFILE')
     def test_profiling(self):
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('N2__3__631g__D2h'))

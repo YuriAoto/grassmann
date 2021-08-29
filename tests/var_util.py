@@ -27,6 +27,7 @@ all_test_categories = [
     'LONG',
     'VERY LONG',
     'COMPLETE',
+    'PROFILE',
     'NONE'
     ]
 

@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from wave_functions import int_norm, cisd, norm_ci
+from wave_functions import interm_norm, cisd, fci
 import tests
 
 molecule = ('H2', 'Li2')
@@ -27,15 +27,15 @@ class CisdFciJacHessTestCase(unittest.TestCase):
                                           molecule=molecule,
                                           basis=basis,
                                           symmetry=symmetry):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
+            wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(test_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            wf_FCI = norm_ci.NormCI_WaveFunction.from_Molpro_FCI(
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            wf_FCI = fci.FCIWaveFunction.from_Molpro_FCI(
                 tests.FCI_file(test_sys), zero_coefficients=False)
             tests.logger.debug("FCI before:\n%r", wf_FCI)
-            wf_FCI.get_coeff_from_int_norm_WF(wf_intN,
-                                              change_structure=False,
-                                              use_structure=True)
+            wf_FCI.get_coeff_from_interm_norm_WF(wf_intN,
+                                                 change_structure=False,
+                                                 use_structure=True)
             tests.logger.debug("CISD:\n%r", wf_CISD)
             tests.logger.debug("FCI:\n%r", wf_FCI)
             Jac_fci, Hess_fci = wf_FCI.make_Jac_Hess_overlap()
@@ -83,10 +83,10 @@ class CisdFciJacHessTestCase(unittest.TestCase):
                                           molecule=molecule,
                                           basis=basis,
                                           symmetry=symmetry):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
+            wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(test_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            wf_FCI = norm_ci.NormCI_WaveFunction.from_int_norm(wf_intN)
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            wf_FCI = fci.FCIWaveFunction.from_interm_norm(wf_intN)
             tests.logger.debug("CISD:\n%r", wf_CISD)
             tests.logger.debug("FCI:\n%r", wf_FCI)
             Jac_fci, Hess_fci = wf_FCI.make_Jac_Hess_overlap()

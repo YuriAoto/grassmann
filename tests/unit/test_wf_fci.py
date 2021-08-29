@@ -24,7 +24,7 @@ class FromMolproTestCase(unittest.TestCase):
     def test_h2_sto3g_d2h(self):
         wf = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__sto3g__D2h'))
-        self.assertEqual(wf.get_coefficients(),
+        self.assertEqual(np.array(wf),
                          np.array([[0.756853272220, 0.0],
                                    [0.0, -0.653584825658]]))
         self.assertEqual(wf.alpha_string_graph, int_array([[0],
@@ -42,7 +42,7 @@ class FromMolproTestCase(unittest.TestCase):
              [ 0.000000000000,-0.612568504984, 0.000000000000,-0.054814463843],
              [ 0.061389372090, 0.000000000000, 0.002689301121, 0.000000000000],
              [ 0.000000000000,-0.054814463843, 0.000000000000,-0.006320711531]])
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         self.assertEqual(wf.alpha_string_graph, int_array([[0],
                                                            [1],
                                                            [2],
@@ -74,7 +74,7 @@ class FromMolproTestCase(unittest.TestCase):
         my_coeff[7, 6:8] = [0.000000000000, -0.001158032360]
         my_coeff[8, 8:] = [-0.002927344434, 0.000000000000]
         my_coeff[9, 8:] = [0.000000000000, -0.001158032360]
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         self.assertEqual(wf.alpha_string_graph, int_array([[0],
                                                            [1],
                                                            [2],
@@ -137,7 +137,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-
+    
     @tests.category('SHORT')
     def test_h2_sto3g_d2h(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -146,8 +146,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__sto3g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
     
     @tests.category('SHORT')
     def test_h2_631g_c2v(self):
@@ -159,12 +158,12 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
              [ 0.00000000,-0.75250839, 0.00000000,-0.05419745],
              [ 0.00000000, 0.00000000, 0.00270811, 0.00000000],
              [ 0.00000000,-0.05419745, 0.00000000,-0.00238158]])
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         wf = FCIWaveFunction.from_interm_norm(
             IntermNormWaveFunction.unrestrict(
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__631g__C2v'))))
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
     
     @tests.category('SHORT')
     def test_h2_631g_d2h(self):
@@ -176,12 +175,12 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
              [ 0.00000000, 0.00270811, 0.00000000, 0.00000000],
              [ 0.00000000, 0.00000000,-0.75250839,-0.05419745],
              [ 0.00000000, 0.00000000,-0.05419745,-0.00238158]])
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         wf = FCIWaveFunction.from_interm_norm(
             IntermNormWaveFunction.unrestrict(
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__631g__D2h'))))
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
     
     @tests.category('SHORT')
     def test_h2_ccpvdz_d2h(self):
@@ -199,12 +198,12 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                              [-0.00845294,  0.00157013, -0.00053259]]
         my_coeff[8, 8] = -0.00075374
         my_coeff[9, 9] = -0.00075374
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         wf = FCIWaveFunction.from_interm_norm(
             IntermNormWaveFunction.unrestrict(
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('H2__5__ccpVDZ__D2h'))))
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
     
     @tests.category('SHORT')
     def test_li2_sto3g_d2h(self):
@@ -220,12 +219,12 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                              [-0.05296460, -0.02815273]]
         my_coeff[6, 6] = -0.00001730
         my_coeff[7, 7] = -0.00001730
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
         wf = FCIWaveFunction.from_interm_norm(
             IntermNormWaveFunction.unrestrict(
                 IntermNormWaveFunction.from_Molpro(
                     tests.CCD_file('Li2__5__sto3g__D2h'))))
-        self.assertEqual(wf.get_coefficients(), my_coeff)
+        self.assertEqual(np.array(wf), my_coeff)
     
     @tests.category('LONG')
     def test_li2_sto3g_d2h_alle(self):
@@ -556,8 +555,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__631g__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
     def test_h2_631g_d2h(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -566,8 +564,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__631g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
     def test_h2_ccpvdz_c2v(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -576,8 +573,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__631g__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
     def test_li2_sto3g_d2h(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -586,8 +582,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('Li2__5__sto3g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
     def test_li2_to2s_c2v(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -596,8 +591,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('Li2__5__to2s__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
     def test_li2_to3s_c2v(self):
         wf = FCIWaveFunction.from_interm_norm(
@@ -606,8 +600,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('Li2__5__to3s__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
-        self.assertEqual(wf.get_coefficients(),
-                         wf_from_molpro_fci.get_coefficients())
+        self.assertEqual(wf, wf_from_molpro_fci)
 
 @tests.category('SHORT', 'ESSENTIAL')
 class ExcInfoTestCase(unittest.TestCase):
@@ -658,7 +651,7 @@ class NormTestCase(unittest.TestCase):
         wf = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__sto3g__D2h'))
         wf.normalise()
-        self.assertAlmostEqual(norm(wf.get_coefficients()), 1.0)
+        self.assertAlmostEqual(norm(np.array(wf)), 1.0)
         wf.normalise(mode='intermediate')
         self.assertAlmostEqual(wf.C0, 1.0)
         wf.normalise()
@@ -672,7 +665,7 @@ class NormTestCase(unittest.TestCase):
         wf = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__631g__C2v'))
         wf.normalise()
-        self.assertAlmostEqual(norm(wf.get_coefficients()), 1.0)
+        self.assertAlmostEqual(norm(np.array(wf)), 1.0)
         wf.normalise(mode='intermediate')
         self.assertAlmostEqual(wf.C0, 1.0)
         wf.normalise()
@@ -686,7 +679,7 @@ class NormTestCase(unittest.TestCase):
         wf = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('H2__5__ccpVDZ__C2v'))
         wf.normalise()
-        self.assertAlmostEqual(norm(wf.get_coefficients()), 1.0)
+        self.assertAlmostEqual(norm(np.array(wf)), 1.0)
         wf.normalise(mode='intermediate')
         self.assertAlmostEqual(wf.C0, 1.0)
         wf.normalise()
@@ -700,7 +693,7 @@ class NormTestCase(unittest.TestCase):
         wf = FCIWaveFunction.from_Molpro_FCI(
             tests.FCI_file('HCl_plus__1.5__631g__C2v'))
         wf.normalise()
-        self.assertAlmostEqual(norm(wf.get_coefficients()), 1.0)
+        self.assertAlmostEqual(norm(np.array(wf)), 1.0)
         wf.normalise(mode='intermediate')
         self.assertAlmostEqual(wf.C0, 1.0)
         wf.normalise()

@@ -371,7 +371,7 @@ cdef class WaveFunction:
         self.Ms = wf.Ms
         self.orbspace.get_attributes_from(wf.orbspace)
         if restricted is not None and restricted:
-            if np.any(wf.orbspace.act.as_array()):
+            if np.any(np.array(wf.orbspace.act)):
                 raise ValueError(
                     'act_orb is not empty, cannot be of restricted type!')
     

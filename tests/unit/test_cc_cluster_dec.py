@@ -12,7 +12,7 @@ from wave_functions.slater_det import SlaterDet
 from coupled_cluster.cluster_decomposition import cluster_decompose
 from coupled_cluster import coupled_cluster as cc
 from wave_functions.interm_norm import IntermNormWaveFunction as WF
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import FullOrbitalSpace, OrbitalSpace
 from coupled_cluster import coupled_cluster
 from coupled_cluster import optimiser
 from integrals import integrals
@@ -292,11 +292,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 5
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes[:no*nv]=[0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]))
         h_sym = np.asarray([0.30,0.55,0.58,0.44,0.77,0.86,0.84,0.74,0.21,0.56,0.46,0.79,0.73,0.77,0.13,0.45,0.70,0.22,0.69,0.43,0.04,1.00,0.55,0.48,0.80,0.21,0.85,0.37,0.48,0.26,0.15,0.03,0.37,0.71,0.69,0.38,0.72,0.72,0.35,0.10,0.30,0.20,0.95,0.06,0.84,0.94,0.21,0.53,0.23,0.77,0.16,0.42,0.37,0.91,0.98])
         h = np.zeros((n,n))
         for i in range(n):
@@ -317,11 +318,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 5
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes[:no*nv]=[0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]))
         h_sym = np.asarray([0.30,0.55,0.58,0.44,0.77,0.86,0.84,0.74,0.21,0.56,0.46,0.79,0.73,0.77,0.13,0.45,0.70,0.22,0.69,0.43,0.04,1.00,0.55,0.48,0.80,0.21,0.85,0.37,0.48,0.26,0.15,0.03,0.37,0.71,0.69,0.38,0.72,0.72,0.35,0.10,0.30,0.20,0.95,0.06,0.84,0.94,0.21,0.53,0.23,0.77,0.16,0.42,0.37,0.91,0.98])
         h = np.zeros((n,n))
         for i in range(n):
@@ -343,11 +345,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 5
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes[:no*nv]=[0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.44, 0.52, 0.12, 0.50, 0.59, 0.60, 0.01, 0.48, 0.14, 0.46, 0.20, 0.50, 0.67, 0.04, 0.10, 0.44, 0.04, 0.72, 0.40, 0.02, 0.18, 0.98, 0.87, 0.77, 0.38]))
         h_sym = np.asarray([0.30,0.55,0.58,0.44,0.77,0.86,0.84,0.74,0.21,0.56,0.46,0.79,0.73,0.77,0.13,0.45,0.70,0.22,0.69,0.43,0.04,1.00,0.55,0.48,0.80,0.21,0.85,0.37,0.48,0.26,0.15,0.03,0.37,0.71,0.69,0.38,0.72,0.72,0.35,0.10,0.30,0.20,0.95,0.06,0.84,0.94,0.21,0.53,0.23,0.77,0.16,0.42,0.37,0.91,0.98])
         h = np.zeros((n,n))
         for i in range(n):
@@ -370,11 +373,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 3
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes[:no*nv]=np.zeros(no*nv)
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.zeros(no*nv))
         h = np.random.rand(n,n)
         hoo = cc.t1_1e_transf_oo(h,wfcc)
         hvo = cc.t1_1e_transf_vo(h,wfcc)
@@ -396,11 +400,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 2
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes = [0.75, 0.79, 0.16, 0.87, 0.43, 0.14,              0.36, 0.40, 0.27, 0.90, 0.88, 0.44, 0.88, 0.09, 0.77, 0.01, 0.26, 0.77, 0.98, 0.25, 0.56, 0.91, 0.31, 0.23, 0.64, 0.68, 0.73, 0.62, 0.52, 0.91, 0.10, 0.65, 0.74]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.75, 0.79, 0.16, 0.87, 0.43, 0.14,              0.36, 0.40, 0.27, 0.90, 0.88, 0.44, 0.88, 0.09, 0.77, 0.01, 0.26, 0.77, 0.98, 0.25, 0.56, 0.91, 0.31, 0.23, 0.64, 0.68, 0.73, 0.62, 0.52, 0.91, 0.10, 0.65, 0.74]))
         u = coupled_cluster.make_u(wfcc,no,nv)
         u_corr = [0.36, -0.1, -0.34, 1.4, 0.88, 0.79, 1.49, -0.26, 0.77, 0.01, -0.46, 0.63, 1.7, 0.25, 0.81, 1.05, 0.06, 0.23, 0.64, 0.74, 1.36, 0.56, 0.52, 1.17, -0.53, 0.39, 0.74]
         for i in range(no*(no+1)*nv**2//2):
@@ -450,11 +455,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 1
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes = [0.1, 0.01]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.1, 0.01]))
         mol_int = integrals.Integrals(None,None,method=None,orth_method=None)
         mol_int.n_func = n
         mol_int.S = np.ndarray((2,2))
@@ -489,11 +495,12 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 1
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
-        wfcc.amplitudes = [0.1, 0.01]
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
+        wfcc.update_amplitudes(np.array([0.1, 0.01]))
         mol_int = integrals.Integrals(None,None,method=None,orth_method=None)
         mol_int.n_func = n
         mol_int.S = np.ndarray((2,2))
@@ -546,10 +553,11 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 1
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
         mol_int = integrals.Integrals(None,None,method=None,orth_method=None)
         mol_int.n_func = n
         mol_int.S = np.ndarray((2,2))
@@ -573,7 +581,7 @@ class ClusterDecTestCase(unittest.TestCase):
         mol_int.g._integrals[3] = 0.6636023327598741
         mol_int.g._integrals[4] = 0
         mol_int.g._integrals[5] = 0.6973849743389031
-#        wfcc.amplitudes = [0, 8.8]
+#        wfcc.update_amplitudes(np.array([0, 8.8]))
         results = optimiser.cc_closed_shell(2*mol_int.h[0,0]+mol_int.g._integrals[0],mol_int,wf_ini=wfcc,max_inter=50)
         self.assertAlmostEqual(results.energy,-1.8516,4)
         print(results)
@@ -584,10 +592,11 @@ class ClusterDecTestCase(unittest.TestCase):
         no = 4
         nv = n - no
         point_group = 'C1'
-        orb_dim = OrbitalsSets([n], occ_type='R')
-        ref_occ = OrbitalsSets([no], occ_type='R')
-        core_orb = OrbitalsSets([0], occ_type='R')
-        wfcc = WF.from_zero_amplitudes(point_group, ref_occ, orb_dim, core_orb, level='SD')
+        orbspace = FullOrbitalSpace(1)
+        orbspace.set_full(OrbitalSpace(dim=[n], orb_type='R'))
+        orbspace.set_ref(OrbitalSpace(dim=[no], orb_type='R'))
+        orbspace.set_froz(OrbitalSpace(dim=[0], orb_type='R'))
+        wfcc = WF.from_zero_amplitudes(point_group, orbspace, level='SD')
         mol_int = integrals.Integrals(None,None,method=None,orth_method=None)
         mol_int.n_func = n
         mol_int.S = np.random.rand(n,n)*0.01

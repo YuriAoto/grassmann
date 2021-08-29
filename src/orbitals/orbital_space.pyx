@@ -157,6 +157,12 @@ cdef class OrbitalSpace():
         x.append(']')
         return ' '.join(x)
 
+    def __array__(self):
+        """Return a copy of the array that represents it in Full"""
+        cdef int i
+        return np.array([self._dim_per_irrep[i] for i in range(2*self._n_irrep)],
+                        dtype=np.intc)
+
     def __eq__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
         if self._n_irrep != other._n_irrep:
@@ -251,10 +257,6 @@ cdef class OrbitalSpace():
             return
         raise ValueError('Cannot restrict ' + str(self) + '.')
     
-    def as_array(self):
-        """Return a copy of the array that represents it in Full"""
-        return np.array(self._dim_per_irrep, dtype=np.intc)
-    
     @property
     def orb_type(self):
         return self._type
@@ -316,7 +318,7 @@ cdef class FullOrbitalSpace:
                 f'========\n'
                 f'frozen:     {self.froz}\n')
     
-    cdef set_n_irrep(self, int n):
+    cpdef set_n_irrep(self, int n):
         self.n_irrep = n
         self.full._n_irrep = n
         self.froz._n_irrep = n
@@ -325,45 +327,45 @@ cdef class FullOrbitalSpace:
         self.corr._n_irrep = n
         self.act._n_irrep = n
 
-    cdef set_full(self, OrbitalSpace other, bint update=True):
+    cpdef set_full(self, OrbitalSpace other, bint update=True):
         self.full.set_(other)
         if update: self.calc_remaining()
 
-    cdef add_to_full(self, OrbitalSpace other, bint update=True):
+    cpdef add_to_full(self, OrbitalSpace other, bint update=True):
         self.full += other
         if update: self.calc_remaining()
 
-    cdef set_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef set_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.froz.set_(other)
         if add_to_full: self.full += other
         if update: self.calc_remaining()
             
-    cdef add_to_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef add_to_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.froz += other
         if add_to_full: self.full += other
         if update: self.calc_remaining()
 
-    cdef set_ref(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef set_ref(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.ref.set_(other)
         if add_to_full: self.full += other
         if update: self.calc_remaining()
             
-    cdef add_to_ref(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef add_to_ref(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.ref += other
         if add_to_full: self.full += other
         if update: self.calc_remaining()
 
-    cdef set_act(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef set_act(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.act.set_(other)
         if add_to_full: self.full += other
         if update: self.calc_remaining()
 
-    cdef add_to_act(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef add_to_act(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
         self.act.set_(other)
         if add_to_full: self.full += other
         if update: self.calc_remaining()
     
-    cdef calc_remaining(self):
+    cpdef calc_remaining(self):
         cdef int irrep
         self.virt = self.full - self.ref
         self.corr = self.ref - self.froz
@@ -380,7 +382,7 @@ cdef class FullOrbitalSpace:
                 self.corr_orbs_before[irrep + 1] = (self.corr_orbs_before[irrep]
                                                     + self.corr[irrep])
 
-    cdef get_attributes_from(self, FullOrbitalSpace other):
+    cpdef get_attributes_from(self, FullOrbitalSpace other):
         """Deepy copy all attributes from other"""
         cdef int i
         self.n_irrep = other.n_irrep
@@ -398,7 +400,7 @@ cdef class FullOrbitalSpace:
         self.act.set_(other.act, force=True)
         # needed???
         # if restricted:
-        #     if np.any(other.act_orb.as_array()):
+        #     if np.any(np.array(other.act)):
         #         raise ValueError(
         #             'act_orb is not empty, cannot be of restricted type!')
         #     self.ref_orb.restrict_it()

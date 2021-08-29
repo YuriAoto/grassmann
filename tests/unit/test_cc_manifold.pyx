@@ -10,12 +10,11 @@ from util.variables import int_dtype
 from util.other import int_array
 from src.coupled_cluster.manifold cimport (_term1, _term2_diag, _exc_on_string,
     SingleExc, DoubleExc, _term1_a)
-from wave_functions.singles_doubles cimport (
-    EXC_TYPE_ALL,
-    EXC_TYPE_A, EXC_TYPE_B,
-    EXC_TYPE_AA, EXC_TYPE_BB, EXC_TYPE_AB)
+from wave_functions.interm_norm cimport ExcType
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
+from orbitals.orbital_space cimport FullOrbitalSpace, OrbitalSpace
+from orbitals.orbital_space import FullOrbitalSpace, OrbitalSpace
 
 @tests.category('SHORT', 'ESSENTIAL')
 class ExcOnStringTestCase(unittest.TestCase):
@@ -210,25 +209,25 @@ class Terms2el6orbTestCase(unittest.TestCase):
                                         self.str_gr),
                                -0.41)
         self.assertAlmostEqual(_term1(int_array(0, 1),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                -0.41)
         self.assertAlmostEqual(_term1(int_array(0, 2),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                0.6)
         self.assertAlmostEqual(_term1(int_array(0, 1),
-                                      EXC_TYPE_B,
+                                      ExcType.B,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                0.31)
         self.assertAlmostEqual(_term1(int_array(0, 2),
-                                      EXC_TYPE_B,
+                                      ExcType.B,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
@@ -236,25 +235,25 @@ class Terms2el6orbTestCase(unittest.TestCase):
     
     def test_term1_doubles(self):
         self.assertAlmostEqual(_term1(int_array(0, 1, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                -0.7)
         self.assertAlmostEqual(_term1(int_array(0, 1, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                -0.1)
         self.assertAlmostEqual(_term1(int_array(0, 2, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
                                0.5)
         self.assertAlmostEqual(_term1(int_array(0, 2, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.str_gr,
                                       self.str_gr),
@@ -262,25 +261,25 @@ class Terms2el6orbTestCase(unittest.TestCase):
     
     def test_term2_diag_singles(self):
         self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.29)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.29)
         self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-                                           EXC_TYPE_B,
+                                           ExcType.B,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.53)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-                                           EXC_TYPE_B,
+                                           ExcType.B,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
@@ -288,25 +287,25 @@ class Terms2el6orbTestCase(unittest.TestCase):
     
     def test_term2_diag_doubles(self):
         self.assertAlmostEqual(_term2_diag(int_array(0, 1, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.0)
         self.assertAlmostEqual(_term2_diag(int_array(0, 1, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.0)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
                                1.0)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.nel,
                                            self.nel),
@@ -343,37 +342,37 @@ class Terms3el7orbTestCase(unittest.TestCase):
         
     def test_term1_singles(self):
         self.assertAlmostEqual(_term1(int_array(0, 2),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.44)
         self.assertAlmostEqual(_term1(int_array(0, 3),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -1.3)
         self.assertAlmostEqual(_term1(int_array(1, 2),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                0.11)
         self.assertAlmostEqual(_term1(int_array(1, 3),
-                                      EXC_TYPE_A,
+                                      ExcType.A,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.79)
         self.assertAlmostEqual(_term1(int_array(0, 1),
-                                      EXC_TYPE_B,
+                                      ExcType.B,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                0.7)
         self.assertAlmostEqual(_term1(int_array(0, 2),
-                                      EXC_TYPE_B,
+                                      ExcType.B,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
@@ -381,55 +380,55 @@ class Terms3el7orbTestCase(unittest.TestCase):
     
     def test_term1_doubles(self):
         self.assertAlmostEqual(_term1(int_array(0, 2, 1, 3),
-                                      EXC_TYPE_AA,
+                                      ExcType.AA,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.79)
         self.assertAlmostEqual(_term1(int_array(0, 2, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                0.06)
         self.assertAlmostEqual(_term1(int_array(0, 2, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                1.44)
         self.assertAlmostEqual(_term1(int_array(0, 3, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.14)
         self.assertAlmostEqual(_term1(int_array(0, 3, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                0.34)
         self.assertAlmostEqual(_term1(int_array(1, 2, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.62)
         self.assertAlmostEqual(_term1(int_array(1, 2, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                0.07)
         self.assertAlmostEqual(_term1(int_array(1, 3, 0, 1),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
                                -0.04)
         self.assertAlmostEqual(_term1(int_array(1, 3, 0, 2),
-                                      EXC_TYPE_AB,
+                                      ExcType.AB,
                                       self.wf, self.wf_cc,
                                       self.alpha_str_gr,
                                       self.beta_str_gr),
@@ -437,37 +436,37 @@ class Terms3el7orbTestCase(unittest.TestCase):
         
     def test_term2_diag_singles(self):
         self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                2.43)
         self.assertAlmostEqual(_term2_diag(int_array(0, 3),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                2.91)
         self.assertAlmostEqual(_term2_diag(int_array(1, 2),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                2.72)
         self.assertAlmostEqual(_term2_diag(int_array(1, 3),
-                                           EXC_TYPE_A,
+                                           ExcType.A,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                2.68)
         self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-                                           EXC_TYPE_B,
+                                           ExcType.B,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.94)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-                                           EXC_TYPE_B,
+                                           ExcType.B,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
@@ -475,55 +474,55 @@ class Terms3el7orbTestCase(unittest.TestCase):
     
     def test_term2_diag_doubles(self):
         self.assertAlmostEqual(_term2_diag(int_array(0, 2, 1, 3),
-                                           EXC_TYPE_AA,
+                                           ExcType.AA,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.74)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.04)
         self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.04)
         self.assertAlmostEqual(_term2_diag(int_array(0, 3, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.04)
         self.assertAlmostEqual(_term2_diag(int_array(0, 3, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.04)
         self.assertAlmostEqual(_term2_diag(int_array(1, 2, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.01)
         self.assertAlmostEqual(_term2_diag(int_array(1, 2, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.01)
         self.assertAlmostEqual(_term2_diag(int_array(1, 3, 0, 1),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
                                1.49)
         self.assertAlmostEqual(_term2_diag(int_array(1, 3, 0, 2),
-                                           EXC_TYPE_AB,
+                                           ExcType.AB,
                                            self.wf_cc,
                                            self.alpha_nel,
                                            self.beta_nel),
@@ -534,12 +533,16 @@ class Terms3el7orbTestCase(unittest.TestCase):
 class OccOrbitalTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.corr_orb = int_array(5, 2, 2, 0, 4, 2, 2, 0)
-        self.n_orb_before = int_array(0, 10, 15, 20, 22)
+        self.orbspace = FullOrbitalSpace(4)
+        self.orbspace.set_full(OrbitalSpace(dim=[10, 5, 5, 2], orb_type='R'),
+                               update=False)
+        self.orbspace.set_ref(OrbitalSpace(dim=[5, 2, 2, 0,
+                                                4, 2, 2, 0], orb_type='F'),
+                               update=True)
 
     def test_alpha(self):
         cdef OccOrbital i
-        i = OccOrbital(self.corr_orb, self.n_orb_before, True)
+        i = OccOrbital(self.orbspace, True)
         self.assertEqual(i.pos_in_occ, 0)
         self.assertEqual(i.orb, 0)
         self.assertEqual(i.spirrep, 0)
@@ -579,7 +582,7 @@ class OccOrbitalTestCase(unittest.TestCase):
 
     def test_beta(self):
         cdef OccOrbital i
-        i = OccOrbital(self.corr_orb, self.n_orb_before, False)
+        i = OccOrbital(self.orbspace, False)
         self.assertEqual(i.pos_in_occ, 0)
         self.assertEqual(i.orb, 0)
         self.assertEqual(i.spirrep, 4)

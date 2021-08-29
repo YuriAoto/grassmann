@@ -3,11 +3,11 @@
 
 
 """
-import copy
 import math
 import logging
 
 from numpy import linalg
+import numpy as np
 
 from input_output.log import logtime
 from util.results import Results, OptResults
@@ -18,6 +18,7 @@ from wave_functions.fci import FCIWaveFunction
 from wave_functions.slater_det import SlaterDet
 import wave_functions.strings_rev_lexical_order as str_order
 from util.other import int_array
+from util.variables import int_dtype
 
 logger = logging.getLogger(__name__)
 
@@ -311,12 +312,13 @@ def calc_dist_to_cc_manifold(wf,
         cc_wf = IntermNormWaveFunction.similar_to(
             wf, 'CC' + level, restricted=False)
     elif isinstance(ini_wf, IntermNormWaveFunction):
-        cc_wf = copy.deepcopy(ini_wf)
+        cc_wf = IntermNormWaveFunction.unrestrict(ini_wf)
     else:
         raise ValueError('Unknown type of initial wave function')
     n_ampl = len(cc_wf)
-    corr_orb = wf.corr_orb.as_array()
-    virt_orb = wf.virt_orb.as_array()
+    orbs_before = np.array(wf.orbspace.orbs_before, dtype=int_dtype)
+    corr_orb = np.array(wf.orbspace.corr)
+    virt_orb = np.array(wf.orbspace.virt)
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
     logger.info('Wave Function, before iterations:\n%s', wf)
     if f_out is not None:
@@ -330,7 +332,7 @@ def calc_dist_to_cc_manifold(wf,
                 cc_wf_as_fci._coefficients[:] = ini_wf._coefficients
             else:
                 with logtime('Transforming CC wave function to FCI-like'):
-                    cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf)
+                    cc_wf_as_fci.get_coefficients_from_interm_norm_wf(cc_wf)
             logger.info('Wave Function, at iteration %d:\n%s',
                         i_iteration,
                         cc_wf_as_fci)
@@ -344,27 +346,25 @@ def calc_dist_to_cc_manifold(wf,
             if approx_hess:
                 with logtime('Making Jacobian and approximate Hessian'):
                     z, normJ = cc_manifold.min_dist_app_hess(
-                        wf._coefficients,
-                        cc_wf_as_fci._coefficients,
+                        np.array(wf),
+                        np.array(cc_wf_as_fci),
                         n_ampl,
-                        wf.orbs_before,
-                        corr_orb,
-                        virt_orb,
-                        wf._alpha_string_graph,
-                        wf._beta_string_graph,
+                        wf.orbspace,
+                        wf.alpha_string_graph,
+                        wf.beta_string_graph,
                         level=level)
                 logger.log(1, 'Update vector z:\n%r', z)
             else:
                 with logtime('Making Jacobian and Hessian'):
                     Jac, Hess = cc_manifold.min_dist_jac_hess(
-                        wf._coefficients,
-                        cc_wf_as_fci._coefficients,
+                        np.array(wf),
+                        np.array(cc_wf_as_fci),
                         wf.n_irrep,
-                        wf.orbs_before,
+                        wf.orbspace.orbs_before,
                         corr_orb,
                         virt_orb,
-                        wf._alpha_string_graph,
-                        wf._beta_string_graph)
+                        wf.alpha_string_graph,
+                        wf.beta_string_graph)
                 logger.log(1, 'Jacobian:\n%r', Jac)
                 logger.log(1, 'Hessian:\n%r', Hess)
                 with logtime('Calculating z: Solving linear system.'):
