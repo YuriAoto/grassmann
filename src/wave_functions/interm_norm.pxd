@@ -25,3 +25,5 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                         ExcType exc_type) except -1
     cdef int initialize_amplitudes(self) except -1
     cdef void _calc_ini_blocks(self)
+    cdef double S_contrib_to_norm(self) except -1.0
+    cdef double D_contrib_to_norm(self) except -1.0

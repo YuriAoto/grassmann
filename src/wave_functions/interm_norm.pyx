@@ -9,6 +9,8 @@ IntermNormWaveFunction
 """
 import logging
 
+from libc.math cimport sqrt
+
 import numpy as np
 
 from util.array_indices cimport (triangular,
@@ -654,12 +656,12 @@ cdef class IntermNormWaveFunction(WaveFunction):
                        + self.orbspace.corr[self.n_irrep - 1])
         n_occ_beta = self.orbspace.corr_orbs_before[2*self.n_irrep]
         if self.restricted:
-            self.ini_blocks_S = np.zeros(self.n_irrep, dtype=int_dtype)
+            self.ini_blocks_S = np.zeros(self.n_irrep+1, dtype=int_dtype)
             raveled_ini_blocks_D = np.zeros(triangular(n_occ_alpha)
                                             * self.n_irrep,
                                             dtype=int_dtype)
         else:
-            self.ini_blocks_S = np.zeros(2*self.n_irrep, dtype=int_dtype)
+            self.ini_blocks_S = np.zeros(2*self.n_irrep+1, dtype=int_dtype)
             raveled_ini_blocks_D = np.zeros(
                 (triangular(n_occ_alpha - 1)
                  + triangular(n_occ_beta - 1)
@@ -676,6 +678,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     raveled_ini_blocks_D[0] = new_index
                 else:
                     self.ini_blocks_S[spirrep + 1] = new_index
+            self.ini_blocks_S[self.n_irrep] = raveled_ini_blocks_D[0]
         else:
             raveled_ini_blocks_D[0] = 0
         i_in_D = 0
@@ -1396,28 +1399,85 @@ cdef class IntermNormWaveFunction(WaveFunction):
 
     @property
     def norm(self):
-        raise NotImplementedError('Do it')
         if self._norm < 0:
-            if (self.wf_type == 'CISD'
-                or (self.wf_type in ('CCSD', 'BCCD', 'CCD')
-                    and self.use_CISD_norm)):
-                self._norm = 1.0
-                # S = 0.0
-                # for I in self.string_indices():
-                #     S += self[I]**2
-                # self._norm = math.sqrt(S)
-                # if self.wf_type != 'CISD':
-                #     logger.warning(
-                #         'We are calculating the CCSD norm'
-                #         + ' considering only SD determinants!!')
-            elif self.wf_type in ('CCSD', 'BCCD', 'CCD'):
-                self._norm = 1.0
-                logger.warning('CCSD norm set to 1.0!!')
-            else:
-                raise ValueError(
-                    'We do not know how to calculate the norm for '
-                    + self.wf_type + '!')
+            logger.debug('IntermNormWaveFunction before normalisation:\n%s', self)
+            self._norm = sqrt(1.0
+                              + self.S_contrib_to_norm()
+                              + self.D_contrib_to_norm())
+            logger.debug('Calculated norm: %s', self._norm)
         return self._norm
+
+    cdef double S_contrib_to_norm(self) except -1.0:
+        """Contribution of singly excited determinants to norm"""
+        cdef double S = 0.0
+        cdef int pos
+        for pos in range(self.ini_blocks_D[0,0]):
+            logger.debug('contribution from single to the norm: %.16f', self.amplitudes[pos]**2)
+            S += self.amplitudes[pos]**2
+        if self.restricted:
+            S *= 2
+        return S
+
+    cdef double D_contrib_to_norm(self) except -1.0:
+        """Contribution of doubly excited determinants to norm"""
+        if self.wf_type != 'CISD' and self.wf_type != 'CID':
+            raise NotImplementedError('Norm for CI wave function in the moment')
+        cdef OccOrbital i, j
+        cdef int pos, pos_compl, a_irrep, b_irrep, ij
+        cdef double S_contrib, D_contrib
+        D = 0.0
+        ij = 0
+        pos = self.ini_blocks_D[0,0]
+        if self.restricted:
+            for i, j in self.occupied_pairs(ExcType.ALL):
+                ij_differ = i.orb != j.orb
+                logger.debug('i=%s, j=%s', i, j)
+                for a_irrep in range(self.n_irrep):
+                    b_irrep = irrep_product[a_irrep,
+                                            irrep_product[i.spirrep,
+                                                          j.spirrep]]
+                    if b_irrep > a_irrep:
+                        pos = self.ini_blocks_D[ij, a_irrep+1]
+                        continue
+                    ab_same_irrep = a_irrep == b_irrep
+                    for a in range(self.orbspace.virt[a_irrep]):
+                        for b in range(self.orbspace.virt[b_irrep]):
+                            if ab_same_irrep and a == b:
+                                D += self.amplitudes[pos]**2
+                                logger.debug('contribution from double to the norm (a=b=%s irrep=%s): %.16f',
+                                             a, a_irrep, self.amplitudes[pos]**2)
+                                if ij_differ:
+                                    D += self.amplitudes[pos]**2
+                                    logger.debug('contribution from double to the norm (extra a=b and i!=j): %.16f',
+                                                 self.amplitudes[pos]**2)
+                            elif (ab_same_irrep and b < a) or not ab_same_irrep:
+                                pos_compl = (self.ini_blocks_D[ij, b_irrep]
+                                             + n_from_rect(
+                                                 b, a, self.orbspace.virt[a_irrep]))
+                                if ij_differ:
+                                    D += 4*(self.amplitudes[pos]**2
+                                            + self.amplitudes[pos_compl]**2
+                                            - (self.amplitudes[pos]
+                                               *self.amplitudes[pos_compl]))
+                                    logger.debug('contribution from double to the norm (a=%s irrep=%s, b=%s irrep=%s and i!=j): %.16f',
+                                                 a, a_irrep, b, b_irrep,
+                                                 4*(self.amplitudes[pos]**2
+                                                    + self.amplitudes[pos_compl]**2
+                                                    - (self.amplitudes[pos]
+                                                       *self.amplitudes[pos_compl])))
+                                else:
+                                    D += 0.5*(self.amplitudes[pos]
+                                              + self.amplitudes[pos_compl])**2
+                                    logger.debug('contribution from double to the norm (a=%s irrep=%s, b=%s irrep=%s  and i==j): %.16f',
+                                                 a, a_irrep, b, b_irrep,
+                                                 0.5*(self.amplitudes[pos]
+                                                      + self.amplitudes[pos_compl])**2)
+                            pos += 1
+                ij += 1
+        else:
+            raise NotImplementedError(
+                'We still dont have norm for unrestricted wave function')
+        return D
         
     @property
     def C0(self):

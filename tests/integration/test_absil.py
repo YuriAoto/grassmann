@@ -28,8 +28,8 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
             wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(cisd_sys))
             wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
-            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
-                                                wf_CISD.orb_dim,
+            U = tests.construct_random_orbitals(wf_CISD.orbspace.ref,
+                                                wf_CISD.orbspace.full,
                                                 wf_CISD.n_irrep,
                                                 self.prng)
             tests.logger.debug("Int norm WF (%s):\n%s",
@@ -49,8 +49,8 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
             wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(cisd_sys))
             wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
-            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
-                                                wf_CISD.orb_dim,
+            U = tests.construct_random_orbitals(wf_CISD.orbspace.ref,
+                                                wf_CISD.orbspace.full,
                                                 wf_CISD.n_irrep,
                                                 self.prng)
             f_CI, X_CI, C_CI = absil.generate_lin_system(

@@ -219,7 +219,7 @@ cdef class CISDWaveFunction(WaveFunction):
                 for i in range(self.orbspace.corr[irp]):
                     slice_i = slice(
                         slices_HJ[irp].start + i * self.orbspace.virt[irp],
-                        slices_HJ[irp].start + (i + 1) * self.obspace.virt[irp])
+                        slices_HJ[irp].start + (i + 1) * self.orbspace.virt[irp])
                     if irp == irp2 and (i + self.orbspace.corr[irp]) % 2 == 0:
                         Jac[slice_i] *= -1
                     for j in range(self.orbspace.corr[irp2]):
@@ -282,8 +282,10 @@ cdef class CISDWaveFunction(WaveFunction):
         new_wf.C0 = wf.C0
         if wf.has_singles:
             for irrep in range(new_wf.n_irrep):
-                new_wf.Cs[irrep] += wf.amplitudes[wf.ini_blocks_S[irrep]:
-                                                  wf.ini_blocks_S[irrep]+1]
+                new_wf.Cs[irrep] += np.reshape(wf.amplitudes[wf.ini_blocks_S[irrep]:
+                                                             wf.ini_blocks_S[irrep+1]],
+                                               (wf.orbspace.corr[irrep],
+                                                wf.orbspace.virt[irrep]))
                 for ii in range(new_wf.orbspace.corr[irrep]):
                     if (new_wf.orbspace.corr[irrep] + ii) % 2 == 0:
                         new_wf.Cs[irrep][ii, :] *= -1
@@ -296,16 +298,16 @@ cdef class CISDWaveFunction(WaveFunction):
             if i.spirrep != j.spirrep:
                 n_virt_i = wf.orbspace.virt[i.spirrep]
                 n_virt_j = wf.orbspace.virt[j.spirrep]
-                inibl_D = wf.ini_blocks_D[ij, i.spirrep]
+                inibl_D = wf.ini_blocks_D[ij, j.spirrep]
                 new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] = \
                     2 * np.reshape(np.array(wf.amplitudes[inibl_D:
                                                           inibl_D + n_virt_i*n_virt_j]),
-                                   (n_virt_i,n_virt_j))
-                inibl_D = wf.ini_blocks_D[ij, j.spirrep]
+                                   (n_virt_j,n_virt_i)).T
+                inibl_D = wf.ini_blocks_D[ij, i.spirrep]
                 new_wf.Csd[i.spirrep][j.spirrep][i.orbirp, :, j.orbirp, :] -= \
                     np.reshape(np.array(wf.amplitudes[inibl_D:
                                                       inibl_D + n_virt_i*n_virt_j]),
-                               (n_virt_j,n_virt_i)).T
+                               (n_virt_i,n_virt_j))
                 if wf.wf_type == 'CCSD':
                     inibl_i = wf.ini_blocks_S[i.spirrep] + i.orbirp*n_virt_i
                     inibl_j = wf.ini_blocks_S[j.spirrep] + j.orbirp*n_virt_j
@@ -326,17 +328,17 @@ cdef class CISDWaveFunction(WaveFunction):
                 inibl_j = wf.ini_blocks_S[j.spirrep] + j.orbirp*n_virt
                 new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] += np.reshape(
                     np.array(wf.amplitudes[inibl_D:inibl_D + n_virt*n_virt]),
-                    (n_virt,n_virt))
+                    (n_virt,n_virt)).T
                 new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] += np.reshape(
                     np.array(wf.amplitudes[inibl_D:inibl_D + n_virt*n_virt]),
-                    (n_virt,n_virt)).T
+                    (n_virt,n_virt))
                 if wf.wf_type == 'CCSD':
                     new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] += np.outer(
-                        wf.amplitudes[inibl_i:inibl_i+n_virt],
-                        wf.amplitudes[inibl_j:inibl_j+n_virt])
-                    new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] += np.outer(
                         wf.amplitudes[inibl_j:inibl_j+n_virt],
                         wf.amplitudes[inibl_i:inibl_i+n_virt])
+                    new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] += np.outer(
+                        wf.amplitudes[inibl_i:inibl_i+n_virt],
+                        wf.amplitudes[inibl_j:inibl_j+n_virt])
                 if i.orbirp == j.orbirp:
                     new_wf.Csd[irp][irp][i.orbirp, :, i.orbirp, :] /= 2
                 if i.orbirp != j.orbirp:
@@ -346,14 +348,14 @@ cdef class CISDWaveFunction(WaveFunction):
                             # Increment ab instead?? Check the order
                             ab = n_from_triang(b, a)
                             new_wf.Cd[irp][ij_Cd, ab] = \
-                                wf.amplitudes[inibl_D + n_from_rect(b, a, n_virt)] \
-                                - wf.amplitudes[inibl_D + n_from_rect(a, b, n_virt)]
+                                wf.amplitudes[inibl_D + n_from_rect(a, b, n_virt)] \
+                                - wf.amplitudes[inibl_D + n_from_rect(b, a, n_virt)]
                             if wf.wf_type == 'CCSD':
                                 new_wf.Cd[irp][ij_Cd, ab] += \
-                                    wf.amplitudes[inibl_i + b] \
+                                    wf.amplitudes[inibl_i + a] \
                                     * wf.amplitudes[inibl_j + b] \
-                                    - wf.amplitudes[inibl_i + a] \
-                                    * wf.amplitudes[inibl_j + b]
+                                    - wf.amplitudes[inibl_i + b] \
+                                    * wf.amplitudes[inibl_j + a]
                     if (i.orbirp + j.orbirp) % 2 == 1:
                         new_wf.Csd[irp][irp][i.orbirp, :, j.orbirp, :] *= -1
                         new_wf.Csd[irp][irp][j.orbirp, :, i.orbirp, :] *= -1

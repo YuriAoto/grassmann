@@ -92,8 +92,8 @@ def main(args, f_out):
                          ('int_norm'
                           if args.algorithm == 'general_Absil' else
                           'fci')))
-    if args.at_ref:
-        ext_wf.use_CISD_norm = False
+    # if args.at_ref:
+    #     ext_wf.use_CISD_norm = False
     logger.debug('External wave function:\n %r', ext_wf)
     toout('External wave function (|extWF>) is: ' + ext_wf.wf_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
