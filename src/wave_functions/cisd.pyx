@@ -342,7 +342,7 @@ cdef class CISDWaveFunction(WaveFunction):
                 if i.orbirp == j.orbirp:
                     new_wf.Csd[irp][irp][i.orbirp, :, i.orbirp, :] /= 2
                 if i.orbirp != j.orbirp:
-                    ij_Cd = n_from_triang(j.pos_in_occ, i.pos_in_occ)
+                    ij_Cd = n_from_triang(j.orbirp, i.orbirp)
                     for a in range(n_virt):
                         for b in range(a):
                             # Increment ab instead?? Check the order
