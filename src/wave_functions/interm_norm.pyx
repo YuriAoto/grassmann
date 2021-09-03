@@ -1412,7 +1412,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
         cdef double S = 0.0
         cdef int pos
         for pos in range(self.ini_blocks_D[0,0]):
-            logger.debug('contribution from single to the norm: %.16f', self.amplitudes[pos]**2)
+            logger.debug('contribution from single to the norm: %.16f',
+                         self.amplitudes[pos]**2)
             S += self.amplitudes[pos]**2
         if self.restricted:
             S *= 2
@@ -1420,11 +1421,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
 
     cdef double D_contrib_to_norm(self) except -1.0:
         """Contribution of doubly excited determinants to norm"""
-        if self.wf_type != 'CISD' and self.wf_type != 'CID':
-            raise NotImplementedError('Norm for CI wave function in the moment')
         cdef OccOrbital i, j
         cdef int pos, pos_compl, a_irrep, b_irrep, ij
-        cdef double S_contrib, D_contrib
+        cdef int nva, nvb
+        cdef double D, C, C2, t_ia_t_jb, t_ja_t_ib
         D = 0.0
         ij = 0
         pos = self.ini_blocks_D[0,0]
@@ -1439,39 +1439,61 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     if b_irrep > a_irrep:
                         pos = self.ini_blocks_D[ij, a_irrep+1]
                         continue
+                    nva = self.orbspace.virt[a_irrep]
+                    inibla = self.ini_blocks_S[a_irrep]
+                    nvb = self.orbspace.virt[b_irrep]
+                    iniblb = self.ini_blocks_S[b_irrep]
                     ab_same_irrep = a_irrep == b_irrep
+                    ccsd_ia_same_irrep = i.spirrep == a_irrep and self.wf_type == 'CCSD'
+                    ccsd_ja_same_irrep = j.spirrep == a_irrep and self.wf_type == 'CCSD'
+                    t_ia_t_jb = 0
+                    t_ja_t_ib = 0
                     for a in range(self.orbspace.virt[a_irrep]):
                         for b in range(self.orbspace.virt[b_irrep]):
+                            if ccsd_ia_same_irrep:
+                                t_ia_t_jb = (self.amplitudes[inibla
+                                                             + n_from_rect(i.orbirp, a, nva)]
+                                             * self.amplitudes[iniblb
+                                                               + n_from_rect(j.orbirp, b, nvb)])
+                            if ccsd_ja_same_irrep:
+                                t_ja_t_ib = (self.amplitudes[inibla
+                                                             + n_from_rect(j.orbirp, a, nva)]
+                                             * self.amplitudes[iniblb
+                                                               + n_from_rect(i.orbirp, b, nvb)])
                             if ab_same_irrep and a == b:
-                                D += self.amplitudes[pos]**2
-                                logger.debug('contribution from double to the norm (a=b=%s irrep=%s): %.16f',
-                                             a, a_irrep, self.amplitudes[pos]**2)
+                                C = self.amplitudes[pos]
+                                if ccsd_ia_same_irrep: C += t_ia_t_jb
+                                C = C**2
                                 if ij_differ:
-                                    D += self.amplitudes[pos]**2
-                                    logger.debug('contribution from double to the norm (extra a=b and i!=j): %.16f',
-                                                 self.amplitudes[pos]**2)
+                                    C2 = self.amplitudes[pos]
+                                    if ccsd_ja_same_irrep: C2 += t_ia_t_jb
+                                    C = C + C2**2
+                                logger.debug('Contribution from double to the norm'
+                                             ' (a=b=%s irrep=%s): %.16f',
+                                             a, a_irrep, C)
+                                D += C
                             elif (ab_same_irrep and b < a) or not ab_same_irrep:
                                 pos_compl = (self.ini_blocks_D[ij, b_irrep]
-                                             + n_from_rect(
-                                                 b, a, self.orbspace.virt[a_irrep]))
+                                             + n_from_rect(b, a, nva))
                                 if ij_differ:
-                                    D += 4*(self.amplitudes[pos]**2
-                                            + self.amplitudes[pos_compl]**2
-                                            - (self.amplitudes[pos]
-                                               *self.amplitudes[pos_compl]))
-                                    logger.debug('contribution from double to the norm (a=%s irrep=%s, b=%s irrep=%s and i!=j): %.16f',
-                                                 a, a_irrep, b, b_irrep,
-                                                 4*(self.amplitudes[pos]**2
-                                                    + self.amplitudes[pos_compl]**2
-                                                    - (self.amplitudes[pos]
-                                                       *self.amplitudes[pos_compl])))
+                                    C = self.amplitudes[pos] - self.amplitudes[pos_compl]
+                                    if ccsd_ia_same_irrep: C += t_ia_t_jb
+                                    if ccsd_ja_same_irrep: C -= t_ja_t_ib
+                                    C = 2 * C**2
+                                    C2 = self.amplitudes[pos]
+                                    if ccsd_ia_same_irrep: C2 += t_ia_t_jb
+                                    C += 2 * C2**2
+                                    C2 = self.amplitudes[pos_compl]
+                                    if ccsd_ja_same_irrep: C2 += t_ja_t_ib
+                                    C += 2 * C2**2
                                 else:
-                                    D += 0.5*(self.amplitudes[pos]
-                                              + self.amplitudes[pos_compl])**2
-                                    logger.debug('contribution from double to the norm (a=%s irrep=%s, b=%s irrep=%s  and i==j): %.16f',
-                                                 a, a_irrep, b, b_irrep,
-                                                 0.5*(self.amplitudes[pos]
-                                                      + self.amplitudes[pos_compl])**2)
+                                    C = self.amplitudes[pos] + self.amplitudes[pos_compl]
+                                    if ccsd_ia_same_irrep: C += 2 * t_ia_t_jb
+                                    C = 0.5* C**2
+                                logger.debug('Contribution from double to the norm'
+                                             ' (a=%s irrep=%s, b=%s irrep=%s): %.16f',
+                                             a, a_irrep, b, b_irrep, C)
+                                D += C
                             pos += 1
                 ij += 1
         else:
