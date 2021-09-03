@@ -3,6 +3,7 @@
 
 """
 import logging
+import time
 
 import numpy as np
 from scipy import linalg
@@ -14,6 +15,7 @@ from . import absil
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
+
 
 
 class HartreeFockStep():
@@ -32,6 +34,8 @@ class HartreeFockStep():
         self.Dmat = None
         self.Fock = None
         self.gradNorm = None
+        self.invS = None
+        self.invSqrt = None
 
     def initialise(self, step_type):
         if step_type == 'RH-SCF':
@@ -45,8 +49,9 @@ class HartreeFockStep():
         elif step_type == 'densMat-SCF':
             pass
         elif step_type == 'Absil':
-            self.grad = np.zeros((2 * len(self.orb),
-                                  self.n_occ))
+            self.invS = linalg.inv(self.integrals.S)
+            self.invSqrt = linalg.inv(self.integrals.X)
+            self.grad = np.zeros((len(self.orb), self.n_occ))
             self.integrals.g.transform_to_ijkl()
         elif step_type == 'orb_rot-Newton':
             pass
@@ -140,52 +145,51 @@ class HartreeFockStep():
         
         """
         N_alpha, N_beta = self.n_occ_alpha, self.n_occ_beta
-        N = N_alpha + N_beta
-        n = len(self.orb)
-        D = np.zeros((2*n*N, 2*n*N))
-        X = self.orb[0][:,:self.n_occ_alpha]
-        Y = self.orb[1][:,:self.n_occ_beta]
-        Z = np.zeros((2*n, N))
-        Z[:n,:N_alpha], Z[n:,N_alpha:] = X, Y
-        overlap = np.zeros((2*n, 2*n))
-        overlap[:n,:n], overlap[n:,n:] = self.integrals.S, self.integrals.S
-        Sqrt = np.zeros((2*n, 2*n))
-        Sqrt[:n,:n], Sqrt[n:,n:] = self.integrals.X, self.integrals.X
+        N, n = N_alpha + N_beta, len(self.orb)
+        X, Y = self.orb[0][:,:N_alpha], self.orb[1][:,:N_beta]
+        S, Sqrt = self.integrals.S, self.integrals.X
+        invS, invSqrt = self.invS, self.invSqrt
+        augmentedD = np.zeros((n * N + N_alpha ** 2 + N_beta ** 2, n * N))
+        augmentedR = np.zeros((n * N + N_alpha ** 2 + N_beta ** 2,))
+        R, Id = np.empty((n, N)), np.eye(n)
+        projX, projY = Id - (X @ X.T @ S), Id - (Y @ Y.T @ S)
+        g, h = self.integrals.g._integrals, self.integrals.h
+        xxt, yyt = X @ X.T, Y @ Y.T
+        gradX, gradY = self.grad[:,:N_alpha], self.grad[:,N_alpha:]
+
+        with logtime("final energy"):
+            self.energy = absil.energyfinal(X, Y, xxt, yyt, h, g)
         
-        self.energy = absil.energy(N_alpha, N_beta, n, Z,
-                                   self.integrals.g._integrals,
-                                   self.integrals.h)
-        self.grad = absil.gradone(N_alpha, N_beta, n, X, Y,
-                                  self.integrals.h)
-        # self.grad *= np.trace(Z.T @ overlap @ Z) # provavelmente desnecessário
-        # self.grad -= self.energy * (overlap @ Z + overlap.T @ Z)
-        # self.grad /= np.trace(Z.T @ overlap @ Z) ** 2
-        teste = absil.verificagrad(n, N_alpha, N_beta,
-                                   self.integrals.g._integrals,
-                                   self.integrals.h,
-                                   self.grad,
-                                   Z,
-                                   overlap)
-        print(teste)
-        # print(self.grad)
-        # print(Z)
-        R = - (np.identity(2*n) - (Z @ Z.T @ overlap)) @ self.grad
-        # print(R)
-        print(R.T @ overlap @ Z)
+        with logtime("final gradient"):
+            gradX = absil.gradfinal(X, Y, xxt, yyt, h, g)
+            gradY = absil.gradfinal(Y, X, yyt, xxt, h, g)
+        D = absil.direc_derivative(X, Y, xxt, yyt, projX, projY, gradX, gradY,
+                                   invS, h, g)
+        augmentedD[:n*N,:] = D
+        gradX, gradY = invS @ gradX, invS @ gradY
+        R[:,:N_alpha], R[:,N_alpha:] = -projX @ gradX, -projY @ gradY
+        R = np.reshape(R, (n * N,), 'F')
+        augmentedR[:n*N] = R
+        if N_alpha != 0:
+            augmentedD[n*N:n*N+N_alpha**2,:n*N_alpha] = np.kron(np.eye(N_alpha),
+                                                                X.T @ S)
+        if N_beta != 0:
+            augmentedD[n*N+N_alpha**2:,n*N_alpha:] = np.kron(np.eye(N_beta),
+                                                               Y.T @ S)
+        eta = np.reshape(np.linalg.lstsq(augmentedD, augmentedR, rcond=None)[0],
+                         (n, N),
+                         'F')
+        if N_alpha != 0:
+            u, s, v = linalg.svd(Sqrt @ eta[:,:N_alpha], full_matrices=False)
+            sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
+            X = X @ v.T @ cos + invSqrt @ u @ sin
+            self.orb[0][:,:N_alpha] = absil.gs(X,S)
+        if N_beta != 0:
+            u, s, v = linalg.svd(Sqrt @ eta[:,N_alpha:], full_matrices=False)
+            sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
+            Y = Y @ v.T @ cos + invSqrt @ u @ sin
+            self.orb[1][:,:N_beta] = absil.gs(Y, S)
         self.gradNorm = linalg.norm(R)
-        # R = np.reshape(R, (2*n*N, 1), 'F')
-        # D = absil.directionalderivative(n, N_alpha, N_beta,
-        #                                 self.integrals.g._integrals,
-        #                                 self.integrals.h,
-        #                                 Z, overlap, self.grad)
-        # eta = np.linalg.solve(D, R)
-        # eta = np.reshape(eta, (2*n, N), 'F')
-        u, s, v = linalg.svd(R, full_matrices=False)
-        s = np.diag(s)
-        Z = Z @ v.T @ np.cos(0.5 * s) + u @ np.sin(0.5 * s)
-        self.orb[0][:,:self.n_occ_alpha] = Z[:n,:N_alpha] # ponto inicial
-        self.orb[1][:,:self.n_occ_beta] = Z[n:,N_alpha:]
         
-    
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
