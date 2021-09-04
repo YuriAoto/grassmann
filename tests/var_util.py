@@ -17,7 +17,14 @@ logging.basicConfig(filename='testing.log',
 logger = logging.getLogger(__name__)
 
 
-memory.set_total_memory(400.0)
+_GR_MEMORY_env = os.getenv('GR_MEMORY')
+
+if _GR_MEMORY_env is None:
+    memory.set_total_memory(400.0)
+else:
+    memory.set_total_memory(float(_GR_MEMORY_env))
+
+
 
 all_test_categories = [
     'ALL',

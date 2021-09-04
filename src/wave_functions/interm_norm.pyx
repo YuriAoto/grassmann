@@ -678,7 +678,9 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     raveled_ini_blocks_D[0] = new_index
                 else:
                     self.ini_blocks_S[spirrep + 1] = new_index
-            self.ini_blocks_S[self.n_irrep] = raveled_ini_blocks_D[0]
+            self.ini_blocks_S[self.n_irrep
+                              if self.restricted else
+                              (2*self.n_irrep)] = raveled_ini_blocks_D[0]
         else:
             raveled_ini_blocks_D[0] = 0
         i_in_D = 0
