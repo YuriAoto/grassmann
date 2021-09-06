@@ -2,6 +2,12 @@
 
 
 """
+import copy
+
+import numpy as np
+
+from orbitals.orbital_space cimport FullOrbitalSpace
+
 cdef class OccOrbital:
     """Class to run over occupied orbitals
     
@@ -26,6 +32,7 @@ cdef class OccOrbital:
     i = OccOrbital(corr_orb, orbs_before, True)
     i.pos_in_occ  # 0
     i.orb  # 0
+    i.orbirp  # 0
     i.spirrep  # 0
     i.alive  # True
     
@@ -33,6 +40,7 @@ cdef class OccOrbital:
     
     i.pos_in_occ  # 1
     i.orb  # 1
+    i.orbirp  # 1
     i.spirrep  # 0
     
     for k in range(3):
@@ -40,37 +48,39 @@ cdef class OccOrbital:
     
     i.pos_in_occ  # 4
     i.orb  # 4
+    i.orbirp  # 4
     i.spirrep  # 0
     
     i.next_()
     
     i.pos_in_occ  # 5
     i.orb  # 10
+    i.orbirp  # 0
     i.spirrep  # 1
     
     for k in range(4):
        i.next_()
-    
-    i.pos_in_occ   # 9 > n of occupied orb
+
+    i.pos_in_occ # 9 > n of occupied orb
     i.alive  # False
     
     i.rewind()
     i.pos_in_occ  # 0
     i.orb  # 0
+    i.orbirp  # 0
     i.spirrep  # 0
     i.alive  # True
     
     
     """
-    def __cinit__(self,
-                  int[:] corr_orb,
-                  int[:] orbs_before,
+    def __init__(self,
+                  FullOrbitalSpace orbspace,
                   bint is_alpha):
         cdef int irrep, spirrep
-        self._n_irrep = orbs_before.shape[0] - 1
+        self._n_irrep = orbspace.n_irrep
         self.is_alpha = is_alpha
-        self._corr_orb = corr_orb
-        self._orbs_before = orbs_before
+        self._corr_orb = np.array(orbspace.corr)
+        self._orbs_before = orbspace.orbs_before
         self._n_occ = 0
         self.spirrep = 0 if is_alpha else self._n_irrep
         spirrep = self.spirrep
@@ -86,6 +96,10 @@ cdef class OccOrbital:
             return
         self.alive = True
         self.pos_in_occ = 0
+        self.orbirp = 0
+
+    def __str__(self):
+        return f'Occupied orbital: {self.orb} of spirrep {self.spirrep}'
 
     cpdef rewind(self):
         cdef int irrep = 0
@@ -98,12 +112,14 @@ cdef class OccOrbital:
             self.spirrep += 1
             irrep += 1
         self.orb = self._orbs_before[irrep]
+        self.orbirp = 0
         self.pos_in_occ = 0
 
     cpdef next_(self):
         self.pos_in_occ += 1
         if self.pos_in_occ < self._n_occ:
             self.orb += 1
+            self.orbirp += 1
             if self.orb < (self._orbs_before[self.spirrep % self._n_irrep]
                            + self._corr_orb[self.spirrep]):
                 return
@@ -111,5 +127,6 @@ cdef class OccOrbital:
             while self._corr_orb[self.spirrep] == 0:
                 self.spirrep += 1
             self.orb = self._orbs_before[self.spirrep % self._n_irrep]
+            self.orbirp = 0
         else:
             self.alive = False

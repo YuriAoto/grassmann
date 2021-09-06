@@ -54,7 +54,8 @@ class MemoryExceededError(Exception):
     """Exception raised when memory is exceeded"""
     
     def __init__(self, action, mem_required, mem_remaining):
-        super().__init__('Memory limit has been exceeded')
+        super().__init__(f'Memory limit has been exceeded:'
+                         f' req={mem_required}; remaining={mem_remaining}')
         self.action = action
         self.mem_required = mem_required
         self.mem_remaining = mem_remaining

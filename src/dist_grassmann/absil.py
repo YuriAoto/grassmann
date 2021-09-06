@@ -29,8 +29,8 @@ import numpy as np
 from scipy import linalg
 
 from wave_functions.general import WaveFunction
-from wave_functions.cisd import CISD_WaveFunction
-from orbitals.symmetry import OrbitalsSets
+from wave_functions.cisd import CISDWaveFunction
+from orbitals.orbital_space import OrbitalSpace
 from string_indices.string_indices import SpirrepIndex
 from util.variables import int_dtype
 from util.array_indices import n_from_triang
@@ -223,7 +223,7 @@ def overlap_to_det(wf, U, F=None, assume_orth=True):
     
     The float <wf|U>
     """
-    if isinstance(wf, CISD_WaveFunction):
+    if isinstance(wf, CISDWaveFunction):
         return _overlap_to_det_from_restricted_CISD(
             wf, U, assume_orth=assume_orth)
     elif isinstance(wf, WaveFunction):
@@ -237,12 +237,12 @@ def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
     F0 = []
     Fs = []
     for irrep in wf.spirrep_blocks(restricted=True):
-        Fs.append(np.zeros((wf.corr_orb[irrep], wf.virt_orb[irrep])))
+        Fs.append(np.zeros((wf.orbspace.corr[irrep], wf.orbspace.virt[irrep])))
         Index = np.arange(U[irrep].shape[1])
         F0.append(_calc_fI(U[irrep], Index))
         for i, a, Index in _all_singles(U[irrep].shape[1],
-                                        wf.corr_orb[irrep],
-                                        wf.virt_orb[irrep]):
+                                        wf.orbspace.corr[irrep],
+                                        wf.orbspace.virt[irrep]):
             Fs[irrep][i, a] = _calc_fI(U[irrep], Index)
         logger.debug('F0[irrep = %d] = %f', irrep, F0[irrep])
         logger.debug('Fs[irrep = %d]:\n%r', irrep, Fs[irrep])
@@ -251,8 +251,8 @@ def _overlap_to_det_from_restricted_CISD(wf, U, assume_orth=True):
         contr_irrep = np.einsum('ia,ia',
                                 Fs[irrep], wf.Cs[irrep])
         for i, j, a, b, Index in _all_doubles(U[irrep].shape[1],
-                                              wf.corr_orb[irrep],
-                                              wf.virt_orb[irrep]):
+                                              wf.orbspace.corr[irrep],
+                                              wf.orbspace.virt[irrep]):
             contr_irrep += (_calc_fI(U[irrep], Index)
                             * wf.Cd[irrep][n_from_triang(j, i),
                                            n_from_triang(b, a)])
@@ -283,7 +283,7 @@ def _overlap_to_det_from_genWF(wf, U, F=None, assume_orth=True):
         F = calc_all_F(wf, U)
     f = 0.0
     for Index in wf.string_indices(no_occ_orb=True,
-                                   only_this_occ=OrbitalsSets(
+                                   only_this_occ=OrbitalSpace(
                                        list(map(lambda Ui: Ui.shape[1], U)))):
         f_contr = 1.0
         for spirrep, I_spirrep in enumerate(Index):
@@ -343,7 +343,7 @@ def generate_lin_system(
     ------------
     
     Only for restricted calculations if wf is instance of
-    CISD_WaveFunction, and only for unrestricted otherwise.
+    CISDWaveFunction, and only for unrestricted otherwise.
     
     Parameters:
     -----------
@@ -370,7 +370,7 @@ def generate_lin_system(
     
     The tuple (X, C), such that eta satisfies X @ eta = C
     """
-    if isinstance(wf, CISD_WaveFunction):
+    if isinstance(wf, CISDWaveFunction):
         return _generate_lin_system_from_restricted_CISD(
             wf, U, slice_XC)
     elif isinstance(wf, WaveFunction):
@@ -430,7 +430,7 @@ def _generate_lin_system_from_restricted_CISD(
     """Generate the linear system for Absil's method
     
     This is the specific implementation, for a restricted CISD
-    wave function (wave_functions.cisd.CISD_WaveFunction), using
+    wave function (wave_functions.cisd.CISDWaveFunction), using
     restricted orbitals, and for the component of the Grassmannian
     with same occupation as reference wave function
     
@@ -451,11 +451,11 @@ def _generate_lin_system_from_restricted_CISD(
     q,s        run over all occupied orbitals (of that irrep):
                0 <= q,s < n[irrep]
     i,j        run over correlated occupied orbitals (of that irrep):
-               0 <= i,j < wf.corr_orb[irrep]
-               (add wf.froz_orb[irrep] to get corresponding position in U)
+               0 <= i,j < wf.orbspace.corr[irrep]
+               (add wf.orbspace.froz[irrep] to get corresponding position in U)
     a,b        run over virtual orbitals (of that irrep):
-               0 <= a,b < wf.virt_orb[irrep]
-               (add wf.ref_orb[irrep] to get corresponding position in U)
+               0 <= a,b < wf.orbspace.virt[irrep]
+               (add wf.orbspace.ref[irrep] to get corresponding position in U)
    
     The relation between indices and the notation for X:
     
@@ -483,17 +483,17 @@ def _generate_lin_system_from_restricted_CISD(
         F0.append(_calc_fI(U[irrep], Index))
         f *= F0[irrep]
         G0.append(np.zeros((K[irrep], n[irrep])))
-        Fs.append(np.zeros((wf.corr_orb[irrep], wf.virt_orb[irrep])))
+        Fs.append(np.zeros((wf.orbspace.corr[irrep], wf.orbspace.virt[irrep])))
         # -> not needed, right        Index = np.arange(n[irrep])
         for p in range(K[irrep]):
             for q in range(n[irrep]):
                 G0[irrep][p, q] = _calc_G(U[irrep], Index,
                                           p, q)
-        for i in range(wf.corr_orb[irrep]):
-            for a in range(wf.virt_orb[irrep]):
-                Fs[irrep][i, a] = np.dot(U[irrep][wf.ref_orb[irrep] + a, :],
-                                         G0[irrep][wf.froz_orb[irrep] + i, :])
-            if (wf.froz_orb[irrep] + i + n[irrep] - 1) % 2 == 1:
+        for i in range(wf.orbspace.corr[irrep]):
+            for a in range(wf.orbspace.virt[irrep]):
+                Fs[irrep][i, a] = np.dot(U[irrep][wf.orbspace.ref[irrep] + a, :],
+                                         G0[irrep][wf.orbspace.froz[irrep] + i, :])
+            if (wf.orbspace.froz[irrep] + i + n[irrep] - 1) % 2 == 1:
                 Fs[irrep][i, :] *= -1
         Pi.append(np.identity(K[irrep]) - U[irrep] @ U[irrep].T)
         if n[irrep] > 0:
@@ -502,7 +502,7 @@ def _generate_lin_system_from_restricted_CISD(
     f = wf.C0 * f**2
     logger.debug('C0 * Fprod (first contrib. to f(Y)) = %f', f)
     for irrep in wf.spirrep_blocks(restricted=True):
-        Gs.append(np.zeros((wf.corr_orb[irrep], wf.virt_orb[irrep],
+        Gs.append(np.zeros((wf.orbspace.corr[irrep], wf.orbspace.virt[irrep],
                             K[irrep], n[irrep])))
         H = np.zeros((K[irrep], n[irrep],
                       K[irrep], n[irrep]))
@@ -517,20 +517,20 @@ def _generate_lin_system_from_restricted_CISD(
                                                 r, s, p, q)
                         H[r, q, p, s] = H[p, s, r, q] = -H[r, s, p, q]
                         H[p, q, r, s] = H[r, s, p, q]
-        for i in range(wf.corr_orb[irrep]):
-            for a in range(wf.virt_orb[irrep]):
+        for i in range(wf.orbspace.corr[irrep]):
+            for a in range(wf.orbspace.virt[irrep]):
                 for p in range(n[irrep]):
-                    if p == wf.froz_orb[irrep] + i:
+                    if p == wf.orbspace.froz[irrep] + i:
                         continue
                     for q in range(n[irrep]):
                         Gs[irrep][i, a, p, q] = (
-                            np.dot(U[irrep][wf.ref_orb[irrep] + a, :],
-                                   H[p, q, wf.froz_orb[irrep] + i, :])
-                            - (U[irrep][wf.ref_orb[irrep] + a, q]
-                               * H[p, q, wf.froz_orb[irrep] + i, q]))
-                Gs[irrep][i, a, wf.ref_orb[irrep] + a, :] = (
-                    G0[irrep][wf.froz_orb[irrep] + i, :])
-            if (wf.froz_orb[irrep] + i + n[irrep] - 1) % 2 == 1:
+                            np.dot(U[irrep][wf.orbspace.ref[irrep] + a, :],
+                                   H[p, q, wf.orbspace.froz[irrep] + i, :])
+                            - (U[irrep][wf.orbspace.ref[irrep] + a, q]
+                               * H[p, q, wf.orbspace.froz[irrep] + i, q]))
+                Gs[irrep][i, a, wf.orbspace.ref[irrep] + a, :] = (
+                    G0[irrep][wf.orbspace.froz[irrep] + i, :])
+            if (wf.orbspace.froz[irrep] + i + n[irrep] - 1) % 2 == 1:
                 Gs[irrep][i, :, :, :] *= -1
         if n[irrep] > 0:
             logger.debug('For irrep = %d:\nH_I0:\n%r\nGs:\n%r',
@@ -546,19 +546,19 @@ def _generate_lin_system_from_restricted_CISD(
             else:
                 D2 += np.einsum('iajb,ia->jb',
                                 wf.Csd[irrep2][irrep], Fs[irrep2]) / F0[irrep2]
-        for i in range(wf.corr_orb[irrep]):
+        for i in range(wf.orbspace.corr[irrep]):
             # Here, b<a always
             sign = (1
-                    if (wf.froz_orb[irrep] + i + n[irrep] + 1) % 2 == 1 else
+                    if (wf.orbspace.froz[irrep] + i + n[irrep] + 1) % 2 == 1 else
                     -1)
-            for a in range(wf.virt_orb[irrep]):
+            for a in range(wf.orbspace.virt[irrep]):
                 for j in range(i):
                     ij = n_from_triang(j, i)
                     for b in range(a):
                         ab = n_from_triang(b, a)
-                        tmp = sign * np.dot(U[irrep][wf.ref_orb[irrep] + a, :],
+                        tmp = sign * np.dot(U[irrep][wf.orbspace.ref[irrep] + a, :],
                                             Gs[irrep][j, b,
-                                                      wf.froz_orb[irrep] + i, :])
+                                                      wf.orbspace.froz[irrep] + i, :])
                         logger.debug('Current F_{i,j=%d,%d}^{a,b=%d,%d} = %f',
                                      i, j, a, b, tmp)
                         D += wf.Cd[irrep][ij, ab] * tmp
@@ -603,8 +603,8 @@ def _generate_lin_system_from_restricted_CISD(
         logger.debug('C at 3:\n%r', C[slice_XC[irrep]])
         Gd = np.zeros((K[irrep], n[irrep]))
         for i, j, a, b, Index in _all_doubles(n[irrep],
-                                              wf.corr_orb[irrep],
-                                              wf.virt_orb[irrep]):
+                                              wf.orbspace.corr[irrep],
+                                              wf.orbspace.virt[irrep]):
             ij = n_from_triang(j, i)
             ab = n_from_triang(b, a)
             for p in range(K[irrep]):
@@ -628,8 +628,8 @@ def _generate_lin_system_from_restricted_CISD(
                      np.einsum('pqts,rt->pqrs',
                                H, Pi[irrep]))
         for i, a, Index in _all_singles(n[irrep],
-                                        wf.corr_orb[irrep],
-                                        wf.virt_orb[irrep]):
+                                        wf.orbspace.corr[irrep],
+                                        wf.orbspace.virt[irrep]):
             for p in range(K[irrep]):
                 for q in range(n[irrep]):
                     H[p, q, p, q] = -Fs[irrep][i, a]
@@ -652,8 +652,8 @@ def _generate_lin_system_from_restricted_CISD(
                                              (nK[irrep],
                                               nK[irrep])) * tmp
         for i, j, a, b, Index in _all_doubles(n[irrep],
-                                              wf.corr_orb[irrep],
-                                              wf.virt_orb[irrep]):
+                                              wf.orbspace.corr[irrep],
+                                              wf.orbspace.virt[irrep]):
             ij = n_from_triang(j, i)
             ab = n_from_triang(b, a)
             for p in range(K[irrep]):
@@ -1007,7 +1007,7 @@ def _generate_lin_system_from_genWF(
                                 continue
                             F_contr = 1.0
                             for spirrep_other, I_other in enumerate(I_full):
-                                if (wf.ref_orb[spirrep_other] > 0
+                                if (wf.orbspace.ref[spirrep_other] > 0
                                     and spirrep_other != spirrep_1
                                         and spirrep_other != spirrep_2):
                                     F_contr *= F[spirrep_other][int(I_other)]

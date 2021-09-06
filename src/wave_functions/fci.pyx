@@ -21,13 +21,17 @@ from input_output import molpro
 from util.array_indices import n_from_rect
 from util.variables import int_dtype
 from util.memory import mem_of_floats
+from util.other import int_array
+from molecular_geometry.symmetry import irrep_product
+from wave_functions.general cimport WaveFunction
 from wave_functions.general import WaveFunction
-from wave_functions.norm_ci import _get_Slater_Det_from_FCI_line as get_SD_old
+from wave_functions.interm_norm cimport IntermNormWaveFunction
+from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
 from coupled_cluster.cluster_decomposition import cluster_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 
 from wave_functions.slater_det import get_slater_det_from_excitation
 
@@ -149,6 +153,118 @@ def _sign_for_absolute_order(
         print('sign final:', sign)
     return sign
 
+def get_occ_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
+                          molpro_output='', line_number=-1):
+    """Read the configuration of a FCI line Molpro output
+    
+    Parameters:
+    -----------
+    l (str)
+        The line with a configuration, from the FCI program in Molpro
+        to be converted to a Slater Determinant.
+    
+    orb_dim (OrbitalSpace)
+        Dimension of orbital space
+    
+    froz_orb (OrbitalSpace)
+        Dimension of frozen orbitals space
+    
+    n_irrep (int)
+        Number of irreps
+    
+    Ms (float)
+        Ms of total wave function (n_alpha - n_beta)/2
+    
+    molpro_output (str, optional, default='')
+        The output file name (only for error message)
+    
+    line_number (int, optional, default=-1)
+        The line number in Molpro output
+    
+    Returns:
+    --------
+    A list of arrays, see the examples
+    
+    Raises:
+    molpro.MolproInputError
+    
+    Examples:
+    ---------
+    
+    # if n_irrep = 4, orb_dim = (6,2,2,0), froz_orb = (0,0,0,0) then
+    
+    -0.162676901257  1  2  7  1  2  7
+    gives
+    [(0,1) (0) () () (0,1) (0) () ()]
+    
+    -0.049624632911  1  2  4  1  2  6
+    gives
+    [(0,1,3) () () () (0,1,5) () () ()]
+    
+    0.000000000000  1  2  9  1  2 10
+    gives
+    [(0,1) () (0) () (0,1) () (1) ()]
+    
+    # but if froz_orb = (1,1,0,0) then the above cases give
+         (because frozen electrons are indexed first in Molpro convention)
+    
+    [(0,5) (0) () () (0,5) (0) () ()]
+    
+    [(0,2) (0) () () (0,4) (0) () ()]
+    
+    [(0) (0) (0) () (0) (0) (1) ()]
+
+
+    """
+    lspl = l.split()
+    final_occ = [list(range(froz_orb[irp])) for irp in range(2 * n_irrep)]
+    n_tot_frozen = sum(map(len, final_occ)) // 2
+    try:
+        coeff = float(lspl[0])
+        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_frozen]
+    except Exception as e:
+        raise molpro.MolproInputError(
+            "Error when reading FCI configuration. Exception was:\n"
+            + str(e),
+            line=l,
+            line_number=line_number,
+            file_name=molpro_output)
+    if len(occ) + 2 * n_tot_frozen + 1 != len(lspl):
+        raise molpro.MolproInputError(
+            "Inconsistency in number of frozen orbitals for FCI. froz_orb:\n"
+            + str(froz_orb),
+            line=l,
+            line_number=line_number,
+            file_name=molpro_output)
+    total_orbs = [sum(froz_orb[irp] for irp in range(n_irrep))]
+    for i in range(n_irrep):
+        total_orbs.append(total_orbs[-1]
+                          + orb_dim[i] - froz_orb[i])
+    irrep = irrep_shift = 0
+    ini_beta = (len(occ) + int(2 * Ms)) // 2
+    for i, orb in enumerate(occ):
+        if i == ini_beta:
+            irrep_shift = n_irrep
+            irrep = 0
+        while True:
+            if irrep == n_irrep:
+                raise molpro.MolproInputError(
+                    'Configuration is not consistent with orb_dim = '
+                    + str(orb_dim),
+                    line=l,
+                    line_number=line_number,
+                    file_name=molpro_output)
+            if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
+                final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep]
+                                                      + froz_orb[irrep])
+                break
+            else:
+                irrep += 1
+    for i, o in enumerate(final_occ):
+        final_occ[i] = np.array(o, dtype=int_dtype)
+    return final_occ
+
+
 
 def _compare_strings(ref, exc):
     """Compare strings ref and exc and return information about excitation
@@ -195,7 +311,7 @@ def _compare_strings(ref, exc):
     return len(holes), holes, particles
 
 
-class FCIWaveFunction(WaveFunction):
+cdef class FCIWaveFunction(WaveFunction):
     """A FCI-like wave function, based on alpha and beta strings
     
     The wave function is stored in a 2D np.array, whose rows and columns
@@ -227,44 +343,38 @@ class FCIWaveFunction(WaveFunction):
     def __init__(self):
         """Initialize the wave function"""
         super().__init__()
-        self._coefficients = None
-        self._alpha_string_graph = None
-        self._beta_string_graph = None
-        self._n_alpha_str = None
-        self._n_beta_str = None
-        self.ref_det = None
-        self._ordered_orbs = True
-        self._sign_change_orbs = None
-        self._normalisation = 'unnormalised'
+        self.n_alpha_str_init = False
+        self.n_beta_str_init = False
     
     def __len__(self):
         try:
-            return self._coefficients.size
+            return self.coefficients.size
         except AttributeError:
             return 0
     
     def __getitem__(self, i):
-        return self._coefficients[i]
-    
+        return self.coefficients[i[0], i[1]]
+
+    def __setitem__(self, i, value):
+        self.coefficients[i[0], i[1]] = value
+
     def __iter__(self):
         """Generator for determinants"""
         aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
-        for ia in range(self._coefficients.shape[0]):
+        for ia in range(self.coefficients.shape[0]):
             bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
-            for ib in range(self._coefficients.shape[1]):
-                yield SlaterDet(c=self._coefficients[ia, ib],
+            for ib in range(self.coefficients.shape[1]):
+                yield SlaterDet(c=self.coefficients[ia, ib],
                                 alpha_occ=aocc, beta_occ=bocc)
                 str_order.next_str(bocc)
             str_order.next_str(aocc)
         
-    def __eq__(self, other):
+    def __eq__(self, FCIWaveFunction other):
         """Checks if both wave functions are the same within
         TODO: compare all attributes
         """
-        global rtol
-        global atol
-        return np.allclose(self._coefficients, other._coefficients,
-                           rtol=rtol, atol=atol)
+        return np.allclose(self.coefficients, other.coefficients,
+                           rtol=self.rtol, atol=self.atol)
     
     def __str__(self):
         """Return a string version of the wave function."""
@@ -359,6 +469,21 @@ class FCIWaveFunction(WaveFunction):
         if self.ordered_orbs:
             self.change_orbital_order()
     
+    def __array__(self):
+        return np.array(self.coefficients)
+
+    @property
+    def shape(self):
+        return self.n_alpha_str, self.n_beta_str
+
+    @property
+    def alpha_string_graph(self):
+        return np.array(self._alpha_string_graph)
+
+    @property
+    def beta_string_graph(self):
+        return np.array(self._beta_string_graph)
+
     def enumerate(self):
         """Generator for determinants that also yield the index
         
@@ -370,40 +495,42 @@ class FCIWaveFunction(WaveFunction):
             print((ia, ib) == wf.index(det)) # Should be always True
         """
         aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
-        for ia in range(self._coefficients.shape[0]):
+        for ia in range(self.coefficients.shape[0]):
             bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
-            for ib in range(self._coefficients.shape[1]):
-                yield ia, ib, SlaterDet(c=self._coefficients[ia, ib],
+            for ib in range(self.coefficients.shape[1]):
+                yield ia, ib, SlaterDet(c=self.coefficients[ia, ib],
                                         alpha_occ=aocc, beta_occ=bocc)
                 str_order.next_str(bocc)
             str_order.next_str(aocc)
     
     @property
     def n_alpha_str(self):
-        if self._n_alpha_str is None:
-            self._n_alpha_str = comb(self.n_orb_nofrozen, self.n_corr_alpha,
+        if not self.n_alpha_str_init:
+            self._n_alpha_str = comb(self.orbspace.n_orb_nofrozen,
+                                     self.n_corr_alpha,
                                      exact=True)
         return self._n_alpha_str
     
     @property
     def n_beta_str(self):
-        if self._n_beta_str is None:
-            self._n_beta_str = comb(self.n_orb_nofrozen, self.n_corr_beta,
+        if not self.n_beta_str_init:
+            self._n_beta_str = comb(self.orbspace.n_orb_nofrozen,
+                                    self.n_corr_beta,
                                     exact=True)
         return self._n_beta_str
     
-    def calc_memory(self):
+    def calc_memory(self, calc_args):
         """Calculate memory of current determinants in wave function"""
         return mem_of_floats(self.n_alpha_str * self.n_beta_str)
     
     def initialize_coeff_matrix(self):
         """Initialize the matrix with the coefficients"""
         self._alpha_string_graph = str_order.generate_graph(
-            self.n_corr_alpha, self.n_orb_nofrozen)
+            self.n_corr_alpha, self.orbspace.n_orb_nofrozen)
         self._beta_string_graph = str_order.generate_graph(
-            self.n_corr_beta, self.n_orb_nofrozen)
+            self.n_corr_beta, self.orbspace.n_orb_nofrozen)
         self._set_memory()
-        self._coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
+        self.coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
 
     def set_slater_det(self, det):
         """Set a the Slater Determinant coefficient to the wave function
@@ -418,10 +545,10 @@ class FCIWaveFunction(WaveFunction):
         The index of this determinant
         """
         ii = self.index(det)
-        self._coefficients[ii] = det.c
+        self.coefficients[ii[0], ii[1]] = det.c
         return ii
     
-    def index(self, det):
+    cpdef (int, int) index(self,  det) except *:
         """Return the index of det in the coefficients matrix
         
         Parameters:
@@ -451,11 +578,11 @@ class FCIWaveFunction(WaveFunction):
         If set_ref_det is True, also sets ref_det to the corresponding
         determinant (default=False)
         """
-        i_max = np.unravel_index(np.argmax(self._coefficients),
-                                 self._coefficients.shape)
+        i_max = np.unravel_index(np.argmax(self.coefficients),
+                                 self.coefficients.shape)
         if set_ref_det:
             self.ref_det = SlaterDet(
-                c=self[i_max],
+                c=self.coefficients[i_max],
                 alpha_occ=self.alpha_orb_occupation(i_max[0]),
                 beta_occ=self.beta_orb_occupation(i_max[1]))
         return i_max
@@ -509,7 +636,7 @@ class FCIWaveFunction(WaveFunction):
         An instance of SlaterDet with the coefficient associated to ii
         and the alpha and beta occupation, without considering frozen orbitals
         """
-        return SlaterDet(c=self[ii],
+        return SlaterDet(c=self.coefficients[ii],
                          alpha_occ=self.alpha_orb_occupation(ii[0]),
                          beta_occ=self.beta_orb_occupation(ii[1]))
     
@@ -585,11 +712,14 @@ class FCIWaveFunction(WaveFunction):
         """
         if self._normalisation == mode and not force:
             return
+        cdef int i, j
         if mode == 'unit':
-            S = norm(self._coefficients)
+            S = norm(self.coefficients)
         elif mode == 'intermediate':
             S = self.C0
-        self._coefficients /= S
+        for i in range(self._n_alpha_str):
+            for j in range(self._n_beta_str):
+                self.coefficients[i, j] /= S
         self._normalisation = mode
         self.set_coeff_ref_det()
     
@@ -597,10 +727,10 @@ class FCIWaveFunction(WaveFunction):
         ref_alpha = []
         ref_beta = []
         for irrep in self.spirrep_blocks(restricted=True):
-            for i in range(self.corr_orb[irrep]):
-                ref_alpha.append(i + self.orbs_before[irrep])
-            for i in range(self.corr_orb[irrep + self.n_irrep]):
-                ref_beta.append(i + self.orbs_before[irrep])
+            for i in range(self.orbspace.corr[irrep]):
+                ref_alpha.append(i + self.orbspace.orbs_before[irrep])
+            for i in range(self.orbspace.corr[irrep + self.n_irrep]):
+                ref_beta.append(i + self.orbspace.orbs_before[irrep])
         self.ref_det = SlaterDet(
             c=0.0,
             alpha_occ=np.array(ref_alpha, dtype=int_dtype),
@@ -610,7 +740,7 @@ class FCIWaveFunction(WaveFunction):
     def set_coeff_ref_det(self):
         ia, ib = self.index(self.ref_det)
         self.ref_det = SlaterDet(
-            c=self[ia, ib],
+            c=self.coefficients[ia, ib],
             alpha_occ=self.ref_det.alpha_occ,
             beta_occ=self.ref_det.beta_occ)
     
@@ -625,7 +755,7 @@ class FCIWaveFunction(WaveFunction):
         return new_wf
 
     @classmethod
-    def from_int_norm(cls, wf, restricted=None, ordered_orbitals=False):
+    def from_interm_norm(cls, wf, restricted=None, ordered_orbitals=False):
         """Construct the wave function from wf in intermediate normalisation
         
         This constructor returns an instance of cls that represents
@@ -643,7 +773,7 @@ class FCIWaveFunction(WaveFunction):
         new_wf = cls.similar_to(wf, restricted=False)  # Because proj to interm norm requires false...restricted)
         new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
-        new_wf.get_coefficients_from_int_norm_wf(wf, ordered_orbitals)
+        new_wf.get_coefficients_from_interm_norm_wf(wf, ordered_orbitals)
         return new_wf
     
     @classmethod
@@ -665,7 +795,9 @@ class FCIWaveFunction(WaveFunction):
                                      zero_coefficients=zero_coefficients)
         return new_wf
     
-    def get_coefficients_from_int_norm_wf(self, wf, ordered_orbitals=False):
+    def get_coefficients_from_interm_norm_wf(self,
+                                             IntermNormWaveFunction wf,
+                                             ordered_orbitals=False):
         """Get coefficients from a wave function in the int. normalisation
         
         Parameters:
@@ -691,7 +823,7 @@ class FCIWaveFunction(WaveFunction):
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
-                self._coefficients[ia, ib] = 1.0
+                self.coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
                 self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
@@ -740,6 +872,7 @@ class FCIWaveFunction(WaveFunction):
         If use_structure, should we compare old attributes to check
         compatibility?
         """
+        cdef int i, j
         FCI_coefficients_found = False
         uhf_alpha_was_read = False
         found_orbital_source = False
@@ -758,14 +891,17 @@ class FCIWaveFunction(WaveFunction):
                     'point_group is mandatory when molpro_output'
                     + ' is a file object')
             self.point_group = point_group
+            self.orbspace.set_n_irrep(self.n_irrep)
         self.source = 'From file ' + f_name
         S = 0.0
         first_determinant = True
+        unknown_ref_det = True
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
                     self.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
+                    self.orbspace.set_n_irrep(self.n_irrep)
                 except molpro.MolproLineHasNoPointGroup:
                     if molpro.FCI_header == line:
                         FCI_prog_found = True
@@ -776,7 +912,7 @@ class FCIWaveFunction(WaveFunction):
                 if 'EOF' in line:
                     break
                 det = get_slater_det_from_fci_line(
-                    line, self.Ms, self.froz_orb,
+                    line, self.Ms, self.orbspace.froz,
                     molpro_output=molpro_output,
                     line_number=line_number)
                 if first_determinant:
@@ -787,14 +923,15 @@ class FCIWaveFunction(WaveFunction):
                     # might not have the same ref_orb (per spirrep) as
                     # the True reference determinant... I think that this
                     # is not a real problem
-                    self.ref_orb = OrbitalsSets(
-                        list(map(len, get_SD_old(
-                            line, self.orb_dim, self.froz_orb,
-                            self.n_irrep, self.Ms).occupation)))
+                    self.orbspace.set_ref(OrbitalSpace(
+                        dim=list(map(len, get_occ_from_FCI_line(
+                            line, self.orbspace.full, self.orbspace.froz,
+                            self.n_irrep, self.Ms)))))
                     self.initialize_coeff_matrix()
                 S += det.c**2
                 self.set_slater_det(det)
-                if self.ref_det is None or abs(det.c) > abs(self.ref_det.c):
+                if unknown_ref_det or abs(det.c) > abs(self.ref_det.c):
+                    unknown_ref_det = False
                     self.ref_det = det
                     line_ref = line
             else:
@@ -802,16 +939,16 @@ class FCIWaveFunction(WaveFunction):
                         and 'Energy' in line):
                     FCI_coefficients_found = True
                 elif 'Frozen orbitals:' in line:
-                    self.froz_orb = molpro.get_orb_info(line, line_number,
-                                                        self.n_irrep,
-                                                        'R')
+                    self.orbspace.set_froz(molpro.get_orb_info(line, line_number,
+                                                               self.n_irrep,
+                                                               'R'))
                 elif 'Active orbitals:' in line:
-                    self.orb_dim = (self.froz_orb
-                                    + molpro.get_orb_info(
-                                        line,
-                                        line_number,
-                                        self.n_irrep,
-                                        'R'))
+                    self.orbspace.set_full(self.orbspace.froz
+                                           + molpro.get_orb_info(
+                                               line,
+                                               line_number,
+                                               self.n_irrep,
+                                               'R'))
                 elif 'Active electrons:' in line:
                     active_el_in_out = int(line.split()[2])
                 elif 'Spin quantum number:' in line:
@@ -843,12 +980,14 @@ class FCIWaveFunction(WaveFunction):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
-        self.ref_orb = OrbitalsSets(
-            list(map(len, get_SD_old(
-                line_ref, self.orb_dim, self.froz_orb,
-                self.n_irrep, self.Ms).occupation)))
+        self.orbspace.set_ref(OrbitalSpace(
+            dim=list(map(len, get_occ_from_FCI_line(
+                line_ref, self.orbspace.full, self.orbspace.froz,
+                self.n_irrep, self.Ms)))))
         if self.ref_det.c < 0:
-            self._coefficients *= -1
+            for i in range(self.n_alpha_str):
+                for j in range(self.n_beta_str):
+                    self.coefficients[i,j] *= -1
             self.ref_det = SlaterDet(c=-self.ref_det.c,
                                      alpha_occ=self.ref_det.alpha_occ,
                                      beta_occ=self.ref_det.beta_occ)
@@ -859,11 +998,11 @@ class FCIWaveFunction(WaveFunction):
             self.restricted = False
         logger.info('norm of FCI wave function: %f', math.sqrt(S))
         self._normalisation = 'unit'
-        self.act_orb = OrbitalsSets(np.zeros(self.n_irrep),
-                                    occ_type='A')
-        if active_el_in_out + len(self.froz_orb) != self.n_elec:
+        self.orbspace.set_act(OrbitalSpace(n_irrep=self.n_irrep,
+                                           orb_type='A'))
+        if active_el_in_out + len(self.orbspace.froz) != self.n_elec:
             raise ValueError('Inconsistency in number of electrons:\n'
-                             + 'n frozen el = ' + str(self.froz_orb)
+                             + 'n frozen el = ' + str(self.orbspace.froz)
                              + '; n act el (Molpro output) = '
                              + str(active_el_in_out)
                              + '; n elec = ' + str(self.n_elec))
@@ -879,13 +1018,13 @@ class FCIWaveFunction(WaveFunction):
                 det_max_coef = det
         U = []
         for spirrep in self.spirrep_blocks():
-            U.append(np.identity(self.orb_dim[spirrep]))
+            U.append(np.identity(self.orbspace.full[spirrep]))
             extra_in_det = []
             miss_in_det = []
             for orb in det_max_coef.occupation[spirrep]:
-                if orb not in range(self.ref_orb[spirrep]):
+                if orb not in range(self.orbspace.ref[spirrep]):
                     extra_in_det.append(orb)
-            for orb in range(self.ref_orb[spirrep]):
+            for orb in range(self.orbspace.ref[spirrep]):
                 if orb not in det_max_coef.occupation[spirrep]:
                     miss_in_det.append(orb)
             for p, q in zip(extra_in_det, miss_in_det):
@@ -997,7 +1136,7 @@ class FCIWaveFunction(WaveFunction):
         n_param = 0
         spirrep_start = [0]
         for spirrep in self.spirrep_blocks(restricted=restricted):
-            nK = self.ref_orb[spirrep] * self.virt_orb[spirrep]
+            nK = self.orbspace.ref[spirrep] * self.orbspace.virt[spirrep]
             spirrep_start.append(spirrep_start[-1] + nK)
             n_param += nK
         spirrep_start.pop()
@@ -1055,10 +1194,10 @@ class FCIWaveFunction(WaveFunction):
                 pos = spirrep_start[holes[0].spirrep]
                 pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
-                    self.virt_orb[particles[0].spirrep])
+                    self.orbspace.virt[particles[0].spirrep])
                 Jac[pos] += (det.c
                              if (holes[0].orb
-                                 + self.ref_orb[holes[0].spirrep]) % 2 == 0
+                                 + self.orbspace.ref[holes[0].spirrep]) % 2 == 0
                              else -det.c)
                 logger.debug('Adding to Jac[%d] = %f', pos, Jac[pos])
             elif rank == 2:
@@ -1080,19 +1219,19 @@ class FCIWaveFunction(WaveFunction):
                 pos = spirrep_start[holes[0].spirrep]
                 pos += n_from_rect(
                     holes[0].orb, particles[0].orb,
-                    self.virt_orb[particles[0].spirrep])
+                    self.orbspace.virt[particles[0].spirrep])
                 pos1 = spirrep_start[holes[1].spirrep]
                 pos1 += n_from_rect(
                     holes[1].orb, particles[1].orb,
-                    self.virt_orb[particles[1].spirrep])
+                    self.orbspace.virt[particles[1].spirrep])
                 if holes[0].spirrep == holes[1].spirrep:
                     negative = (holes[0].orb
                                 + holes[1].orb) % 2 == 0
                 else:
                     negative = (holes[0].orb
                                 + holes[1].orb
-                                + self.ref_orb[holes[0].spirrep]
-                                + self.ref_orb[holes[1].spirrep]) % 2 == 1
+                                + self.orbspace.ref[holes[0].spirrep]
+                                + self.orbspace.ref[holes[1].spirrep]) % 2 == 1
                 Hess[pos, pos1] += -det.c if negative else det.c
                 if pos != pos1:
                     Hess[pos1, pos] += -det.c if negative else det.c
@@ -1102,11 +1241,11 @@ class FCIWaveFunction(WaveFunction):
                     pos = spirrep_start[holes[0].spirrep]
                     pos += n_from_rect(
                         holes[0].orb, particles[1].orb,
-                        self.virt_orb[particles[1].spirrep])
+                        self.orbspace.virt[particles[1].spirrep])
                     pos1 = spirrep_start[holes[1].spirrep]
                     pos1 += n_from_rect(
                         holes[1].orb, particles[0].orb,
-                        self.virt_orb[particles[0].spirrep])
+                        self.orbspace.virt[particles[0].spirrep])
                     negative = not negative
                     Hess[pos, pos1] += -det.c if negative else det.c
                     if pos1 != pos:
@@ -1213,10 +1352,7 @@ class FCIWaveFunction(WaveFunction):
         new_wf.restricted = self.restricted
         new_wf.point_group = self.point_group
         new_wf.Ms = self.Ms
-        new_wf.froz_orb = self.froz_orb
-        new_wf.act_orb = self.act_orb
-        new_wf.orb_dim = self.orb_dim
-        new_wf.ref_orb = self.ref_orb
+        new_wf.orbspace.get_attributes_from(self)
         new_wf.wf_type = self.wf_type
         new_wf.source = (self.source.replace(' (another basis)', '')
                          + ' (another basis)')
@@ -1275,15 +1411,15 @@ class FCIWaveFunction(WaveFunction):
         tLb = np.identity(len(tUa)) - tLb
         ta = tUa + tLa
         tb = tUb + tLb
-        for k_tot in range(2*(self.orb_dim - self.n_frozen)):
+        for k_tot in range(2*(self.orbspace.full - self.n_frozen)):
             coeff_delta = []
-            if k_tot < self.orb_dim - self.n_frozen:
+            if k_tot < self.orbspace.full - self.n_frozen:
                 k = k_tot
                 spin_shift = 0
                 t = ta
                 logger.debug('k in alpha')
             else:
-                k = k_tot -(self.orb_dim - self.n_frozen)
+                k = k_tot -(self.orbspace.full - self.n_frozen)
                 spin_shift = new_wf.n_alpha
                 t = tb
                 logger.debug('k in beta')
@@ -1309,7 +1445,7 @@ class FCIWaveFunction(WaveFunction):
                                 if not i in det_I.occupation:#...[new_wf.n_alpha+1:]:
                                     n_diff += 1
                                     if spin_shift:
-                                        p = i - (self.orb_dim - self.n_frozen) -1
+                                        p = i - (self.orbspace.full - self.n_frozen) -1
                                         logger('Current p (beta): %d', p)
                         if n_diff > 1:
                             continue
@@ -1382,5 +1518,6 @@ class FCIWaveFunction(WaveFunction):
                 self.normalise(mode='unit')
                 other.normalise(mode='unit')
         if metric == 'IN':
-            return str_order.eucl_distance(self._coefficients,
-                                           other._coefficients)
+            return str_order.eucl_distance(self.coefficients,
+                                           other.coefficients)
+    

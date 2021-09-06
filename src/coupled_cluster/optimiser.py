@@ -3,17 +3,17 @@
 import copy
 
 from util.results import OptResults
-from wave_function.int_norm import IntermNormWaveFunction
-from orbitals.symmetry import OrbitalsSets
-import .ccsd
+from wave_functions.interm_norm import IntermNormWaveFunction
+from orbitals.orbital_space import OrbitalSpace
+import coupled_cluster.coupled_cluster as ccsd
 
 def cc_closed_shell(hf_energy,
-                    mol_geom,
+                    mol_orb,
+                    atom_int,
                     wf_ini=None,
                     preserve_wf_ini=False,
                     level='SD',
-                    max_iter=20,
-                    inter_matrix=True):
+                    max_inter=20):
     """A Restricted Closed Shell Coupled-Cluster (CC) procedure
     
     Parameters:
@@ -22,8 +22,11 @@ def cc_closed_shell(hf_energy,
     hf_energy (float)
         The energy of the slater determinant reference
 
-    mol_geom (MolecularGeometry)
-        The molecular geometry, with all integrals already calculated
+    mol_orb (MolecularOrbital)
+        The molecular orbitals 
+
+    atom_int (Integrals)
+        Integrals from atomic basis set with the associated MolecularGeometry properly setted.
 
     wf_ini (IntermNormWaveFunction, optional, default=None)
         A previous wf can be used as initial guess, if None a new one is generated
@@ -39,18 +42,14 @@ def cc_closed_shell(hf_energy,
     max_iter (int, optional, default=20)
         Maximum number of iterations
 
-    inter_matrix (bool, optional, default=True)
-        If True intermediate matrices are used. These are u, L and F matrices.
-        If False all calculations uses only the one and two electrons (h and g) matrices.
-
     """
-    if cc_ini == None:
+    if wf_ini == None:
         point_group = 'C1'
-        orb_dim = OrbitalsSets([mol_geom.integrals.n_func],
+        orb_dim = OrbitalSpace([len(mol_orb)],
                                occ_type='R')
-        ref_occ = OrbitalsSets([mol_geom.n_elec],
+        ref_occ = OrbitalSpace([atom_int.mol_geo.n_elec],
                                occ_type='R')
-        core_orb = OrbitalsSets([0],
+        core_orb = OrbitalSpace([0],
                                 occ_type='R')
         wave_function = IntermNormWaveFunction.from_zero_amplitudes(
             point_group, ref_occ, orb_dim, core_orb, level=level)
@@ -62,36 +61,25 @@ def cc_closed_shell(hf_energy,
     else:
         raise ValueError(
             'wf_ini must be an instance of IntermNormWaveFunction.')
+    mol_orb.molecular_integrals_gen(atom_int)
+    F = ccsd.make_F(mol_orb.molecular_integrals.h,mol_orb.molecular_integrals.g._integrals,len(wave_function.ref_orb)//2)
+    omega = None
 
-    g = get_2e_MO(mol_geom.integrals.g,D_matrix)
-    h = get_1e_MO(mol_geom.integrals.h,d_matrix)
-
-    if cc_wf.inter_matrix:
-        L = ccsd.make_L(g)
-        F = ccsd.make_F(h,L,use_L=True)
-    else:
-        u = None
-        L = None
-        F = None
-    
-    omega1 = None
-
-    n_iter = 0
+    n_inter = -1
     while True:
-        n_iter+=1
-        energy = ccsd.energy(wave_function,hf_energy)
-        conv_status = ccsd.test_conv(omega1,omega2) 
-        if conv_status or n_iter == max_iter:
+        n_inter+=1
+        energy = ccsd.energy(wave_function,hf_energy,mol_orb.molecular_integrals.g._integrals)
+        conv_status = ccsd.test_conv(omega) 
+        if conv_status or n_inter == max_inter:
             break
  
-        omega1,omega2=ccsd.equation(wave_function,h,g,F,L)
-        wave_function.update_amplitudes(omega0,omega2)
+        omega,update = ccsd.equation(wave_function,F,mol_orb.molecular_integrals.g._integrals)
+        print(omega,wave_function.amplitudes)
+        wave_function.update_amplitudes(update)
 
     results = OptResults('CC'+level)
     results.wave_function=wave_function
     results.energy=energy
     results.n_inter=n_inter
-    if conv_status:
-        results.sucess = True
-    else:
-        results.warning = True ##((Or error?))
+    results.success = conv_status
+    return results 

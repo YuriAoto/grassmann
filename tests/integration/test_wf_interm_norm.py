@@ -7,7 +7,7 @@ import numpy as np
 
 from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
-from wave_functions import int_norm, cisd
+from wave_functions import interm_norm, cisd
 import tests
 
 
@@ -158,13 +158,11 @@ class CISDvsCCSDTestCase(unittest.TestCase):
     def test_check_CCvsCI_cisd_for_H2(self):
         for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
                                          molecule='H2'):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CISD_file(H2_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CCSD_file(H2_sys))
+            wf_intN = IntermNormWaveFunction.from_Molpro(tests.CISD_file(H2_sys))
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            wf_intN = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(H2_sys))
             wf_intN.use_CISD_norm = True
-            wf_CCSD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
+            wf_CCSD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
             with self.subTest(system=H2_sys, coef='C0'):
                 self.assertAlmostEqual(wf_CCSD.C0, wf_CISD.C0, places=5)
             for irp in wf_CCSD.spirrep_blocks(restricted=True):
@@ -177,18 +175,3 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                       irrep2=irp2, coef='Cs'):
                         self.assertEqual(wf_CCSD.Csd[irp][irp2],
                                          wf_CISD.Csd[irp][irp2])
-
-    def test_check_CCvsCI_string_indices_for_H2(self):
-        for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
-                                         molecule='H2'):
-            wf_CI = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CISD_file(H2_sys))
-            wf_CC = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CCSD_file(H2_sys))
-            wf_CC.use_CISD_norm = True
-            str_ind_CC = wf_CC.string_indices()
-            for Ind_CI in wf_CI.string_indices():
-                Ind_CC = next(str_ind_CC)
-                self.assertAlmostEqual(Ind_CC.C, Ind_CI.C, places=5)
-                for irp in wf_CI.spirrep_blocks(restricted=False):
-                    self.assertEqual(Ind_CC[irp].occ_orb, Ind_CI[irp].occ_orb)

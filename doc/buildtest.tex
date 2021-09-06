@@ -1,0 +1,35 @@
+\hypertarget{chap:buildtest}{}
+\chapter{Building and testing}
+\label{sec:buildtest}
+\chaptermark{Building and testing}
+\chapterauthor{}
+
+
+\section{Building}
+
+Grassmann is written in Python and Cython.
+Although the Python language does not require any compilation,
+its extension Cython is actually a wrapper for C code,
+with a syntax very similar to Python, and requires compilation.
+As long as you have the proper compilers and packages (see Chap.~\ref{sec:requirements}),
+the code can be compiled with:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ @\pythonexec{}@ setup.py --build_ext --inplace
+\end{lstlisting}
+
+\section{Testing}
+
+The a number of unit, integration, and implementation tests are implemented and it is wise to check if they are working well after building.
+To run the essential tests:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ GR_TESTS_CATEG=ESSENTIAL @\pythonexec{}@ setup.py test
+\end{lstlisting}
+
+For a finer control of tests (development and debugging) see Chap.~\ref{}.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
+
+

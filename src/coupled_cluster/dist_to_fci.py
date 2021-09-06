@@ -10,12 +10,17 @@ import logging
 
 import numpy as np
 from numpy import linalg
+import numpy as np
 
 from input_output.log import logtime
 from util.results import Results, OptResults, inside_box
 from coupled_cluster import manifold as cc_manifold
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.fci import FCIWaveFunction, contribution_from_clusters
+from wave_functions.slater_det import SlaterDet
+import wave_functions.strings_rev_lexical_order as str_order
+from util.other import int_array
+from util.variables import int_dtype
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -321,8 +326,8 @@ def calc_dist_to_cc_manifold(wf,
         Hess = np.empty((1, 1))
     else:
         Hess = np.empty((cc_wf.n_indep_ampl, cc_wf.n_indep_ampl))
-    corr_orb = wf.corr_orb.as_array()
-    virt_orb = wf.virt_orb.as_array()
+    corr_orb = np.array(wf.orbspace.corr_orb)
+    virt_orb = np.array(wf.orbspace.virt_orb)
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
     if f_out is not None:
         f_out.write(
@@ -351,13 +356,11 @@ def calc_dist_to_cc_manifold(wf,
                 break
             with logtime('Making Jacobian and approximate Hessian'):
                 cc_manifold.min_dist_jac_hess(
-                    wf._coefficients,
-                    cc_wf_as_fci._coefficients,
+                    np.array(wf),
+                    np.array(cc_wf_as_fci),
                     Jac,
                     Hess,
-                    wf.orbs_before,
-                    corr_orb,
-                    virt_orb,
+                    wf.orbspace,
                     wf._alpha_string_graph,
                     wf._beta_string_graph,
                     diag_hess,

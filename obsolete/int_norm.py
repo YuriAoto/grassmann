@@ -20,7 +20,7 @@ from util.variables import int_dtype
 from util.memory import mem_of_floats
 from input_output import molpro
 from molecular_geometry.symmetry import irrep_product
-from orbitals.symmetry import OrbitalsSets
+from orbitals.orbital_space import OrbitalSpace
 from wave_functions.general import WaveFunction
 from string_indices.string_indices import (SD_StringIndex, SpirrepIndex,
                                            SpirrepStringIndex)
@@ -1015,10 +1015,10 @@ class IntermNormWaveFunction(WaveFunction):
                 'If spirrep is given, only_this_occ must be an integer.')
         if (spirrep is None
             and only_this_occ is not None
-                and not isinstance(only_this_occ, OrbitalsSets)):
+                and not isinstance(only_this_occ, OrbitalSpace)):
             raise ValueError(
                 'If spirrep is not given, only_this_occ must be'
-                + ' an instance of gen_wf.OrbitalsSets.')
+                + ' an instance of gen_wf.OrbitalSpace.')
         if coupled_to is not None:
             if not isinstance(coupled_to, tuple):
                 raise ValueError('Parameter coupled_to must be a tuple.')
@@ -1158,7 +1158,7 @@ class IntermNormWaveFunction(WaveFunction):
             irp_a, irp_a)
         # Maybe this can be made directly:
         if (only_this_occ is not None
-            and only_this_occ != OrbitalsSets(
+            and only_this_occ != OrbitalSpace(
                 list(map(len, Index)))):
             return
         Index[irp_a][-1] = self.ref_orb[irp_a]
@@ -1255,7 +1255,7 @@ class IntermNormWaveFunction(WaveFunction):
             irrep_a, irrep_b)
         if only_this_occ is not None:
             indices_occ = DoublesTypes(
-                *[OrbitalsSets(occ, occ_type='F')
+                *[OrbitalSpace(occ, occ_type='F')
                   for occ in map(lambda x: list(map(len, x)), indices)])
             if only_this_occ not in indices_occ:
                 return
@@ -1930,13 +1930,13 @@ class IntermNormWaveFunction(WaveFunction):
 
         Parameters:
         -----------
-        ref_orb (OrbitalsSets)
+        ref_orb (OrbitalSpace)
             The reference occupation
 
-        orb_dim (OrbitalsSets)
+        orb_dim (OrbitalSpace)
             The dimension of orbital spaces
 
-        froz_orb (OrbitalsSets)
+        froz_orb (OrbitalSpace)
             The frozen orbitals
 
         Limitations:
@@ -2090,10 +2090,13 @@ class IntermNormWaveFunction(WaveFunction):
             elif dbl_found:
                 lspl = line.split()
                 if len(lspl) == 7:
-                    (Molpros_i, Molpros_j,
-                     irrep_a, irrep_b,
-                     a, b) = map(
-                         lambda x: int(x) - 1, lspl[0:-1])
+                    try:
+                        (Molpros_i, Molpros_j,
+                         irrep_a, irrep_b,
+                         a, b) = map(
+                             lambda x: int(x) - 1, lspl[0:-1])
+                    except ValueError:
+                        continue
                     C = float(lspl[-1])
                     if exc_type[0] == 'a':
                         a -= new_wf.act_orb[irrep_a]

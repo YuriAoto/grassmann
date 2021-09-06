@@ -3,7 +3,7 @@
 Usage:
 ------
 python3 setup.py build_ext --inplace
-python3 setyp.py test
+python3 setup.py test
 
 
 """
@@ -11,7 +11,9 @@ from setuptools import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
-# without .pyx
+#
+# Cython files (without the .pyx extension)
+#
 all_cython_files = ["src/integrals/integrals_cy",
                     "src/coupled_cluster/exc_on_string",
                     "src/coupled_cluster/manifold",
@@ -19,13 +21,16 @@ all_cython_files = ["src/integrals/integrals_cy",
                     "src/coupled_cluster/manifold_term2",
                     "src/coupled_cluster/manifold_hess",
                     "src/wave_functions/singles_doubles",
+                    "src/wave_functions/general",
+                    "src/wave_functions/fci",
+                    "src/wave_functions/interm_norm",
+                    "src/wave_functions/cisd",
                     "src/wave_functions/strings_rev_lexical_order",
                     "src/orbitals/occ_orbitals",
+                    "src/orbitals/orbital_space",
                     "src/util/array_indices",
                     "src/coupled_cluster/cluster_decomposition"]
 
-###                    "tests/speed/cc_manifold_term1",
-    
 
 extensions = []
 for cy_file in all_cython_files:

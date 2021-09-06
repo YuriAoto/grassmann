@@ -9,7 +9,7 @@ import numpy as np
 from scipy import linalg
 
 from input_output.log import logger, logtime
-from input_output import molpro
+from wave_functions import molpro
 from .metric import dist_from_ovlp, ovlp_Slater_dets
 from orbitals import orbitals as orb
 from . import optimiser
@@ -86,20 +86,14 @@ def main(args, f_out):
     with logtime('Reading wave function'):
         ext_wf = molpro.load_wave_function(
             args.molpro_output,
-            WF_templ=args.WF_templ,
             use_CISD_norm=not args.at_ref,
             wf_obj_type=('cisd'
                          if args.algorithm == 'CISD_Absil' else
                          ('int_norm'
                           if args.algorithm == 'general_Absil' else
                           'fci')))
-    if args.at_ref:
-        ext_wf.use_CISD_norm = False
-    if (isinstance(ext_wf, wave_functions.norm_ci.NormCI_WaveFunction)
-        and 'Absil' in args.algorithm
-            and not args.at_ref):
-        raise Exception('algorithm CISD_Absil is not compatible with'
-                        + 'fci.NormCI_WaveFunction')
+    # if args.at_ref:
+    #     ext_wf.use_CISD_norm = False
     logger.debug('External wave function:\n %r', ext_wf)
     toout('External wave function (|extWF>) is: ' + ext_wf.wf_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
@@ -128,7 +122,7 @@ def main(args, f_out):
         else:
             print_ovlp_D('minE', 'WFref',
                          ovlp_Slater_dets(HF_in_basis_of_refWF,
-                                          ext_wf.ref_orb))
+                                          ext_wf.orbspace.ref))
     else:
         toout('Using |WFref> (the reference of |extWF>) as |minE>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
@@ -148,8 +142,8 @@ def main(args, f_out):
             U = orb.MolecularOrbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.MolecularOrbitals.from_file(args.WF_orb))
     else:
-        U = orb.construct_Id_orbitals(ext_wf.ref_orb,
-                                      ext_wf.orb_dim,
+        U = orb.construct_Id_orbitals(ext_wf.orbspace.ref,
+                                      ext_wf.orbspace.full,
                                       (1
                                        if restricted else
                                        2) * ext_wf.n_irrep,
@@ -159,12 +153,7 @@ def main(args, f_out):
           'Unrestricted calculation')
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
-    toout('Dim. of core orb. space:  {0:}'.
-          format(ext_wf.froz_orb))
-    toout('Dim. of ref. determinant: {0:}'.
-          format(ext_wf.ref_orb))
-    toout('Dim. of orbital space:    {0:}'.
-          format(ext_wf.orb_dim))
+    toout(f'Orbital space:\n{ext_wf.orbspace}\n')
     toout()
     if args.save_all_orb or args.save_final_orb:
         try:
@@ -194,7 +183,7 @@ def main(args, f_out):
         ovlp_with_1st_it = ovlp_Slater_dets((2 * res.U)
                                             if restricted else
                                             res.U,
-                                            ext_wf.ref_orb)
+                                            ext_wf.orbspace.ref)
         print_ovlp_D('refWF', '1st it',
                      ovlp_with_1st_it,
                      with_dist=False)
@@ -287,7 +276,7 @@ def main(args, f_out):
                          ovlp_Slater_dets((2 * res.U)
                                           if restricted else
                                           res.U,
-                                          ext_wf.ref_orb))
+                                          ext_wf.orbspace.ref))
             for spirrep, Ui in enumerate(U):
                 if Ui.shape[1] > 0:
                     res.U[spirrep] = np.matmul(
@@ -296,5 +285,5 @@ def main(args, f_out):
                      ovlp_Slater_dets((2 * res.U)
                                       if restricted else
                                       res.U,
-                                      ext_wf.ref_orb))
+                                      ext_wf.orbspace.ref))
     toout()

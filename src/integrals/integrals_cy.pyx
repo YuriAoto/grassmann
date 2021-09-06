@@ -48,6 +48,7 @@ def from_2e_atomic_to_molecular_cy(double[:] mo_integrals,
                                         pqrs = (rs + pq * (pq + 1) // 2
                                                 if pq >= rs else
                                                 pq + rs * (rs + 1) // 2)
+                                        ##TODO: Add F2e case
                                         at_int = atomic[pqrs]
                                         mo_integrals[ijkl]+= molecular[p,i]*molecular[q,j]*molecular[r,k]*molecular[s,l]*at_int
                                         if p != q and r != s and ( q != s or p != r ):
@@ -72,5 +73,47 @@ def from_2e_atomic_to_molecular_cy(double[:] mo_integrals,
                                             mo_integrals[ijkl]+= molecular[s,i]*molecular[r,j]*molecular[p,k]*molecular[q,l]*at_int
                                         elif p != r or q != s:
                                             mo_integrals[ijkl]+= molecular[r,i]*molecular[s,j]*molecular[p,k]*molecular[q,l]*at_int
+
+    return mo_integrals
+
+
+def from_1e_atomic_to_molecular_cy(double[:,:] mo_integrals,
+                                double[:,:] molecular,
+                                double[:,:] atomic,
+                                int n_func):
+    cdef int i,j,p,q
+    cdef double at_int
+
+    with nogil:
+        for i in prange(n_func):
+            for j in range(n_func):
+                for p in range(n_func):
+                    for q in range(n_func):
+                        mo_integrals[i,j]+= molecular[p,i]*molecular[q,j]*atomic[p,q]
+
+    return mo_integrals
+
+def from_1e_atomic_to_molecular_sym_cy(double[:] mo_integrals,
+                                double[:,:] molecular,
+                                double[:] atomic,
+                                int n_func):
+    cdef int i,j,ij,p,q,pq
+    cdef double at_int
+
+    with nogil:
+        for i in range(n_func):
+            for j in range(n_func):
+                if i < j:
+                    continue
+                ij = i+j*(j+1)//2 ##Check if it's right
+                for p in range(n_func):
+                    for q in range(n_func):
+                        if p < q:
+                            continue
+                        pq = p+q*(q+1)//2
+                        at_int = atomic[pq]
+                        mo_integrals[ij]+= molecular[p,i]*molecular[q,j]*atomic[pq]
+                        if p != q:
+                            mo_integrals[ij]+= molecular[q,i]*molecular[p,j]*atomic[pq]
 
     return mo_integrals

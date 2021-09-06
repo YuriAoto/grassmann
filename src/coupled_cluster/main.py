@@ -9,6 +9,7 @@ from wave_functions.interm_norm import IntermNormWaveFunction
 from coupled_cluster.dist_to_fci import (vertical_dist_to_cc_manifold,
                                          calc_dist_to_cc_manifold,
                                          calc_all_distances)
+from coupled_cluster import optimiser
 
 
 def main(args, f_out):
@@ -68,6 +69,17 @@ def main(args, f_out):
                 level=level)
         f_out.write(str(res_all_dists))
     
+    elif args.method in ('CCD', 'CCSD'):
+        found_method = True
+        level = 'SD' if 'SD' in args.method else 'D'
+        optimiser.cc_closed_shell(args.res_hf.energy,
+                                  args.res_hf.orbitals,
+                                  args.res_hf.integrals, ##TODO: Find where the integrals are!!
+                                  wf_ini=None,
+                                  preserve_wf_ini=False,
+                                  level='SD',
+                                  max_inter=20)
+
     if not found_method:
         raise ValueError(
             f'The CC method {args.method} has not been found')
