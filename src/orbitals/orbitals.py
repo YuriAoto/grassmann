@@ -158,8 +158,8 @@ def calc_U_from_z(z, wf):
             + 'len(z) = ' + str(len(z))
             + '\nz:\n' + str(z)
             + '\nn_param = ' + str(n_param)
-            + '; corr_orb = ' + str(wf.orbspace.corr)
-            + '; virt_orb = ' + str(wf.orbspace.virt))
+            + '; corr = ' + str(wf.orbspace.corr)
+            + '; virt = ' + str(wf.orbspace.virt))
     U = []
     for spirrep in wf.spirrep_blocks(restricted=restricted):
         if wf.orbspace.full[spirrep] == 0:

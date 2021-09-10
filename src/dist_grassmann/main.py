@@ -89,7 +89,7 @@ def main(args, f_out):
             use_CISD_norm=not args.at_ref,
             wf_obj_type=('cisd'
                          if args.algorithm == 'CISD_Absil' else
-                         ('int_norm'
+                         ('interm_norm'
                           if args.algorithm == 'general_Absil' else
                           'fci')))
     # if args.at_ref:

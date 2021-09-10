@@ -6,13 +6,59 @@ import math
 import cProfile
 import pstats
 from pstats import SortKey
+import tracemalloc
 
 import numpy as np
 
 from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
 import tests
+from util import memory
 
+
+tracemalloc.start()
+
+def createWF():
+    mol_system = 'Li2__5__sto3g__D2h'
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print('before readinf FCI:\n')
+    for stat in top_stats:
+        print(stat)
+    wf = FCIWaveFunction.from_Molpro_FCI(
+        tests.FCI_file(mol_system, allE=True))
+    print('FCI mem: ', wf.mem)    
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print('before reading CCSD:\n')
+    for stat in top_stats:
+        print(stat)
+    cc_wf = IntermNormWaveFunction.from_Molpro(
+        tests.CCSD_file(mol_system, allE=True))
+    print('CC mem: ', cc_wf.mem)
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print('end of function:\n')
+    for stat in top_stats:
+        print(stat)
+
+
+@tests.category('PROFILE')
+class CheckMemory(unittest.TestCase):
+    """Check memory profile"""
+    
+    def test1(self):
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        print('before calling the function:\n')
+        for stat in top_stats:
+            print(stat)
+        createWF()
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        print('after calling the function:\n')
+        for stat in top_stats:
+            print(stat)
 
 
 @tests.category('SHORT')
@@ -27,14 +73,14 @@ class FromMolproTestCase(unittest.TestCase):
     def test_h2_sto3g_d2h(self):
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('H2__5__sto3g__D2h'))
-        self.assertEqual(wf.get_amplitudes(), np.array([-0.86355553]))
+        self.assertEqual(np.array(wf), np.array([-0.86355553]))
         self.assertEqual(wf.n_irrep, 8)
         self.assertTrue(wf.restricted)
 
     def test_h2_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('H2__5__631g__C2v'))
-        self.assertEqual(wf.get_amplitudes(), np.array(
+        my_ampl = np.array(
             # Singles:
             [#               i, a       irrep = 0
              -0.00000000,  # 0, 0
@@ -53,7 +99,8 @@ class FromMolproTestCase(unittest.TestCase):
              -0.07011574,  # 2, 0
              -0.00000000,  # 2, 1
              -0.00808512,  # 2, 2
-            ]))
+            ])
+        self.assertEqual(np.array(wf), my_ampl)
         self.assertEqual(wf.n_irrep, 4)
         self.assertTrue(wf.restricted)
 
@@ -108,7 +155,7 @@ class FromMolproTestCase(unittest.TestCase):
               0.00000000,  # 1, 0
              -0.00148179,  # 1, 1
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
         self.assertEqual(wf.n_irrep, 4)
         self.assertTrue(wf.restricted)
 
@@ -292,7 +339,7 @@ class FromMolproTestCase(unittest.TestCase):
              # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
              -0.04065767   # 0, 0
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
     
     def test_hcl_plus_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
@@ -618,7 +665,7 @@ class FromMolproTestCase(unittest.TestCase):
              # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
              -0.03355893   # 0, 0
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
         self.assertEqual(wf.n_irrep, 4)
         self.assertFalse(wf.restricted)
 
@@ -1172,7 +1219,7 @@ class FromMolproTestCase(unittest.TestCase):
              # ----------    a,b     irrep_a = 1  (=> irrep_b = 1)
              -0.03364337,  # 0,0
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
         self.assertEqual(wf.n_irrep, 2)
         self.assertFalse(wf.restricted)
 
@@ -1193,7 +1240,7 @@ class FromProjCCDTestCase(unittest.TestCase):
             tests.CCD_file('H2__5__sto3g__D2h'))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     @unittest.skip('Is this a valid test??')
     def test_h2_631g_d2h_noS(self):
@@ -1206,7 +1253,7 @@ class FromProjCCDTestCase(unittest.TestCase):
             tests.CCD_file('H2__5__631g__D2h'))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
 
 class FromProjCCSDTestCase(unittest.TestCase):
@@ -1226,7 +1273,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_631g_d2h(self):
         mol_system = 'H2__5__631g__D2h'
@@ -1237,7 +1284,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_ccpvdz_d2h(self):
         mol_system = 'H2__5__ccpVDZ__D2h'
@@ -1248,7 +1295,8 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        proj_cc_wf.set_eq_tol(atol=1.0E-6, rtol=1.0E-5)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_sto3g_d2h(self):
         mol_system = 'Li2__5__sto3g__D2h'
@@ -1259,7 +1307,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to2s_c2v(self):
         mol_system = 'Li2__5__to2s__C2v'
@@ -1270,7 +1318,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to3s_c2v(self):
         mol_system = 'Li2__5__to3s__C2v'
@@ -1281,7 +1329,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.CCSD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CCSD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_he2_631g_c2v(self):
         """
@@ -1340,7 +1388,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
-        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+        self.assertEqual(np.array(proj_cc_wf), my_ampl)
 
     def test_he2_631g_d2h(self):
         mol_system = 'He2__1.5__631g__D2h'
@@ -1378,7 +1426,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
-        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+        self.assertEqual(np.array(proj_cc_wf), my_ampl)
 
 
 class FromProjCISDTestCase(unittest.TestCase):
@@ -1398,7 +1446,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_631g_d2h(self):
         mol_system = 'H2__5__631g__D2h'
@@ -1409,7 +1457,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_ccpvdz_d2h(self):
         mol_system = 'H2__5__ccpVDZ__D2h'
@@ -1420,7 +1468,8 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        proj_cc_wf.set_eq_tol(atol=1.0E-6, rtol=1.0E-5)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_sto3g_d2h(self):
         mol_system = 'Li2__5__sto3g__D2h'
@@ -1431,7 +1480,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to2s_c2v(self):
         mol_system = 'Li2__5__to2s__C2v'
@@ -1442,7 +1491,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to3s_c2v(self):
         mol_system = 'Li2__5__to3s__C2v'
@@ -1453,7 +1502,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
-        self.assertEqual(proj_cc_wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_he2_631g_c2v(self):
         """
@@ -1512,7 +1561,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
-        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+        self.assertEqual(np.array(proj_cc_wf), my_ampl)
 
     def test_he2_631g_d2h(self):
         mol_system = 'He2__1.5__631g__D2h'
@@ -1550,7 +1599,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
-        self.assertEqual(proj_cc_wf.amplitudes, my_ampl)
+        self.assertEqual(np.array(proj_cc_wf), my_ampl)
 
 
 class ProjCCDwfCCDTestCase(unittest.TestCase):
@@ -1566,9 +1615,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('SHORT')
     def test_be_sto3g_d2h_allel(self):
@@ -1576,9 +1625,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_li2_sto3g_d2h_allel(self):
@@ -1586,9 +1635,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_be_ccpvdz_d2h_allel(self):
@@ -1596,9 +1645,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c2v_allel(self):
@@ -1606,9 +1655,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c1_allel(self):
@@ -1616,9 +1665,9 @@ class ProjCCDwfCCDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
 
 class ProjCCSDwfCCSDTestCase(unittest.TestCase):
@@ -1634,9 +1683,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('SHORT')
     def test_be_sto3g_d2h_allel(self):
@@ -1644,9 +1693,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_li2_sto3g_d2h_allel(self):
@@ -1654,9 +1703,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_be_ccpvdz_d2h_allel(self):
@@ -1664,9 +1713,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c2v_allel(self):
@@ -1674,9 +1723,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c1_allel(self):
@@ -1684,9 +1733,9 @@ class ProjCCSDwfCCSDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CCSD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
 
 class ProjCISDwfCISDTestCase(unittest.TestCase):
@@ -1702,9 +1751,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('SHORT')
     def test_be_sto3g_d2h_allel(self):
@@ -1712,9 +1761,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_li2_sto3g_d2h_allel(self):
@@ -1722,9 +1771,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
     
     @tests.category('LONG')
     def test_be_ccpvdz_d2h_allel(self):
@@ -1732,9 +1781,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c2v_allel(self):
@@ -1742,9 +1791,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
     @tests.category('VERY LONG')
     def test_li2_sto3g_c1_allel(self):
@@ -1752,9 +1801,9 @@ class ProjCISDwfCISDTestCase(unittest.TestCase):
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(mol_system, allE=True)))
-        wf = FCIWaveFunction.from_int_norm(cc_wf)
+        wf = FCIWaveFunction.from_interm_norm(cc_wf)
         wf = IntermNormWaveFunction.from_projected_fci(wf, 'CISD')        
-        self.assertEqual(wf.amplitudes, cc_wf.amplitudes)
+        self.assertEqual(wf, cc_wf)
 
 
 @tests.category('SHORT')
@@ -1770,13 +1819,13 @@ class He2MethodsTestCase(unittest.TestCase):
                                                      wf_type='CCSD',
                                                      restricted=self.He2_CCwf.restricted)
         d = 0.0
-        for t in self.He2_CCwf.amplitudes:
+        for t in np.array(self.He2_CCwf):
             d += t**2
         d = math.sqrt(d)
         self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), d)
         other_wf = IntermNormWaveFunction.restrict(self.He2_CCwf)
         self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), 0.0)
-        other_wf.amplitudes[0] -= 1.0
+        other_wf[0] = other_wf[0] - 1.0
         self.assertAlmostEqual(self.He2_CCwf.dist_to(other_wf), 1.0)
 
 
@@ -1792,10 +1841,10 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertTrue(wf.restricted)
         wf = IntermNormWaveFunction.unrestrict(wf)
         self.assertFalse(wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), np.array([-0.86355553]))
+        self.assertEqual(np.array(wf), np.array([-0.86355553]))
         wf = IntermNormWaveFunction.restrict(wf)
         self.assertTrue(wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), np.array([-0.86355553]))
+        self.assertEqual(np.array(wf), np.array([-0.86355553]))
 
     def test_h2_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
@@ -1803,7 +1852,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
         self.assertTrue(wf.restricted)
         wf = IntermNormWaveFunction.unrestrict(wf)
         self.assertFalse(wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), np.array(
+        my_ampl = np.array(
             # Singles:
             [# alpha -> alpha
              #               i, a       irrep = 0
@@ -1829,10 +1878,11 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
              -0.07011574,  # 2, 0
              -0.00000000,  # 2, 1
              -0.00808512,  # 2, 2
-            ]))
+            ])
+        self.assertEqual(np.array(wf), my_ampl)
         wf = IntermNormWaveFunction.restrict(wf)
         self.assertTrue(wf.restricted)
-        self.assertEqual(wf.get_amplitudes(), np.array(
+        my_ampl = np.array(
             # Singles:
             [#               i, a       irrep = 0
              -0.00000000,  # 0, 0
@@ -1851,7 +1901,8 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
              -0.07011574,  # 2, 0
              -0.00000000,  # 2, 1
              -0.00808512,  # 2, 2
-            ]))
+            ])
+        self.assertEqual(np.array(wf), my_ampl)
 
     def test_h2_ccpvdz_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
@@ -1916,7 +1967,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
               0.00000000,  # 1, 0
              -0.00148179,  # 1, 1
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
         wf = IntermNormWaveFunction.restrict(wf)
         self.assertTrue(wf.restricted)
         my_ampl = np.array(
@@ -1967,7 +2018,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
               0.00000000,  # 1, 0
              -0.00148179,  # 1, 1
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
 
     def test_hcl_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(
@@ -2383,7 +2434,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
              # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
              -0.04065767   # 0, 0
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
         wf = IntermNormWaveFunction.restrict(wf)
         self.assertTrue(wf.restricted)
         my_ampl = np.array(
@@ -2563,7 +2614,7 @@ class RestrictUnrestrictItTestCase(unittest.TestCase):
              # ----------    a, b     irrep_a = 2  (=> irrep_b = 2)
              -0.04065767   # 0, 0
             ])
-        self.assertEqual(wf.get_amplitudes(), my_ampl)
+        self.assertEqual(np.array(wf), my_ampl)
 
     def test_hcl_plus_631g_c2v(self):
         wf = IntermNormWaveFunction.from_Molpro(

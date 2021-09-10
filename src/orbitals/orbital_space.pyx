@@ -287,7 +287,7 @@ cdef class FullOrbitalSpace:
     
     orbs_before (np.array of int)
         The number of orbitals (without frozen orbitals) before each irrep.
-        orbs_before[irrep] = sum(corr_orb[:irrep]) + sum(virt_orb[:irrep])
+        orbs_before[irrep] = sum(corr[:irrep]) + sum(virt[:irrep])
     
     corr_orbs_before (np.array of int)
         The number of correlated orbitals before each irrep.
@@ -326,6 +326,15 @@ cdef class FullOrbitalSpace:
         self.virt._n_irrep = n
         self.corr._n_irrep = n
         self.act._n_irrep = n
+
+    def __eq__(self, other):
+        if self.full != other.full: return False
+        if self.froz != other.froz: return False
+        if self.ref != other.ref: return False
+        if self.corr != other.corr: return False
+        if self.virt != other.virt: return False
+        if self.act != other.act: return False
+        return True
 
     cpdef set_full(self, OrbitalSpace other, bint update=True):
         self.full.set_(other)
@@ -403,7 +412,8 @@ cdef class FullOrbitalSpace:
         #     if np.any(np.array(other.act)):
         #         raise ValueError(
         #             'act_orb is not empty, cannot be of restricted type!')
-        #     self.ref_orb.restrict_it()
-
-
-
+        #     self.orbspace.ref.restrict_it()
+    
+    cdef inline int first_virtual(self, int spirrep):
+        """The index of first virtual orbital of spirrep"""
+        return self.orbs_before[spirrep % self.n_irrep] + self.corr[spirrep]

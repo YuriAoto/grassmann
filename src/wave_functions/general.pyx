@@ -25,13 +25,14 @@ If the wave function is not of restricted type (either with restricted orbitals
 or not), first come all frozen alpha orbitals, then all frozen beta orbitals,
 then all alpha (non-frozen) and finally all beta (non-frozen)
 
-Example (restricted type):
+Example. Consider the following orbital space (see FullOrbitalSpace),
+of restricted type:
 
-orb_dim   [10, 6, 6, 4]   Dimension of orbital space by irrep (with frozen)
-froz_orb  [ 2, 1, 1, 1]   Frozen (core) orbitals
-ref_orb   [ 5, 3, 3, 1]   Reference occupation (with frozen)
-corr_orb  [ 3, 2, 2, 0]   Correlated orbitals
-virt_orb  [ 5, 3, 3, 3]   Virtual orbitals
+full  [10, 6, 6, 4]   Dimension of orbital space by irrep (with frozen)
+froz  [ 2, 1, 1, 1]   Frozen (core) orbitals
+ref   [ 5, 3, 3, 1]   Reference occupation (with frozen)
+corr  [ 3, 2, 2, 0]   Correlated orbitals
+virt  [ 5, 3, 3, 3]   Virtual orbitals
 
 orbs_before = [0, 8, 13, 18, 21]
 
@@ -93,13 +94,13 @@ Orbital dimension obviously does not depend on alpha/beta.
 For frozen, we will consider only same frozen orbitals
 in alpha and beta
 
-orb_dim   [10, 6, 6, 4]                 As above
-froz_orb  [ 2, 1, 1, 1]                 As above
-ref_orb   [ 5, 3, 3, 1,  3, 3, 3, 1]    Reference occupation
+full  [10, 6, 6, 4]                 As above
+froz  [ 2, 1, 1, 1]                 As above
+ref   [ 5, 3, 3, 1,  3, 3, 3, 1]    Reference occupation
                                         (with frozen, alpha/beta)
-corr_orb  [ 3, 2, 2, 0,  1, 2, 2, 0]    Correlated orbitals
+corr  [ 3, 2, 2, 0,  1, 2, 2, 0]    Correlated orbitals
                                         (alpha/beta)
-virt_orb  [ 5, 3, 3, 3,  7, 3, 3, 3]    Virtual orbitals
+virt  [ 5, 3, 3, 3,  7, 3, 3, 3]    Virtual orbitals
 
 corr_orbs_before = [0, 3, 5, 7, 0, 1, 3, 5, 0]
 
@@ -279,7 +280,7 @@ cdef class WaveFunction:
         x.append('-' * 50)
         return '\n'.join(x)
     
-    def __del__(self):
+    def __dealloc__(self):
         memory.free(self.mem)
     
     def _set_memory(self, object destination=None, object calc_args=()):
@@ -344,6 +345,22 @@ cdef class WaveFunction:
         new_wf.mem = 0.0
         return new_wf
     
+        
+    def str_compare_with(self, WaveFunction other):
+        """A string that compares both wave functions"""
+        space_between = 4
+        self_str = str(self).split('\n')
+        other_str = str(other).split('\n')
+        maxlen = max(map(len, self_str)) + space_between
+        x1 = 'Wave function 1:'
+        x2 = 'Wave function 2:'
+        paste = [x1 + ' '*(maxlen - len(x1)) + x2,
+                 '=' * (maxlen * 2 - space_between)]
+        
+        for i, x in enumerate(self_str):
+            paste.append(x + ' '*(maxlen - len(x)) + other_str[i])
+        return '\n'.join(paste)
+
     def get_attributes_from(self, WaveFunction wf, restricted=None):
         """Get parameters from wf
         
@@ -359,7 +376,7 @@ cdef class WaveFunction:
             of restricted type:
             If None, it will be as wf.
             If False, creates a unrestricted wave function, even if wf is
-              restricted. In such case, attributes such as ref_orb are of "F"
+              restricted. In such case, attributes such as orbspace.ref are of "F"
               type, to allow unrestricted case, but with alpha and beta
               dimensions
             If True, creates a restricted wave function if possible. If wf

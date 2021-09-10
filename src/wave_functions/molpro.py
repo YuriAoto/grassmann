@@ -11,7 +11,7 @@ def load_wave_function(molpro_output,
                        method=None,
                        ith=0,
                        use_CISD_norm=True,
-                       wf_obj_type='int_norm',
+                       wf_obj_type='interm_norm',
                        _zero_coefficients=False,
                        _change_structure=True,
                        _use_structure=False):
@@ -59,7 +59,7 @@ def load_wave_function(molpro_output,
         Indicates the object type to be returned after reading
         a molpro output with a CI/CC wave function in intermediate
         normalisation
-        Possible values are: 'int_norm', 'cisd', 'fci'.
+        Possible values are: 'interm_norm', 'cisd', 'fci'.
     
     wf (wave_function.general.WaveFunction or None, optional, default=None)
         If given, this object is changed, and nothing is returned.
@@ -141,12 +141,12 @@ def load_wave_function(molpro_output,
                         change_structure=_change_structure,
                         use_structure=_use_structure)
                 else:
-                    wf_int_norm = IntermNormWaveFunction.from_Molpro(
+                    wf_interm_norm = IntermNormWaveFunction.from_Molpro(
                             f, start_line_number=line_number-1,
                             wf_type=wf_type,
                             point_group=point_group)
-                    wf_int_norm.use_CISD_norm = use_CISD_norm
-                    wf = wf_int_norm
+                    wf_interm_norm.use_CISD_norm = use_CISD_norm
+                    wf = wf_interm_norm
                     if wf_obj_type == 'cisd':
                         wf = cisd.CISDWaveFunction.from_interm_norm(wf)
                     elif wf_obj_type == 'fci':

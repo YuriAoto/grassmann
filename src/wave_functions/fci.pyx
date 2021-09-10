@@ -121,17 +121,17 @@ def _sign_for_absolute_order(
                     spirrep_j = spirrep_i
                     spirrep_b = spirrep_a
                 if spirrep_i <= spirrep_a:
-                    n_transp = wf.corr_orb[spirrep_i] - i - 1
+                    n_transp = wf.orbspace.corr[spirrep_i] - i - 1
                     if _to_print:
                         print('n transp before', n_transp)
                     for irrep in range(spirrep_i + 1, spirrep_a + 1):
-                        n_transp += wf.corr_orb[irrep]
+                        n_transp += wf.orbspace.corr[irrep]
                     if _to_print:
                         print('n transp after', n_transp)
                 else:
                     n_transp = i
                     for irrep in range(spirrep_a + 1, spirrep_i):
-                        n_transp += wf.corr_orb[irrep]
+                        n_transp += wf.orbspace.corr[irrep]
                 sign_sp *= -1 if n_transp % 2 else 1
                 if _to_print:
                     print('sign_sp = ', sign_sp)
@@ -343,6 +343,7 @@ cdef class FCIWaveFunction(WaveFunction):
     def __init__(self):
         """Initialize the wave function"""
         super().__init__()
+        self._sign_change_orbs = None
         self.n_alpha_str_init = False
         self.n_beta_str_init = False
     
@@ -401,20 +402,20 @@ cdef class FCIWaveFunction(WaveFunction):
         but obtain the sign from the previous using the reverse lexical
         ordering?
         """
-        self._sign_change_orbs = (np.empty(self._coefficients.shape[0],
+        self._sign_change_orbs = (np.empty(self.coefficients.shape[0],
                                            dtype=int_dtype),
-                                  np.empty(self._coefficients.shape[1],
+                                  np.empty(self.coefficients.shape[1],
                                            dtype=int_dtype))
         occ_b = np.empty(self.n_corr_beta, dtype=int_dtype)
         occ_a = np.empty(self.n_corr_alpha, dtype=int_dtype)
         str_order.ini_str(occ_a)
-        for ia in range(self._coefficients.shape[0]):
+        for ia in range(self.coefficients.shape[0]):
             str_order.next_str(occ_a)
             self._sign_change_orbs[0][ia] = str_order.sign_put_max_coincidence(
                 self.ref_det.alpha_occ,
                 occ_a, self.n_corr_alpha)
         str_order.ini_str(occ_b)
-        for ib in range(self._coefficients.shape[1]):
+        for ib in range(self.coefficients.shape[1]):
             str_order.next_str(occ_b)
             self._sign_change_orbs[1][ib] = str_order.sign_put_max_coincidence(
                 self.ref_det.beta_occ,
@@ -453,9 +454,9 @@ cdef class FCIWaveFunction(WaveFunction):
         """
         if self._sign_change_orbs is None:
             self.calc_sign_change_orbs()
-        for ia in range(self._coefficients.shape[0]):
-            for ib in range(self._coefficients.shape[1]):
-                self._coefficients[ia, ib] *= (self._sign_change_orbs[0][ia]
+        for ia in range(self.coefficients.shape[0]):
+            for ib in range(self.coefficients.shape[1]):
+                self.coefficients[ia, ib] *= (self._sign_change_orbs[0][ia]
                                                * self._sign_change_orbs[1][ib])
         self._ordered_orbs = not self._ordered_orbs
     
@@ -478,11 +479,11 @@ cdef class FCIWaveFunction(WaveFunction):
 
     @property
     def alpha_string_graph(self):
-        return np.array(self._alpha_string_graph)
+        return np.array(self.alpha_string_graph)
 
     @property
     def beta_string_graph(self):
-        return np.array(self._beta_string_graph)
+        return np.array(self.beta_string_graph)
 
     def enumerate(self):
         """Generator for determinants that also yield the index
@@ -523,14 +524,15 @@ cdef class FCIWaveFunction(WaveFunction):
         """Calculate memory of current determinants in wave function"""
         return mem_of_floats(self.n_alpha_str * self.n_beta_str)
     
-    def initialize_coeff_matrix(self):
+    cdef int initialize_coeff_matrix(self) except -1:
         """Initialize the matrix with the coefficients"""
-        self._alpha_string_graph = str_order.generate_graph(
+        self.alpha_string_graph = str_order.generate_graph(
             self.n_corr_alpha, self.orbspace.n_orb_nofrozen)
-        self._beta_string_graph = str_order.generate_graph(
+        self.beta_string_graph = str_order.generate_graph(
             self.n_corr_beta, self.orbspace.n_orb_nofrozen)
         self._set_memory()
         self.coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
+        return 0
 
     def set_slater_det(self, det):
         """Set a the Slater Determinant coefficient to the wave function
@@ -565,8 +567,8 @@ cdef class FCIWaveFunction(WaveFunction):
         ValueError if element is not in self
         
         """
-        return (str_order.get_index(det.alpha_occ, self._alpha_string_graph),
-                str_order.get_index(det.beta_occ, self._beta_string_graph))
+        return (str_order.get_index(det.alpha_occ, self.alpha_string_graph),
+                str_order.get_index(det.beta_occ, self.beta_string_graph))
             
     @property
     def i_ref(self):
@@ -605,7 +607,7 @@ cdef class FCIWaveFunction(WaveFunction):
         A 1D np.array with the occupied alpha orbitals (without considering
         frozen orbitals)
         """
-        return str_order.occ_from_pos(i, self._alpha_string_graph)
+        return str_order.occ_from_pos(i, self.alpha_string_graph)
 
     def beta_orb_occupation(self, i):
         """Return the beta occupied orbitals of index i
@@ -621,7 +623,7 @@ cdef class FCIWaveFunction(WaveFunction):
         A 1D np.array with the occupied beta orbitals (without considering
         frozen orbitals)
         """
-        return str_order.occ_from_pos(i, self._beta_string_graph)
+        return str_order.occ_from_pos(i, self.beta_string_graph)
     
     def get_slater_det(self, ii):
         """Return the slater determinant associated to index i
@@ -646,7 +648,7 @@ cdef class FCIWaveFunction(WaveFunction):
         """Return some info about the excitation that lead from ref to det
         
         This will return the holes, the particles, and the rank of det,
-        viewed as a excitation over self.ref_orb.
+        viewed as a excitation over self.orbspace.ref.
         Particles and holes are returned as lists of Orbital_Info.
         These lists have len = rank.
         If consider_frozen == False, frozen orbitals are not considered,
@@ -657,7 +659,7 @@ cdef class FCIWaveFunction(WaveFunction):
         canonical: follows the spirrep, and the normal order inside each
         spirrep.
         Particles are numbered starting at zero, that is, the index at det
-        minus self.ref_orb[spirrep].
+        minus self.orbspace.ref[spirrep].
         
         Parameters:
         -----------
@@ -745,14 +747,22 @@ cdef class FCIWaveFunction(WaveFunction):
             beta_occ=self.ref_det.beta_occ)
     
     @classmethod
-    def similar_to(cls, wf, restricted=None):
+    def similar_to(cls, WaveFunction wf, restricted=None):
         """Construct a FCIWaveFunction with same basic attributes as wf"""
+        cdef FCIWaveFunction new_wf
         new_wf = super().similar_to(wf, restricted=restricted)
         new_wf.initialize_coeff_matrix()
         new_wf.set_ref_det_from_corr_orb()
-        if isinstance(wf, FCIWaveFunction) and wf._sign_change_orbs is not None:
-            new_wf._sign_change_orbs = wf._sign_change_orbs
+        if isinstance(wf, FCIWaveFunction):
+            new_wf.sign_change_orb_from(wf)
         return new_wf
+
+    cdef int sign_change_orb_from(self, FCIWaveFunction wf) except -1:
+        """Copy the _sign_change_orbs from wf"""
+        if wf._sign_change_orbs is not None:
+            self._sign_change_orbs = (np.array(wf._sign_change_orbs[0]),
+                                        np.array(wf._sign_change_orbs[1]))
+        return 0
 
     @classmethod
     def from_interm_norm(cls, wf, restricted=None, ordered_orbitals=False):
@@ -770,6 +780,7 @@ cdef class FCIWaveFunction(WaveFunction):
             See WaveFunction.get_parameters_from
         
         """
+        cdef FCIWaveFunction new_wf
         new_wf = cls.similar_to(wf, restricted=False)  # Because proj to interm norm requires false...restricted)
         new_wf.wf_type = wf.wf_type + ' as FCI'
         new_wf.source = wf.source
@@ -819,16 +830,16 @@ cdef class FCIWaveFunction(WaveFunction):
         self._ordered_orbs = False
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed_det(det):
-                self._coefficients[ia, ib] = 0.0
+                self.coefficients[ia, ib] = 0.0
                 continue
             rank, alpha_hp, beta_hp = self.get_exc_info(det)
             if rank == 0:
                 self.coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                self._coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
+                self.coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
-                self._coefficients[ia, ib] = contribution_from_clusters(
+                self.coefficients[ia, ib] = contribution_from_clusters(
                     alpha_hp, beta_hp, wf, level)
         self._normalisation = 'intermediate'
         if ordered_orbitals:
@@ -918,9 +929,9 @@ cdef class FCIWaveFunction(WaveFunction):
                 if first_determinant:
                     first_determinant = False
                     # Improve!! do not use old version
-                    # This definition of ref_orb seem to be
+                    # This definition of orbspace.ref seem to be
                     # quite bad, because the first slater determinant
-                    # might not have the same ref_orb (per spirrep) as
+                    # might not have the same orbspace.ref (per spirrep) as
                     # the True reference determinant... I think that this
                     # is not a real problem
                     self.orbspace.set_ref(OrbitalSpace(
@@ -1066,30 +1077,31 @@ cdef class FCIWaveFunction(WaveFunction):
         In each irrep, the elements K(irrep) (or, in each spirrep, the
         elements of K(irrep,sigma)) are:
         
-        K_1^{n+1}    K_1^{n+2}   ...  K_1^orb_dim
-        K_2^{n+1}    K_2^{n+2}   ...  K_2^orb_dim
+        K_1^{n+1}    K_1^{n+2}   ...  K_1^orbspace.full
+        K_2^{n+1}    K_2^{n+2}   ...  K_2^orbspace.full
           ...
           ...        K_i^a
           ...
-        K_n^{n+1}    K_n^{n+2}   ...  K_n^orb_dim
+        K_n^{n+1}    K_n^{n+2}   ...  K_n^orbspace.full
         
-        The Jacobian and Hessian are packed using the C order (row-major):
+        The Jacobian and Hessian are packed using the C order (row-major)
+        (virt is dimension of the virtual space):
         
-        K_1^{n+1}       -> Jac[0]
-        K_1^{n+2}       -> Jac[1]
+        K_1^{n+1}             -> Jac[0]
+        K_1^{n+2}             -> Jac[1]
         ...
-        K_1^{orb_dim}   -> Jac[virt_orb - 1 = orb_dim-ref_orb-1]
-        K_2^{n+1}       -> Jac[virt_orb + 0]
-        K_2^{n+2}       -> Jac[virt_orb + 1]
+        K_1^{orbspace.full}   -> Jac[virt - 1 = orbspace.full-orbspace.ref-1]
+        K_2^{n+1}             -> Jac[virt + 0]
+        K_2^{n+2}             -> Jac[virt + 1]
         ...
-        K_2^{orb_dim}   -> Jac[2*virt_orb-1]
+        K_2^{orbspace.full}   -> Jac[2*virt-1]
         ...
-        K_i^a           -> Jac[(i-1) * virt_orb + (a-1-virt_orb)]
+        K_i^a                 -> Jac[(i-1) * virt + (a-1-virt)]
         ...
-        K_n^{n+1}       -> Jac[(n-1) * virt_orb + 0]
-        K_n^{n+2}       -> Jac[(n-1) * virt_orb + 1]
+        K_n^{n+1}             -> Jac[(n-1) * virt + 0]
+        K_n^{n+2}             -> Jac[(n-1) * virt + 1]
         ...
-        K_n^{orb_dim}   -> Jac[(n-1) * virt_orb + virt_orb - 1]
+        K_n^{orbspace.full}   -> Jac[(n-1) * virt + virt - 1]
         
         The elements are ordered as above inside each irrep (spirrep) block.
         The irreps are then ordered sequentially. For unrestricted first come
@@ -1201,7 +1213,7 @@ cdef class FCIWaveFunction(WaveFunction):
                              else -det.c)
                 logger.debug('Adding to Jac[%d] = %f', pos, Jac[pos])
             elif rank == 2:
-                if (holes[0].spirrep != particles[0].spirrep  # occ != ref_orb
+                if (holes[0].spirrep != particles[0].spirrep  # occ != orbspace.ref
                         and holes[1].spirrep != particles[1].spirrep):
                     continue
                 if restricted:
@@ -1474,7 +1486,7 @@ cdef class FCIWaveFunction(WaveFunction):
                        only_this_occ=None):
         raise NotImplementedError('undone')
         
-    def dist_to(self, other,
+    def dist_to(self, FCIWaveFunction other,
                 metric='IN',
                 normalise=True):
         """Distance between self and other

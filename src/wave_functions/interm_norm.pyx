@@ -28,7 +28,7 @@ from wave_functions.general import WaveFunction
 from wave_functions.slater_det import get_slater_det_from_excitation
 import wave_functions.strings_rev_lexical_order as str_order
 from coupled_cluster.cluster_decomposition import cluster_dec
-from coupled_cluster.manifold import update_indep_amplitudes
+from coupled_cluster.manifold cimport update_indep_amplitudes
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
 from orbitals.orbital_space cimport FullOrbitalSpace
@@ -239,14 +239,14 @@ cdef class IntermNormWaveFunction(WaveFunction):
         subblocks, running over the irrep of a. In each of these
         subblocks the amplitudes for pairs of virtual orbitals,
         {a,b}, are stored. There are
-        virt_orb[irrep_a]*virt_orb[irrep_b]
+        virt[irrep_a]*virt[irrep_b]
         of such elements, and remember that irrep_b is determined
         by the other irreps. b indices run faster:
         
         t_{ij}^{00}, t_{ij}^{01}, ...,
-            t_{ij}^{0{virt_orb[irrep_b]-1}}, t_{ij}^{10}, ...
-            t_{ij}^{1{virt_orb[irrep_b]-1}}, ...
-                t_{ij}^{{virt_orb[irrep_a]-1}{virt_orb[irrep_b]-1}}
+            t_{ij}^{0{virt[irrep_b]-1}}, t_{ij}^{10}, ...
+            t_{ij}^{1{virt[irrep_b]-1}}, ...
+                t_{ij}^{{virt[irrep_a]-1}{virt[irrep_b]-1}}
                      
         
         * If unrestricted:
@@ -283,7 +283,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         Then, for each of these pairs, the situation is similar to
         in the restricted case: there are blocks for the irrep of a
-        and for the virt_orb[irrep_a]*virt_orb[irrep_b] amplitudes.
+        and for the virt[irrep_a]*virt[irrep_b] amplitudes.
         In this case, however, t_{ij}{ab} = -t_{ij}{ba}. We opted
         to store both amplitudes, and thus the last subblock is
         antisymmetric if irrep_a == irrep_b, or it is minus the
@@ -371,11 +371,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
         ---------
         for:
             restricted   True
-            orb_dim      [9, 5, 5, 2]
-            froz_orb     [1, 0, 0, 0]
-            ref_orb      [4, 2, 2, 0]
-            corr_orb     [3, 2, 2, 0]
-            virt_orb     [5, 3, 3, 2]
+            full     [9, 5, 5, 2]
+            froz     [1, 0, 0, 0]
+            ref      [4, 2, 2, 0]
+            corr     [3, 2, 2, 0]
+            virt     [5, 3, 3, 2]
         
         rank = 1
         alpha_hp = ([0], [3])
@@ -415,11 +415,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         for:
             restricted   False
-            orb_dim      [9, 5, 5, 2]
-            froz_orb     [1, 0, 0, 0]
-            ref_orb      [4, 2, 2, 0, 3, 2, 2, 0]
-            corr_orb     [3, 2, 2, 0, 2, 2, 2, 0]
-            virt_orb     [5, 3, 3, 2, 6, 3, 3, 2]
+            full     [9, 5, 5, 2]
+            froz     [1, 0, 0, 0]
+            ref      [4, 2, 2, 0, 3, 2, 2, 0]
+            corr     [3, 2, 2, 0, 2, 2, 2, 0]
+            virt     [5, 3, 3, 2, 6, 3, 3, 2]
         
         __ALPHA__           __BETA__
         0                   0
@@ -529,6 +529,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
     
     def __init__(self):
         super().__init__()
+        self._n_indep_ampl = -1
         self._norm = -1.0
         self.use_CISD_norm = True
         self.first_bb_pair = 0
@@ -655,7 +656,22 @@ cdef class IntermNormWaveFunction(WaveFunction):
             self._calc_ini_blocks()
         return self._n_ampl
     
-    def dist_to(self, other):
+    def __array__(self):
+        return np.array(self.amplitudes)
+
+    def __imul__(self, factor):
+        cdef int i
+        for i in range(len(self)):
+            self.amplitudes[i] *= factor
+        return self
+
+    def __div__(self, factor):
+        cdef int i
+        for i in range(len(self)):
+            self.amplitudes[i] /= factor
+        return self
+
+    def dist_to(self, IntermNormWaveFunction other):
         """The distance, in the amplitudes spaces, to another wave function
         
         
@@ -676,8 +692,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         the distance.
         
         """
-        if (self.orb_dim != other.orb_dim
-            or self.ref_orb != other.ref_orb
+        if (self.orbspace != other.orbspace
             or self.n_alpha != other.n_alpha
                 or self.n_beta != other.n_beta):
             raise ValueError('The other wave function is not compatible!')
@@ -702,14 +717,15 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         """
         n_ampl = len(self)
-        virt_orb = self.virt_orb.as_array()
-        if self._n_indep_ampl is None:
+        if self._n_indep_ampl < 0:
             if self.restricted:
                 self._n_indep_ampl = n_ampl
+                logger.debug('In n_indep_ampl, starting with %d', self._n_indep_ampl)
             else:
                 self._n_indep_ampl = self.ini_blocks_D[0, 0]
-                for exc_type in [EXC_TYPE_AA, EXC_TYPE_BB]:
-                    n_irrep_or_0 = 0 if exc_type == EXC_TYPE_A else self.n_irrep
+                logger.debug('In n_indep_ampl, starting with %d', self._n_indep_ampl)
+                for exc_type in [ExcType.AA, ExcType.BB]:
+                    n_irrep_or_0 = 0 if exc_type == ExcType.A else self.n_irrep
                     for i, j in self.occupied_pairs(exc_type):
                         for a_irrep in range(self.n_irrep):
                             b_irrep = irrep_product[
@@ -718,10 +734,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
                             a_spirrep = a_irrep + n_irrep_or_0,
                             b_spirrep = b_irrep + n_irrep_or_0
                             if a_irrep < b_irrep:
-                                self._n_indep_ampl += (virt_orb[a_spirrep]
-                                                       * virt_orb[b_spirrep])
+                                self._n_indep_ampl += (self.orbspace.virt[a_spirrep]
+                                                       * self.orbspace.virt[b_spirrep])
                             elif a_irrep == b_irrep:
-                                self._n_indep_ampl += triangular(virt_orb[a_spirrep] - 1)
+                                self._n_indep_ampl += triangular(self.orbspace.virt[a_spirrep] - 1)
                 self._n_indep_ampl += n_ampl - self.ini_blocks_D[self.first_ab_pair, 0]
         return self._n_indep_ampl
     
@@ -891,7 +907,9 @@ cdef class IntermNormWaveFunction(WaveFunction):
     
     def __setitem__(self, key, value):
         """Set the amplitude associated to that excitation. See class doc."""
-        if len(key) == 3:
+        if isinstance(key, int):
+            self.amplitudes[key] = value
+        elif len(key) == 3:
             pos = self.pos_in_ampl_for_hp(key)
             if isinstance(pos, tuple):
                 if self.restricted:
@@ -907,6 +925,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
     def __getitem__(self, key):
         """Get the amplitude associated to that excitation. See class doc."""
+        if isinstance(key, int):
+            return self.amplitudes[key]
         if len(key) == 3:
             pos = self.pos_in_ampl_for_hp(key)
             if isinstance(pos, tuple):
@@ -1105,13 +1125,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                  ' as the number of independent amplitude.')
             update_indep_amplitudes(self.amplitudes,
                                     z,
-                                    self.n_irrep,
                                     self.ini_blocks_D[0, 0],
                                     len(self),
                                     self.n_indep_ampl,
-                                    self.orbs_before,
-                                    self.corr_orb.as_array(),
-                                    self.virt_orb.as_array())
+                                    self.orbspace)
         else:
             raise ValueError('Unknown mode!')
     
@@ -1193,6 +1210,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
         
         
         """
+        cdef OccOrbital i, j
+        cdef IntermNormWaveFunction new_wf
         wf.set_max_coincidence_orbitals()
         pos_ini = np.empty(8, dtype=int_dtype)
         pos = 0
@@ -1209,46 +1228,46 @@ cdef class IntermNormWaveFunction(WaveFunction):
             # --- alpha -> alpha
             for irrep in range(wf.n_irrep):
                 spirrep = irrep
-                if wf.virt_orb[spirrep] == 0 or wf.corr_orb[spirrep] == 0:
+                if wf.orbspace.virt[spirrep] == 0 or wf.orbspace.corr[spirrep] == 0:
                     continue
-                virt_pos = (wf.corr_orbs_before[spirrep]
-                            + wf.corr_orb[spirrep] - 1)
-                for ii in range(wf.corr_orbs_before[spirrep], virt_pos):
+                virt_pos = (wf.orbspace.corr_orbs_before[spirrep]
+                            + wf.orbspace.corr[spirrep] - 1)
+                for ii in range(wf.orbspace.corr_orbs_before[spirrep], virt_pos):
                     alpha_occ[ii] = alpha_occ[ii + 1]
-                for ii in range(wf.corr_orb[spirrep]):
-                    alpha_occ[virt_pos] = (wf.orbs_before[irrep]
-                                           + wf.corr_orb[spirrep])
-                    for a in range(wf.virt_orb[spirrep]):
+                for ii in range(wf.orbspace.corr[spirrep]):
+                    alpha_occ[virt_pos] = (wf.orbspace.orbs_before[irrep]
+                                           + wf.orbspace.corr[spirrep])
+                    for a in range(wf.orbspace.virt[spirrep]):
                         new_wf.amplitudes[pos] = wf[
-                            str_order.get_index(alpha_occ, wf._alpha_string_graph),
+                            str_order.get_index(alpha_occ, wf.alpha_string_graph),
                             i_beta_ref]
                         pos += 1
                         alpha_occ[virt_pos] += 1
-                    alpha_occ[wf.corr_orbs_before[spirrep] + ii] = \
-                        wf.orbs_before[irrep] + ii
+                    alpha_occ[wf.orbspace.corr_orbs_before[spirrep] + ii] = \
+                        wf.orbspace.orbs_before[irrep] + ii
             # --- beta -> beta
             for irrep in range(wf.n_irrep):
                 spirrep = irrep + wf.n_irrep
-                if wf.virt_orb[spirrep] == 0 or wf.corr_orb[spirrep] == 0:
+                if wf.orbspace.virt[spirrep] == 0 or wf.orbspace.corr[spirrep] == 0:
                     continue
-                virt_pos = (wf.corr_orbs_before[spirrep]
-                            + wf.corr_orb[spirrep] - 1)
-                for ii in range(wf.corr_orbs_before[spirrep], virt_pos):
+                virt_pos = (wf.orbspace.corr_orbs_before[spirrep]
+                            + wf.orbspace.corr[spirrep] - 1)
+                for ii in range(wf.orbspace.corr_orbs_before[spirrep], virt_pos):
                     beta_occ[ii] = beta_occ[ii + 1]
-                for ii in range(wf.corr_orb[spirrep]):
-                    beta_occ[virt_pos] = (wf.orbs_before[irrep]
-                                          + wf.corr_orb[spirrep])
-                    for a in range(wf.virt_orb[spirrep]):
+                for ii in range(wf.orbspace.corr[spirrep]):
+                    beta_occ[virt_pos] = (wf.orbspace.orbs_before[irrep]
+                                          + wf.orbspace.corr[spirrep])
+                    for a in range(wf.orbspace.virt[spirrep]):
                         new_wf.amplitudes[pos] = wf[
                             i_alpha_ref,
-                            str_order.get_index(beta_occ, wf._beta_string_graph)]
+                            str_order.get_index(beta_occ, wf.beta_string_graph)]
                         pos += 1
                         beta_occ[virt_pos] += 1
-                    beta_occ[wf.corr_orbs_before[spirrep] + ii] = \
-                        wf.orbs_before[irrep] + ii
+                    beta_occ[wf.orbspace.corr_orbs_before[spirrep] + ii] = \
+                        wf.orbspace.orbs_before[irrep] + ii
         # --- alpha, alpha -> alpha, alpha
-        i = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, True)
-        j = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, True)
+        i = OccOrbital(wf.orbspace, True)
+        j = OccOrbital(wf.orbspace, True)
         j.next_()
         beta_hp = (int_array(), int_array())
         while j.alive:
@@ -1265,28 +1284,29 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                   j.spirrep], a_irrep]
                 a_spirrep = a_irrep
                 b_spirrep = b_irrep
-                if wf.virt_orb[a_spirrep] == 0 or wf.virt_orb[b_spirrep] == 0:
+                if wf.orbspace.virt[a_spirrep] == 0 or wf.orbspace.virt[b_spirrep] == 0:
                     continue
                 if a_irrep <= b_irrep:
-                    if a_irrep == b_irrep and wf.virt_orb[a_spirrep] < 2:
+                    if a_irrep == b_irrep and wf.orbspace.virt[a_spirrep] < 2:
                         pos += 1
                         continue
                     virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
                         virt_pos_a, virt_pos_b,
                         i, j, a_spirrep, b_spirrep,
-                        alpha_occ, wf.corr_orbs_before, wf.corr_orb)
-                    alpha_occ[virt_pos_a] = wf.orbs_before[a_irrep] + wf.corr_orb[a_spirrep]
-                    for a in range(wf.virt_orb[a_spirrep]):
+                        alpha_occ, wf.orbspace.corr_orbs_before, wf.orbspace.corr)
+                    alpha_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
+                                             + wf.orbspace.corr[a_spirrep])
+                    for a in range(wf.orbspace.virt[a_spirrep]):
                         alpha_hp[1][0] = alpha_occ[virt_pos_a]
-                        nvirt_1 = wf.virt_orb[a_spirrep] - 1
-                        alpha_occ[virt_pos_b] = (wf.orbs_before[b_irrep]
-                                                 + wf.corr_orb[b_spirrep])
-                        for b in range(wf.virt_orb[b_spirrep]):
+                        nvirt_1 = wf.orbspace.virt[a_spirrep] - 1
+                        alpha_occ[virt_pos_b] = (wf.orbspace.orbs_before[b_irrep]
+                                                 + wf.orbspace.corr[b_spirrep])
+                        for b in range(wf.orbspace.virt[b_spirrep]):
                             alpha_hp[1][1] = alpha_occ[virt_pos_b]
                             if a_irrep < b_irrep or a < b:
                                 new_wf.amplitudes[pos] = wf[
                                     str_order.get_index(alpha_occ,
-                                                        wf._alpha_string_graph),
+                                                        wf.alpha_string_graph),
                                     i_beta_ref]
                                 if do_decomposition:
                                     new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
@@ -1298,11 +1318,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                             alpha_occ[virt_pos_b] += 1
                         alpha_occ[virt_pos_a] += 1
                 else:  # and a_irrep > b_irrep
-                    for a in range(wf.virt_orb[a_spirrep]):
-                        for b in range(wf.virt_orb[b_spirrep]):
+                    for a in range(wf.orbspace.virt[a_spirrep]):
+                        for b in range(wf.orbspace.virt[b_spirrep]):
                             new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                 pos_ini[b_irrep] + n_from_rect(
-                                    b, a, wf.virt_orb[a_spirrep])]
+                                    b, a, wf.orbspace.virt[a_spirrep])]
                             pos += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
                 j.next_()
@@ -1310,8 +1330,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
             else:
                 i.next_()
         # --- beta, beta -> beta, beta
-        i = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, False)
-        j = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, False)
+        i = OccOrbital(wf.orbspace, False)
+        j = OccOrbital(wf.orbspace, False)
         j.next_()
         alpha_hp = (int_array(), int_array())
         while j.alive:
@@ -1328,29 +1348,30 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                   j.spirrep - wf.n_irrep], a_irrep]
                 a_spirrep = a_irrep + wf.n_irrep
                 b_spirrep = b_irrep + wf.n_irrep
-                if wf.virt_orb[a_spirrep] == 0 or wf.virt_orb[b_spirrep] == 0:
+                if wf.orbspace.virt[a_spirrep] == 0 or wf.orbspace.virt[b_spirrep] == 0:
                     continue
                 if a_irrep <= b_irrep:
-                    if a_irrep == b_irrep and wf.virt_orb[a_spirrep] < 2:
+                    if a_irrep == b_irrep and wf.orbspace.virt[a_spirrep] < 2:
                         pos += 1
                         continue
                     virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
                         virt_pos_a, virt_pos_b,
                         i, j, a_spirrep, b_spirrep,
-                        beta_occ, wf.corr_orbs_before, wf.corr_orb)
-                    beta_occ[virt_pos_a] = wf.orbs_before[a_irrep] + wf.corr_orb[a_spirrep]
-                    for a in range(wf.virt_orb[a_spirrep]):
+                        beta_occ, wf.orbspace.corr_orbs_before, wf.orbspace.corr)
+                    beta_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
+                                            + wf.orbspace.corr[a_spirrep])
+                    for a in range(wf.orbspace.virt[a_spirrep]):
                         beta_hp[1][0] = beta_occ[virt_pos_a]
-                        nvirt_1 = wf.virt_orb[a_spirrep] - 1
-                        beta_occ[virt_pos_b] = (wf.orbs_before[b_irrep]
-                                                + wf.corr_orb[b_spirrep])
-                        for b in range(wf.virt_orb[b_spirrep]):
+                        nvirt_1 = wf.orbspace.virt[a_spirrep] - 1
+                        beta_occ[virt_pos_b] = (wf.orbspace.orbs_before[b_irrep]
+                                                + wf.orbspace.corr[b_spirrep])
+                        for b in range(wf.orbspace.virt[b_spirrep]):
                             beta_hp[1][1] = beta_occ[virt_pos_b]
                             if a_irrep < b_irrep or a < b:
                                 new_wf.amplitudes[pos] = wf[
                                     i_alpha_ref,
                                     str_order.get_index(beta_occ,
-                                                        wf._beta_string_graph)]
+                                                        wf.beta_string_graph)]
                                 if do_decomposition:
                                     new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
                                         alpha_hp, beta_hp, wf)
@@ -1361,11 +1382,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                             beta_occ[virt_pos_b] += 1
                         beta_occ[virt_pos_a] += 1
                 else:  # and a_irrep > b_irrep
-                    for a in range(wf.virt_orb[a_spirrep]):
-                        for b in range(wf.virt_orb[b_spirrep]):
+                    for a in range(wf.orbspace.virt[a_spirrep]):
+                        for b in range(wf.orbspace.virt[b_spirrep]):
                             new_wf.amplitudes[pos] = -new_wf.amplitudes[
                                 pos_ini[b_irrep] + n_from_rect(
-                                    b, a, wf.virt_orb[a_spirrep])]
+                                    b, a, wf.orbspace.virt[a_spirrep])]
                             pos += 1
             if i.pos_in_occ == j.pos_in_occ - 1:
                 j.next_()
@@ -1373,8 +1394,8 @@ cdef class IntermNormWaveFunction(WaveFunction):
             else:
                 i.next_()
         # --- alpha, beta -> alpha, beta
-        i = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, True)
-        j = OccOrbital(wf.corr_orb.as_array(), wf.orbs_before, False)
+        i = OccOrbital(wf.orbspace, True)
+        j = OccOrbital(wf.orbspace, False)
         while j.alive:
             alpha_hp = (int_array(i.orb), int_array(0))
             beta_hp = (int_array(j.orb), int_array(0))
@@ -1389,14 +1410,14 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     irrep_product[i.spirrep, j.spirrep - wf.n_irrep], a_irrep]
                 a_spirrep = a_irrep
                 b_spirrep = b_irrep + wf.n_irrep
-                if wf.virt_orb[a_spirrep] == 0 or wf.virt_orb[b_spirrep] == 0:
+                if wf.orbspace.virt[a_spirrep] == 0 or wf.orbspace.virt[b_spirrep] == 0:
                     continue
-                alpha_occ[virt_pos_a] = (wf.orbs_before[a_irrep]
-                                         + wf.corr_orb[a_spirrep])
-                new_virt_pos_a = (wf.corr_orbs_before[a_spirrep]
-                                  + wf.corr_orb[a_spirrep])
-                new_virt_pos_b = (wf.corr_orbs_before[b_spirrep]
-                                  + wf.corr_orb[b_spirrep])
+                alpha_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
+                                         + wf.orbspace.corr[a_spirrep])
+                new_virt_pos_a = (wf.orbspace.corr_orbs_before[a_spirrep]
+                                  + wf.orbspace.corr[a_spirrep])
+                new_virt_pos_b = (wf.orbspace.corr_orbs_before[b_spirrep]
+                                  + wf.orbspace.corr[b_spirrep])
                 if (i.spirrep <= a_spirrep):
                     new_virt_pos_a -= 1
                 if (j.spirrep <= b_spirrep):
@@ -1417,17 +1438,17 @@ cdef class IntermNormWaveFunction(WaveFunction):
                                                              - (ii+1)]
                 virt_pos_a = new_virt_pos_a
                 virt_pos_b = new_virt_pos_b
-                alpha_occ[virt_pos_a] = (wf.orbs_before[a_irrep]
-                                         + wf.corr_orb[a_spirrep])
-                for a in range(wf.virt_orb[a_spirrep]):
+                alpha_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
+                                         + wf.orbspace.corr[a_spirrep])
+                for a in range(wf.orbspace.virt[a_spirrep]):
                     alpha_hp[1][0] = alpha_occ[virt_pos_a]
-                    beta_occ[virt_pos_b] = (wf.orbs_before[b_irrep]
-                                            + wf.corr_orb[b_spirrep])
-                    for b in range(wf.virt_orb[b_spirrep]):
+                    beta_occ[virt_pos_b] = (wf.orbspace.orbs_before[b_irrep]
+                                            + wf.orbspace.corr[b_spirrep])
+                    for b in range(wf.orbspace.virt[b_spirrep]):
                         beta_hp[1][0] = beta_occ[virt_pos_b]
                         new_wf.amplitudes[pos] = wf[
-                            str_order.get_index(alpha_occ, wf._alpha_string_graph),
-                            str_order.get_index(beta_occ, wf._beta_string_graph)]
+                            str_order.get_index(alpha_occ, wf.alpha_string_graph),
+                            str_order.get_index(beta_occ, wf.beta_string_graph)]
                         if do_decomposition:
                             new_wf.amplitudes[pos] += singles_contr_from_clusters_fci(
                                 alpha_hp, beta_hp, wf)
@@ -1569,7 +1590,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         cdef double[:] this_block, transp_block 
         cdef OccOrbital i, j
         if not r_wf.restricted:
-            ur_wf = cls.similar_to(r_wf, r_wf.wf_type, True)
+            ur_wf = cls.similar_to(r_wf, r_wf.wf_type, False)
             ur_wf.amplitudes = np.array(r_wf.amplitudes)
             return ur_wf
         ur_wf = cls.similar_to(r_wf, r_wf.wf_type, False)
@@ -1858,9 +1879,6 @@ cdef class IntermNormWaveFunction(WaveFunction):
         if isinstance(molpro_output, str):
             f.close()
         return new_wf
-
-    def get_amplitudes(self):
-        return np.array(self.amplitudes)
 
     @property
     def norm(self):

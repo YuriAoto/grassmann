@@ -23,3 +23,4 @@ cdef class FullOrbitalSpace:
     cpdef add_to_act(self, OrbitalSpace other, bint update=*, bint add_to_full=*)
     cpdef calc_remaining(self)
     cpdef get_attributes_from(self, FullOrbitalSpace other)
+    cdef inline int first_virtual(self, int spirrep)

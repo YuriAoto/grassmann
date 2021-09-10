@@ -20,6 +20,13 @@ from libc.math cimport sqrt
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
 from orbitals.orbital_space cimport FullOrbitalSpace
+from orbitals.orbital_space import FullOrbitalSpace
+from orbitals.orbital_space cimport OrbitalSpace
+from orbitals.orbital_space import OrbitalSpace
+from wave_functions.fci import FCIWaveFunction
+from wave_functions.fci cimport FCIWaveFunction
+from wave_functions.interm_norm import IntermNormWaveFunction
+from wave_functions.interm_norm cimport IntermNormWaveFunction
 from util.array_indices cimport n_from_rect
 from util.variables import int_dtype
 from molecular_geometry.symmetry import irrep_product
@@ -33,13 +40,10 @@ from coupled_cluster.manifold_hess cimport (
 from wave_functions.fci import FCIWaveFunction
 
 
-def min_dist_jac_hess(double[:, :] wf,
-                      double[:, :] wf_cc,
+def min_dist_jac_hess(FCIWaveFunction wf,
+                      FCIWaveFunction wf_cc,
                       double[:] J,
                       double[:, :] H,
-                      FullOrbitalSpace orbspace,
-                      int[:, :] alpha_string_graph,
-                      int[:, :] beta_string_graph,
                       bint diag_hess,
                       level='SD'):
     """Calculate the Jacobian and Hessian
@@ -47,12 +51,11 @@ def min_dist_jac_hess(double[:, :] wf,
     Parameters:
     -----------
     wf
-        The wave function, as a matrix of alpha and beta strings
+        The FCI wave function
         It should be with ordered orbitals.
     
     wf_cc
-        The coupled cluster wave function, as a matrix of alpha
-        and beta strings
+        The coupled cluster wave function, as a FCIWaveFunction
         It should be with ordered orbitals.
     
     J
@@ -61,19 +64,7 @@ def min_dist_jac_hess(double[:, :] wf,
     H
         Will be filled with the Hessian, or its first entry with the norm of
         the Jacobian (diag_hess=True)
-    
-    orbspace (FullOrbitalSpace)
-        Te orbital space
-        Currently, the wave function is assumed to be of unrestricted type
-    
-    alpha_string_graph
-        The graph to obtain the alpha strings (associated to the first
-        index of wf and wf_cc) in the reverse lexical order
-    
-    beta_string_graph
-        The graph to obtain the beta strings (associated to the second
-        index of wf and wf_cc) in the reverse lexical order
-    
+        
     diag_hess
         If True, use approximate diagonal Hessian
     
@@ -97,35 +88,34 @@ def min_dist_jac_hess(double[:, :] wf,
     cdef DoubleExc double_exc
     cdef int pos_ini_exc_type
     cdef OccOrbital i, j
-    cdef int[:] occ_buff_a = np.empty(alpha_string_graph.shape[1],
+    cdef int[:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1],
                                       dtype=int_dtype)
-    cdef int[:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1],
+    cdef int[:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1],
                                           dtype=int_dtype)
-    cdef int[:] occ_buff_b = np.empty(beta_string_graph.shape[1],
+    cdef int[:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1],
                                       dtype=int_dtype)
-    cdef int[:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1],
+    cdef int[:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1],
                                           dtype=int_dtype)
     n_indep_ampl = J.shape[0]
-    n_alpha = alpha_string_graph.shape[1]
-    n_beta = beta_string_graph.shape[1]
-    n_irrep = orbspace.n_irrep
+    n_alpha = wf.alpha_string_graph.shape[1]
+    n_beta = wf.beta_string_graph.shape[1]
     if diag_hess:
         H[0, 0] = 0.0
     if level == 'SD':
         # --- alpha -> alpha
-        for irrep in range(n_irrep):
+        for irrep in range(wf.n_irrep):
             spirrep = irrep
-            single_exc.i = orbspace.orbs_before[irrep]
-            for ii in range(orbspace.corr[spirrep]):
-                single_exc.a = orbspace.orbs_before[irrep] + orbspace.corr[spirrep]
-                for a in range(orbspace.virt[spirrep]):
+            single_exc.i = wf.orbspace.orbs_before[irrep]
+            for ii in range(wf.orbspace.corr[spirrep]):
+                single_exc.a = wf.orbspace.orbs_before[irrep] + wf.orbspace.corr[spirrep]
+                for a in range(wf.orbspace.virt[spirrep]):
                     J[pos] = term1_a(single_exc,
-                                     wf,
-                                     wf_cc,
-                                     alpha_string_graph,
+                                     wf.coefficients,
+                                     wf_cc.coefficients,
+                                     wf.alpha_string_graph,
                                      occ_buff_a, exc_occ_buff_a)
                     diag = term2_diag_a(single_exc,
-                                        wf_cc,
+                                        wf_cc.coefficients,
                                         occ_buff_a)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
@@ -136,31 +126,25 @@ def min_dist_jac_hess(double[:, :] wf,
                                  single_exc,
                                  wf,
                                  wf_cc,
-                                 pos,
-                                 n_irrep,
-                                 orbs_before,
-                                 corr_orb,
-                                 virt_orb,
-                                 alpha_string_graph,
-                                 beta_string_graph)
+                                 pos)
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
         # --- beta -> beta
         pos_ini_exc_type = pos
-        for irrep in range(n_irrep):
-            spirrep = irrep + n_irrep
-            single_exc.i = orbspace.orbs_before[irrep]
-            for ii in range(orbspace.corr[spirrep]):
-                single_exc.a = orbspace.orbs_before[irrep] + orbspace.corr[spirrep]
-                for a in range(orbspace.virt[spirrep]):
+        for irrep in range(wf.n_irrep):
+            spirrep = irrep + wf.n_irrep
+            single_exc.i = wf.orbspace.orbs_before[irrep]
+            for ii in range(wf.orbspace.corr[spirrep]):
+                single_exc.a = wf.orbspace.orbs_before[irrep] + wf.orbspace.corr[spirrep]
+                for a in range(wf.orbspace.virt[spirrep]):
                     J[pos] = term1_b(single_exc,
-                                     wf,
-                                     wf_cc,
-                                     beta_string_graph,
+                                     wf.coefficients,
+                                     wf_cc.coefficients,
+                                     wf.beta_string_graph,
                                      occ_buff_b, exc_occ_buff_b)
                     diag = term2_diag_b(single_exc,
-                                        wf_cc,
+                                        wf_cc.coefficients,
                                         occ_buff_b)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
@@ -171,40 +155,36 @@ def min_dist_jac_hess(double[:, :] wf,
                                  single_exc,
                                  wf,
                                  wf_cc,
-                                 pos - pos_ini_exc_type,
-                                 n_irrep,
-                                 orbs_before,
-                                 corr_orb,
-                                 virt_orb,
-                                 alpha_string_graph,
-                                 beta_string_graph)
+                                 pos - pos_ini_exc_type)
                     pos += 1
                     single_exc.a += 1
                 single_exc.i += 1
     # --- alpha, alpha -> alpha, alpha
     pos_ini_exc_type = pos
-    i = OccOrbital(orbspace, True)
-    j = OccOrbital(orbspace, True)
+    i = OccOrbital(wf.orbspace, True)
+    j = OccOrbital(wf.orbspace, True)
     j.next_()
     double_exc.i = i.orb
     double_exc.j = j.orb
     while j.alive:
-        for a_irrep in range(n_irrep):
+        for a_irrep in range(wf.n_irrep):
             b_irrep = irrep_product[irrep_product[i.spirrep, j.spirrep], a_irrep]
             a_spirrep = a_irrep
             b_spirrep = b_irrep
-            double_exc.a = orbspace.orbs_before[a_irrep] + orbspace.corr[a_spirrep]
+            double_exc.a = wf.orbspace.orbs_before[a_irrep] + wf.orbspace.corr[a_spirrep]
             if a_irrep <= b_irrep:
-                for a in range(orbspace.virt[a_spirrep]):
-                    double_exc.b = orbspace.orbs_before[b_irrep] + orbspace.corr[b_spirrep]
-                    for b in range(orbspace.virt[b_spirrep]):
+                for a in range(wf.orbspace.virt[a_spirrep]):
+                    double_exc.b = wf.orbspace.orbs_before[b_irrep] + wf.orbspace.corr[b_spirrep]
+                    for b in range(wf.orbspace.virt[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
                             J[pos] = term1_aa(double_exc,
-                                              wf,
-                                              wf_cc,
-                                              alpha_string_graph,
+                                              wf.coefficients,
+                                              wf_cc.coefficients,
+                                              wf.alpha_string_graph,
                                               occ_buff_a, exc_occ_buff_a)
-                            diag = term2_diag_aa(double_exc, wf_cc, occ_buff_a)
+                            diag = term2_diag_aa(double_exc,
+                                                 wf_cc.coefficients,
+                                                 occ_buff_a)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
                                 J[pos] /= -diag
@@ -214,13 +194,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                           double_exc,
                                           wf,
                                           wf_cc,
-                                          pos - pos_ini_exc_type,
-                                          n_irrep,
-                                          orbs_before,
-                                          corr_orb,
-                                          virt_orb,
-                                          alpha_string_graph,
-                                          beta_string_graph)
+                                          pos - pos_ini_exc_type)
                             pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
@@ -233,29 +207,31 @@ def min_dist_jac_hess(double[:, :] wf,
         double_exc.i = i.orb
     # --- beta, beta -> beta, beta
     pos_ini_exc_type = pos
-    i = OccOrbital(orbspace, False)
-    j = OccOrbital(orbspace, False)
+    i = OccOrbital(wf.orbspace, False)
+    j = OccOrbital(wf.orbspace, False)
     j.next_()
     double_exc.i = i.orb
     double_exc.j = j.orb
     while j.alive:
-        for a_irrep in range(n_irrep):
-            b_irrep = irrep_product[irrep_product[i.spirrep - n_irrep,
-                                                  j.spirrep - n_irrep], a_irrep]
-            a_spirrep = a_irrep + n_irrep
-            b_spirrep = b_irrep + n_irrep
-            double_exc.a = orbspace.orbs_before[a_irrep] + orbspace.corr[a_spirrep]
+        for a_irrep in range(wf.n_irrep):
+            b_irrep = irrep_product[irrep_product[i.spirrep - wf.n_irrep,
+                                                  j.spirrep - wf.n_irrep], a_irrep]
+            a_spirrep = a_irrep + wf.n_irrep
+            b_spirrep = b_irrep + wf.n_irrep
+            double_exc.a = wf.orbspace.orbs_before[a_irrep] + wf.orbspace.corr[a_spirrep]
             if a_irrep <= b_irrep:
-                for a in range(orbspace.virt[a_spirrep]):
-                    double_exc.b = orbspace.orbs_before[b_irrep] + orbspace.corr[b_spirrep]
-                    for b in range(orbspace.virt[b_spirrep]):
+                for a in range(wf.orbspace.virt[a_spirrep]):
+                    double_exc.b = wf.orbspace.first_virtual(b_spirrep)
+                    for b in range(wf.orbspace.virt[b_spirrep]):
                         if a_irrep < b_irrep or a < b:
                             J[pos] = term1_bb(double_exc,
-                                              wf,
-                                              wf_cc,
-                                              beta_string_graph,
+                                              wf.coefficients,
+                                              wf_cc.coefficients,
+                                              wf.beta_string_graph,
                                               occ_buff_b, exc_occ_buff_b)
-                            diag = term2_diag_bb(double_exc, wf_cc, occ_buff_b)
+                            diag = term2_diag_bb(double_exc,
+                                                 wf_cc.coefficients,
+                                                 occ_buff_b)
                             if diag_hess:
                                 H[0, 0] += J[pos]**2
                                 J[pos] /= -diag
@@ -265,13 +241,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                           double_exc,
                                           wf,
                                           wf_cc,
-                                          pos - pos_ini_exc_type,
-                                          n_irrep,
-                                          orbs_before,
-                                          corr_orb,
-                                          virt_orb,
-                                          alpha_string_graph,
-                                          beta_string_graph)
+                                          pos - pos_ini_exc_type)
                             pos += 1
                         double_exc.b += 1
                     double_exc.a += 1
@@ -284,28 +254,30 @@ def min_dist_jac_hess(double[:, :] wf,
         double_exc.i = i.orb
     # --- alpha, beta -> alpha, beta
     pos_ini_exc_type = pos
-    i = OccOrbital(orbspace, True)
-    j = OccOrbital(orbspace, False)
+    i = OccOrbital(wf.orbspace, True)
+    j = OccOrbital(wf.orbspace, False)
     double_exc.i = i.orb
     double_exc.j = j.orb
     while j.alive:
-        for a_irrep in range(n_irrep):
+        for a_irrep in range(wf.n_irrep):
             b_irrep = irrep_product[irrep_product[i.spirrep,
-                                                  j.spirrep - n_irrep], a_irrep]
+                                                  j.spirrep - wf.n_irrep], a_irrep]
             a_spirrep = a_irrep
-            b_spirrep = b_irrep + n_irrep
-            double_exc.a = orbspace.orbs_before[a_irrep] + orbspace.corr[a_spirrep]
-            for a in range(orbspace.virt[a_spirrep]):
-                double_exc.b = orbspace.orbs_before[b_irrep] + orbspace.corr[b_spirrep]
-                for b in range(orbspace.virt[b_spirrep]):
+            b_spirrep = b_irrep + wf.n_irrep
+            double_exc.a = wf.orbspace.orbs_before[a_irrep] + wf.orbspace.corr[a_spirrep]
+            for a in range(wf.orbspace.virt[a_spirrep]):
+                double_exc.b = wf.orbspace.orbs_before[b_irrep] + wf.orbspace.corr[b_spirrep]
+                for b in range(wf.orbspace.virt[b_spirrep]):
                     J[pos] = term1_ab(double_exc,
-                                      wf,
-                                      wf_cc,
-                                      alpha_string_graph,
-                                      beta_string_graph,
+                                      wf.coefficients,
+                                      wf_cc.coefficients,
+                                      wf.alpha_string_graph,
+                                      wf.beta_string_graph,
                                       occ_buff_a, exc_occ_buff_a,
                                       occ_buff_b, exc_occ_buff_b)
-                    diag = term2_diag_ab(double_exc, wf_cc, occ_buff_a, occ_buff_b)
+                    diag = term2_diag_ab(double_exc,
+                                         wf_cc.coefficients,
+                                         occ_buff_a, occ_buff_b)
                     if diag_hess:
                         H[0, 0] += J[pos]**2
                         J[pos] /= -diag
@@ -315,13 +287,7 @@ def min_dist_jac_hess(double[:, :] wf,
                                   double_exc,
                                   wf,
                                   wf_cc,
-                                  pos - pos_ini_exc_type,
-                                  n_irrep,
-                                  orbs_before,
-                                  corr_orb,
-                                  virt_orb,
-                                  alpha_string_graph,
-                                  beta_string_graph)
+                                  pos - pos_ini_exc_type)
                     pos += 1
                     double_exc.b += 1
                 double_exc.a += 1
@@ -375,13 +341,13 @@ cdef inline int _transp(int a,
             b_pos_ini + n_from_rect(b, a, a_virt))
 
 
-cdef _fill_pos_ini(int n_irrep,
-                   int i_spirrep,
-                   int j_spirrep,
-                   int pos_ampl,
-                   int n_irrep_or_0,
-                   int [:] pos_ini,
-                   int [:] virt_orb):
+cdef int _fill_pos_ini(int n_irrep,
+                       int i_spirrep,
+                       int j_spirrep,
+                       int pos_ampl,
+                       int n_irrep_or_0,
+                       int [:] pos_ini,
+                       OrbitalSpace virt_orb) except -1:
     """Fill in the initial position for each irrep block
     
     The array pos_ini is filled, with the position (in the full
@@ -407,21 +373,21 @@ cdef _fill_pos_ini(int n_irrep,
         The array that will be filled up with the initial positions
     
     virt_orb
-        The number of virtual orbitals for each spirrep
+        The dimensions of virtual orbitals space for each spirrep
     """
-    cdef int a_irrep, b_irrep, a_spirrep, b_spirrep
+    cdef int a_irrep, a_spirrep_prev, b_spirrep_prev
     for a_irrep in range(n_irrep):
         if a_irrep == 0:
             pos_ini[a_irrep] = pos_ampl
         else:
-            b_irrep = irrep_product[
+            a_spirrep_prev = a_irrep - 1 + n_irrep_or_0 
+            b_spirrep_prev = irrep_product[
                 irrep_product[i_spirrep - n_irrep_or_0,
-                              j_spirrep - n_irrep_or_0], a_irrep]
-            a_spirrep = a_irrep + n_irrep_or_0
-            b_spirrep = b_irrep + n_irrep_or_0
+                              j_spirrep - n_irrep_or_0], a_irrep - 1]
             pos_ini[a_irrep] = (pos_ini[a_irrep - 1]
-                                + virt_orb[a_spirrep - 1]
-                                * virt_orb[b_spirrep - 1])
+                                + virt_orb[a_spirrep_prev]
+                                * virt_orb[b_spirrep_prev])
+    return 0
 
 
 cpdef inline (int, int, int) _sp_irreps(int a_irrep,
@@ -454,15 +420,12 @@ cpdef inline (int, int, int) _sp_irreps(int a_irrep,
             a_irrep + n_irrep_or_0,
             b_irrep + n_irrep_or_0)
 
-def update_indep_amplitudes(double [:] amplitudes,
-                            double [:] z,
-                            int n_irrep,
-                            int n_singles,
-                            int n_ampl,
-                            int n_indep_ampl,
-                            int [:] orbs_before,
-                            int [:] corr_orb,
-                            int [:] virt_orb):
+cdef int update_indep_amplitudes(double [:] amplitudes,
+                                 double [:] z,
+                                 int n_singles,
+                                 int n_ampl,
+                                 int n_indep_ampl,
+                                 FullOrbitalSpace orbspace) except -1:
     """Does amplitudes += z considering only independent amplitudes in z
     
     The amplitudes are updated by z, for the case where the array amplitudes
@@ -479,9 +442,6 @@ def update_indep_amplitudes(double [:] amplitudes,
     z
         The update, with (for alpha/alpha and beta/beta) only t_ij^ab with a<b
     
-    n_irrep
-        Number of irreps
-    
     n_singles
         Number of singles
     
@@ -491,8 +451,8 @@ def update_indep_amplitudes(double [:] amplitudes,
     n_indep_ampl
         Number of independent amplitudes
     
-    orbs_before, corr_orb, virt_orb
-        See min_dist_jac_hess
+    orbspace
+        The orbital space
     
     Return:
     -------
@@ -513,32 +473,32 @@ def update_indep_amplitudes(double [:] amplitudes,
     pos_ampl = pos
     # alpha/alpha and beta/beta
     for is_alpha in [True, False]:
-        i = OccOrbital(corr_orb, orbs_before, is_alpha)
-        j = OccOrbital(corr_orb, orbs_before, is_alpha)
+        i = OccOrbital(orbspace, is_alpha)
+        j = OccOrbital(orbspace, is_alpha)
         j.next_()
-        n_irrep_or_0 = 0 if is_alpha else n_irrep
+        n_irrep_or_0 = 0 if is_alpha else orbspace.n_irrep
         while j.alive:
-            _fill_pos_ini(n_irrep,
+            _fill_pos_ini(orbspace.n_irrep,
                           i.spirrep,
                           j.spirrep,
                           pos_ampl,
                           n_irrep_or_0,
                           pos_ini,
-                          virt_orb)
-            for a_irrep in range(n_irrep):
+                          orbspace.virt)
+            for a_irrep in range(orbspace.n_irrep):
                 b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
                                                            i.spirrep,
                                                            j.spirrep,
                                                            n_irrep_or_0)
-                for a in range(virt_orb[a_spirrep]):
-                    for b in range(virt_orb[b_spirrep]):
+                for a in range(orbspace.virt[a_spirrep]):
+                    for b in range(orbspace.virt[b_spirrep]):
                         if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
                             amplitudes[pos_ampl] += z[pos]
                             pos += 1
                         elif a_irrep > b_irrep or a > b:
                             pos_transp = _transp(a, b, a_irrep, b_irrep,
                                                  pos_ampl,
-                                                 virt_orb[a_spirrep],
+                                                 orbspace.virt[a_spirrep],
                                                  pos_ini[b_irrep])
                             amplitudes[pos_ampl] = -amplitudes[pos_transp]
                         pos_ampl += 1
@@ -556,6 +516,7 @@ def update_indep_amplitudes(double [:] amplitudes,
         raise Exception(str(pos) + ' = pos != n_indep_ampl = ' + str(n_indep_ampl))
     if pos_ampl != n_ampl:
         raise Exception(str(pos_ampl) + ' = pos_ampl != n_ampl = ' + str(n_ampl))
+    return 0
 
 
 cdef inline double _df2_dxdy(f_pp, f_mm, f_p, f_m, f, pos, pos_2, eps_2_2):
@@ -578,11 +539,8 @@ cdef _compare_hess(int pos, int pos2, double [:, :] H, double [:, :] Hanal):
                         + '\n num:  ' + str(H[pos, pos2]))
 
 
-def min_dist_jac_hess_num(wf,
-                          cc_wf,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
+def min_dist_jac_hess_num(FCIWaveFunction wf,
+                          IntermNormWaveFunction cc_wf,
                           Janal, Hanal,
                           eps=0.001):
     """Calculate the Jacobian and Hessian numerically
@@ -598,9 +556,6 @@ def min_dist_jac_hess_num(wf,
     cc_wf (IntermNormWaveFunction)
         The wave function at the CC manifold, where the jacobian will
         be calculated
-    
-    orbs_before, corr_orb, virt_orb
-        See min_dist_jac_hess
     
     Janal (1D np.array)
         The analytic Jacobian. Exception is raised imediatly when an entry of
@@ -665,7 +620,7 @@ def min_dist_jac_hess_num(wf,
         the following line should be added after contructing wf_as_fci:
             wf_as_fci.set_ordered_orbitals()
         """
-        wf_as_fci = FCIWaveFunction.from_int_norm(x)
+        wf_as_fci = FCIWaveFunction.from_interm_norm(x)
         d = wf.dist_to(wf_as_fci,
                        metric='IN',
                        normalise=False)**2
@@ -679,7 +634,6 @@ def min_dist_jac_hess_num(wf,
     f_m = np.zeros(n_indep_ampl)
     J = np.zeros(n_indep_ampl)
     H = np.zeros((n_indep_ampl, n_indep_ampl))
-    n_irrep = orbs_before.size - 1
     pos = 0
     pos_ampl = 0
     # --- alpha -> alpha and beta -> beta
@@ -695,29 +649,29 @@ def min_dist_jac_hess_num(wf,
         pos_ampl += 1
     # --- alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
     for is_alpha in [True, False]:
-        i = OccOrbital(corr_orb, orbs_before, is_alpha)
-        j = OccOrbital(corr_orb, orbs_before, is_alpha)
+        i = OccOrbital(wf.orbspace, is_alpha)
+        j = OccOrbital(wf.orbspace, is_alpha)
         j.next_()
-        n_irrep_or_0 = 0 if is_alpha else n_irrep
+        n_irrep_or_0 = 0 if is_alpha else wf.n_irrep
         while j.alive:
-            _fill_pos_ini(n_irrep,
+            _fill_pos_ini(wf.n_irrep,
                           i.spirrep,
                           j.spirrep,
                           pos_ampl,
                           n_irrep_or_0,
                           pos_ini,
-                          virt_orb)
-            for a_irrep in range(n_irrep):
+                          wf.orbspace.virt)
+            for a_irrep in range(wf.n_irrep):
                 b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
                                                            i.spirrep,
                                                            j.spirrep,
                                                            n_irrep_or_0)
-                for a in range(virt_orb[a_spirrep]):
-                    for b in range(virt_orb[b_spirrep]):
+                for a in range(wf.orbspace.virt[a_spirrep]):
+                    for b in range(wf.orbspace.virt[b_spirrep]):
                         if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
                             pos_transp = _transp(a, b, a_irrep, b_irrep,
                                                  pos_ampl,
-                                                 virt_orb[a_spirrep],
+                                                 wf.orbspace.virt[a_spirrep],
                                                  pos_ini[b_irrep])
                             cc_wf.amplitudes[pos_ampl] += eps
                             cc_wf.amplitudes[pos_transp] -= eps
@@ -780,28 +734,28 @@ def min_dist_jac_hess_num(wf,
             pos2_ampl += 1
         # --- pos2: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
         for is_alpha2 in [True, False]:
-            i2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
-            j2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
+            i2 = OccOrbital(wf.orbspace, is_alpha2)
+            j2 = OccOrbital(wf.orbspace, is_alpha2)
             j2.next_()
-            n_irrep_or_02 = 0 if is_alpha2 else n_irrep
+            n_irrep_or_02 = 0 if is_alpha2 else wf.n_irrep
             while j2.alive:
-                _fill_pos_ini(n_irrep,
+                _fill_pos_ini(wf.n_irrep,
                               i2.spirrep,
                               j2.spirrep,
                               pos2_ampl,
                               n_irrep_or_02,
-                              pos2_ini, virt_orb)
-                for a2_irrep in range(n_irrep):
+                              pos2_ini, wf.orbspace.virt)
+                for a2_irrep in range(wf.n_irrep):
                     b2_irrep, a2_spirrep, b2_spirrep = _sp_irreps(a2_irrep,
                                                                   i2.spirrep,
                                                                   j2.spirrep,
                                                                   n_irrep_or_02)
-                    for a2 in range(virt_orb[a2_spirrep]):
-                        for b2 in range(virt_orb[b2_spirrep]):
+                    for a2 in range(wf.orbspace.virt[a2_spirrep]):
+                        for b2 in range(wf.orbspace.virt[b2_spirrep]):
                             if a2_irrep < b2_irrep or (a2_irrep == b2_irrep and a2 < b2):
                                 pos2_transp = _transp(a2, b2, a2_irrep, b2_irrep,
                                                       pos2_ampl,
-                                                      virt_orb[a2_spirrep],
+                                                      wf.orbspace.virt[a2_spirrep],
                                                       pos2_ini[b2_irrep])
                                 cc_wf.amplitudes[pos_ampl] += eps
                                 cc_wf.amplitudes[pos2_ampl] += eps
@@ -850,29 +804,29 @@ def min_dist_jac_hess_num(wf,
     ini_pos_aabb = pos
     # --- pos: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
     for is_alpha in [True, False]:
-        i = OccOrbital(corr_orb, orbs_before, is_alpha)
-        j = OccOrbital(corr_orb, orbs_before, is_alpha)
+        i = OccOrbital(wf.orbspace, is_alpha)
+        j = OccOrbital(wf.orbspace, is_alpha)
         j.next_()
-        n_irrep_or_0 = 0 if is_alpha else n_irrep
+        n_irrep_or_0 = 0 if is_alpha else wf.n_irrep
         while j.alive:
-            _fill_pos_ini(n_irrep,
+            _fill_pos_ini(wf.n_irrep,
                           i.spirrep,
                           j.spirrep,
                           pos_ampl,
                           n_irrep_or_0,
                           pos_ini,
-                          virt_orb)
-            for a_irrep in range(n_irrep):
+                          wf.orbspace.virt)
+            for a_irrep in range(wf.n_irrep):
                 b_irrep, a_spirrep, b_spirrep = _sp_irreps(a_irrep,
                                                            i.spirrep,
                                                            j.spirrep,
                                                            n_irrep_or_0)
-                for a in range(virt_orb[a_spirrep]):
-                    for b in range(virt_orb[b_spirrep]):
+                for a in range(wf.orbspace.virt[a_spirrep]):
+                    for b in range(wf.orbspace.virt[b_spirrep]):
                         if a_irrep < b_irrep or (a_irrep == b_irrep and a < b):
                             pos_transp = _transp(a, b, a_irrep, b_irrep,
                                                  pos_ampl,
-                                                 virt_orb[a_spirrep],
+                                                 wf.orbspace.virt[a_spirrep],
                                                  pos_ini[b_irrep])
                             H[pos, pos] = (f_p[pos] - 2*f + f_m[pos]) / eps**2
                             _compare_hess(pos, pos, H, Hanal)
@@ -880,30 +834,33 @@ def min_dist_jac_hess_num(wf,
                             pos2_ampl = ini_pos_aabb
                             # --- pos2: alpha, alpha -> alpha, alpha, and beta, beta -> beta, beta
                             for is_alpha2 in [True, False]:
-                                i2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
-                                j2 = OccOrbital(corr_orb, orbs_before, is_alpha2)
+                                i2 = OccOrbital(wf.orbspace, is_alpha2)
+                                j2 = OccOrbital(wf.orbspace, is_alpha2)
                                 j2.next_()
-                                n_irrep_or_02 = 0 if is_alpha2 else n_irrep
+                                n_irrep_or_02 = 0 if is_alpha2 else wf.n_irrep
                                 while j2.alive:
-                                    _fill_pos_ini(n_irrep,
+                                    _fill_pos_ini(wf.n_irrep,
                                                   i2.spirrep,
                                                   j2.spirrep,
                                                   pos2_ampl,
                                                   n_irrep_or_02,
                                                   pos2_ini,
-                                                  virt_orb)
-                                    for a2_irrep in range(n_irrep):
+                                                  wf.orbspace.virt)
+                                    for a2_irrep in range(wf.n_irrep):
                                         b2_irrep, a2_spirrep, b2_spirrep = _sp_irreps(a2_irrep,
                                                                                       i2.spirrep,
                                                                                       j2.spirrep,
                                                                                       n_irrep_or_02)
-                                        for a2 in range(virt_orb[a2_spirrep]):
-                                            for b2 in range(virt_orb[b2_spirrep]):
-                                                if a2_irrep < b2_irrep or (a2_irrep == b2_irrep and a2 < b2):
+                                        for a2 in range(wf.orbspace.virt[a2_spirrep]):
+                                            for b2 in range(wf.orbspace.virt[b2_spirrep]):
+                                                if (a2_irrep < b2_irrep
+                                                    or (a2_irrep == b2_irrep and a2 < b2)):
                                                     if pos2 > pos:
-                                                        pos2_transp = _transp(a2, b2, a2_irrep, b2_irrep,
-                                                                              pos2_ampl,
-                                                                              virt_orb[a2_spirrep],
+                                                        pos2_transp = _transp(
+                                                            a2, b2,
+                                                            a2_irrep, b2_irrep,
+                                                            pos2_ampl,
+                                                            wf.orbspace.virt[a2_spirrep],
                                                                               pos2_ini[b2_irrep])
                                                         cc_wf.amplitudes[pos_ampl] += eps
                                                         cc_wf.amplitudes[pos_transp] -= eps
@@ -952,7 +909,9 @@ def min_dist_jac_hess_num(wf,
                                 pos2 += 1
                                 pos2_ampl += 1
                             if pos2_ampl != n_ampl:
-                                raise Exception(str(pos2_ampl) + ' = pos2_ampl != n_ampl = ' + str(n_ampl))
+                                raise Exception(str(pos2_ampl)
+                                                + ' = pos2_ampl != n_ampl = '
+                                                + str(n_ampl))
                             pos += 1
                         pos_ampl += 1
             if i.pos_in_occ == j.pos_in_occ - 1:

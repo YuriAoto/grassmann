@@ -41,40 +41,40 @@ class CisdFciJacHessTestCase(unittest.TestCase):
             slices_cisd = []
             slices_fci = []
             for irp in wf_CISD.spirrep_blocks(restricted=True):
-                nK = wf_CISD.corr_orb[irp] * wf_CISD.virt_orb[irp]
+                nK = wf_CISD.orbspace.corr[irp] * wf_CISD.orbspace.virt[irp]
                 slice_start = 0 if irp == 0 else slices_cisd[-1].stop
                 slices_cisd.append(slice(slice_start, slice_start + nK))
-                nK = wf_FCI.ref_orb[irp] * wf_FCI.virt_orb[irp]
+                nK = wf_FCI.orbspace.ref[irp] * wf_FCI.orbspace.virt[irp]
                 slice_start = 0 if irp == 0 else slices_fci[-1].stop
                 slices_fci.append(slice(slice_start, slice_start + nK))
             for irp in wf_CISD.spirrep_blocks(restricted=True):
                 with self.subTest(system=test_sys, irrep=irp, coef='Jac'):
                     self.assertEqual(
                         np.reshape(Jac_cisd[slices_cisd[irp]],
-                                   (wf_CISD.corr_orb[irp],
-                                    wf_CISD.virt_orb[irp])),
+                                   (wf_CISD.orbspace.corr[irp],
+                                    wf_CISD.orbspace.virt[irp])),
                         np.reshape(Jac_fci[slices_fci[irp]],
-                                   (wf_FCI.ref_orb[irp],
-                                    wf_FCI.virt_orb[irp]))[
-                                        wf_FCI.froz_orb[irp]:, :])
+                                   (wf_FCI.orbspace.ref[irp],
+                                    wf_FCI.orbspace.virt[irp]))[
+                                        wf_FCI.orbspace.froz[irp]:, :])
                 for irp2 in range(irp + 1):
                     with self.subTest(system=test_sys, irrep=irp,
                                       irrep2=irp2, coef='Hess'):
                         self.assertEqual(
                             np.reshape(Hess_cisd[slices_cisd[irp],
                                                  slices_cisd[irp2]],
-                                       (wf_CISD.corr_orb[irp],
-                                        wf_CISD.virt_orb[irp],
-                                        wf_CISD.corr_orb[irp2],
-                                        wf_CISD.virt_orb[irp2])),
+                                       (wf_CISD.orbspace.corr[irp],
+                                        wf_CISD.orbspace.virt[irp],
+                                        wf_CISD.orbspace.corr[irp2],
+                                        wf_CISD.orbspace.virt[irp2])),
                             np.reshape(Hess_fci[slices_fci[irp],
                                                 slices_fci[irp2]],
-                                       (wf_FCI.ref_orb[irp],
-                                        wf_FCI.virt_orb[irp],
-                                        wf_FCI.ref_orb[irp2],
-                                        wf_FCI.virt_orb[irp2]))[
-                                            wf_FCI.froz_orb[irp]:, :,
-                                            wf_FCI.froz_orb[irp2]:, :])
+                                       (wf_FCI.orbspace.ref[irp],
+                                        wf_FCI.orbspace.virt[irp],
+                                        wf_FCI.orbspace.ref[irp2],
+                                        wf_FCI.orbspace.virt[irp2]))[
+                                            wf_FCI.orbspace.froz[irp]:, :,
+                                            wf_FCI.orbspace.froz[irp2]:, :])
 
     def test_check_Jac_Hess_FCIdirectly(self):
         for test_sys in tests.test_systems(has_method=('CISD', 'FCI'),
@@ -92,37 +92,37 @@ class CisdFciJacHessTestCase(unittest.TestCase):
             slices_cisd = []
             slices_fci = []
             for irp in wf_CISD.spirrep_blocks(restricted=True):
-                nK = wf_CISD.corr_orb[irp] * wf_CISD.virt_orb[irp]
+                nK = wf_CISD.orbspace.corr[irp] * wf_CISD.orbspace.virt[irp]
                 slice_start = 0 if irp == 0 else slices_cisd[-1].stop
                 slices_cisd.append(slice(slice_start, slice_start + nK))
-                nK = wf_FCI.ref_orb[irp] * wf_FCI.virt_orb[irp]
+                nK = wf_FCI.orbspace.ref[irp] * wf_FCI.orbspace.virt[irp]
                 slice_start = 0 if irp == 0 else slices_fci[-1].stop
                 slices_fci.append(slice(slice_start, slice_start + nK))
             for irp in wf_CISD.spirrep_blocks(restricted=True):
                 with self.subTest(system=test_sys, irrep=irp, coef='Jac'):
                     self.assertEqual(
                         np.reshape(Jac_cisd[slices_cisd[irp]],
-                                   (wf_CISD.corr_orb[irp],
-                                    wf_CISD.virt_orb[irp])),
+                                   (wf_CISD.orbspace.corr[irp],
+                                    wf_CISD.orbspace.virt[irp])),
                         np.reshape(Jac_fci[slices_fci[irp]],
-                                   (wf_FCI.ref_orb[irp],
-                                    wf_FCI.virt_orb[irp]))[
-                                        wf_FCI.froz_orb[irp]:, :])
+                                   (wf_FCI.orbspace.ref[irp],
+                                    wf_FCI.orbspace.virt[irp]))[
+                                        wf_FCI.orbspace.froz[irp]:, :])
                 for irp2 in range(irp + 1):
                     with self.subTest(system=test_sys, irrep=irp,
                                       irrep2=irp2, coef='Hess'):
                         self.assertEqual(
                             np.reshape(Hess_cisd[slices_cisd[irp],
                                                  slices_cisd[irp2]],
-                                       (wf_CISD.corr_orb[irp],
-                                        wf_CISD.virt_orb[irp],
-                                        wf_CISD.corr_orb[irp2],
-                                        wf_CISD.virt_orb[irp2])),
+                                       (wf_CISD.orbspace.corr[irp],
+                                        wf_CISD.orbspace.virt[irp],
+                                        wf_CISD.orbspace.corr[irp2],
+                                        wf_CISD.orbspace.virt[irp2])),
                             np.reshape(Hess_fci[slices_fci[irp],
                                                 slices_fci[irp2]],
-                                       (wf_FCI.ref_orb[irp],
-                                        wf_FCI.virt_orb[irp],
-                                        wf_FCI.ref_orb[irp2],
-                                        wf_FCI.virt_orb[irp2]))[
-                                            wf_FCI.froz_orb[irp]:, :,
-                                            wf_FCI.froz_orb[irp2]:, :])
+                                       (wf_FCI.orbspace.ref[irp],
+                                        wf_FCI.orbspace.virt[irp],
+                                        wf_FCI.orbspace.ref[irp2],
+                                        wf_FCI.orbspace.virt[irp2]))[
+                                            wf_FCI.orbspace.froz[irp]:, :,
+                                            wf_FCI.orbspace.froz[irp2]:, :])

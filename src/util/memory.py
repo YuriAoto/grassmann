@@ -123,6 +123,12 @@ def show_status(mode='short'):
     if mode == 'short':
         return '   Max. allocation: {1} {0}\n   Max. used: {2} {0}'.format(
             unit(), _maximum_allocation, _maximum_reached)
+    if mode == 'full':
+        return (f'Full memory status (in {_memory_unit}:\n'
+                f'  Total:           {_total_memory}\n'
+                f'  Used:            {_used_memory}\n'
+                f'  Max. allocation: {_maximum_allocation}\n'
+                f'  Max. used:       {_maximum_reached}')
 
 
 def unit():

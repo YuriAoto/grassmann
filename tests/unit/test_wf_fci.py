@@ -231,9 +231,9 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             )
         wfcc = IntermNormWaveFunction.from_Molpro(
             tests.CCD_file('He2__1.5__631g__C2v'))
-        wf = FCIWaveFunction.from_int_norm(wfcc)
+        wf = FCIWaveFunction.from_interm_norm(wfcc)
         wf.set_ordered_orbitals()
-        self.assertEqual(np.array(wf), my_coeff)
+        self.assertEqual(np.array(wf), coef)
 
     def test_he2_sto3g_d2h(self):
         tq = ((-0.02680236*-0.05023852)
@@ -250,9 +250,9 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             )
         wfcc = IntermNormWaveFunction.from_Molpro(
             tests.CCD_file('He2__1.5__631g__D2h'))
-        wf = FCIWaveFunction.from_int_norm(wfcc)
+        wf = FCIWaveFunction.from_interm_norm(wfcc)
         wf.set_ordered_orbitals()
-        self.assertEqual(np.array(wf), my_coeff)
+        self.assertEqual(np.array(wf), coef)
     
     @tests.category('SHORT')
     def test_li2_sto3g_d2h(self):
@@ -690,14 +690,14 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             )
         wfcc = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('He2__1.5__631g__C2v'))
-        wf = FCIWaveFunction.from_int_norm(wfcc)
+        wf = FCIWaveFunction.from_interm_norm(wfcc)
         wf.set_ordered_orbitals()
         self.assertEqual(np.array(wf), coef)
 
     def test_he2_sto3g_d2h(self):
         wfcc = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file('He2__1.5__631g__D2h'))
-        wf = FCIWaveFunction.from_int_norm(wfcc)
+        wf = FCIWaveFunction.from_interm_norm(wfcc)
         wf.set_ordered_orbitals()
         self.assertEqual(wf[0, 5], 0.02903510)
         self.assertEqual(wf[5, 0], 0.02903510)

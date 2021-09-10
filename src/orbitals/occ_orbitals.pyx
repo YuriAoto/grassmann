@@ -25,11 +25,11 @@ cdef class OccOrbital:
     Example:
     ------
     # alpha and beta correlated orbitals
-    corr_orb = np.array([5,2,2,0, 4,2,2,0], dtype=int_dtype)
+    orbspace.corr = [5,2,2,0, 4,2,2,0]
     # number of orbitals before that irrep
-    orbs_before = np.array([0, 10, 15, 20, 22])
+    orbspace.orbs_before = np.array([0, 10, 15, 20, 22])
     
-    i = OccOrbital(corr_orb, orbs_before, True)
+    i = OccOrbital(orbspace, True)
     i.pos_in_occ  # 0
     i.orb  # 0
     i.orbirp  # 0

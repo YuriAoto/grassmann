@@ -16,7 +16,7 @@ wf = FCIWaveFunction.from_Molpro_FCI(
 cc = IntermNormWaveFunction.from_Molpro(
     tests.CCSD_file(system, allE=True))
 cc.amplitudes *= 0.8
-wf_cc = FCIWaveFunction.from_int_norm(cc)
+wf_cc = FCIWaveFunction.from_interm_norm(cc)
 
 i=1
 j=0
