@@ -22,7 +22,9 @@ def main_grassmann(args, f_out):
     """
     if args.method == 'dist_Grassmann':
         main_dist_gr(args, f_out)
-    elif args.method == 'Hartree_Fock' or args.method == 'CCSD' or args.method == 'CCD':
+    elif (args.method == 'Hartree_Fock'
+          or args.method == 'CCSD'
+          or args.method == 'CCD'):
         main_hf(args, f_out)
         if args.method == 'CCSD' or args.method == 'CCD':
             main_cc(args, f_out)

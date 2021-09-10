@@ -72,6 +72,8 @@ def _parser():
                         + ' or transformation matrices,'
                         + ' as Molpro\'s "put" xml file or'
                         + ' npz file')
+    parser.add_argument('--ini_cc_wf',
+                        help='Initial wave function for CC calculations')
     parser.add_argument('--HF_orb',
                         help='Hartree-Fock orbitals'
                         + ' (as Molpro\'s "put" xml file)')
@@ -91,6 +93,9 @@ def _parser():
     parser.add_argument('--at_ref',
                         help='Do only one iteration at reference.',
                         action='store_true')
+    parser.add_argument('--ref_orb',
+                        help='The reference orbitals, passed as a list.',
+                        type=lambda x: list(map(int, x[1:-1].split(','))))
     parser.add_argument('--algorithm',
                         help='the algorithm to be used in the optimisation.'
                         + ' Possible values are: "orb_rotations",'
@@ -254,6 +259,7 @@ def _check(args):
     args.molpro_output = _glob_file(args.molpro_output)
     args.cc_wf = _glob_file(args.cc_wf)
     args.ci_wf = _glob_file(args.ci_wf)
+    args.ini_cc_wf = _glob_file(args.ini_cc_wf)
 
 
 def _argvise_file(filename, files_content, indentation):

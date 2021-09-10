@@ -789,6 +789,7 @@ cdef class FCIWaveFunction(WaveFunction):
     
     @classmethod
     def from_Molpro_FCI(cls, molpro_output,
+                        ref=None,
                         start_line_number=1,
                         point_group=None,
                         state='1.1',
@@ -800,6 +801,7 @@ cdef class FCIWaveFunction(WaveFunction):
         """
         new_wf = cls()
         new_wf.get_coeff_from_molpro(molpro_output,
+                                     ref=ref,
                                      start_line_number=start_line_number,
                                      point_group=point_group,
                                      state=state,
@@ -847,6 +849,7 @@ cdef class FCIWaveFunction(WaveFunction):
         self.set_coeff_ref_det()
     
     def get_coeff_from_molpro(self, molpro_output,
+                              ref=None,
                               start_line_number=1,
                               point_group=None,
                               state='1.1',
@@ -863,6 +866,10 @@ cdef class FCIWaveFunction(WaveFunction):
             It iterates over the lines,
             stops when the wave function is completely loaded,
             and do not closes the file.
+        
+        ref (iterable of int)
+            A list that will be used to set the reference space
+            for the wave function
         
         start_line_number (int, optional, default=1)
             line number where file starts to be read.
@@ -903,6 +910,8 @@ cdef class FCIWaveFunction(WaveFunction):
                     + ' is a file object')
             self.point_group = point_group
             self.orbspace.set_n_irrep(self.n_irrep)
+            if ref is not None:
+                self.orbspace.set_ref(OrbitalSpace(dim=ref))
         self.source = 'From file ' + f_name
         S = 0.0
         first_determinant = True
@@ -913,6 +922,8 @@ cdef class FCIWaveFunction(WaveFunction):
                     self.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
                     self.orbspace.set_n_irrep(self.n_irrep)
+                    if ref is not None:
+                        self.orbspace.set_ref(OrbitalSpace(dim=ref))
                 except molpro.MolproLineHasNoPointGroup:
                     if molpro.FCI_header == line:
                         FCI_prog_found = True
@@ -926,8 +937,7 @@ cdef class FCIWaveFunction(WaveFunction):
                     line, self.Ms, self.orbspace.froz,
                     molpro_output=molpro_output,
                     line_number=line_number)
-                if first_determinant:
-                    first_determinant = False
+                if first_determinant and ref is None:
                     # Improve!! do not use old version
                     # This definition of orbspace.ref seem to be
                     # quite bad, because the first slater determinant
@@ -938,6 +948,8 @@ cdef class FCIWaveFunction(WaveFunction):
                         dim=list(map(len, get_occ_from_FCI_line(
                             line, self.orbspace.full, self.orbspace.froz,
                             self.n_irrep, self.Ms)))))
+                if first_determinant:
+                    first_determinant = False
                     self.initialize_coeff_matrix()
                 S += det.c**2
                 self.set_slater_det(det)
