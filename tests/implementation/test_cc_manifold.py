@@ -58,30 +58,22 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     wf.set_max_coincidence_orbitals()
     tests.logger.info('wf with max coincidence orbitals:\n%s', wf)
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, wf_type=wf_type)
-    cc_wf.amplitudes *= factor
-    cc_wf_as_fci = FCIWaveFunction.from_int_norm(cc_wf, ordered_orbitals=True)
+    cc_wf *= factor
+    cc_wf_as_fci = FCIWaveFunction.from_interm_norm(cc_wf, ordered_orbitals=True)
     tests.logger.info('cc wf:\n%s\nas FCI\n%s', cc_wf, cc_wf_as_fci)
     wf.set_ordered_orbitals()
     Jac = np.empty(cc_wf.n_indep_ampl)
     Hess = np.empty((cc_wf.n_indep_ampl, cc_wf.n_indep_ampl))
     min_dist_jac_hess(
-        wf._coefficients,
-        cc_wf_as_fci._coefficients,
+        wf,
+        cc_wf_as_fci,
         Jac,
         Hess,
-        wf.orbs_before,
-        wf.corr_orb.as_array(),
-        wf.virt_orb.as_array(),
-        wf._alpha_string_graph,
-        wf._beta_string_graph,
         diag_hess=False,
         level=wf_type[2:])
     JacNum, HessNum = min_dist_jac_hess_num(
         wf,
         cc_wf,
-        wf.orbs_before,
-        wf.corr_orb.as_array(),
-        wf.virt_orb.as_array(),
         np.array(Jac)*2,
         np.array(Hess)*2,
         eps = 0.0002)

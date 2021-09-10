@@ -1,0 +1,324 @@
+\hypertarget{chap:input}{}
+\chapter{Input}
+\label{sec:input}
+\chaptermark{Input}
+\chapterauthor{}
+
+
+\section{General considerations}
+
+All input information are passed in one of two forms:
+\begin{itemize}
+\item \emph{key}/\emph{value}:
+  The \emph{value} is used for that \emph{key},
+  e.g. \emph{key}=\verb+method+ and \emph{value}=\verb+Hartree_Fock+ sets Hartree-Fock as the method.
+\item \emph{flag}:
+  Activates \emph{flag},
+  e.g. \emph{flag}=\verb+restricted+ sets a restricted type of calculation.
+\end{itemize}
+A list of all possible arguments are in \ref{sec:inputargs}.
+
+These input information can be passed to Grassmann through arguments in the command line arguments
+and/or read from input file(s). Every argument can be given in either of the two forms:
+\begin{itemize}
+\item In the command line, keys and flags should be preceded by \verb+--+.
+  If of type key/value, the value comes after the key, separated by a space or a equal (\verb+=+) sign.
+\item Instead of using the command line to pass (perhaps several) arguments, this can be made
+  in an input file, whose name(s) can be passed in the command line.
+  In this case, the arguments should be one in each line, with an equal sign (\verb+=+) separating
+  key/values pairs.
+  The character ``\verb+#+'' is used to begin a comment, and the remaining of the line is ignored.
+\end{itemize}
+Both ways can be used in conjunction, with several and nested input files.
+If the same argument is given more than once the precedence is ``use what is given last''.
+
+\subsection{Examples}
+
+Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file), only from the command line:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ @\grassmannexec{}@ --method Hartree_Fock --geometry H2.xyz
+\end{lstlisting}
+
+Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file), from a input file:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ cat myfile.inp
+method =Hartree_Fock # method
+geometry = H2.xyz
+@\shPr{}@ @\grassmannexec{}@ myfile.inp
+\end{lstlisting}
+
+Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file), from both command line and input file:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ cat myfile.inp
+method =Hartree_Fock # method
+@\shPr{}@ @\grassmannexec{}@ myfile.inp --geometry H2.xyz
+\end{lstlisting}
+
+Sets \verb+Hartree_Fock+ as method and \verb+H2.xyz+ as geometry (file),
+from both command line and input file.
+Note that since \verb+H2.xyz+ is passed after the file, that contains \verb+whatever+,
+for the key geometry, this is what Grassmann uses:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ cat myfile.inp
+method =Hartree_Fock # method
+geometry = whatever
+@\shPr{}@ @\grassmannexec{}@ myfile.inp --geometry H2.xyz
+\end{lstlisting}
+
+Error (assuming that there is no file named ``\verb+whatever+''),
+because \verb+H2.xyz+ is passed before the file, that contains \verb+whatever+ for the key geometry:
+\begin{lstlisting}[style=shstyint]
+@\shPr{}@ cat myfile.inp
+method =Hartree_Fock # method
+geometry = whatever
+@\shPr{}@ @\grassmannexec{}@ --geometry H2.xyz myfile.inp
+\end{lstlisting}
+
+
+\section{Geometry files}
+\label{sec:geometry}
+Geometry can be specified in standard xyz file:
+The first line contains the number of atoms;
+The second is a title/comment, that is ignored;
+From the third line a list of all atoms,
+with the element symbol and its three Cartesian coordinates,in \AA, separated with spaces.
+Optionally, a number can be put together with the element symbol to differentiate
+among atoms of the same element.
+
+Example:
+\begin{lstlisting}[style=filestyint]
+2
+The hydrogen molecule
+H1   0.0     0.0    0.0
+H2   0.74    0.0    0.0
+\end{lstlisting}
+
+
+\section{Input arguments}
+\label{sec:inputargs}
+
+In the following, all arguments of Grassmann are listed and briefly described.
+
+\subsection{key/value arguments}
+
+\begin{itemize}
+  % ===================================
+\item \verb+method+
+
+  \emph{Possible values}: \verb+dist_Grassmann+ and \verb+Hartree_Fock+
+
+  \emph{Default value}: \verb+dist_Grassmann+
+
+  The main calculation.
+
+  % ===================================
+\item \verb+geometry+
+
+  \emph{Possible values}: A file name.
+
+  \emph{Default value}: None.
+
+  The file with the geometry description, see Sect.~\ref{sec:geometry}.
+
+  % ===================================
+\item \verb+molpro_output+
+
+  \emph{Possible values}: A file name.
+
+  \emph{Default value}: None.
+
+  The Molpro file name with the wave function to be used in the calculation.
+
+  % ===================================
+\item \verb+memory+
+
+  \emph{Possible values}: a number, optionally followed by a memory unit
+  (\verb+B+, \verb+kB+, \verb+MB+, \verb+GB+, or \verb+TB+).
+
+  \emph{Default value}: \verb+100.0kB+.
+
+  The maximum memory that will be permitted to be allocated.
+  If only a number is passed, it is assumed to be in kB.
+  
+  % ===================================
+\item \verb+basis+
+
+  \emph{Possible values}: Any basis that is in the directory \verb+bases+ of IR-WMME or any basis that van be obtained from \href{https://www.basissetexchange.org/}{https://www.basissetexchange.org/}.
+
+  \emph{Default value}: cc-pVDZ.
+
+  The basis set to be used in the calculation.
+
+
+  % ===================================
+\item \verb+ini_orb+
+
+  \emph{Possible values}: Molpro's ``put'' xml file or npz file.
+
+  \emph{Default value}: None.
+  
+  Initial orbital to be used in orbital optimisations.
+  
+  % ===================================
+\item \verb+HF_orb+
+
+  \emph{Possible values}: Molpro's ``put'' xml file.
+
+  \emph{Default value}: None.
+
+  The Hartree-Fock orbitals
+
+  % ===================================
+\item \verb+WF_orb+
+
+  \emph{Possible values}: Molpro's ``put'' xml file.
+
+  \emph{Default value}: None.
+  
+  The orbitals used to construct the wave function (that is read from \verb+molpro_output+)
+  
+  % ===================================
+\item \verb+WF_templ+
+
+  \emph{Possible values}: Molpro output.
+
+  \emph{Default value}: None.
+  
+  A file with a FCI wave function, that will be used as ``template''.
+  
+  % ===================================
+\item \verb+maxiter+
+
+  \emph{Possible values}: Integer.
+
+  \emph{Default value}: Method dependent.
+
+  Maximum number of iterations
+
+  % ===================================
+\item \verb+algorithm+
+
+  \emph{Possible values}: \verb+orb_rotations+, \verb+general_Absil+, \verb+CISD_Absil+
+
+  \emph{Default value}: \verb+CISD_Absil+.
+
+  The algorithm, to be used in a min dist (at the Grassmannian) calculation.
+
+  % ===================================
+\item \verb+state+
+
+  \emph{Possible values}: An electronic state in Molpro notation.
+
+  \emph{Default value}: None.
+
+  The state to be read from \verb+molpro_output+. If None, uses the first.
+
+  % ===================================
+\item \verb+loglevel+
+
+  \emph{Possible values}: Integer or a log level name.
+
+  \emph{Default value}: \verb+warning+.
+  
+  The log level, see Sect~\ref{sec:controllog}.
+  
+  % ===================================
+\item \verb+logfilter+
+
+  \emph{Possible values}: A regular expression.
+
+  \emph{Default value}: None.
+  
+  A regular expression filter for function names that will be logged,
+  see Sect~\ref{sec:controllog}.
+  
+  % ===================================
+\item \verb+out_extension+
+
+  \emph{Possible values}: String.
+
+  \emph{Default value}: \verb+.gr+.
+  
+  The extension to be used for the output file. See Sect~\ref{sec:outname}
+  
+  % ===================================
+\item \verb+log_extension+
+
+  \emph{Possible values}: String.
+
+  \emph{Default value}: \verb+.grlog+.
+  
+  The extension to be used for the log file. See Sect~\ref{sec:outname}
+  
+  % ===================================
+\item \verb+dir_extension+
+
+  \emph{Possible values}: String.
+
+  \emph{Default value}: \verb+.grdir+.
+  
+  The extension to be used for the output directory. See Sect~\ref{sec:outname}
+
+  % ===================================
+\item \verb+output+
+
+  \emph{Possible values}: String.
+
+  \emph{Default value}: None.
+
+  The output file name. See Sect~\ref{sec:outname}
+
+  
+\end{itemize}
+
+\subsection{flag arguments}
+
+\begin{itemize}
+  % ===================================
+\item \verb+restricted+
+
+  \emph{Default value}: Depends on the method.
+
+  Do a spin restricted calculation.
+
+  % ===================================
+\item \verb+save_final_orb+
+
+  \emph{Default value}: False.
+
+  If set, saves the final orbital.
+
+  % ===================================
+\item \verb+save_full_orb+
+
+  \emph{Default value}: False.
+
+  If set, saves the virtual orbitals too.
+
+  % ===================================
+\item \verb+save_all_orb+
+
+  \emph{Default value}: False.
+
+  If set, saves the orbitals of all iterations.
+
+\end{itemize}
+
+
+\section{Environment variables}
+\label{sec:envvar}
+
+Grassmann is affected by the following environment variables:
+\begin{itemize}
+\item \verb+GR_MEMORY+: Sets the maximum memory, in kB;
+\item \verb+GR_TESTS_CATEG+: The tests categories to run (see \ref{});
+\item \verb+GR_IR_WMME_DIR+: The directory of the program ir-wmme (see Sect.~\ref{sec:irwmme}).
+\end{itemize}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
+
+

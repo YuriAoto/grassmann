@@ -21,8 +21,8 @@ class CalcAllDistTestCase(unittest.TestCase):
         self.res.cc__vert_ampl = 1.0
         self.res.cc__min_d = 1.0
         self.res.cc__min_d_ampl = 1.0
-        self.res.vert__min_d = 1.0
-        self.res.vert__min_d_ampl = 1.0
+        self.res.min_d__vert = 1.0
+        self.res.min_d__vert_ampl = 1.0
 
     def test_str(self):
         tests.logger.info("%s", self.res)
@@ -30,18 +30,22 @@ class CalcAllDistTestCase(unittest.TestCase):
         self.assertFalse('regular CI' in x)
         self.assertFalse('regular CC' in x)
         
+        self.res.has_cc = True
         self.res.fci__cc = 1.0
         tests.logger.info("%s", self.res)
         x = str(self.res)
         self.assertFalse('regular CI' in x)
         self.assertTrue('regular CC' in x)
         
+        self.res.has_ci = True
         self.res.fci__ci = 1.0
+        self.res.ci__cc = 1.0        
         tests.logger.info("%s", self.res)
         x = str(self.res)
         self.assertTrue('regular CI' in x)
         self.assertTrue('regular CC' in x)
         
+        self.res.has_cc = False
         del self.res.fci__cc
         tests.logger.info("%s", self.res)
         x = str(self.res)
@@ -49,4 +53,4 @@ class CalcAllDistTestCase(unittest.TestCase):
         self.assertFalse('regular CC' in x)
         
         self.assertTrue('CC manifold' in x)
-        self.assertTrue('D(FCI, minD CC) = 1.00000' in x)
+        self.assertTrue('D(FCI, minD_CC) = 1.00000' in x)

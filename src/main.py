@@ -22,8 +22,10 @@ def main_grassmann(args, f_out):
     """
     if args.method == 'dist_Grassmann':
         main_dist_gr(args, f_out)
-    elif args.method == 'Hartree_Fock':
+    elif args.method == 'Hartree_Fock' or args.method == 'CCSD' or args.method == 'CCD':
         main_hf(args, f_out)
+        if args.method == 'CCSD' or args.method == 'CCD':
+            main_cc(args, f_out)
     elif args.method in ('CCD_mani_vert', 'CCSD_mani_vert',
                          'CCD_mani_minD', 'CCSD_mani_minD',
                          'CCD_full_analysis', 'CCSD_full_analysis'):

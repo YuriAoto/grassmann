@@ -29,6 +29,12 @@ def assert_arrays(array1, array2, msg=None):
             '\n' + str(array1) + '\n!=\n' + str(array2))
     return True
 
+def assert_wave_functions(wf1, wf2, msg=None):
+    """Asserts WaveFunction. To be used with addTypeEqualityFunc"""
+    if wf1 != wf2:
+        raise unittest.TestCase.failureException('Wave functions differ:\n'
+                                                 + wf1.str_compare_with(wf2))
+    return True
 
 def assert_occupations(occ1, occ2, msg=None):
     """Assert occupations. To be used with addTypeEqualityFunc"""

@@ -10,12 +10,17 @@ import logging
 
 import numpy as np
 from numpy import linalg
+import numpy as np
 
 from input_output.log import logtime
 from util.results import Results, OptResults, inside_box
 from coupled_cluster import manifold as cc_manifold
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.fci import FCIWaveFunction, contribution_from_clusters
+from wave_functions.slater_det import SlaterDet
+import wave_functions.strings_rev_lexical_order as str_order
+from util.other import int_array
+from util.variables import int_dtype
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -61,7 +66,7 @@ class DistResults(Results):
     @property
     def wave_function_as_fci(self):
         if self._wave_function_as_fci is None:
-            self._wave_function_as_fci = FCIWaveFunction.from_int_norm(self.wave_function)
+            self._wave_function_as_fci = FCIWaveFunction.from_interm_norm(self.wave_function)
         return self._wave_function_as_fci
 
 
@@ -242,7 +247,7 @@ def calc_dist_to_cc_manifold(wf,
     Side Effects:
     -------------
     The wave function wf is put in the intermediate normalisation and
-    with the convention of orbitals with maximum coincidence for the signs
+    with the convention of ordered orbitals for the signs
     of the determinants
 
     Parameters:
@@ -321,8 +326,6 @@ def calc_dist_to_cc_manifold(wf,
         Hess = np.empty((1, 1))
     else:
         Hess = np.empty((cc_wf.n_indep_ampl, cc_wf.n_indep_ampl))
-    corr_orb = wf.corr_orb.as_array()
-    virt_orb = wf.virt_orb.as_array()
     cc_wf_as_fci = FCIWaveFunction.similar_to(wf, restricted=False)
     if f_out is not None:
         f_out.write(
@@ -337,9 +340,9 @@ def calc_dist_to_cc_manifold(wf,
                 cc_wf_as_fci._coefficients[:] = ini_wf._coefficients
             else:
                 with logtime('Transforming CC wave function to FCI-like'):
-                    cc_wf_as_fci.get_coefficients_from_int_norm_wf(cc_wf,
-                                                                   ordered_orbitals=True)
-            logger.debug('Wave Function, at iteration %d:\n%s',
+                    cc_wf_as_fci.get_coefficients_from_interm_norm_wf(cc_wf,
+                                                                      ordered_orbitals=True)
+            logger.debug('Wave Function, at iteration %d:\n%r',
                          i_iteration,
                          cc_wf_as_fci)
             with logtime('Distance to current CC wave function'):
@@ -350,18 +353,12 @@ def calc_dist_to_cc_manifold(wf,
                 converged = True
                 break
             with logtime('Making Jacobian and approximate Hessian'):
-                cc_manifold.min_dist_jac_hess(
-                    wf._coefficients,
-                    cc_wf_as_fci._coefficients,
-                    Jac,
-                    Hess,
-                    wf.orbs_before,
-                    corr_orb,
-                    virt_orb,
-                    wf._alpha_string_graph,
-                    wf._beta_string_graph,
-                    diag_hess,
-                    level=level)
+                cc_manifold.min_dist_jac_hess(wf,
+                                              cc_wf_as_fci,
+                                              Jac,
+                                              Hess,
+                                              diag_hess,
+                                              level=level)
             if diag_hess:
                 z = Jac
                 normJ = Hess[0, 0]
@@ -607,6 +604,10 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
     --------
     An instance of AllDistResults
     
+    TODO:
+    -----
+    calculate distance from vert(CI) to vert(CC)
+    
     """
     res = AllDistResults(f'Distances among CC{level}/CI{level} wave functions')
     res.fci__min_d = res_min_d.distance
@@ -621,7 +622,7 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
         res_vert.wave_function_as_fci)
     if cc_wf is not None:
         res.has_cc = True
-        cc_as_fci = FCIWaveFunction.from_int_norm(cc_wf)
+        cc_as_fci = FCIWaveFunction.from_interm_norm(cc_wf)
         res.fci__cc = cc_as_fci.dist_to(fci_wf)
         res.cc__min_d_ampl = cc_wf.dist_to(res_min_d.wave_function)
         res.cc__min_d = cc_as_fci.dist_to(res_min_d.wave_function_as_fci)
@@ -629,7 +630,7 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
         res.cc__vert = cc_as_fci.dist_to(res_vert.wave_function_as_fci)
     if ci_wf is not None:
         res.has_ci = True
-        ci_as_fci = FCIWaveFunction.from_int_norm(ci_wf)
+        ci_as_fci = FCIWaveFunction.from_interm_norm(ci_wf)
         res.fci__ci = ci_as_fci.dist_to(fci_wf)
         if cc_wf is not None:
             res.ci__cc = ci_as_fci.dist_to(cc_as_fci)

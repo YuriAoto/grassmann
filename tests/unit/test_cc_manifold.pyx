@@ -8,14 +8,17 @@ import numpy as np
 import tests
 from util.variables import int_dtype
 from util.other import int_array
-#from src.coupled_cluster.manifold cimport (_term1, _term2_diag,
-#                                           SingleExc, DoubleExc, _term1_a,
-#                                           min_dist_jac_hess)
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
-from coupled_cluster.manifold_term1 cimport term1_a, term1_b, term1_aa, term1_ab
-from coupled_cluster.manifold_util cimport (
-    SingleExc, DoubleExc)
+from orbitals.orbital_space cimport FullOrbitalSpace, OrbitalSpace
+from orbitals.orbital_space import FullOrbitalSpace, OrbitalSpace
+from coupled_cluster.manifold_util cimport SingleExc, DoubleExc
+from coupled_cluster.manifold_term1 cimport (term1_a, term1_b,
+                                             term1_aa, term1_bb,
+                                             term1_ab)
+from coupled_cluster.manifold_term2 cimport (term2_diag_a, term2_diag_b,
+                                             term2_diag_aa,
+                                             term2_diag_ab)
 
 
 
@@ -114,57 +117,71 @@ class Terms2el6orbTestCase(unittest.TestCase):
                                         self.occ_b, self.exc_occ_b),
                                0.4)
     
-    # def test_term2_diag_singles(self):
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.29)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.29)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-    #                                        EXC_TYPE_B,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.53)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-    #                                        EXC_TYPE_B,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.53)
+    def test_term2_diag_singles(self):
+        cdef SingleExc single_exc
+        single_exc.i = 0
+        single_exc.a = 1
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -1.29)
+        single_exc.i = 0
+        single_exc.a = 2
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -1.29)
+        single_exc.i = 0
+        single_exc.a = 1
+        self.assertAlmostEqual(term2_diag_b(single_exc,
+                                            self.wf_cc,
+                                            self.occ_b),
+                               -1.53)
+        single_exc.i = 0
+        single_exc.a = 2
+        self.assertAlmostEqual(term2_diag_b(single_exc,
+                                            self.wf_cc,
+                                            self.occ_b),
+                               -1.53)
     
-    # def test_term2_diag_doubles(self):
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 1, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.0)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 1, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.0)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.0)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.nel,
-    #                                        self.nel),
-    #                            -1.0)
+    def test_term2_diag_doubles(self):
+        cdef DoubleExc double_exc
+        double_exc.i = 0
+        double_exc.a = 1
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.0)
+        double_exc.i = 0
+        double_exc.a = 1
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.0)
+        double_exc.i = 0
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.0)
+        double_exc.i = 0
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.0)
 
 
 @tests.category('SHORT')
@@ -337,111 +354,142 @@ class Terms3el7orbTestCase(unittest.TestCase):
                                         self.occ_b, self.exc_occ_b),
                                -0.69)
         
-    # def test_term2_diag_singles(self):
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -2.43)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 3),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -2.91)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 2),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -2.72)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 3),
-    #                                        EXC_TYPE_A,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -2.68)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 1),
-    #                                        EXC_TYPE_B,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.94)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2),
-    #                                        EXC_TYPE_B,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.94)
+    def test_term2_diag_singles(self):
+        cdef SingleExc single_exc
+        single_exc.i = 0
+        single_exc.a = 2
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -2.43)
+        single_exc.i = 0
+        single_exc.a = 3
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -2.91)
+        single_exc.i = 1
+        single_exc.a = 2
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -2.72)
+        single_exc.i = 1
+        single_exc.a = 3
+        self.assertAlmostEqual(term2_diag_a(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -2.68)
+        single_exc.i = 0
+        single_exc.a = 1
+        self.assertAlmostEqual(term2_diag_b(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -1.94)
+        single_exc.i = 0
+        single_exc.a = 2
+        self.assertAlmostEqual(term2_diag_b(single_exc,
+                                            self.wf_cc,
+                                            self.occ_a),
+                               -1.94)
     
-    # def test_term2_diag_doubles(self):
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2, 1, 3),
-    #                                        EXC_TYPE_AA,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.74)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.04)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 2, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.04)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 3, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.04)
-    #     self.assertAlmostEqual(_term2_diag(int_array(0, 3, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.04)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 2, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.01)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 2, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.01)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 3, 0, 1),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.49)
-    #     self.assertAlmostEqual(_term2_diag(int_array(1, 3, 0, 2),
-    #                                        EXC_TYPE_AB,
-    #                                        self.wf_cc,
-    #                                        self.alpha_nel,
-    #                                        self.beta_nel),
-    #                            -1.49)
+    def test_term2_diag_doubles(self):
+        cdef DoubleExc double_exc
+        double_exc.i = 0
+        double_exc.a = 2
+        double_exc.j = 1
+        double_exc.b = 3
+        self.assertAlmostEqual(term2_diag_aa(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a),
+                               -1.74)
+        double_exc.i = 0
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_aa(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a),
+                               -1.04)
+        double_exc.i = 0
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.04)
+        double_exc.i = 0
+        double_exc.a = 3
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.04)
+        double_exc.i = 0
+        double_exc.a = 3
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.04)
+        double_exc.i = 1
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.01)
+        double_exc.i = 1
+        double_exc.a = 2
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.01)
+        double_exc.i = 1
+        double_exc.a = 3
+        double_exc.j = 0
+        double_exc.b = 1
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.49)
+        double_exc.i = 1
+        double_exc.a = 3
+        double_exc.j = 0
+        double_exc.b = 2
+        self.assertAlmostEqual(term2_diag_ab(double_exc,
+                                             self.wf_cc,
+                                             self.occ_a,
+                                             self.occ_b),
+                               -1.49)
 
 
 @tests.category('SHORT', 'ESSENTIAL')
 class OccOrbitalTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.corr_orb = int_array(5, 2, 2, 0, 4, 2, 2, 0)
-        self.n_orb_before = int_array(0, 10, 15, 20, 22)
+        self.orbspace = FullOrbitalSpace(n_irrep=4)
+        self.orbspace.set_full(OrbitalSpace(dim=[10, 5, 5, 2], orb_type='R'), update=False)
+        self.orbspace.set_ref(OrbitalSpace(dim=[5, 2, 2, 0,
+                                                4, 2, 2, 0], orb_type='F'))
+##        self.orbspace.corr = [5, 2, 2, 0, 4, 2, 2, 0]
+##        self.orbspace.n_orb_before = [0, 10, 15, 20, 22]
 
     def test_alpha(self):
         cdef OccOrbital i
-        i = OccOrbital(self.corr_orb, self.n_orb_before, True)
+        i = OccOrbital(self.orbspace, True)
         self.assertEqual(i.pos_in_occ, 0)
         self.assertEqual(i.orb, 0)
         self.assertEqual(i.spirrep, 0)
@@ -481,7 +529,7 @@ class OccOrbitalTestCase(unittest.TestCase):
 
     def test_beta(self):
         cdef OccOrbital i
-        i = OccOrbital(self.corr_orb, self.n_orb_before, False)
+        i = OccOrbital(self.orbspace, False)
         self.assertEqual(i.pos_in_occ, 0)
         self.assertEqual(i.orb, 0)
         self.assertEqual(i.spirrep, 4)

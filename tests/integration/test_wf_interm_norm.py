@@ -1,4 +1,4 @@
-"""Integration tests for wave_functions.int_norm
+"""Integration tests for wave_functions.interm_norm
 
 """
 import unittest
@@ -7,7 +7,7 @@ import numpy as np
 
 from wave_functions.fci import FCIWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
-from wave_functions import int_norm, cisd
+from wave_functions import interm_norm, cisd
 import tests
 
 
@@ -19,39 +19,39 @@ class CISDgoFCIbackCISDTestCase(unittest.TestCase):
     """
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.addTypeEqualityFunc(IntermNormWaveFunction, tests.assert_wave_functions)
 
     def test_he2_631g_c2v(self):
         mol_system = 'He2__1.5__631g__C2v'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         goback_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(
-                FCIWaveFunction.from_int_norm(cc_wf), 'CISD'))
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+                FCIWaveFunction.from_interm_norm(cc_wf), 'CISD'))
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_he2_631g_d2h(self):
         mol_system = 'He2__1.5__631g__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_li2_ccpvdz_d2h(self):
         mol_system = 'Li2__5__ccpVDZ__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_li2_sto3g_d2h_allel(self):
         mol_system = 'Li2__5__sto3g__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system, allE=True))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CISD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
 
 @tests.category('SHORT')
@@ -61,40 +61,40 @@ class CCDgoFCIbackCCDTestCase(unittest.TestCase):
     """
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.addTypeEqualityFunc(IntermNormWaveFunction, tests.assert_wave_functions)
 
     def test_he2_631g_c2v(self):
         mol_system = 'He2__1.5__631g__C2v'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
         goback_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(
-                FCIWaveFunction.from_int_norm(cc_wf), 'CCD'))
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+                FCIWaveFunction.from_interm_norm(cc_wf), 'CCD'))
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_he2_631g_d2h(self):
         mol_system = 'He2__1.5__631g__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_li2_ccpvdz_d2h(self):
         mol_system = 'Li2__5__ccpVDZ__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     @unittest.skip('This is too long and requires too much memory...')
     def test_h2o_631g_c2v(self):
         mol_system = 'h2o__Req__631g__C2v'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
 
 @tests.category('SHORT')
@@ -104,43 +104,43 @@ class CCSDgoFCIbackCCSDTestCase(unittest.TestCase):
     """
     
     def setUp(self):
-        self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
+        self.addTypeEqualityFunc(IntermNormWaveFunction, tests.assert_wave_functions)
 
     def test_he2_631g_c2v(self):
         mol_system = 'He2__1.5__631g__C2v'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
         goback_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(
-                FCIWaveFunction.from_int_norm(cc_wf), 'CCSD'))
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+                FCIWaveFunction.from_interm_norm(cc_wf), 'CCSD'))
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_he2_631g_d2h(self):
         mol_system = 'He2__1.5__631g__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_li2_ccpvdz_d2h(self):
         mol_system = 'Li2__5__ccpVDZ__D2h'
         cc_wf = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
         goback_cc_wf = IntermNormWaveFunction.restrict(goback_cc_wf)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
     def test_li2_sto3g_d2h_allel(self):
         mol_system = 'Li2__5__sto3g__D2h'
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(tests.CCSD_file(mol_system, allE=True)))
-        goback_cc_wf = FCIWaveFunction.from_int_norm(cc_wf)
+        goback_cc_wf = FCIWaveFunction.from_interm_norm(cc_wf)
         tests.logger.info('in the FCI wave function:\n%s', goback_cc_wf)
         goback_cc_wf = IntermNormWaveFunction.from_projected_fci(goback_cc_wf, 'CCSD')
         tests.logger.info('cc_wf:\n%s', cc_wf)
-        for i, j in zip(cc_wf.amplitudes, goback_cc_wf.amplitudes):
+        for i, j in zip(cc_wf, goback_cc_wf):
             tests.logger.info('%f %f %f', i, j, i-j)
-        self.assertEqual(cc_wf.amplitudes, goback_cc_wf.amplitudes)
+        self.assertEqual(cc_wf, goback_cc_wf)
 
 
 @tests.category('SHORT')
@@ -158,13 +158,11 @@ class CISDvsCCSDTestCase(unittest.TestCase):
     def test_check_CCvsCI_cisd_for_H2(self):
         for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
                                          molecule='H2'):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CISD_file(H2_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CCSD_file(H2_sys))
+            wf_intN = IntermNormWaveFunction.from_Molpro(tests.CISD_file(H2_sys))
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            wf_intN = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(H2_sys))
             wf_intN.use_CISD_norm = True
-            wf_CCSD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
+            wf_CCSD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
             with self.subTest(system=H2_sys, coef='C0'):
                 self.assertAlmostEqual(wf_CCSD.C0, wf_CISD.C0, places=5)
             for irp in wf_CCSD.spirrep_blocks(restricted=True):
@@ -177,18 +175,3 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                       irrep2=irp2, coef='Cs'):
                         self.assertEqual(wf_CCSD.Csd[irp][irp2],
                                          wf_CISD.Csd[irp][irp2])
-
-    def test_check_CCvsCI_string_indices_for_H2(self):
-        for H2_sys in tests.test_systems(has_method=('CISD', 'CCSD'),
-                                         molecule='H2'):
-            wf_CI = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CISD_file(H2_sys))
-            wf_CC = int_norm.IntermNormWaveFunction.from_Molpro(
-                tests.CCSD_file(H2_sys))
-            wf_CC.use_CISD_norm = True
-            str_ind_CC = wf_CC.string_indices()
-            for Ind_CI in wf_CI.string_indices():
-                Ind_CC = next(str_ind_CC)
-                self.assertAlmostEqual(Ind_CC.C, Ind_CI.C, places=5)
-                for irp in wf_CI.spirrep_blocks(restricted=False):
-                    self.assertEqual(Ind_CC[irp].occ_orb, Ind_CI[irp].occ_orb)

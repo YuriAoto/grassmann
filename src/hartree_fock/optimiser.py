@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def Restricted_Closed_Shell_SCF(mol_geom,
+def Restricted_Closed_Shell_SCF(integrals,
+								nucl_rep,
+								n_elec,
                                 max_iter=20,
                                 grad_thresh=1.0E-5,
                                 f_out=sys.stdout,
@@ -25,14 +27,22 @@ def Restricted_Closed_Shell_SCF(mol_geom,
                                 ini_orb=None):
     """A Restricted Closed Shell SCF Roothan-Hall procedure
     
-    mol_geom (MolecularGeometry)
-        The molecular geometry, with all integrals already calculated
+
     
+    integrals (Integrals)
+		The molecular integrals in the basis
+
+    nucl_rep (float)
+		The nuclear repulsion
+
+	n_elec (int)
+	    The number of electrons (must be even)
+
     max_iter (int, optional, default=20)
-        Maximum number of iterations
+		Maximum number of iterations
     
-    grad_thresh (float, optional, default=20)
-        Threshold for the norn of the gradient
+    grad_thresh (float, optional, default=1.0E-5)
+		Threshold for the norn of the gradient
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
@@ -54,35 +64,35 @@ def Restricted_Closed_Shell_SCF(mol_geom,
     ini_orb (MolecularOrbitals, optional, default=None)
         Initial orbitals for the SCF procedure
     """
-    if mol_geom.n_elec % 2 != 0:
+    if n_elec % 2 != 0:
         raise ValueError(
             'Closed-shell RHF requires system with even number of electrons.')
     kind_of_calc = 'closed-shell RHF'
     converged = False
     hf_step = HartreeFockStep()
-    hf_step.intgrls = mol_geom.integrals
-    hf_step.n_occ = mol_geom.n_elec // 2
+    hf_step.integrals = integrals
+    hf_step.n_occ = n_elec // 2
     hf_step.n_DIIS = n_DIIS
     logger.info('Starting Closed-Shell Restricted Hartree-Fock calculation\n'
                 + 'Nuclear repulsion energy: %f\n'
                 + 'n electrons: %d\n'
                 + 'n occupied orbitals: %d\n'
                 + 'n DIIS: %d\n',
-                mol_geom.nucl_rep, mol_geom.n_elec,
+                nucl_rep, n_elec,
                 hf_step.n_occ, hf_step.n_DIIS)
     
     if ini_orb is None:
         logger.info('Using eigenvectors of orthogonalised h as starting guess')
         hf_step.orb = MolecularOrbitals.from_eig_h(
-            hf_step.intgrls,
-            mol_geom.atomic_basis_set + '(AO)')
+            hf_step.integrals,
+            integrals.basis_set + '(AO)')
     else:
         logger.info('Using orbitals given by the user as initial guess.')
         hf_step.orb = MolecularOrbitals(ini_orb)
-        hf_step.orb.orthogonalise(X=mol_geom.intgrls.X)
+        hf_step.orb.orthogonalise(X=integrals.X)
     if loglevel <= logging.DEBUG:
         assert hf_step.orb.is_orthonormal(
-            mol_geom.intgrls.S), "Orbitals are not orthonormal"
+            integrals.S), "Orbitals are not orthonormal"
     
     hf_step.i_DIIS = -1  # does this have to be inside hf_step
     hf_step.grad = np.zeros((hf_step.n_occ, len(hf_step.orb) - hf_step.n_occ,
@@ -119,7 +129,7 @@ def Restricted_Closed_Shell_SCF(mol_geom,
         
         if f_out is not None:
             f_out.write(util.fmt_HF_iter_general.format(
-                i_SCF, mol_geom.nucl_rep + hf_step.energy,
+                i_SCF, nucl_rep + hf_step.energy,
                 hf_step.gradNorm, step_type, T.elapsed_time))
             f_out.flush()
         
@@ -127,10 +137,10 @@ def Restricted_Closed_Shell_SCF(mol_geom,
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
-    
+
     hf_step.orb.name = 'RHF'
     res = OptResults(kind_of_calc)
-    res.energy = mol_geom.nucl_rep + hf_step.energy
+    res.energy = nucl_rep + hf_step.energy
     res.orbitals = hf_step.orb
     res.success = converged
     res.n_iter = i_SCF

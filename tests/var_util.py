@@ -18,11 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 _GR_MEMORY_env = os.getenv('GR_MEMORY')
-if _GR_MEMORY_env is None:
-    memory.set_total_memory(200.0)
-else:
-    memory.set_total_memory(float(_GR_MEMORY_env))
-
+memory.set_total_memory(400.0
+                        if _GR_MEMORY_env is None else
+                        float(_GR_MEMORY_env))
 
 all_test_categories = [
     'ALL',
@@ -32,6 +30,7 @@ all_test_categories = [
     'LONG',
     'VERY LONG',
     'COMPLETE',
+    'PROFILE',
     'NONE'
     ]
 

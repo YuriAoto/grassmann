@@ -40,15 +40,6 @@ double[:, :] wf_cc
 int pos_ini
     The position associated to the excitation, namely, x as above
 
-int n_irrep,
-    The number of irreducuble representations
-
-int[:] orbs_before
-int[:] corr_orb
-int[:] virt_orb
-int[:, :] alpha_string_graph
-int[:, :] beta_string_graph
-
 Similar to min_dist_jac_hess
 
 """
@@ -80,187 +71,109 @@ from coupled_cluster.manifold_term2 cimport (
 from orbitals.occ_orbitals cimport OccOrbital
 from util.variables import int_dtype
 from util.array_indices cimport n_from_rect
+from wave_functions.fci import FCIWaveFunction
+from wave_functions.fci cimport FCIWaveFunction
+from orbitals.orbital_space cimport OrbitalSpace
+from orbitals.orbital_space import OrbitalSpace
 
 
 cdef int calc_H_a(double [:] H,
                   SingleExc single_exc,
-                  double[:, :] wf,
-                  double[:, :] wf_cc,
-                  int pos_ini,
-                  int n_irrep,
-                  int[:] orbs_before,
-                  int[:] corr_orb,
-                  int[:] virt_orb,
-                  int[:, :] alpha_string_graph,
-                  int[:, :] beta_string_graph):
+                  FCIWaveFunction wf,
+                  FCIWaveFunction wf_cc,
+                  int pos_ini) except -1:
     """H[alpha->alpha, alpha->alpha:]"""
     cdef int pos
-    pos = calc_H_block_aa(H, single_exc,
-                          wf, wf_cc,
-                          pos_ini,
-                          n_irrep, orbs_before, corr_orb, virt_orb,
-                          alpha_string_graph)
-    pos += calc_H_block_ab(H[pos:], single_exc,
-                           wf, wf_cc,
-                           n_irrep, orbs_before, corr_orb, virt_orb,
-                           alpha_string_graph, beta_string_graph)
-    pos += calc_H_block_aaa(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph)
-    pos += calc_H_block_abb(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph, beta_string_graph)
-    pos += calc_H_block_aab(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph, beta_string_graph)
+    pos = calc_H_block_aa(H, single_exc, wf, wf_cc, pos_ini)
+    pos += calc_H_block_ab(H[pos:], single_exc, wf, wf_cc)
+    pos += calc_H_block_aaa(H[pos:], single_exc, wf, wf_cc)
+    pos += calc_H_block_abb(H[pos:], single_exc, wf, wf_cc)
+    pos += calc_H_block_aab(H[pos:], single_exc, wf, wf_cc)
     return pos
 
 
 cdef int calc_H_b(double [:] H,
                   SingleExc single_exc,
-                  double[:, :] wf,
-                  double[:, :] wf_cc,
-                  int pos_ini,
-                  int n_irrep,
-                  int[:] orbs_before,
-                  int[:] corr_orb,
-                  int[:] virt_orb,
-                  int[:, :] alpha_string_graph,
-                  int[:, :] beta_string_graph):
+                  FCIWaveFunction wf,
+                  FCIWaveFunction wf_cc,
+                  int pos_ini) except -1:
     """H[beta->beta, beta->beta:]"""
     cdef int pos
-    pos = calc_H_block_bb(H, single_exc,
-                          wf, wf_cc,
-                          pos_ini,
-                          n_irrep, orbs_before, corr_orb, virt_orb,
-                          beta_string_graph)
-    pos += calc_H_block_baa(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph, beta_string_graph)
-    pos += calc_H_block_bbb(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            beta_string_graph)
-    pos += calc_H_block_bab(H[pos:], single_exc,
-                            wf, wf_cc,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph, beta_string_graph)
+    pos = calc_H_block_bb(H, single_exc, wf, wf_cc, pos_ini)
+    pos += calc_H_block_baa(H[pos:], single_exc, wf, wf_cc)
+    pos += calc_H_block_bbb(H[pos:], single_exc, wf, wf_cc)
+    pos += calc_H_block_bab(H[pos:], single_exc, wf, wf_cc)
     return pos
 
 
 cdef int calc_H_aa(double [:] H,
                    DoubleExc double_exc,
-                   double[:, :] wf,
-                   double[:, :] wf_cc,
-                   int pos_ini,
-                   int n_irrep,
-                   int[:] orbs_before,
-                   int[:] corr_orb,
-                   int[:] virt_orb,
-                   int[:, :] alpha_string_graph,
-                   int[:, :] beta_string_graph):
+                   FCIWaveFunction wf,
+                   FCIWaveFunction wf_cc,
+                   int pos_ini) except -1:
     """H[(alpha,alpha)->(alpha,alpha), (alpha,alpha)->(alpha,alpha):]"""
     cdef int pos
-    pos = calc_H_block_aaaa(H, double_exc,
-                            wf, wf_cc,
-                            pos_ini,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            alpha_string_graph)
-    pos += calc_H_block_aabb(H[pos:], double_exc,
-                             wf, wf_cc,
-                             n_irrep, orbs_before, corr_orb, virt_orb,
-                             alpha_string_graph, beta_string_graph)
-    pos += calc_H_block_aaab(H[pos:], double_exc,
-                             wf, wf_cc,
-                             n_irrep, orbs_before, corr_orb, virt_orb,
-                             alpha_string_graph, beta_string_graph)
+    pos = calc_H_block_aaaa(H, double_exc, wf, wf_cc, pos_ini)
+    pos += calc_H_block_aabb(H[pos:], double_exc, wf, wf_cc)
+    pos += calc_H_block_aaab(H[pos:], double_exc, wf, wf_cc)
     return pos
 
 
 cdef int calc_H_bb(double [:] H,
                    DoubleExc double_exc,
-                   double[:, :] wf,
-                   double[:, :] wf_cc,
-                   int pos_ini,
-                   int n_irrep,
-                   int[:] orbs_before,
-                   int[:] corr_orb,
-                   int[:] virt_orb,
-                   int[:, :] alpha_string_graph,
-                   int[:, :] beta_string_graph):
+                   FCIWaveFunction wf,
+                   FCIWaveFunction wf_cc,
+                   int pos_ini) except -1:
     """H[(beta,beta)->(beta,beta), (beta,beta)->(beta,beta):]"""
     cdef int pos
-    pos = calc_H_block_bbbb(H, double_exc,
-                            wf, wf_cc,
-                            pos_ini,
-                            n_irrep, orbs_before, corr_orb, virt_orb,
-                            beta_string_graph)
-    pos += calc_H_block_bbab(H[pos:], double_exc,
-                             wf, wf_cc,
-                             n_irrep, orbs_before, corr_orb, virt_orb,
-                             alpha_string_graph, beta_string_graph)
+    pos = calc_H_block_bbbb(H, double_exc, wf, wf_cc, pos_ini)
+    pos += calc_H_block_bbab(H[pos:], double_exc, wf, wf_cc)
     return pos
 
 
 cdef int calc_H_ab(double [:] H,
                    DoubleExc double_exc,
-                   double[:, :] wf,
-                   double[:, :] wf_cc,
-                   int pos_ini,
-                   int n_irrep,
-                   int[:] orbs_before,
-                   int[:] corr_orb,
-                   int[:] virt_orb,
-                   int[:, :] alpha_string_graph,
-                   int[:, :] beta_string_graph):
+                   FCIWaveFunction wf,
+                   FCIWaveFunction wf_cc,
+                   int pos_ini) except -1:
     """H[(alpha,beta)->(alpha,beta), (alpha,beta)->(alpha,beta):]"""
-    return calc_H_block_abab(H, double_exc,
-                             wf, wf_cc,
-                             pos_ini,
-                             n_irrep, orbs_before, corr_orb, virt_orb,
-                             alpha_string_graph, beta_string_graph)
+    return calc_H_block_abab(H, double_exc, wf, wf_cc, pos_ini)
 
 
 #@cython.boundscheck(False)  # Deactivate bounds checking
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aa(double [:] H,
                          SingleExc single_exc,
-                         double[:, :] wf,
-                         double[:, :] wf_cc,
-                         int pos_ini,
-                         int n_irrep,
-                         int[:] orbs_before,
-                         int[:] corr_orb,
-                         int[:] virt_orb,
-                         int[:, :] string_graph):
+                         FCIWaveFunction wf,
+                         FCIWaveFunction wf_cc,
+                         int pos_ini) except -1:
     """H[alpha->alpha, alpha->alpha]"""
     cdef int pos = -pos_ini
     cdef int j, b, irrep, spirrep
     cdef bint occ_differ
     cdef DoubleExc double_exc
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
     double_exc.i = single_exc.i
     double_exc.a = single_exc.a
-    for irrep in range(n_irrep):
-        spirrep = irrep + n_irrep
-        double_exc.j = orbs_before[irrep]
-        for j in range(corr_orb[spirrep]):
+    for irrep in range(wf.n_irrep):
+        spirrep = irrep + wf.n_irrep
+        double_exc.j = wf.orbspace.orbs_before[irrep]
+        for j in range(wf.orbspace.corr[spirrep]):
             occ_differ = double_exc.i != double_exc.j
-            double_exc.b = orbs_before[irrep] + corr_orb[spirrep]
-            for b in range(virt_orb[spirrep]):
+            double_exc.b = wf.orbspace.first_virtual(spirrep)
+            for b in range(wf.orbspace.virt[spirrep]):
                 if pos > 0:
-                    H[pos] = term2_aa(
-                        double_exc, wf_cc, string_graph,
-                        occ_buff, exc_occ_buff)
+                    H[pos] = term2_aa(double_exc,
+                                      wf_cc.coefficients,
+                                      wf.alpha_string_graph,
+                                      occ_buff, exc_occ_buff)
                     if occ_differ and double_exc.a != double_exc.b:
-                        H[pos] += term1_aa(
-                            double_exc, wf, wf_cc, string_graph,
-                            occ_buff, exc_occ_buff)
+                        H[pos] += term1_aa(double_exc,
+                                           wf.coefficients,
+                                           wf_cc.coefficients,
+                                           wf.alpha_string_graph,
+                                           occ_buff, exc_occ_buff)
                 pos += 1
                 double_exc.b += 1
             double_exc.j += 1
@@ -271,38 +184,36 @@ cdef int calc_H_block_aa(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bb(double [:] H,
                          SingleExc single_exc,
-                         double[:, :] wf,
-                         double[:, :] wf_cc,
-                         int pos_ini,
-                         int n_irrep,
-                         int[:] orbs_before,
-                         int[:] corr_orb,
-                         int[:] virt_orb,
-                         int[:, :] string_graph):
+                         FCIWaveFunction wf,
+                         FCIWaveFunction wf_cc,
+                         int pos_ini) except -1:
     """H[beta->beta, beta->beta]"""
     cdef int pos = -pos_ini
     cdef int j, b, irrep, spirrep
     cdef bint occ_differ
     cdef DoubleExc double_exc
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     double_exc.i = single_exc.i
     double_exc.a = single_exc.a
-    for irrep in range(n_irrep):
-        spirrep = irrep + n_irrep
-        double_exc.j = orbs_before[irrep]
-        for j in range(corr_orb[spirrep]):
+    for irrep in range(wf.n_irrep):
+        spirrep = irrep + wf.n_irrep
+        double_exc.j = wf.orbspace.orbs_before[irrep]
+        for j in range(wf.orbspace.corr[spirrep]):
             occ_differ = double_exc.i != double_exc.j
-            double_exc.b = orbs_before[irrep] + corr_orb[spirrep]
-            for b in range(virt_orb[spirrep]):
+            double_exc.b = wf.orbspace.first_virtual(spirrep)
+            for b in range(wf.orbspace.virt[spirrep]):
                 if pos > 0:
-                    H[pos] = term2_bb(
-                        double_exc, wf_cc, string_graph,
-                        occ_buff, exc_occ_buff)
+                    H[pos] = term2_bb(double_exc,
+                                      wf_cc.coefficients,
+                                      wf.beta_string_graph,
+                                      occ_buff, exc_occ_buff)
                     if occ_differ and double_exc.a != double_exc.b:
-                        H[pos] += term1_bb(
-                            double_exc, wf, wf_cc, string_graph,
-                            occ_buff, exc_occ_buff)
+                        H[pos] += term1_bb(double_exc,
+                                           wf.coefficients,
+                                           wf_cc.coefficients,
+                                           wf.beta_string_graph,
+                                           occ_buff, exc_occ_buff)
                 pos += 1
                 double_exc.b += 1
             double_exc.j += 1
@@ -313,13 +224,8 @@ cdef int calc_H_block_bb(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaa(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[alpha->alpha,  (alpha,alpha)->(alpha,alpha)]"""
     cdef int pos = 0, nvirt_1
     cdef int b, b_irrep, b_spirrep
@@ -327,39 +233,42 @@ cdef int calc_H_block_aaa(double [:] H,
     cdef bint occ_differ
     cdef TripleExc triple_exc
     cdef OccOrbital j, k
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, True)
-    k = OccOrbital(corr_orb, orbs_before, True)
+    j = OccOrbital(wf.orbspace, True)
+    k = OccOrbital(wf.orbspace, True)
     k.next_()
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
         occ_differ = (triple_exc.i != triple_exc.j
                       and triple_exc.i != triple_exc.k)
-        for b_irrep in range(n_irrep):
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j.spirrep, k.spirrep], b_irrep]
             b_spirrep = b_irrep
             c_spirrep = c_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
             if b_irrep <= c_irrep:
-                for b in range(virt_orb[b_spirrep]):
-                    nvirt_1 = virt_orb[b_spirrep] - 1
-                    triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                    for c in range(virt_orb[c_spirrep]):
+                for b in range(wf.orbspace.virt[b_spirrep]):
+                    nvirt_1 = wf.orbspace.virt[b_spirrep] - 1
+                    triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                    for c in range(wf.orbspace.virt[c_spirrep]):
                         if b_irrep < c_irrep or b < c:
-                            H[pos] = term2_aaa(
-                                triple_exc, wf_cc, string_graph,
-                                occ_buff, exc_occ_buff)
+                            H[pos] = term2_aaa(triple_exc,
+                                               wf_cc.coefficients,
+                                               wf.alpha_string_graph,
+                                               occ_buff, exc_occ_buff)
                             if (occ_differ
                                 and triple_exc.a != triple_exc.b
                                 and triple_exc.a != triple_exc.c
                             ):
-                                H[pos] += term1_aaa(
-                                    triple_exc, wf, wf_cc, string_graph,
-                                    occ_buff, exc_occ_buff)
+                                H[pos] += term1_aaa(triple_exc,
+                                                    wf.coefficients,
+                                                    wf_cc.coefficients,
+                                                    wf.alpha_string_graph,
+                                                    occ_buff, exc_occ_buff)
                             pos += 1
                         triple_exc.c += 1
                     triple_exc.b += 1
@@ -377,13 +286,8 @@ cdef int calc_H_block_aaa(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbb(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[beta->beta,  (beta,beta)->(beta,beta)]"""
     cdef int pos = 0, nvirt_1
     cdef int b, b_irrep, b_spirrep
@@ -392,41 +296,44 @@ cdef int calc_H_block_bbb(double [:] H,
     cdef TripleExc triple_exc
     cdef OccOrbital j, k
     cdef int j_irrep, k_irrep
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, False)
-    k = OccOrbital(corr_orb, orbs_before, False)
+    j = OccOrbital(wf.orbspace, False)
+    k = OccOrbital(wf.orbspace, False)
     k.next_()
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
-        j_irrep = j.spirrep - n_irrep
-        k_irrep = k.spirrep - n_irrep
+        j_irrep = j.spirrep - wf.n_irrep
+        k_irrep = k.spirrep - wf.n_irrep
         occ_differ = (triple_exc.i != triple_exc.j
                       and triple_exc.i != triple_exc.k)
-        for b_irrep in range(n_irrep):
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j_irrep, k_irrep], b_irrep]
             b_spirrep = b_irrep
             c_spirrep = c_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
             if b_irrep <= c_irrep:
-                for b in range(virt_orb[b_spirrep]):
-                    nvirt_1 = virt_orb[b_spirrep] - 1
-                    triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                    for c in range(virt_orb[c_spirrep]):
+                for b in range(wf.orbspace.virt[b_spirrep]):
+                    nvirt_1 = wf.orbspace.virt[b_spirrep] - 1
+                    triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                    for c in range(wf.orbspace.virt[c_spirrep]):
                         if b_irrep < c_irrep or b < c:
-                            H[pos] = term2_bbb(
-                                triple_exc, wf_cc, string_graph,
-                                occ_buff, exc_occ_buff)
+                            H[pos] = term2_bbb(triple_exc,
+                                               wf_cc.coefficients,
+                                               wf.beta_string_graph,
+                                               occ_buff, exc_occ_buff)
                             if (occ_differ
                                 and triple_exc.a != triple_exc.b
                                 and triple_exc.a != triple_exc.c
                             ):
-                                H[pos] += term1_bbb(
-                                    triple_exc, wf, wf_cc, string_graph,
-                                    occ_buff, exc_occ_buff)
+                                H[pos] += term1_bbb(triple_exc,
+                                                    wf.coefficients,
+                                                    wf_cc.coefficients,
+                                                    wf.beta_string_graph,
+                                                    occ_buff, exc_occ_buff)
                             pos += 1
                         triple_exc.c += 1
                     triple_exc.b += 1
@@ -444,14 +351,9 @@ cdef int calc_H_block_bbb(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaaa(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int pos_ini,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc,
+                           int pos_ini) except -1:
     """H[(alpha,alpha)->(alpha,alpha), (alpha,alpha)->(alpha,alpha)]"""
     cdef int pos = -pos_ini
     cdef int c, c_irrep
@@ -459,14 +361,14 @@ cdef int calc_H_block_aaaa(double [:] H,
     cdef bint occ_differ, cd_same_irrep
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, True)
-    l = OccOrbital(corr_orb, orbs_before, True)
+    k = OccOrbital(wf.orbspace, True)
+    l = OccOrbital(wf.orbspace, True)
     l.next_()
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
@@ -475,27 +377,30 @@ cdef int calc_H_block_aaaa(double [:] H,
                       and quadruple_exc.i != quadruple_exc.l
                       and quadruple_exc.j != quadruple_exc.k
                       and quadruple_exc.j != quadruple_exc.l)
-        for c_irrep in range(n_irrep):
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k.spirrep, l.spirrep], c_irrep]
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_irrep]
+            quadruple_exc.c = wf.orbspace.first_virtual(c_irrep)
             if c_irrep <= d_irrep:
-                for c in range(virt_orb[c_irrep]):
-                    quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_irrep]
-                    for d in range(virt_orb[d_irrep]):
+                for c in range(wf.orbspace.virt[c_irrep]):
+                    quadruple_exc.d = wf.orbspace.first_virtual(d_irrep)
+                    for d in range(wf.orbspace.virt[d_irrep]):
                         if c_irrep < d_irrep or c < d:
                             if pos > 0:
-                                H[pos] = term2_aaaa(
-                                    quadruple_exc, wf_cc, string_graph,
-                                    occ_buff, exc_occ_buff)
+                                H[pos] = term2_aaaa(quadruple_exc,
+                                                    wf_cc.coefficients,
+                                                    wf.alpha_string_graph,
+                                                    occ_buff, exc_occ_buff)
                                 if (occ_differ
                                     and quadruple_exc.a != quadruple_exc.c
                                     and quadruple_exc.a != quadruple_exc.d
                                     and quadruple_exc.b != quadruple_exc.c
                                     and quadruple_exc.b != quadruple_exc.d
                                 ):
-                                    H[pos] += term1_aaaa(
-                                        quadruple_exc, wf, wf_cc, string_graph,
-                                        occ_buff, exc_occ_buff)
+                                    H[pos] += term1_aaaa(quadruple_exc,
+                                                         wf.coefficients,
+                                                         wf_cc.coefficients,
+                                                         wf.alpha_string_graph,
+                                                         occ_buff, exc_occ_buff)
                             pos += 1
                         quadruple_exc.d += 1
                     quadruple_exc.c += 1
@@ -513,14 +418,9 @@ cdef int calc_H_block_aaaa(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbbb(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int pos_ini,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc,
+                           int pos_ini) except -1:
     """H[(beta,beta)->(beta,beta),  (beta,beta)->(beta,beta)]"""
     cdef int pos = -pos_ini
     cdef int c, c_irrep, c_spirrep
@@ -529,47 +429,50 @@ cdef int calc_H_block_bbbb(double [:] H,
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
     cdef int k_irrep, l_irrep
-    cdef int [:] occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff = np.empty(string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, False)
-    l = OccOrbital(corr_orb, orbs_before, False)
+    k = OccOrbital(wf.orbspace, False)
+    l = OccOrbital(wf.orbspace, False)
     l.next_()
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
     while l.alive:
-        k_irrep = k.spirrep - n_irrep
-        l_irrep = l.spirrep - n_irrep
+        k_irrep = k.spirrep - wf.n_irrep
+        l_irrep = l.spirrep - wf.n_irrep
         occ_differ = (quadruple_exc.i != quadruple_exc.k
                       and quadruple_exc.i != quadruple_exc.l
                       and quadruple_exc.j != quadruple_exc.k
                       and quadruple_exc.j != quadruple_exc.l)
-        for c_irrep in range(n_irrep):
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k_irrep, l_irrep], c_irrep]
-            c_spirrep = c_irrep + n_irrep
-            d_spirrep = d_irrep + n_irrep
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
+            c_spirrep = c_irrep + wf.n_irrep
+            d_spirrep = d_irrep + wf.n_irrep
+            quadruple_exc.c = wf.orbspace.first_virtual(c_spirrep)
             if c_irrep <= d_irrep:
-                for c in range(virt_orb[c_spirrep]):
-                    quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_spirrep]
-                    for d in range(virt_orb[d_spirrep]):
+                for c in range(wf.orbspace.virt[c_spirrep]):
+                    quadruple_exc.d = wf.orbspace.first_virtual(d_spirrep)
+                    for d in range(wf.orbspace.virt[d_spirrep]):
                         if c_irrep < d_irrep or c < d:
                             if pos > 0:
-                                H[pos] = term2_bbbb(
-                                    quadruple_exc, wf_cc, string_graph,
-                                    occ_buff, exc_occ_buff)
+                                H[pos] = term2_bbbb(quadruple_exc,
+                                                    wf_cc.coefficients,
+                                                    wf.beta_string_graph,
+                                                    occ_buff, exc_occ_buff)
                                 if (occ_differ
                                     and quadruple_exc.a != quadruple_exc.c
                                     and quadruple_exc.a != quadruple_exc.d
                                     and quadruple_exc.b != quadruple_exc.c
                                     and quadruple_exc.b != quadruple_exc.d
                                 ):
-                                    H[pos] += term1_bbbb(
-                                        quadruple_exc, wf, wf_cc, string_graph,
-                                        occ_buff, exc_occ_buff)
+                                    H[pos] += term1_bbbb(quadruple_exc,
+                                                         wf.coefficients,
+                                                         wf_cc.coefficients,
+                                                         wf.beta_string_graph,
+                                                         occ_buff, exc_occ_buff)
                             pos += 1
                         quadruple_exc.d += 1
                     quadruple_exc.c += 1
@@ -587,41 +490,35 @@ cdef int calc_H_block_bbbb(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_ab(double [:] H,
                          SingleExc single_exc,
-                         double[:, :] wf,
-                         double[:, :] wf_cc,
-                         int n_irrep,
-                         int[:] orbs_before,
-                         int[:] corr_orb,
-                         int[:] virt_orb,
-                         int[:, :] alpha_string_graph,
-                         int[:, :] beta_string_graph):
+                         FCIWaveFunction wf,
+                         FCIWaveFunction wf_cc) except -1:
     """H[alpha->alpha, beta->beta]"""
     cdef int pos = 0
     cdef int j, b, irrep, spirrep
     cdef DoubleExc double_exc
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     double_exc.i = single_exc.i
     double_exc.a = single_exc.a
-    for irrep in range(n_irrep):
-        spirrep = irrep + n_irrep
-        double_exc.j = orbs_before[irrep]
-        for j in range(corr_orb[spirrep]):
-            double_exc.b = orbs_before[irrep] + corr_orb[spirrep]
-            for b in range(virt_orb[spirrep]):
+    for irrep in range(wf.n_irrep):
+        spirrep = irrep + wf.n_irrep
+        double_exc.j = wf.orbspace.orbs_before[irrep]
+        for j in range(wf.orbspace.corr[spirrep]):
+            double_exc.b = wf.orbspace.first_virtual(spirrep)
+            for b in range(wf.orbspace.virt[spirrep]):
                 H[pos] = term2_ab(double_exc,
-                                  wf_cc,
-                                  alpha_string_graph,
-                                  beta_string_graph,
+                                  wf_cc.coefficients,
+                                  wf.alpha_string_graph,
+                                  wf.beta_string_graph,
                                   occ_buff_a, exc_occ_buff_a,
                                   occ_buff_b, exc_occ_buff_b)
                 H[pos] += term1_ab(double_exc,
-                                   wf,
-                                   wf_cc,
-                                   alpha_string_graph,
-                                   beta_string_graph,
+                                   wf.coefficients,
+                                   wf_cc.coefficients,
+                                   wf.alpha_string_graph,
+                                   wf.beta_string_graph,
                                    occ_buff_a, exc_occ_buff_a,
                                    occ_buff_b, exc_occ_buff_b)
                 pos += 1
@@ -634,14 +531,8 @@ cdef int calc_H_block_ab(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_abb(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] alpha_string_graph,
-                          int[:, :] beta_string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[alpha->alpha,  (beta,beta)->(beta,beta)]"""
     cdef int pos = 0, nvirt_1
     cdef int b, b_irrep, b_spirrep
@@ -649,41 +540,41 @@ cdef int calc_H_block_abb(double [:] H,
     cdef TripleExc triple_exc
     cdef OccOrbital j, k
     cdef int j_irrep, k_irrep
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, False)
-    k = OccOrbital(corr_orb, orbs_before, False)
+    j = OccOrbital(wf.orbspace, False)
+    k = OccOrbital(wf.orbspace, False)
     k.next_()
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
-        j_irrep = j.spirrep - n_irrep
-        k_irrep = k.spirrep - n_irrep
-        for b_irrep in range(n_irrep):
+        j_irrep = j.spirrep - wf.n_irrep
+        k_irrep = k.spirrep - wf.n_irrep
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j_irrep, k_irrep], b_irrep]
-            b_spirrep = b_irrep + n_irrep
-            c_spirrep = c_irrep + n_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
+            b_spirrep = b_irrep + wf.n_irrep
+            c_spirrep = c_irrep + wf.n_irrep
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
             if b_irrep <= c_irrep:
-                for b in range(virt_orb[b_spirrep]):
-                    triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                    for c in range(virt_orb[c_spirrep]):
+                for b in range(wf.orbspace.virt[b_spirrep]):
+                    triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                    for c in range(wf.orbspace.virt[c_spirrep]):
                         if b_irrep < c_irrep or b < c:
                             H[pos] = term2_abb(triple_exc,
-                                               wf_cc,
-                                               alpha_string_graph,
-                                               beta_string_graph,
+                                               wf_cc.coefficients,
+                                               wf.alpha_string_graph,
+                                               wf.beta_string_graph,
                                                occ_buff_a, exc_occ_buff_a,
                                                occ_buff_b, exc_occ_buff_b)
                             H[pos] += term1_abb(triple_exc,
-                                                wf,
-                                                wf_cc,
-                                                alpha_string_graph,
-                                                beta_string_graph,
+                                                wf.coefficients,
+                                                wf_cc.coefficients,
+                                                wf.alpha_string_graph,
+                                                wf.beta_string_graph,
                                                 occ_buff_a, exc_occ_buff_a,
                                                 occ_buff_b, exc_occ_buff_b)
                             pos += 1
@@ -703,53 +594,47 @@ cdef int calc_H_block_abb(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_baa(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] alpha_string_graph,
-                          int[:, :] beta_string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[beta->beta,  (alpha,alpha)->(alpha,alpha)]"""
     cdef int pos = 0
     cdef int b, b_irrep, b_spirrep
     cdef int c, c_irrep, c_spirrep
     cdef TripleExc triple_exc
     cdef OccOrbital j, k
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, True)
-    k = OccOrbital(corr_orb, orbs_before, True)
+    j = OccOrbital(wf.orbspace, True)
+    k = OccOrbital(wf.orbspace, True)
     k.next_()
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
-        for b_irrep in range(n_irrep):
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j.spirrep, k.spirrep], b_irrep]
             b_spirrep = b_irrep
             c_spirrep = c_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
             if b_irrep <= c_irrep:
-                for b in range(virt_orb[b_spirrep]):
-                    triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                    for c in range(virt_orb[c_spirrep]):
+                for b in range(wf.orbspace.virt[b_spirrep]):
+                    triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                    for c in range(wf.orbspace.virt[c_spirrep]):
                         if b_irrep < c_irrep or b < c:
                             H[pos] = term2_baa(triple_exc,
-                                               wf_cc,
-                                               alpha_string_graph,
-                                               beta_string_graph,
+                                               wf_cc.coefficients,
+                                               wf.alpha_string_graph,
+                                               wf.beta_string_graph,
                                                occ_buff_a, exc_occ_buff_a,
                                                occ_buff_b, exc_occ_buff_b)
                             H[pos] += term1_baa(triple_exc,
-                                                wf,
-                                                wf_cc,
-                                                alpha_string_graph,
-                                                beta_string_graph,
+                                                wf.coefficients,
+                                                wf_cc.coefficients,
+                                                wf.alpha_string_graph,
+                                                wf.beta_string_graph,
                                                 occ_buff_a, exc_occ_buff_a,
                                                 occ_buff_b, exc_occ_buff_b)
                             pos += 1
@@ -769,14 +654,8 @@ cdef int calc_H_block_baa(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aabb(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] alpha_string_graph,
-                           int[:, :] beta_string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc) except -1:
     """H[(alpha,alpha)->(alpha,alpha),  (beta,beta)->(beta,beta)]"""
     cdef int pos = 0
     cdef int c, c_irrep, c_spirrep
@@ -784,43 +663,43 @@ cdef int calc_H_block_aabb(double [:] H,
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
     cdef int k_irrep, l_irrep
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, False)
-    l = OccOrbital(corr_orb, orbs_before, False)
+    k = OccOrbital(wf.orbspace, False)
+    l = OccOrbital(wf.orbspace, False)
     l.next_()
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
     while l.alive:
-        k_irrep = k.spirrep - n_irrep
-        l_irrep = l.spirrep - n_irrep
-        for c_irrep in range(n_irrep):
+        k_irrep = k.spirrep - wf.n_irrep
+        l_irrep = l.spirrep - wf.n_irrep
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k_irrep, l_irrep], c_irrep]
-            c_spirrep = c_irrep + n_irrep
-            d_spirrep = d_irrep + n_irrep
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
+            c_spirrep = c_irrep + wf.n_irrep
+            d_spirrep = d_irrep + wf.n_irrep
+            quadruple_exc.c = wf.orbspace.first_virtual(c_spirrep)
             if c_irrep <= d_irrep:
-                for c in range(virt_orb[c_spirrep]):
-                    quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_spirrep]
-                    for d in range(virt_orb[d_spirrep]):
+                for c in range(wf.orbspace.virt[c_spirrep]):
+                    quadruple_exc.d = wf.orbspace.first_virtual(d_spirrep)
+                    for d in range(wf.orbspace.virt[d_spirrep]):
                         if c_irrep < d_irrep or c < d:
                             H[pos] = term2_aabb(quadruple_exc,
-                                                wf_cc,
-                                                alpha_string_graph,
-                                                beta_string_graph,
+                                                wf_cc.coefficients,
+                                                wf.alpha_string_graph,
+                                                wf.beta_string_graph,
                                                 occ_buff_a, exc_occ_buff_a,
                                                 occ_buff_b, exc_occ_buff_b)
                             H[pos] += term1_aabb(quadruple_exc,
-                                                 wf,
-                                                 wf_cc,
-                                                 alpha_string_graph,
-                                                 beta_string_graph,
+                                                 wf.coefficients,
+                                                 wf_cc.coefficients,
+                                                 wf.alpha_string_graph,
+                                                 wf.beta_string_graph,
                                                  occ_buff_a, exc_occ_buff_a,
                                                  occ_buff_b, exc_occ_buff_b)
                             pos += 1
@@ -840,14 +719,8 @@ cdef int calc_H_block_aabb(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aab(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] alpha_string_graph,
-                          int[:, :] beta_string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[alpha->alpha, (alpha,beta)->(alpha,beta)]"""
     cdef int pos = 0
     cdef int b, b_irrep, b_spirrep
@@ -856,39 +729,39 @@ cdef int calc_H_block_aab(double [:] H,
     cdef OccOrbital j, k
     cdef int k_irrep
     cdef bint occ_differ
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, True)
-    k = OccOrbital(corr_orb, orbs_before, False)
+    j = OccOrbital(wf.orbspace, True)
+    k = OccOrbital(wf.orbspace, False)
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
-        k_irrep = k.spirrep - n_irrep
+        k_irrep = k.spirrep - wf.n_irrep
         occ_differ = triple_exc.i != triple_exc.j
-        for b_irrep in range(n_irrep):
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j.spirrep, k_irrep], b_irrep]
             b_spirrep = b_irrep
-            c_spirrep = c_irrep + n_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
-            for b in range(virt_orb[b_spirrep]):
-                triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                for c in range(virt_orb[c_spirrep]):
+            c_spirrep = c_irrep + wf.n_irrep
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
+            for b in range(wf.orbspace.virt[b_spirrep]):
+                triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                for c in range(wf.orbspace.virt[c_spirrep]):
                     H[pos] = term2_aab(triple_exc,
-                                       wf_cc,
-                                       alpha_string_graph,
-                                       beta_string_graph,
+                                       wf_cc.coefficients,
+                                       wf.alpha_string_graph,
+                                       wf.beta_string_graph,
                                        occ_buff_a, exc_occ_buff_a,
                                        occ_buff_b, exc_occ_buff_b)
                     if occ_differ and triple_exc.a != triple_exc.b:
                         H[pos] += term1_aab(triple_exc,
-                                            wf,
-                                            wf_cc,
-                                            alpha_string_graph,
-                                            beta_string_graph,
+                                            wf.coefficients,
+                                            wf_cc.coefficients,
+                                            wf.alpha_string_graph,
+                                            wf.beta_string_graph,
                                             occ_buff_a, exc_occ_buff_a,
                                             occ_buff_b, exc_occ_buff_b)
                     pos += 1
@@ -907,14 +780,8 @@ cdef int calc_H_block_aab(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bab(double [:] H,
                           SingleExc single_exc,
-                          double[:, :] wf,
-                          double[:, :] wf_cc,
-                          int n_irrep,
-                          int[:] orbs_before,
-                          int[:] corr_orb,
-                          int[:] virt_orb,
-                          int[:, :] alpha_string_graph,
-                          int[:, :] beta_string_graph):
+                          FCIWaveFunction wf,
+                          FCIWaveFunction wf_cc) except -1:
     """H[beta->beta,  (alpha,beta)->(alpha,beta)]"""
     cdef int pos = 0
     cdef int b, b_irrep, b_spirrep
@@ -923,39 +790,39 @@ cdef int calc_H_block_bab(double [:] H,
     cdef OccOrbital j, k
     cdef int k_irrep
     cdef bint occ_differ
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     triple_exc.i = single_exc.i
     triple_exc.a = single_exc.a
-    j = OccOrbital(corr_orb, orbs_before, True)
-    k = OccOrbital(corr_orb, orbs_before, False)
+    j = OccOrbital(wf.orbspace, True)
+    k = OccOrbital(wf.orbspace, False)
     triple_exc.j = j.orb
     triple_exc.k = k.orb
     while k.alive:
-        k_irrep = k.spirrep - n_irrep
+        k_irrep = k.spirrep - wf.n_irrep
         occ_differ = triple_exc.i != triple_exc.k
-        for b_irrep in range(n_irrep):
+        for b_irrep in range(wf.n_irrep):
             c_irrep = irrep_product[irrep_product[j.spirrep, k_irrep], b_irrep]
             b_spirrep = b_irrep
-            c_spirrep = c_irrep + n_irrep
-            triple_exc.b = orbs_before[b_irrep] + corr_orb[b_spirrep]
-            for b in range(virt_orb[b_spirrep]):
-                triple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-                for c in range(virt_orb[c_spirrep]):
+            c_spirrep = c_irrep + wf.n_irrep
+            triple_exc.b = wf.orbspace.first_virtual(b_spirrep)
+            for b in range(wf.orbspace.virt[b_spirrep]):
+                triple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+                for c in range(wf.orbspace.virt[c_spirrep]):
                     H[pos] = term2_bab(triple_exc,
-                                       wf_cc,
-                                       alpha_string_graph,
-                                       beta_string_graph,
+                                       wf_cc.coefficients,
+                                       wf.alpha_string_graph,
+                                       wf.beta_string_graph,
                                        occ_buff_a, exc_occ_buff_a,
                                        occ_buff_b, exc_occ_buff_b)
                     if occ_differ and triple_exc.a != triple_exc.c:
                         H[pos] += term1_bab(triple_exc,
-                                            wf,
-                                            wf_cc,
-                                            alpha_string_graph,
-                                            beta_string_graph,
+                                            wf.coefficients,
+                                            wf_cc.coefficients,
+                                            wf.alpha_string_graph,
+                                            wf.beta_string_graph,
                                             occ_buff_a, exc_occ_buff_a,
                                             occ_buff_b, exc_occ_buff_b)
                     pos += 1
@@ -974,14 +841,8 @@ cdef int calc_H_block_bab(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaab(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] alpha_string_graph,
-                           int[:, :] beta_string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc) except -1:
     """H[(alpha,alpha)->(alpha,alpha),  (alpha,beta)->(alpha,beta)]"""
     cdef int pos = 0
     cdef int c, c_irrep, c_spirrep
@@ -990,34 +851,34 @@ cdef int calc_H_block_aaab(double [:] H,
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
     cdef int l_irrep
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, True)
-    l = OccOrbital(corr_orb, orbs_before, False)
+    k = OccOrbital(wf.orbspace, True)
+    l = OccOrbital(wf.orbspace, False)
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
     while l.alive:
-        l_irrep = l.spirrep - n_irrep
+        l_irrep = l.spirrep - wf.n_irrep
         occ_differ = (quadruple_exc.i != quadruple_exc.k
                       and quadruple_exc.j != quadruple_exc.k)
-        for c_irrep in range(n_irrep):
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k.spirrep, l_irrep], c_irrep]
             c_spirrep = c_irrep
-            d_spirrep = d_irrep + n_irrep
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-            for c in range(virt_orb[c_spirrep]):
-                quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_spirrep]
-                for d in range(virt_orb[d_spirrep]):
+            d_spirrep = d_irrep + wf.n_irrep
+            quadruple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+            for c in range(wf.orbspace.virt[c_spirrep]):
+                quadruple_exc.d = wf.orbspace.first_virtual(d_spirrep)
+                for d in range(wf.orbspace.virt[d_spirrep]):
                     H[pos] = term2_aaab(quadruple_exc,
-                                        wf_cc,
-                                        alpha_string_graph,
-                                        beta_string_graph,
+                                        wf_cc.coefficients,
+                                        wf.alpha_string_graph,
+                                        wf.beta_string_graph,
                                         occ_buff_a, exc_occ_buff_a,
                                         occ_buff_b, exc_occ_buff_b)
                     if (occ_differ
@@ -1025,10 +886,10 @@ cdef int calc_H_block_aaab(double [:] H,
                         and quadruple_exc.b != quadruple_exc.c
                     ):
                         H[pos] += term1_aaab(quadruple_exc,
-                                             wf,
-                                             wf_cc,
-                                             alpha_string_graph,
-                                             beta_string_graph,
+                                             wf.coefficients,
+                                             wf_cc.coefficients,
+                                             wf.alpha_string_graph,
+                                             wf.beta_string_graph,
                                              occ_buff_a, exc_occ_buff_a,
                                              occ_buff_b, exc_occ_buff_b)
                     pos += 1
@@ -1047,14 +908,8 @@ cdef int calc_H_block_aaab(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbab(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] alpha_string_graph,
-                           int[:, :] beta_string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc) except -1:
     """H[(beta,beta)->(beta,beta),  (alpha,beta)->(alpha,beta)]"""
     cdef int pos = 0
     cdef int c, c_irrep, c_spirrep
@@ -1063,34 +918,34 @@ cdef int calc_H_block_bbab(double [:] H,
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
     cdef int l_irrep
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, True)
-    l = OccOrbital(corr_orb, orbs_before, False)
+    k = OccOrbital(wf.orbspace, True)
+    l = OccOrbital(wf.orbspace, False)
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
     while l.alive:
-        l_irrep = l.spirrep - n_irrep
+        l_irrep = l.spirrep - wf.n_irrep
         occ_differ = (quadruple_exc.i != quadruple_exc.l
                       and quadruple_exc.j != quadruple_exc.l)
-        for c_irrep in range(n_irrep):
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k.spirrep, l_irrep], c_irrep]
             c_spirrep = c_irrep
-            d_spirrep = d_irrep + n_irrep
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-            for c in range(virt_orb[c_spirrep]):
-                quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_spirrep]
-                for d in range(virt_orb[d_spirrep]):
+            d_spirrep = d_irrep + wf.n_irrep
+            quadruple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+            for c in range(wf.orbspace.virt[c_spirrep]):
+                quadruple_exc.d = wf.orbspace.first_virtual(d_spirrep)
+                for d in range(wf.orbspace.virt[d_spirrep]):
                     H[pos] = term2_bbab(quadruple_exc,
-                                        wf_cc,
-                                        alpha_string_graph,
-                                        beta_string_graph,
+                                        wf_cc.coefficients,
+                                        wf.alpha_string_graph,
+                                        wf.beta_string_graph,
                                         occ_buff_a, exc_occ_buff_a,
                                         occ_buff_b, exc_occ_buff_b)
                     if (occ_differ
@@ -1098,10 +953,10 @@ cdef int calc_H_block_bbab(double [:] H,
                         and quadruple_exc.b != quadruple_exc.d
                     ):
                         H[pos] += term1_bbab(quadruple_exc,
-                                             wf,
-                                             wf_cc,
-                                             alpha_string_graph,
-                                             beta_string_graph,
+                                             wf.coefficients,
+                                             wf_cc.coefficients,
+                                             wf.alpha_string_graph,
+                                             wf.beta_string_graph,
                                              occ_buff_a, exc_occ_buff_a,
                                              occ_buff_b, exc_occ_buff_b)
                     pos += 1
@@ -1120,15 +975,9 @@ cdef int calc_H_block_bbab(double [:] H,
 #@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_abab(double [:] H,
                            DoubleExc double_exc,
-                           double[:, :] wf,
-                           double[:, :] wf_cc,
-                           int pos_ini,
-                           int n_irrep,
-                           int[:] orbs_before,
-                           int[:] corr_orb,
-                           int[:] virt_orb,
-                           int[:, :] alpha_string_graph,
-                           int[:, :] beta_string_graph):
+                           FCIWaveFunction wf,
+                           FCIWaveFunction wf_cc,
+                           int pos_ini) except -1:
     """H[(alpha,beta)->(alpha,beta), (alpha,beta)->(alpha,beta)]"""
     cdef int pos = -pos_ini
     cdef int c, c_irrep, c_spirrep
@@ -1137,35 +986,35 @@ cdef int calc_H_block_abab(double [:] H,
     cdef QuadrupleExc quadruple_exc
     cdef OccOrbital k, l
     cdef int l_irrep
-    cdef int [:] occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_a = np.empty(alpha_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
-    cdef int [:] exc_occ_buff_b = np.empty(beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_a = np.empty(wf.alpha_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
+    cdef int [:] exc_occ_buff_b = np.empty(wf.beta_string_graph.shape[1], dtype=int_dtype)
     quadruple_exc.i = double_exc.i
     quadruple_exc.a = double_exc.a
     quadruple_exc.j = double_exc.j
     quadruple_exc.b = double_exc.b
-    k = OccOrbital(corr_orb, orbs_before, True)
-    l = OccOrbital(corr_orb, orbs_before, False)
+    k = OccOrbital(wf.orbspace, True)
+    l = OccOrbital(wf.orbspace, False)
     quadruple_exc.k = k.orb
     quadruple_exc.l = l.orb
     while l.alive:
-        l_irrep = l.spirrep - n_irrep
+        l_irrep = l.spirrep - wf.n_irrep
         occ_differ = (quadruple_exc.i != quadruple_exc.k
                       and quadruple_exc.j != quadruple_exc.l)
-        for c_irrep in range(n_irrep):
+        for c_irrep in range(wf.n_irrep):
             d_irrep = irrep_product[irrep_product[k.spirrep, l_irrep], c_irrep]
             c_spirrep = c_irrep
-            d_spirrep = d_irrep + n_irrep
-            quadruple_exc.c = orbs_before[c_irrep] + corr_orb[c_spirrep]
-            for c in range(virt_orb[c_spirrep]):
-                quadruple_exc.d = orbs_before[d_irrep] + corr_orb[d_spirrep]
-                for d in range(virt_orb[d_spirrep]):
+            d_spirrep = d_irrep + wf.n_irrep
+            quadruple_exc.c = wf.orbspace.first_virtual(c_spirrep)
+            for c in range(wf.orbspace.virt[c_spirrep]):
+                quadruple_exc.d = wf.orbspace.first_virtual(d_spirrep)
+                for d in range(wf.orbspace.virt[d_spirrep]):
                     if pos > 0:
                         H[pos] = term2_abab(quadruple_exc,
-                                            wf_cc,
-                                            alpha_string_graph,
-                                            beta_string_graph,
+                                            wf_cc.coefficients,
+                                            wf.alpha_string_graph,
+                                            wf.beta_string_graph,
                                             occ_buff_a, exc_occ_buff_a,
                                             occ_buff_b, exc_occ_buff_b)
                         if (occ_differ
@@ -1173,10 +1022,10 @@ cdef int calc_H_block_abab(double [:] H,
                             and quadruple_exc.b != quadruple_exc.d
                         ):
                             H[pos] += term1_abab(quadruple_exc,
-                                                 wf,
-                                                 wf_cc,
-                                                 alpha_string_graph,
-                                                 beta_string_graph,
+                                                 wf.coefficients,
+                                                 wf_cc.coefficients,
+                                                 wf.alpha_string_graph,
+                                                 wf.beta_string_graph,
                                                  occ_buff_a, exc_occ_buff_a,
                                                  occ_buff_b, exc_occ_buff_b)
                     pos += 1
