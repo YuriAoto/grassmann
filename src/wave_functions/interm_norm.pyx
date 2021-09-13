@@ -1125,7 +1125,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         self.amplitudes = np.zeros(len(self))
         return 0
     
-    def update_amplitudes(self, double[:] z, int start=0, mode='direct'):
+    def update_amplitudes(self, double[:] z, Py_ssize_t start=0, mode='direct'):
         """Update the amplitudes by z
         
         Parameters:
@@ -1146,9 +1146,9 @@ cdef class IntermNormWaveFunction(WaveFunction):
         """
         cdef int i
         if mode == 'direct':
-            if len(z) != len(self):
+            if <Py_ssize_t> len(z) != len(self):
                 raise ValueError('Update vector does not have same length as amplitude.')
-            if start + len(z) > len(self):
+            if start + <Py_ssize_t> len(z) > len(self):
                 raise ValueError('Update vector is too large.')
             for i in range(len(z)):
                 self.amplitudes[start+i] += z[i]
