@@ -803,3 +803,63 @@ class NormTestCase(unittest.TestCase):
             S += det.c**2
         S = sqrt(S)
         self.assertAlmostEqual(S, 1.0)
+
+
+@tests.category('SHORT')
+class DistToRefTestCase(unittest.TestCase):
+
+    def test1(self):
+        molsys = 'Li2__5__sto3g__D2h'
+        the_dist = 0.31643502499713894
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+    def test2(self):
+        molsys = 'Li2__5__sto3g__D2h'
+        the_dist = 0.3168706871705199
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+    def test3(self):
+        molsys = 'h2o__Req__631g__C2v'
+        the_dist = 0.21731822858920816
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+    def test4(self):
+        molsys = 'h2o__Req__631g__C2v'
+        the_dist = 0.21729120194062237
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+    def test5(self):
+        molsys = 'Be__at__sto3g__D2h'
+        the_dist = 0.3421718529502774
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+    def test6(self):
+        molsys = 'Be__at__sto3g__D2h'
+        the_dist = 0.34127876312963934
+        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        d = wf.dist_to_ref()
+        self.assertAlmostEqual(d, the_dist)
+        wf.normalise(mode='intermediate')
+        self.assertAlmostEqual(d, wf.dist_to_ref())
+
+        

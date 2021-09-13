@@ -9,15 +9,15 @@ History:
 Yuri
 """
 import logging
+
+from libc.math cimport sqrt
+
 import numpy as np
 from numpy import linalg
 from scipy.linalg import lu, norm
 from scipy.special import comb
-import copy
-import math
 
 from input_output import molpro
-
 from util.array_indices import n_from_rect
 from util.variables import int_dtype
 from util.memory import mem_of_floats
@@ -1019,7 +1019,7 @@ cdef class FCIWaveFunction(WaveFunction):
                 'I didnt find the source of molecular orbitals!')
         if abs(self.Ms) > 0.001:
             self.restricted = False
-        logger.info('norm of FCI wave function: %f', math.sqrt(S))
+        logger.info('norm of FCI wave function: %f', sqrt(S))
         self._normalisation = 'unit'
         self.orbspace.set_act(OrbitalSpace(n_irrep=self.n_irrep,
                                            orb_type='A'))
@@ -1521,7 +1521,7 @@ cdef class FCIWaveFunction(WaveFunction):
         
         Return:
         -------
-        A float, with the distance
+        The, as a float.
         
         Side Effect:
         ------------
@@ -1545,3 +1545,31 @@ cdef class FCIWaveFunction(WaveFunction):
             return str_order.eucl_distance(self.coefficients,
                                            other.coefficients)
     
+    def dist_to_ref(self, metric='IN'):
+        """Distance to the reference Slater determinant
+        
+        Parameters:
+        -----------
+        metric (str, optional, default='IN')
+            metric to calculate the distance.
+            Possible values are:
+            'IN' - Intermediate normalisation
+        
+        Return:
+        -------
+        The distance, as a float.
+        
+        """
+        cdef int i, j
+        cdef double S
+        if metric == 'IN':
+            if self._normalisation == 'unit':
+                return sqrt(1 - self.C0**2)/self.C0
+            elif self._normalisation == 'intermediate':
+                S = 0.0
+                for i in range(self.n_alpha_str):
+                    for j in range(self.n_beta_str):
+                        S += self.coefficients[i, j]**2
+                return sqrt(S - 1.0)
+            else:
+                raise NotImplementedError("Distance to reference only in the metric IN.")

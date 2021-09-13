@@ -175,3 +175,45 @@ class CISDvsCCSDTestCase(unittest.TestCase):
                                       irrep2=irp2, coef='Cs'):
                         self.assertEqual(wf_CCSD.Csd[irp][irp2],
                                          wf_CISD.Csd[irp][irp2])
+
+
+@tests.category('SHORT')
+class CIvsFCIDistToRefTestCase(unittest.TestCase):
+    """Check CISD -> FCI -> CISD
+    
+    """
+    
+    def test1(self):
+        molsys = 'Li2__5__sto3g__D2h'
+        wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CISD_file(molsys)))
+        fciwf = FCIWaveFunction.from_interm_norm(wf)
+        self.assertAlmostEqual(wf.dist_to_ref(), fciwf.dist_to_ref())
+        
+    def test2(self):
+        molsys = 'Li2__5__sto3g__D2h'
+        wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CISD_file(molsys, allE=True)))
+        fciwf = FCIWaveFunction.from_interm_norm(wf)
+        self.assertAlmostEqual(wf.dist_to_ref(), fciwf.dist_to_ref())
+
+    def test3(self):
+        molsys = 'h2o__Req__631g__C2v'
+        wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CISD_file(molsys)))
+        fciwf = FCIWaveFunction.from_interm_norm(wf)
+        self.assertAlmostEqual(wf.dist_to_ref(), fciwf.dist_to_ref())
+        
+    def test4(self):
+        molsys = 'h2o__Req__631g__C2v'
+        wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CISD_file(molsys, allE=True)))
+        fciwf = FCIWaveFunction.from_interm_norm(wf)
+        self.assertAlmostEqual(wf.dist_to_ref(), fciwf.dist_to_ref())
+
+    def test5(self):
+        molsys = 'Be__at__sto3g__D2h'
+        wf = IntermNormWaveFunction.unrestrict(
+            IntermNormWaveFunction.from_Molpro(tests.CISD_file(molsys, allE=True)))
+        fciwf = FCIWaveFunction.from_interm_norm(wf)
+        self.assertAlmostEqual(wf.dist_to_ref(), fciwf.dist_to_ref())

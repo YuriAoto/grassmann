@@ -701,6 +701,39 @@ cdef class IntermNormWaveFunction(WaveFunction):
                 'Wave functions have amplitude vectors of different sizes.'
                 ' we cannot calculate their distance.')
         return distance.euclidean(self.amplitudes, other.amplitudes)
+
+    def dist_to_ref(self):
+        """Distance to the reference Slater determinant
+        
+        The distance is measured in the metric of the intermediate
+        normalisation.
+        
+        Return:
+        -------
+        The distance, as a float.
+        
+        """
+        cdef int i
+        cdef double S = 0.0, D = 0.0
+        if self.wf_type == 'CCSD' or self.wf_type == 'CCSD':
+            raise ValueError('Distance to reference for CC wave function must be'
+                             'through FCIWaveFunction.')
+        if self.restricted:
+            raise NotImplementedError("Distance to reference only for"
+                                      " unrestricted IntermNormWaveFunction.")
+        else:
+            for i in range(self.ini_blocks_D[0, 0]):
+                S += self.amplitudes[i]**2
+            for i in range(self.ini_blocks_D[0, 0],
+                           self.ini_blocks_D[self.first_ab_pair, 0]):
+                D += self.amplitudes[i]**2
+            S += D/2
+            for i in range(self.ini_blocks_D[self.first_ab_pair, 0],
+                           self._n_ampl):
+                S += self.amplitudes[i]**2
+        return sqrt(S)
+
+
     
     @property
     def n_indep_ampl(self):
@@ -1716,12 +1749,12 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     new_wf.orbspace.set_n_irrep(new_wf.n_irrep)
                 continue
             if ('Number of closed-shell orbitals' in line
-                    or 'Number of frozen orbitals' in line):
+                    or 'Number of core orbitals' in line):
                 new_orbitals = molpro.get_orb_info(
                     line, line_number,
                     new_wf.n_irrep, 'R')
                 new_wf.orbspace.add_to_ref(new_orbitals, update=True, add_to_full=True)
-                if 'Number of frozen orbitals' in line:
+                if 'Number of core orbitals' in line:
                     new_wf.orbspace.froz += new_orbitals
             elif 'Number of active  orbitals' in line:
                 new_wf.orbspace.set_act(
