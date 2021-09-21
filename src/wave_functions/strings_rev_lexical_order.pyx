@@ -29,7 +29,6 @@ cpdef int sign_put_max_coincidence(int[:] occ, int[:] ref, int n):
             n_holes -= 1
             i_occ += 1
     if n_holes != i_ref - i_occ:
-        print('------->', n_holes, i_ref, i_occ)
         raise Exception(
             'loop in sign_put_max_coincidence ended with n_holes != iref - iocc')
     return 1 - (n_transp % 2) * 2

@@ -11,10 +11,8 @@ from cc_manifold_term1 import testspeed, testspeed_2
 
 system = 'Li2__5__sto3g__D2h'
 
-wf = FCIWaveFunction.from_Molpro_FCI(
-    tests.FCI_file(system, allE=True))
-cc = IntermNormWaveFunction.from_Molpro(
-    tests.CCSD_file(system, allE=True))
+wf = FCIWaveFunction.from_Molpro(tests.FCI_file(system, allE=True))
+cc = IntermNormWaveFunction.from_Molpro(tests.CCSD_file(system, allE=True))
 cc.amplitudes *= 0.8
 wf_cc = FCIWaveFunction.from_interm_norm(cc)
 

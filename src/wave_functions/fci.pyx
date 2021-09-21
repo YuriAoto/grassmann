@@ -23,17 +23,17 @@ from util.variables import int_dtype
 from util.memory import mem_of_floats
 from util.other import int_array
 from molecular_geometry.symmetry import irrep_product
+from orbitals.orbital_space cimport OrbitalSpace, FullOrbitalSpace
+from orbitals.orbital_space import OrbitalSpace, FullOrbitalSpace
 from wave_functions.general cimport WaveFunction
 from wave_functions.general import WaveFunction
 from wave_functions.interm_norm cimport IntermNormWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
-from wave_functions.slater_det import SlaterDet, get_slater_det_from_fci_line
+from wave_functions.slater_det cimport SlaterDet
+from wave_functions.slater_det import SlaterDet, UndefOrbspace
 from coupled_cluster.cluster_decomposition import cluster_dec
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
-from orbitals.orbital_space import OrbitalSpace
-
-from wave_functions.slater_det import get_slater_det_from_excitation
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +107,11 @@ def _sign_for_absolute_order(
         if rank_of_spin_block >= 1:
             sign_sp = 1
             for ii in range(rank_of_spin_block):
-                i, spirrep_i = wf.get_local_index(
+                i, spirrep_i = wf.orbspace.get_local_index(
                     alpha_hp[0][ii]
                     if is_alpha else
                     beta_hp[0][ii], is_alpha)
-                a, spirrep_a = wf.get_local_index(
+                a, spirrep_a = wf.orbspace.get_local_index(
                     alpha_hp[1][ii]
                     if is_alpha else
                     beta_hp[1][ii], is_alpha)
@@ -152,117 +152,6 @@ def _sign_for_absolute_order(
     if _to_print:
         print('sign final:', sign)
     return sign
-
-def get_occ_from_FCI_line(l, orb_dim, froz_orb, n_irrep, Ms,
-                          molpro_output='', line_number=-1):
-    """Read the configuration of a FCI line Molpro output
-    
-    Parameters:
-    -----------
-    l (str)
-        The line with a configuration, from the FCI program in Molpro
-        to be converted to a Slater Determinant.
-    
-    orb_dim (OrbitalSpace)
-        Dimension of orbital space
-    
-    froz_orb (OrbitalSpace)
-        Dimension of frozen orbitals space
-    
-    n_irrep (int)
-        Number of irreps
-    
-    Ms (float)
-        Ms of total wave function (n_alpha - n_beta)/2
-    
-    molpro_output (str, optional, default='')
-        The output file name (only for error message)
-    
-    line_number (int, optional, default=-1)
-        The line number in Molpro output
-    
-    Returns:
-    --------
-    A list of arrays, see the examples
-    
-    Raises:
-    molpro.MolproInputError
-    
-    Examples:
-    ---------
-    
-    # if n_irrep = 4, orb_dim = (6,2,2,0), froz_orb = (0,0,0,0) then
-    
-    -0.162676901257  1  2  7  1  2  7
-    gives
-    [(0,1) (0) () () (0,1) (0) () ()]
-    
-    -0.049624632911  1  2  4  1  2  6
-    gives
-    [(0,1,3) () () () (0,1,5) () () ()]
-    
-    0.000000000000  1  2  9  1  2 10
-    gives
-    [(0,1) () (0) () (0,1) () (1) ()]
-    
-    # but if froz_orb = (1,1,0,0) then the above cases give
-         (because frozen electrons are indexed first in Molpro convention)
-    
-    [(0,5) (0) () () (0,5) (0) () ()]
-    
-    [(0,2) (0) () () (0,4) (0) () ()]
-    
-    [(0) (0) (0) () (0) (0) (1) ()]
-
-
-    """
-    lspl = l.split()
-    final_occ = [list(range(froz_orb[irp])) for irp in range(2 * n_irrep)]
-    n_tot_frozen = sum(map(len, final_occ)) // 2
-    try:
-        coeff = float(lspl[0])
-        occ = [int(x) - 1 for x in lspl[1:] if int(x) > n_tot_frozen]
-    except Exception as e:
-        raise molpro.MolproInputError(
-            "Error when reading FCI configuration. Exception was:\n"
-            + str(e),
-            line=l,
-            line_number=line_number,
-            file_name=molpro_output)
-    if len(occ) + 2 * n_tot_frozen + 1 != len(lspl):
-        raise molpro.MolproInputError(
-            "Inconsistency in number of frozen orbitals for FCI. froz_orb:\n"
-            + str(froz_orb),
-            line=l,
-            line_number=line_number,
-            file_name=molpro_output)
-    total_orbs = [sum(froz_orb[irp] for irp in range(n_irrep))]
-    for i in range(n_irrep):
-        total_orbs.append(total_orbs[-1]
-                          + orb_dim[i] - froz_orb[i])
-    irrep = irrep_shift = 0
-    ini_beta = (len(occ) + int(2 * Ms)) // 2
-    for i, orb in enumerate(occ):
-        if i == ini_beta:
-            irrep_shift = n_irrep
-            irrep = 0
-        while True:
-            if irrep == n_irrep:
-                raise molpro.MolproInputError(
-                    'Configuration is not consistent with orb_dim = '
-                    + str(orb_dim),
-                    line=l,
-                    line_number=line_number,
-                    file_name=molpro_output)
-            if total_orbs[irrep] <= orb < total_orbs[irrep + 1]:
-                final_occ[irrep + irrep_shift].append(orb - total_orbs[irrep]
-                                                      + froz_orb[irrep])
-                break
-            else:
-                irrep += 1
-    for i, o in enumerate(final_occ):
-        final_occ[i] = np.array(o, dtype=int_dtype)
-    return final_occ
 
 
 
@@ -534,7 +423,7 @@ cdef class FCIWaveFunction(WaveFunction):
         self.coefficients = np.zeros((self.n_alpha_str, self.n_beta_str))
         return 0
 
-    def set_slater_det(self, det):
+    cdef (int, int) set_slater_det(self, SlaterDet det) except *:
         """Set a the Slater Determinant coefficient to the wave function
         
         Parameter:
@@ -726,25 +615,13 @@ cdef class FCIWaveFunction(WaveFunction):
         self.set_coeff_ref_det()
     
     def set_ref_det_from_corr_orb(self):
-        ref_alpha = []
-        ref_beta = []
-        for irrep in self.spirrep_blocks(restricted=True):
-            for i in range(self.orbspace.corr[irrep]):
-                ref_alpha.append(i + self.orbspace.orbs_before[irrep])
-            for i in range(self.orbspace.corr[irrep + self.n_irrep]):
-                ref_beta.append(i + self.orbspace.orbs_before[irrep])
-        self.ref_det = SlaterDet(
-            c=0.0,
-            alpha_occ=np.array(ref_alpha, dtype=int_dtype),
-            beta_occ=np.array(ref_beta, dtype=int_dtype))
+        self.ref_det = SlaterDet.from_orbspace(self.orbspace.corr,
+                                               int_array(self.orbspace.orbs_before))
         self.set_coeff_ref_det()
     
     def set_coeff_ref_det(self):
         ia, ib = self.index(self.ref_det)
-        self.ref_det = SlaterDet(
-            c=self.coefficients[ia, ib],
-            alpha_occ=self.ref_det.alpha_occ,
-            beta_occ=self.ref_det.beta_occ)
+        self.ref_det.set_coef(self.coefficients[ia, ib])
     
     @classmethod
     def similar_to(cls, WaveFunction wf, restricted=None):
@@ -788,13 +665,13 @@ cdef class FCIWaveFunction(WaveFunction):
         return new_wf
     
     @classmethod
-    def from_Molpro_FCI(cls, molpro_output,
-                        ref=None,
-                        start_line_number=1,
-                        point_group=None,
-                        state='1.1',
-                        zero_coefficients=False):
-        """Construct a FCI wave function from an Molpro output
+    def from_Molpro(cls, molpro_output,
+                    ref='maxC',
+                    start_line_number=1,
+                    point_group=None,
+                    state='1.1',
+                    zero_coefficients=False):
+        """Construct the wave function from an Molpro output
         
         This is a class constructor wrapper for get_coefficients.
         See its documentation for the details.
@@ -849,7 +726,7 @@ cdef class FCIWaveFunction(WaveFunction):
         self.set_coeff_ref_det()
     
     def get_coeff_from_molpro(self, molpro_output,
-                              ref=None,
+                              ref='maxC',
                               start_line_number=1,
                               point_group=None,
                               state='1.1',
@@ -867,9 +744,16 @@ cdef class FCIWaveFunction(WaveFunction):
             stops when the wave function is completely loaded,
             and do not closes the file.
         
-        ref (iterable of int)
-            A list that will be used to set the reference space
-            for the wave function
+        ref (str or iterable of int, optional, default='maxC')
+            If string, it should be 'maxC' (default) or 'first'.
+            In these case, the (allowed) Slater determinant with
+            coefficient with largest absolute value, or the first Slater
+            determinant is taken as reference, respectivelly.
+            By "allowed" we mean a Slater determinant whose occupied orbitals
+            in each irrep are the first. (More general Slater determinants
+            cannot be used as reference for implementation reasons).
+            If an iterable of int is given, it is used to construct an
+            OrbitalSpace to be the reference space.
         
         start_line_number (int, optional, default=1)
             line number where file starts to be read.
@@ -891,9 +775,13 @@ cdef class FCIWaveFunction(WaveFunction):
         compatibility?
         """
         cdef int i, j
+        cdef SlaterDet det
         FCI_coefficients_found = False
         uhf_alpha_was_read = False
         found_orbital_source = False
+        unknown_ref_det = True
+        ref_is_given = not isinstance(ref, str)
+        ref_is_maxC = not ref_is_given and ref == 'maxC'
         self.wf_type = 'FCI'
         self._ordered_orbs = True
         if isinstance(molpro_output, str):
@@ -910,20 +798,16 @@ cdef class FCIWaveFunction(WaveFunction):
                     + ' is a file object')
             self.point_group = point_group
             self.orbspace.set_n_irrep(self.n_irrep)
-            if ref is not None:
-                self.orbspace.set_ref(OrbitalSpace(dim=ref))
         self.source = 'From file ' + f_name
         S = 0.0
         first_determinant = True
-        unknown_ref_det = True
+        line_number_ref = -1
         for line_number, line in enumerate(f, start=start_line_number):
             if not FCI_prog_found:
                 try:
                     self.point_group = molpro.get_point_group_from_line(
                         line, line_number, f_name)
                     self.orbspace.set_n_irrep(self.n_irrep)
-                    if ref is not None:
-                        self.orbspace.set_ref(OrbitalSpace(dim=ref))
                 except molpro.MolproLineHasNoPointGroup:
                     if molpro.FCI_header == line:
                         FCI_prog_found = True
@@ -933,38 +817,37 @@ cdef class FCIWaveFunction(WaveFunction):
                     continue
                 if 'EOF' in line:
                     break
-                det = get_slater_det_from_fci_line(
+                det = SlaterDet.from_molpro_line(
                     line, self.Ms, self.orbspace.froz,
                     molpro_output=molpro_output,
                     line_number=line_number)
-                if first_determinant and ref is None:
-                    # Improve!! do not use old version
-                    # This definition of orbspace.ref seem to be
-                    # quite bad, because the first slater determinant
-                    # might not have the same orbspace.ref (per spirrep) as
-                    # the True reference determinant... I think that this
-                    # is not a real problem
-                    self.orbspace.set_ref(OrbitalSpace(
-                        dim=list(map(len, get_occ_from_FCI_line(
-                            line, self.orbspace.full, self.orbspace.froz,
-                            self.n_irrep, self.Ms)))))
+                if first_determinant:
+                    self.orbspace.set_ref(det.orbspace(self.orbspace)
+                                          + self.orbspace.froz)
                 if first_determinant:
                     first_determinant = False
                     self.initialize_coeff_matrix()
                 S += det.c**2
                 self.set_slater_det(det)
-                if unknown_ref_det or abs(det.c) > abs(self.ref_det.c):
+                if (ref_is_maxC 
+                    and (unknown_ref_det
+                         or abs(det.c) > abs(self.ref_det.c))):
                     unknown_ref_det = False
-                    self.ref_det = det
-                    line_ref = line
+                    try:
+                        ref_orbspace = det.orbspace(self.orbspace) + self.orbspace.froz
+                        self.ref_det = det
+                    except UndefOrbspace:
+                        pass
             else:
-                if ('FCI STATE  ' + state + ' Energy' in line
-                        and 'Energy' in line):
+                if f'FCI STATE  {state} Energy' in line:
                     FCI_coefficients_found = True
                 elif 'Frozen orbitals:' in line:
                     self.orbspace.set_froz(molpro.get_orb_info(line, line_number,
                                                                self.n_irrep,
-                                                               'R'))
+                                                               'R'),
+                                           update=False,
+                                           add_to_full=False,
+                                           add_to_ref=True)
                 elif 'Active orbitals:' in line:
                     self.orbspace.set_full(self.orbspace.froz
                                            + molpro.get_orb_info(
@@ -1003,17 +886,15 @@ cdef class FCIWaveFunction(WaveFunction):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
-        self.orbspace.set_ref(OrbitalSpace(
-            dim=list(map(len, get_occ_from_FCI_line(
-                line_ref, self.orbspace.full, self.orbspace.froz,
-                self.n_irrep, self.Ms)))))
+        self.orbspace.set_ref(OrbitalSpace(dim=ref)
+                              if ref_is_given else
+                              ref_orbspace)
+        self.set_ref_det_from_corr_orb()
         if self.ref_det.c < 0:
             for i in range(self.n_alpha_str):
                 for j in range(self.n_beta_str):
                     self.coefficients[i,j] *= -1
-            self.ref_det = SlaterDet(c=-self.ref_det.c,
-                                     alpha_occ=self.ref_det.alpha_occ,
-                                     beta_occ=self.ref_det.beta_occ)
+            self.ref_det.c = -self.ref_det.c
         if not found_orbital_source:
             raise molpro.MolproInputError(
                 'I didnt find the source of molecular orbitals!')

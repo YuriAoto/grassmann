@@ -12,3 +12,4 @@ cdef class WaveFunction:
     cdef public double mem
 #    cdef public void _set_memory(self, object destination=*, object calc_args=*)
 #    cdef public double calc_memory(self, calc_args)
+    cdef int get_n_irrep(self)

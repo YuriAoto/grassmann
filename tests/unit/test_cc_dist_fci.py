@@ -14,15 +14,15 @@ class CalcAllDistTestCase(unittest.TestCase):
 
     def setUp(self):
         self.res = dfci.AllDistResults("Test of distances")
-        self.res.fci__min_d = 1.0
-        self.res.fci__vert = 1.0
-        self.res.fci__vert_ci = 1.0
-        self.res.cc__vert = 1.0
-        self.res.cc__vert_ampl = 1.0
-        self.res.cc__min_d = 1.0
-        self.res.cc__min_d_ampl = 1.0
-        self.res.min_d__vert = 1.0
-        self.res.min_d__vert_ampl = 1.0
+        self.res.FCI__minD = 1.0
+        self.res.FCI__vertCC = 1.0
+        self.res.FCI__vertCI = 1.0
+        self.res.CC__vertCC = 1.0
+        self.res.CC__vertCC_ampl = 1.0
+        self.res.CC__minD = 1.0
+        self.res.CC__minD_ampl = 1.0
+        self.res.minD__vertCC = 1.0
+        self.res.minD__vertCC_ampl = 1.0
 
     def test_str(self):
         tests.logger.info("%s", self.res)
@@ -51,6 +51,5 @@ class CalcAllDistTestCase(unittest.TestCase):
         x = str(self.res)
         self.assertTrue('regular CI' in x)
         self.assertFalse('regular CC' in x)
-        
         self.assertTrue('CC manifold' in x)
-        self.assertTrue('D(FCI, minD_CC) = 1.00000' in x)
+        self.assertTrue('D(FCI, minD)' in x)

@@ -391,7 +391,7 @@ def calc_dist_to_cc_manifold(wf,
             f_out.flush()
     if f_out is not None:
         f_out.write('-----------------------------------------------------------\n\n')
-    res = MinDistResults(f'Minimun distance to CC{level} manifold')
+    res = MinDistResults(f'Minimum distance to CC{level} manifold')
     res.level = level
     res.success = converged
     if not converged:
@@ -599,7 +599,7 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
         res.FCI__minD_expl = res_min_d.wave_function_as_fci.dist_to(fci_wf)
     res.FCI__vertCC = res_vert.distance
     if explicit_calcs:
-        res.FCI__vert_expl = res_vert.wave_function_as_fci.dist_to(fci_wf)
+        res.FCI__vertCC_expl = res_vert.wave_function_as_fci.dist_to(fci_wf)
     res.FCI__vertCI = res_vert.distance_ci
     if explicit_calcs:
         res.FCI__vertCI_expl = FCIWaveFunction.from_interm_norm(vertCI_wf).dist_to(fci_wf)

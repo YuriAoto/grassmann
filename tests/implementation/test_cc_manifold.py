@@ -52,7 +52,7 @@ def _calc_anal_num_jac_hess(mol_system, allE, wf_type, factor=1.0):
     
     
     """
-    wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=allE))
+    wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system, allE=allE))
     wf.normalise(mode='intermediate')
     tests.logger.info('wf from Molpro, interm norm:\n%s', wf)
     wf.set_max_coincidence_orbitals()
@@ -86,39 +86,39 @@ class MinDVertExplicitDistTestCase(unittest.TestCase):
     def test_li2_sto3g_d2h_ccd(self):
         level = 'D'
         mol_system = 'Li2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=True))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system, allE=True))
         res_vert = vertical_dist_to_cc_manifold(wf, level=level)
         cc_wf = res_vert.wave_function
         res_min_d = calc_dist_to_cc_manifold(wf, level=level, ini_wf=cc_wf)
         res_all_dists = calc_all_distances(wf, res_vert, res_min_d,
                                            cc_wf=None, ci_wf=None, level=level,
                                            explicit_calcs=True)
-        self.assertAlmostEqual(res_all_dists.fci__min_d,
-                               res_all_dists.fci__min_d_expl)
-        self.assertAlmostEqual(res_all_dists.fci__vert,
-                               res_all_dists.fci__vert_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__minD,
+                               res_all_dists.FCI__minD_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__vertCC,
+                               res_all_dists.FCI__vertCC_expl)
 
     @tests.category('SHORT')
     def test_li2_sto3g_d2h_ccsd(self):
         level = 'SD'
         mol_system = 'Li2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system, allE=True))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system, allE=True))
         res_vert = vertical_dist_to_cc_manifold(wf, level=level)
         cc_wf = res_vert.wave_function
         res_min_d = calc_dist_to_cc_manifold(wf, level=level, ini_wf=cc_wf)
         res_all_dists = calc_all_distances(wf, res_vert, res_min_d,
                                            cc_wf=None, ci_wf=None, level=level,
                                            explicit_calcs=True)
-        self.assertAlmostEqual(res_all_dists.fci__min_d,
-                               res_all_dists.fci__min_d_expl)
-        self.assertAlmostEqual(res_all_dists.fci__vert,
-                               res_all_dists.fci__vert_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__minD,
+                               res_all_dists.FCI__minD_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__vertCC,
+                               res_all_dists.FCI__vertCC_expl)
 
     @tests.category('LONG')
     def test_he2_631g_d2h_ccd(self):
         level = 'D'
         mol_system = 'He2__1.5__631g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         res_vert = vertical_dist_to_cc_manifold(wf, level=level)
         cc_wf = res_vert.wave_function
         res_min_d = calc_dist_to_cc_manifold(wf, level=level,
@@ -126,26 +126,26 @@ class MinDVertExplicitDistTestCase(unittest.TestCase):
         res_all_dists = calc_all_distances(wf, res_vert, res_min_d,
                                            cc_wf=None, ci_wf=None, level=level,
                                            explicit_calcs=True)
-        self.assertAlmostEqual(res_all_dists.fci__min_d,
-                               res_all_dists.fci__min_d_expl)
-        self.assertAlmostEqual(res_all_dists.fci__vert,
-                               res_all_dists.fci__vert_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__minD,
+                               res_all_dists.FCI__minD_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__vertCC,
+                               res_all_dists.FCI__vertCC_expl)
 
     @tests.category('SHORT')
     def test_he2_631g_d2h_ccsd(self):
         level = 'SD'
         mol_system = 'He2__1.5__631g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         res_vert = vertical_dist_to_cc_manifold(wf, level=level)
         cc_wf = res_vert.wave_function
         res_min_d = calc_dist_to_cc_manifold(wf, level=level, ini_wf=cc_wf)
         res_all_dists = calc_all_distances(wf, res_vert, res_min_d,
                                            cc_wf=None, ci_wf=None, level=level,
                                            explicit_calcs=True)
-        self.assertAlmostEqual(res_all_dists.fci__min_d,
-                               res_all_dists.fci__min_d_expl)
-        self.assertAlmostEqual(res_all_dists.fci__vert,
-                               res_all_dists.fci__vert_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__minD,
+                               res_all_dists.FCI__minD_expl)
+        self.assertAlmostEqual(res_all_dists.FCI__vertCC,
+                               res_all_dists.FCI__vertCC_expl)
 
 
 

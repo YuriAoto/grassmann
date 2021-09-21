@@ -40,7 +40,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Be_sto3g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     def test_Be_sto3g_d2h_allE(self):
         with tests.run_grassmann(
@@ -49,7 +49,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 system=self.Be_sto3g_d2h,
                                 allE=True)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     def test_Li2_sto3g_d2h(self):
         with tests.run_grassmann(
@@ -57,7 +57,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_sto3g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     @tests.category('COMPLETE', 'LONG')
     def test_Li2_sto3g_d2h_allE(self):
@@ -67,7 +67,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 system=self.Li2_sto3g_d2h,
                                 allE=True,
                                 memory='20.0MB')) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     def test_Li2_sto3g_c2v(self):
         with tests.run_grassmann(
@@ -75,7 +75,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_sto3g_c2v)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     def test_Li2_631g_d2h(self):
         with tests.run_grassmann(
@@ -83,7 +83,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_631g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     @tests.category('COMPLETE', 'VERY LONG')
     def test_Li2_631g_d2h_allE(self):
@@ -94,7 +94,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 allE=True,
                                 memory='20.0MB')
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
     def test_Li2_ccpvdz_d2h(self):
         with tests.run_grassmann(
@@ -102,7 +102,7 @@ class MinDistCCDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_ccpvdz_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
 
 
 @tests.category('COMPLETE', 'SHORT')
@@ -123,8 +123,8 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Be_sto3g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
-
+            self.assertEqual(run_gr, run_gr.reference(2))
+            
     def test_Be_sto3g_d2h_allE(self):
         with tests.run_grassmann(
                 *_set_args_test(level='SD',
@@ -132,7 +132,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 system=self.Be_sto3g_d2h,
                                 allE=True)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     def test_Li2_sto3g_d2h(self):
         with tests.run_grassmann(
@@ -140,7 +140,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_sto3g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     @tests.category('COMPLETE', 'LONG')
     def test_Li2_sto3g_d2h_allE(self):
@@ -150,7 +150,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 system=self.Li2_sto3g_d2h,
                                 allE=True,
                                 memory='20.0MB')) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     def test_Li2_sto3g_c2v(self):
         with tests.run_grassmann(
@@ -158,7 +158,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_sto3g_c2v)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     def test_Li2_631g_d2h(self):
         with tests.run_grassmann(
@@ -166,7 +166,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_631g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     @tests.category('COMPLETE', 'VERY LONG')
     def test_Li2_631g_d2h_allE(self):
@@ -177,7 +177,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 allE=True,
                                 memory='20.0MB')
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     def test_Li2_ccpvdz_d2h(self):
         with tests.run_grassmann(
@@ -185,7 +185,7 @@ class MinDistCCSDTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_ccpvdz_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
 
 @tests.category('COMPLETE', 'SHORT')
@@ -206,7 +206,7 @@ class MinDistCCSDDiagHessTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_sto3g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref3')
+            self.assertEqual(run_gr, run_gr.reference(3))
 
     def test_Li2_631g_d2h(self):
         with tests.run_grassmann(
@@ -214,7 +214,7 @@ class MinDistCCSDDiagHessTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_631g_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref3')
+            self.assertEqual(run_gr, run_gr.reference(3))
 
     def test_Li2_ccpvdz_d2h(self):
         with tests.run_grassmann(
@@ -222,4 +222,4 @@ class MinDistCCSDDiagHessTestCase(unittest.TestCase):
                                 base_cmd=self.base_cmd,
                                 system=self.Li2_ccpvdz_d2h)
         ) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref3')
+            self.assertEqual(run_gr, run_gr.reference(3))

@@ -25,7 +25,8 @@ from input_output import molpro
 from molecular_geometry.symmetry import irrep_product
 from wave_functions.general cimport WaveFunction
 from wave_functions.general import WaveFunction
-from wave_functions.slater_det import get_slater_det_from_excitation
+from wave_functions.slater_det cimport SlaterDet
+from wave_functions.slater_det import SlaterDet
 import wave_functions.strings_rev_lexical_order as str_order
 from coupled_cluster.cluster_decomposition import cluster_dec
 from coupled_cluster.manifold cimport update_indep_amplitudes
@@ -108,8 +109,8 @@ def singles_contr_from_clusters_fci(alpha_hp, beta_hp, fci_wf):
             if not fci_wf.symmetry_allowed_exc(cluster_exc[1], cluster_exc[2]):
                 add_contr = False
                 break
-            new_contribution *= fci_wf[fci_wf.index(get_slater_det_from_excitation(
-                fci_wf.ref_det, 0.0, cluster_exc[1], cluster_exc[2]))]
+            new_contribution *= fci_wf[fci_wf.index(SlaterDet.from_excitation(
+                fci_wf.ref_det, 0.0, cluster_exc[1],cluster_exc[2]))]
         if add_contr:
             C += new_contribution
     return C
@@ -854,43 +855,44 @@ cdef class IntermNormWaveFunction(WaveFunction):
     cdef void _calc_ini_blocks(self):
         """Calculate the arrays with the initial index of amplitude blocks"""
         cdef int spirrep, irrep_a, i_in_D
+        cdef int n_irrep = self.get_n_irrep()
         cdef int [:] raveled_ini_blocks_D
         cdef OccOrbital i, j
-        n_occ_alpha = (self.orbspace.corr_orbs_before[self.n_irrep - 1]
-                       + self.orbspace.corr[self.n_irrep - 1])
-        n_occ_beta = self.orbspace.corr_orbs_before[2*self.n_irrep]
+        n_occ_alpha = (self.orbspace.corr_orbs_before[n_irrep - 1]
+                       + self.orbspace.corr[n_irrep - 1])
+        n_occ_beta = self.orbspace.corr_orbs_before[2*n_irrep]
         if self.restricted:
-            self.ini_blocks_S = np.zeros(self.n_irrep+1, dtype=int_dtype)
+            self.ini_blocks_S = np.zeros(n_irrep+1, dtype=int_dtype)
             raveled_ini_blocks_D = np.zeros(triangular(n_occ_alpha)
-                                            * self.n_irrep,
+                                            * n_irrep,
                                             dtype=int_dtype)
         else:
-            self.ini_blocks_S = np.zeros(2*self.n_irrep+1, dtype=int_dtype)
+            self.ini_blocks_S = np.zeros(2*n_irrep+1, dtype=int_dtype)
             raveled_ini_blocks_D = np.zeros(
                 (triangular(n_occ_alpha - 1)
                  + triangular(n_occ_beta - 1)
-                 + n_occ_alpha * n_occ_beta) * self.n_irrep,
+                 + n_occ_alpha * n_occ_beta) * n_irrep,
                 dtype=int_dtype)
         if "SD" in self.wf_type:
             self.ini_blocks_S[0] = 0
             for spirrep in self.spirrep_blocks():
                 new_index = (self.ini_blocks_S[spirrep]
                              + self.orbspace.corr[spirrep] * self.orbspace.virt[spirrep])
-                if spirrep == (self.n_irrep
+                if spirrep == (n_irrep
                                if self.restricted else
-                               (2*self.n_irrep)) - 1:
+                               (2*n_irrep)) - 1:
                     raveled_ini_blocks_D[0] = new_index
                 else:
                     self.ini_blocks_S[spirrep + 1] = new_index
-            self.ini_blocks_S[self.n_irrep
+            self.ini_blocks_S[n_irrep
                               if self.restricted else
-                              (2*self.n_irrep)] = raveled_ini_blocks_D[0]
+                              (2*n_irrep)] = raveled_ini_blocks_D[0]
         else:
             raveled_ini_blocks_D[0] = 0
         i_in_D = 0
         if self.restricted:
             for i, j in self.occupied_pairs():
-                for irrep_a in range(self.n_irrep):
+                for irrep_a in range(n_irrep):
                     i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
@@ -902,7 +904,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
             self.first_bb_pair = 0
             for i, j in self.occupied_pairs(ExcType.AA):
                 self.first_bb_pair += 1
-                for irrep_a in range(self.n_irrep):
+                for irrep_a in range(n_irrep):
                     i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
@@ -913,28 +915,28 @@ cdef class IntermNormWaveFunction(WaveFunction):
             self.first_ab_pair = self.first_bb_pair
             for i, j in self.occupied_pairs(ExcType.BB):
                 self.first_ab_pair += 1
-                for irrep_a in range(self.n_irrep):
+                for irrep_a in range(n_irrep):
                     i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
-                        irrep_a + self.n_irrep,
+                        irrep_a + n_irrep,
                         irrep_product[irrep_a,
-                                      irrep_product[i.spirrep - self.n_irrep,
-                                                    j.spirrep - self.n_irrep]]
-                        + self.n_irrep,
+                                      irrep_product[i.spirrep - n_irrep,
+                                                    j.spirrep - n_irrep]]
+                        + n_irrep,
                         raveled_ini_blocks_D)
             for i, j in self.occupied_pairs(ExcType.AB):
-                for irrep_a in range(self.n_irrep):
+                for irrep_a in range(n_irrep):
                     i_in_D = self._add_block_for_calc_ini_blocks(
                         i_in_D,
                         irrep_a,
                         irrep_product[irrep_a,
                                       irrep_product[i.spirrep,
-                                                    j.spirrep - self.n_irrep]]
-                        + self.n_irrep,
+                                                    j.spirrep - n_irrep]]
+                        + n_irrep,
                         raveled_ini_blocks_D)
         self.ini_blocks_D = np.reshape(raveled_ini_blocks_D,
-                                       (raveled_ini_blocks_D.size // self.n_irrep,
-                                        self.n_irrep))
+                                       (raveled_ini_blocks_D.size // n_irrep,
+                                        n_irrep))
         if i_in_D != self.ini_blocks_D.size:
             raise Exception(f'BUG: {i_in_D} != {self.ini_blocks_D.size}')
     
@@ -982,10 +984,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                         i, a, self.orbspace.virt[irrep]))
         if len(key) == 8:
             i, j, a, b, irrep_i, irrep_j, irrep_a, exc_type = key
-            i = self.get_abs_corr_index(i, irrep_i,
-                                        exc_type in (ExcType.AA, ExcType.AB))
-            j = self.get_abs_corr_index(j, irrep_j,
-                                        exc_type == ExcType.AA)
+            i = self.orbspace.get_abs_corr_index(i, irrep_i,
+                                                 exc_type in (ExcType.AA,
+                                                              ExcType.AB))
+            j = self.orbspace.get_abs_corr_index(j, irrep_j,
+                                                 exc_type == ExcType.AA)
             ij = self.get_ij_pos_from_i_j(i, j, irrep_i, exc_type)
             return (self.ini_blocks_D[ij, irrep_a]
                     + n_from_rect(
@@ -1072,7 +1075,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         i, a = ((alpha_hp[0][0], alpha_hp[1][0])
                 if exc_type == ExcType.A else
                 (beta_hp[0][0], beta_hp[1][0]))
-        irrep = self.get_orb_irrep(i)
+        irrep = self.orbspace.get_orb_irrep(i)
         i -= self.orbspace.orbs_before[irrep]
         a -= self.orbspace.orbs_before[irrep]
         a -= self.orbspace.corr[
@@ -1085,26 +1088,26 @@ cdef class IntermNormWaveFunction(WaveFunction):
     def indices_of_doubles(self, alpha_hp, beta_hp):
         if alpha_hp[0].size == 1:
             exc_type = ExcType.AB
-            i, irrep_i = self.get_local_index(alpha_hp[0][0], True)
-            j, irrep_j = self.get_local_index(beta_hp[0][0], False)
-            a, irrep_a = self.get_local_index(alpha_hp[1][0], True)
-            b, irrep_b = self.get_local_index(beta_hp[1][0], False)
+            i, irrep_i = self.orbspace.get_local_index(alpha_hp[0][0], True)
+            j, irrep_j = self.orbspace.get_local_index(beta_hp[0][0], False)
+            a, irrep_a = self.orbspace.get_local_index(alpha_hp[1][0], True)
+            b, irrep_b = self.orbspace.get_local_index(beta_hp[1][0], False)
             if self.restricted:
                 if irrep_j < irrep_i or (irrep_j == irrep_i and j < i):
                     i, irrep_i, j, irrep_j = j, irrep_j, i, irrep_i
                     a, irrep_a, b, irrep_b = b, irrep_b, a, irrep_a
         elif alpha_hp[0].size == 2:
             exc_type = ExcType.AA
-            i, irrep_i = self.get_local_index(alpha_hp[0][0], True)
-            j, irrep_j = self.get_local_index(alpha_hp[0][1], True)
-            a, irrep_a = self.get_local_index(alpha_hp[1][0], True)
-            b, irrep_b = self.get_local_index(alpha_hp[1][1], True)
+            i, irrep_i = self.orbspace.get_local_index(alpha_hp[0][0], True)
+            j, irrep_j = self.orbspace.get_local_index(alpha_hp[0][1], True)
+            a, irrep_a = self.orbspace.get_local_index(alpha_hp[1][0], True)
+            b, irrep_b = self.orbspace.get_local_index(alpha_hp[1][1], True)
         else:
             exc_type = ExcType.BB
-            i, irrep_i = self.get_local_index(beta_hp[0][0], False)
-            j, irrep_j = self.get_local_index(beta_hp[0][1], False)
-            a, irrep_a = self.get_local_index(beta_hp[1][0], False)
-            b, irrep_b = self.get_local_index(beta_hp[1][1], False)
+            i, irrep_i = self.orbspace.get_local_index(beta_hp[0][0], False)
+            j, irrep_j = self.orbspace.get_local_index(beta_hp[0][1], False)
+            a, irrep_a = self.orbspace.get_local_index(beta_hp[1][0], False)
+            b, irrep_b = self.orbspace.get_local_index(beta_hp[1][1], False)
         return i, j, a, b, irrep_i, irrep_j, irrep_a, exc_type
 
     def calc_memory(self, calcs_args):

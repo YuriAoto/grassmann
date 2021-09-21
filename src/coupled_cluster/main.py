@@ -18,6 +18,7 @@ def main(args, f_out):
     found_method = False
     level = 'SD' if 'SD' in args.method else 'D'
     ini_cc_wf = None
+    ref_orb = 'maxC' if args.ref_orb is None else args.ref_orb
     if args.ini_cc_wf is not None:
         ini_cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(args.ini_cc_wf))
@@ -25,8 +26,8 @@ def main(args, f_out):
                        'CCD_mani_minD', 'CCSD_mani_minD',
                        'CCD_full_analysis', 'CCSD_full_analysis'):
         with logtime('Loading FCI wave function'):
-            fci_wf = fci.FCIWaveFunction.from_Molpro_FCI(args.molpro_output,
-                                                         ref=args.ref_orb)
+            fci_wf = fci.FCIWaveFunction.from_Molpro(args.molpro_output,
+                                                     ref=ref_orb)
         fci_wf.normalise(mode='intermediate')
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
     

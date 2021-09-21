@@ -31,7 +31,7 @@ class MinDistCISDTestCase(unittest.TestCase):
                              tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref')
+            self.assertEqual(run_gr, run_gr.reference())
 
     def test_Li2_sto3g(self):
         arguments = self.base_cmd + ['--save_final_orb',
@@ -46,9 +46,9 @@ class MinDistCISDTestCase(unittest.TestCase):
                              tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
             # U = np.load(run_gr.outdir + '/U_minD.npz')
-            # U_ref = np.load(run_gr.output[:-3] + '.ref1_U.npz')
+            # U_ref = np.load(run_gr.reference(1) + '_U.npz')
             # for iU in U:
             #     print()
             #     print(U[iU])
@@ -75,7 +75,7 @@ class MinDistCISDTestCase(unittest.TestCase):
             #                  tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
         
         arguments = self.base_cmd + ['--molpro_output',
                                      tests.CCSD_file(self.Li2_sto3g)]
@@ -88,7 +88,7 @@ class MinDistCISDTestCase(unittest.TestCase):
                              tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
         
         arguments = self.base_cmd + ['--at_ref', '--molpro_output',
                                      tests.CCSD_file(self.Li2_sto3g)]
@@ -110,7 +110,7 @@ class MinDistCISDTestCase(unittest.TestCase):
             #                  tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))
 
     def test_Li2_ccpVDZ(self):
         arguments = self.base_cmd + ['--molpro_output',
@@ -124,7 +124,7 @@ class MinDistCISDTestCase(unittest.TestCase):
                              tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output + '_ref')
+            self.assertEqual(run_gr, run_gr.reference())
         
     def test_N2_sto3g(self):
         arguments = self.base_cmd + ['--molpro_output',
@@ -138,7 +138,7 @@ class MinDistCISDTestCase(unittest.TestCase):
                              tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref1')
+            self.assertEqual(run_gr, run_gr.reference(1))
         
         arguments = self.base_cmd + ['--at_ref', '--molpro_output',
                                      tests.CCSD_file(self.N2_sto3g)]
@@ -160,4 +160,4 @@ class MinDistCISDTestCase(unittest.TestCase):
             #                  tol=1.0E-10)
         ]
         with tests.run_grassmann(arguments, to_check) as run_gr:
-            self.assertEqual(run_gr, run_gr.output[:-3] + '.ref2')
+            self.assertEqual(run_gr, run_gr.reference(2))

@@ -22,8 +22,7 @@ class FromMolproTestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test_h2_sto3g_d2h(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__sto3g__D2h'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__sto3g__D2h'))
         self.assertEqual(np.array(wf),
                          np.array([[0.756853272220, 0.0],
                                    [0.0, -0.653584825658]]))
@@ -35,8 +34,7 @@ class FromMolproTestCase(unittest.TestCase):
         # self.assertTrue(wf.restricted)
 
     def test_h2_631g_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__631g__C2v'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__631g__C2v'))
         my_coeff = np.array(
             [[ 0.781771118719, 0.000000000000, 0.061389372090, 0.000000000000],
              [ 0.000000000000,-0.612568504984, 0.000000000000,-0.054814463843],
@@ -55,8 +53,7 @@ class FromMolproTestCase(unittest.TestCase):
         # self.assertTrue(wf.restricted)
 
     def test_h2_ccpvdz_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__ccpVDZ__C2v'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__ccpVDZ__C2v'))
         my_coeff = np.zeros((10, 10))
         my_coeff[0, :6] = [0.781815404715,  0.000000000000, -0.084281730429,
                            0.000000000000, -0.004432884704,  0.000000000000]
@@ -99,8 +96,7 @@ class FromMolproTestCase(unittest.TestCase):
         # self.assertTrue(wf.restricted)
 
     def test_hcl_plus_631g_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('HCl_plus__1.5__631g__C2v'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('HCl_plus__1.5__631g__C2v'))
         self.assertEqual(wf[0, 0], 0.000015255089)
         self.assertEqual(
             wf[get_index(int_array(0, 1, 2, 3), wf.alpha_string_graph),
@@ -144,7 +140,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('H2__5__sto3g__D2h')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__sto3g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -605,7 +601,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('H2__5__631g__C2v')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__631g__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -615,7 +611,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('H2__5__631g__D2h')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__631g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -625,7 +621,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('H2__5__631g__C2v')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__631g__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -635,7 +631,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('Li2__5__sto3g__D2h')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('Li2__5__sto3g__D2h'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -645,7 +641,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('Li2__5__to2s__C2v')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('Li2__5__to2s__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(wf, wf_from_molpro_fci)
@@ -655,7 +651,7 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file('Li2__5__to3s__C2v')))
         wf.set_ordered_orbitals()
-        wf_from_molpro_fci = FCIWaveFunction.from_Molpro_FCI(
+        wf_from_molpro_fci = FCIWaveFunction.from_Molpro(
             tests.FCI_file('Li2__5__to3s__C2v'))
         wf_from_molpro_fci.normalise(mode='intermediate')
         self.assertEqual(np.array(wf), np.array(wf_from_molpro_fci))
@@ -708,7 +704,7 @@ class ExcInfoTestCase(unittest.TestCase):
         
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-        self.wf = FCIWaveFunction.from_Molpro_FCI(
+        self.wf = FCIWaveFunction.from_Molpro(
             'tests/inputs_outputs/h2o__Req__sto3g__C2v/FCI_allE.out')
 
     def test_get_exc_1(self):
@@ -749,7 +745,7 @@ class ExcInfoTestCase(unittest.TestCase):
 class NormTestCase(unittest.TestCase):
 
     def test_h2_sto3g_d2h(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
+        wf = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__sto3g__D2h'))
         wf.normalise()
         self.assertAlmostEqual(norm(np.array(wf)), 1.0)
@@ -763,7 +759,7 @@ class NormTestCase(unittest.TestCase):
         self.assertAlmostEqual(S, 1.0)
  
     def test_h2_631g_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
+        wf = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__631g__C2v'))
         wf.normalise()
         self.assertAlmostEqual(norm(np.array(wf)), 1.0)
@@ -777,7 +773,7 @@ class NormTestCase(unittest.TestCase):
         self.assertAlmostEqual(S, 1.0)
  
     def test_h2_ccpvdz_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
+        wf = FCIWaveFunction.from_Molpro(
             tests.FCI_file('H2__5__ccpVDZ__C2v'))
         wf.normalise()
         self.assertAlmostEqual(norm(np.array(wf)), 1.0)
@@ -791,7 +787,7 @@ class NormTestCase(unittest.TestCase):
         self.assertAlmostEqual(S, 1.0)
 
     def test_hcl_plus_631g_c2v(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
+        wf = FCIWaveFunction.from_Molpro(
             tests.FCI_file('HCl_plus__1.5__631g__C2v'))
         wf.normalise()
         self.assertAlmostEqual(norm(np.array(wf)), 1.0)
@@ -811,7 +807,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test1(self):
         molsys = 'Li2__5__sto3g__D2h'
         the_dist = 0.31643502499713894
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')
@@ -820,7 +816,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test2(self):
         molsys = 'Li2__5__sto3g__D2h'
         the_dist = 0.3168706871705199
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys, allE=True))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')
@@ -829,7 +825,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test3(self):
         molsys = 'h2o__Req__631g__C2v'
         the_dist = 0.21731822858920816
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')
@@ -838,7 +834,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test4(self):
         molsys = 'h2o__Req__631g__C2v'
         the_dist = 0.21729120194062237
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys, allE=True))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')
@@ -847,7 +843,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test5(self):
         molsys = 'Be__at__sto3g__D2h'
         the_dist = 0.3421718529502774
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')
@@ -856,7 +852,7 @@ class DistToRefTestCase(unittest.TestCase):
     def test6(self):
         molsys = 'Be__at__sto3g__D2h'
         the_dist = 0.34127876312963934
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(molsys, allE=True))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(molsys, allE=True))
         d = wf.dist_to_ref()
         self.assertAlmostEqual(d, the_dist)
         wf.normalise(mode='intermediate')

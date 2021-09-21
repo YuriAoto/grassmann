@@ -44,8 +44,7 @@ class JacHess_H2_TestCase(unittest.TestCase):
     
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-        self.WF = fci.FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__sto3g__D2h'))
+        self.WF = fci.FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__sto3g__D2h'))
         Ures = []
         Uunres = []
         prng = np.random.RandomState(tests.init_random_state)
@@ -109,8 +108,7 @@ class JacHess_H2_TestCase(unittest.TestCase):
 class WForbChangeTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.WF = fci.FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__sto3g__D2h'))
+        self.WF = fci.FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__sto3g__D2h'))
         self.U1 = []
         self.U2 = []
         self.U3 = []

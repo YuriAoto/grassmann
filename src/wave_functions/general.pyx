@@ -419,9 +419,9 @@ cdef class WaveFunction:
         """Return True if the determinant is symmetry allowed in this wave function"""
         total_irrep = 0
         for p in det.alpha_occ:
-            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+            total_irrep = irrep_product[total_irrep, self.orbspace.get_orb_irrep(p)]
         for p in det.beta_occ:
-            total_irrep = irrep_product[total_irrep, self.get_orb_irrep(p)]
+            total_irrep = irrep_product[total_irrep, self.orbspace.get_orb_irrep(p)]
         return total_irrep == self.irrep
     
     def symmetry_allowed_exc(self, alpha_hp, beta_hp):
@@ -438,111 +438,27 @@ cdef class WaveFunction:
         h_irrep = 0
         p_irrep = 0
         for h in alpha_hp[0]:
-            h_irrep = irrep_product[h_irrep, self.get_orb_irrep(h)]
+            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(h)]
         for h in beta_hp[0]:
-            h_irrep = irrep_product[h_irrep, self.get_orb_irrep(h)]
+            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(h)]
         for p in alpha_hp[1]:
-            p_irrep = irrep_product[p_irrep, self.get_orb_irrep(p)]
+            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(p)]
         for p in beta_hp[1]:
-            p_irrep = irrep_product[p_irrep, self.get_orb_irrep(p)]
+            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(p)]
         return h_irrep == p_irrep
-    
-    def get_orb_irrep(self, int orb):
-        """Return the irrep of orb.
-        
-        Parameters:
-        -----------
-        orb (int)
-            The global orbital index
-        
-        Return:
-        -------
-        The integer of that irrep
-        
-        """
-        cdef int irrep
-        for irrep in self.spirrep_blocks(restricted=True):
-            if orb < self.orbspace.orbs_before[irrep + 1]:
-                return irrep
-    
-    def get_local_index(self, int p, bint alpha_orb):
-        """Return index of p within its block of corr. or virtual orbitals
-
-        Given the global index of an orbital, calculates its index within
-        the block of orbitals it belongs
-
-        Example:
-        --------
-
-        Parameters:
-        -----------
-
-
-        """
-        cdef int irrep, spirrep
-        irrep = self.get_orb_irrep(p)
-        p -= self.orbspace.orbs_before[irrep]
-        spirrep = irrep + (0
-                           if alpha_orb or self.restricted else
-                           self.n_irrep)
-        if p >= self.orbspace.corr[spirrep]:
-            p -= self.orbspace.corr[spirrep]
-        return p, irrep
-    
-    def get_absolute_index(self, p, irrep, occupied, alpha_orb):
-        """Return the absolute index of p
-
-        Given the local index p, within a block of orbitals it belongs,
-        its irrep, and whether it is occupied/virtual or alpha/beta,
-        return its global index (within alpha or beta)
-        
-        It is the inverse of get_local_index
-        
-        Example:
-        --------
-
-        Parameters:
-        -----------
-
-
-        """
-        p += self.orbspace.orbs_before[irrep]
-        if occupied:
-            p += self.orbspace.corr[
-                irrep + (0
-                         if alpha_orb or self.restricted else
-                         self.n_irrep)]
-        return p
-    
-    def get_abs_corr_index(self, p, irrep, alpha_orb):
-        """Return the absolute index of p within correlated orbitals
-        
-        Given the local index p, within a correlated block of orbitals,
-        its irrep, and whether it is alpha/beta,
-        return its global index (within alpha or beta correlated orbitals)
-        
-        It is the inverse of get_local_index
-        
-        Example:
-        --------
-        
-        Parameters:
-        -----------
-        
-        
-        """
-        return p + self.orbspace.corr_orbs_before[
-            irrep
-            + (0 if alpha_orb or self.restricted else
-               self.n_irrep)]
 
     @property
     def n_irrep(self):
         """Number or irreducible representations"""
+        n_irrep = self.get_n_irrep()
+        return n_irrep if n_irrep > 0 else None
+
+    cdef int get_n_irrep(self):
+        """Number or irreducible representations"""
         if self.point_group is None:
-            return None
+            return -1
         return number_of_irreducible_repr[self.point_group]
-    
+
     @property
     def irrep(self):
         """The irreducible representation that this wave function belong"""

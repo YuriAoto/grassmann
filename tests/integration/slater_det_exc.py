@@ -15,7 +15,7 @@ class ExcInfoTestCase(unittest.TestCase):
         
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
-        self.wf = FCIWaveFunction.from_Molpro_FCI(
+        self.wf = FCIWaveFunction.from_Molpro(
             'tests/inputs_outputs/h2o__Req__sto3g__C2v/FCI_allE.out')
 
     def test_1(self):
