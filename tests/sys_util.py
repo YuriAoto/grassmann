@@ -75,6 +75,18 @@ _files_no_allE = ['RHF',
                   'UHF']
 
 
+def geom_file(molecule, geometry):
+    """Return the path for a geometry file
+    
+    molecule (str)
+        The molecule, as in the file name
+
+    geometry (str)
+        The geometry, as in the file name
+    
+    """
+    return os.path.join(main_files_dir, 'geometries' , f'{molecule}__{geometry}.xyz')
+
 def _get_inpout_file(file_name, only_exist=True, only_check=False):
     """Function to get/check file from inputs_outputs
     
