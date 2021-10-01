@@ -886,6 +886,12 @@ cdef class FCIWaveFunction(WaveFunction):
                             file_name=molpro_output)
         if isinstance(molpro_output, str):
             f.close()
+        if not FCI_coefficients_found:
+            raise molpro.MolproInputError('The FCI coefficients for '
+                                          f'state {state} were not found',
+                                          line='',
+                                          line_number=0,
+                                          file_name=molpro_output)
         self.orbspace.set_ref(OrbitalSpace(dim=ref)
                               if ref_is_given else
                               ref_orbspace)

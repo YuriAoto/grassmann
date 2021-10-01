@@ -1910,7 +1910,10 @@ cdef class IntermNormWaveFunction(WaveFunction):
                      or 'Spin contamination' in line)):
                 if not dbl_found:
                     raise molpro.MolproInputError(
-                        'Double excitations not found!')
+                        'Double excitations not found!',
+                        line=line,
+                        line_number=line_number,
+                        file_name=f_name)
                 break
         if new_wf.restricted:
             new_wf.orbspace.ref.restrict_it()

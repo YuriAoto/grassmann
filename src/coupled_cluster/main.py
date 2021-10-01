@@ -5,6 +5,7 @@ Yuri Aoto, 2021
 """
 from input_output.log import logtime, logger
 from wave_functions import fci
+from input_output.molpro import MolproInputError
 from wave_functions.interm_norm import IntermNormWaveFunction
 from coupled_cluster.dist_to_fci import (vertical_dist_to_cc_manifold,
                                          calc_dist_to_cc_manifold,
@@ -27,7 +28,8 @@ def main(args, f_out):
                        'CCD_full_analysis', 'CCSD_full_analysis'):
         with logtime('Loading FCI wave function'):
             fci_wf = fci.FCIWaveFunction.from_Molpro(args.molpro_output,
-                                                     ref=ref_orb)
+                                                     ref=ref_orb,
+                                                     state=args.state)
         fci_wf.normalise(mode='intermediate')
         logger.debug('FCI wave function, in intermediate norm\n%s', fci_wf)
     
@@ -64,13 +66,13 @@ def main(args, f_out):
             try:
                 ccwf = IntermNormWaveFunction.unrestrict(
                     IntermNormWaveFunction.from_Molpro(args.cc_wf))
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, MolproInputError) as exc:
                 logger.warning(f'Error when reading cc wave function: {exc}')
                 ccwf = None
             try:
                 ciwf = IntermNormWaveFunction.unrestrict(
                     IntermNormWaveFunction.from_Molpro(args.ci_wf))
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, MolproInputError) as exc:
                 logger.warning(f'Error when reading ci wave function: {exc}')
                 ciwf = None
             res_all_dists = calc_all_distances(
