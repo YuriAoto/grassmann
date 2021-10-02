@@ -283,8 +283,8 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
         #                    alpha_occ=int_array(0,1,5),
         #                    beta_occ=int_array(0,1,5)))
         self.assertAlmostEqual(wf.C0, 1.0)
-        self.assertEqual(wf.ref_det.alpha_occ, int_array(0,1,5))
-        self.assertEqual(wf.ref_det.beta_occ, int_array(0,1,5))
+        self.assertEqual(int_array(wf.ref_det.alpha_occ), int_array(0,1,5))
+        self.assertEqual(int_array(wf.ref_det.beta_occ), int_array(0,1,5))
         # --------- some singles
         self.assertAlmostEqual(wf[wf.index(SlaterDet(
             c=0.0,

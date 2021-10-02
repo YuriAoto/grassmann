@@ -253,7 +253,7 @@ def _check(args):
         _assert_molpro_output(args.WF_templ)
     if args.logfilter is not None:
         args.logfilter = re.compile(args.logfilter)
-    args.state = args.state if args.state is not None else ''
+    args.state = args.state if args.state is not None else '....'
     if args.loglevel is not None:
         args.loglevel = loglevel_from_str(args.loglevel)
     else:

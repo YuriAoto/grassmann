@@ -9,6 +9,7 @@ History:
 Yuri
 """
 import logging
+import re
 
 from libc.math cimport sqrt
 
@@ -669,7 +670,7 @@ cdef class FCIWaveFunction(WaveFunction):
                     ref='maxC',
                     start_line_number=1,
                     point_group=None,
-                    state='1.1',
+                    state='....',
                     zero_coefficients=False):
         """Construct the wave function from an Molpro output
         
@@ -729,7 +730,7 @@ cdef class FCIWaveFunction(WaveFunction):
                               ref='maxC',
                               start_line_number=1,
                               point_group=None,
-                              state='1.1',
+                              state='....',
                               zero_coefficients=False):
         """Read coefficients from molpro_output but keep the structure.
         
@@ -763,8 +764,8 @@ cdef class FCIWaveFunction(WaveFunction):
             It is mandatory in case a file object has been
             passed in molpro_output.
         
-        state (str, optional, default = '1.1')
-            state of interest
+        state (str, optional, default = '....')
+            The state of interest, possibly a regular expression.
         
         zero_coefficients (bool, optional, default=False)
             If False, set coefficients of new determinants to zero
@@ -782,6 +783,7 @@ cdef class FCIWaveFunction(WaveFunction):
         unknown_ref_det = True
         ref_is_given = not isinstance(ref, str)
         ref_is_maxC = not ref_is_given and ref == 'maxC'
+        fci_state_pattern = re.compile(f' !FCI STATE +{state} +Energy')
         self.wf_type = 'FCI'
         self._ordered_orbs = True
         if isinstance(molpro_output, str):
@@ -839,7 +841,7 @@ cdef class FCIWaveFunction(WaveFunction):
                     except UndefOrbspace:
                         pass
             else:
-                if f'FCI STATE  {state} Energy' in line:
+                if fci_state_pattern.match(line):
                     FCI_coefficients_found = True
                 elif 'Frozen orbitals:' in line:
                     self.orbspace.set_froz(molpro.get_orb_info(line, line_number,
