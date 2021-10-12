@@ -392,9 +392,11 @@ class Integrals():
         self.mol_geo = mol_geo
         self.n_func = 0
         self.S = None
+        self.invS = None
         self.h = None
         self.g = None
         self.X = None
+        self.invX = None
         if method == 'ir-wmme':
             self.set_wmme_integrals()
         if orth_method != None:
@@ -464,7 +466,9 @@ class Integrals():
         self.h = np.load(wmme_coreh_file)
         self.n_func = self.h.shape[0]
         self.S = np.load(wmme_overlap_file)
+        self.invS = linalg.inv(self.S)
         self.orthogonalise_S()
+        self.invX = linalg.inv(self.X)
         self.g = Two_Elec_Int.from_wmme_fint2e(wmme_fint2e_file, self.n_func)
         rmtree(wmmeBasePath)
     
@@ -478,7 +482,7 @@ class Integrals():
             if abs(s[j]) < 0.000001:
                 raise Exception('LD problems in basis functions, s=' + str(s))
             for i in range(len(s)):
-                self.X[i][j] = self.X[i][j]/math.sqrt(s[j])
+                self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
         if loglevel <= logging.DEBUG:
             logger.debug('X:\n%r', self.X)
             logger.debug('XSX:\n%r', self.X.T @ self.S @ self.X)

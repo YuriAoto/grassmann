@@ -36,23 +36,25 @@ def calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
     
     Returns:
     --------
+
     Does not return anything, but the density matrix
     is updated.
     
     TODO:
-    ----
+    -----
+
     This does not give the same result for equivalent
     restricted and unrestricted calculations.
     Investigate why.
     
     This implementation is rather simple, and is not sufficient
-    to achieve convergence for benzene. Improve this
+    to achieve convergence for benzene. Improve this.
     
     """
     B = np.zeros((cur_n_DIIS + 1, cur_n_DIIS + 1))
-    B[:cur_n_DIIS + 1, :cur_n_DIIS + 1] = np.einsum('iap,iaq->pq',
-                                                    grad[:, :, :cur_n_DIIS+1],
-                                                    grad[:, :, :cur_n_DIIS+1])
+    B[:cur_n_DIIS, :cur_n_DIIS] = np.einsum('iap,iaq->pq',
+                                            grad[:, :, :cur_n_DIIS],
+                                            grad[:, :, :cur_n_DIIS])
     for i in range(cur_n_DIIS):
         B[i, cur_n_DIIS] = B[cur_n_DIIS, i] = -1.0
     B[cur_n_DIIS, cur_n_DIIS] = 0.0

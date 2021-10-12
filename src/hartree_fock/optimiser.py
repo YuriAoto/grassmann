@@ -90,9 +90,8 @@ def Restricted_Closed_Shell_SCF(integrals,
         logger.info('Using orbitals given by the user as initial guess.')
         hf_step.orb = MolecularOrbitals(ini_orb)
         hf_step.orb.orthogonalise(X=integrals.X)
-    if loglevel <= logging.DEBUG:
-        assert hf_step.orb.is_orthonormal(
-            integrals.S), "Orbitals are not orthonormal"
+    assert hf_step.orb.is_orthonormal(
+        integrals.S), "Orbitals are not orthonormal"
         
     hf_step.i_DIIS = -1  # does this have to be inside hf_step
     hf_step.grad = np.zeros((hf_step.n_occ, len(hf_step.orb) - hf_step.n_occ,
@@ -250,6 +249,7 @@ def Unrestricted_SCF(integrals,
         
     for i_SCF in range(max_iter):
         logger.info('Starting SCF iteration %d', i_SCF)
+        logger.info('Orbitals: \n%s', hf_step.orb) # override no __str__ do hf_step.orb
         step_type = HF_step_type(i_SCF=i_SCF, grad=hf_step.grad)
         with logtime('SCF iteration') as T:
             if step_type == 'RH-SCF':

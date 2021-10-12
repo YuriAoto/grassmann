@@ -94,6 +94,11 @@ def _parser():
     parser.add_argument('--maxiter',
                         help='Maximum number of iterations',
                         type=int)
+    parser.add_argument('--diis',
+                        help='Number of previous iteration steps considered'
+                        ' in the Roothaan-Hall Hartree-Fock with DIIS'
+                        ' acceleration.',
+                        type=int)
     parser.add_argument('--at_ref',
                         help='Do only one iteration at reference.',
                         action='store_true')
@@ -213,6 +218,10 @@ def _check(args):
         args.maxiter = 20
     elif args.at_ref:
         raise ParseError('--maxiter is not compatible with --at_ref')
+    if args.diis is None:
+        args.diis = 0
+    elif args.diis < 0:
+        raise ParseError('--diis can\'t be negative')
     if args.ini_orb is not None:
         if args.at_ref:
             raise ParseError('--ini_orb is not compatible with --at_ref')
