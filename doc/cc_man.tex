@@ -49,6 +49,8 @@ We receive as input this arbitrary wave function ($\Psi_0$) and we compare it wi
 of coupled-cluster wave functions ($\Psi_{CC}$).
 
 \section{The distance in the intermediate normalisation}
+\hypertarget{sec:dist_interm_norm}{}
+\label{sec:dist_interm_norm}
 
 Let $\Phi_0$ be our reference Slater determinant.
 Any state not orthogonal to $\Phi_0$ can be uniquely written in the intermediate normalisation as:
@@ -159,7 +161,7 @@ with the same double amplitudes as the coefficients of double excitations as in 
 
 The calculation of the vertical distance between $\Psi_0$ and the CCD manifold,
 as well as the check if the manifold curves towards $\Psi_0$,
-is made at \texttt{fci.WaveFunctionFCI.compare\_to\_CC\_manifold}.
+is made at \texttt{coupled\_cluster.dist\_to\_fci.vertical\_dist\_to\_cc\_manifold}.
 
 \subsection{The CCSD manifold}
 We will extend the ideas and equations discussed above to the CCSD manifold,
@@ -249,12 +251,11 @@ we will use them, stored in a vector $\mathbf{t}$ whose elements are $t_\rho$.
 Applying the stationary condition we have:
 \begin{equation}\label{eq:cc_minD_jac}
   \begin{split}
-    0 =& \frac{1}{2} \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
-    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
-    =& \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
+    0 =& \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
   \end{split}
 \end{equation}
-The factor $\frac{1}{2}$ is just for convenience again.
 The wave function $\Psi_0$ must be in the intermediate normalisation.
 $\Phi_\rho = \tau_\rho\Phi_0$ and the last equality holds because $\tau_\rho$ commutes with
 the cluster operator.
@@ -262,21 +263,28 @@ The Hessian, needed for a Newton optimisation:
 \begin{equation}\label{eq:cc_minD_hess}
   \begin{split}
     H_{\sigma\rho}(\mathbf{t}) =
-    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}}
-    - \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}\\
-    & \mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})}
-    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,.
+    & 2\left( \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}
+      + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}} \right)\\
+    & 2\left( \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}
+    + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})} \right)\,.
   \end{split}
 \end{equation}
 
 If these quantities are calculated, the Newton step is obtained as:
 \begin{equation}\label{eq:cc_minD_update}
-  \mathbf{t}_\text{new} =
-  \mathbf{t} - \left(\mathbf{H}(\mathbf{t})\right)^{-1}\mathbf{J}(\mathbf{t})\,.
+  \mathbf{t}_\text{new} = \mathbf{t} + \mathbf{z}\,,
 \end{equation}
-This is implemented at \texttt{wave\_functions.fci.WaveFunctionFCI.calc\_dist\_to\_CC\_manifold}.
+where
+\begin{equation}\label{eq:cc_minD_z}
+  \mathbf{z}
+  = - \left(\mathbf{H}(\mathbf{t})\right)^{-1}\mathbf{J}(\mathbf{t})
+  = - \left(\tfrac{1}{2}\mathbf{H}(\mathbf{t})\right)^{-1}
+  \left(\tfrac{1}{2}\mathbf{J}(\mathbf{t})\right)\,.
+\end{equation}
+This is implemented at \texttt{coupled\_cluster.dist\_to\_fci.calc\_dist\_to\_cc\_manifold}.
 What is more challenging, and time consuming, is the calculation of $\mathbf{J}(\mathbf{t})$ and
 $\mathbf{H}(\mathbf{t})$.
+This is done in\\ \texttt{coupled\_cluster.manifold.min\_dist\_jac\_hess}.
 
 \subsection{One possible approximation to the Hessian}
 \hypertarget{sec:cc_man_appr_hess}{}
@@ -291,7 +299,7 @@ is to use only the diagonal elements of the Hessian:
 \begin{equation}\label{eq:cc_minD_hess_diag}
   \begin{split}
     H_{\rho\rho}(\mathbf{t}) =
-    - \mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
+    2\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
   \end{split}
 \end{equation}
 where we used the fact that $\tau_\rho\tau_\rho = 0$
@@ -299,19 +307,16 @@ where we used the fact that $\tau_\rho\tau_\rho = 0$
 It is not clear if this would be a good approximation
 (namely, that the off diagonal terms are indeed lower than the diagonal),
 but the simplicity suggests that it is worth trying.
-With this, the amplitudes update is:
-\begin{equation}\label{eq:cc_minD_update}
-  (t_\rho)_\text{new}
-  = t_\rho + \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
-  = t_\rho
-  + \frac{\mel{\Psi_0 - \Psi_{CC}(\mathbf{t})}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
+With this:
+\begin{equation}\label{eq:cc_minD_z_diag}
+  z_\rho
+  = - \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
+  = - \frac{\mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
   {\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}}\,.
 \end{equation}
 
-
-
 \newpage
-\subsection{Flowchart}
+\subsection{Flowchart: \texttt{coupled\_cluster.dist\_to\_fci.calc\_dist\_to\_cc\_manifold}}
 
 \input{cc_minD_flowchart}
 

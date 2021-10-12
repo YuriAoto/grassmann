@@ -152,6 +152,13 @@
   (\X{-50}, \Y{#3}) -- ( #4 |- \X{-15}, \Y{#3}) -- (#4);
 }
 
+\newcommand{\algloopsmall}[6]{
+  \draw [->, rounded corners=3mm] (#1) -- ( #1 |- \X{-100},\Y{#2})  --  (\X{#3}, \Y{#2}) --
+  (\X{#3}, \Y{#4}) -- ( #5 |- \X{-15}, \Y{#4}) -- (#5);
+  \node [anchor=west] at (\X{#3}, \Y{#4}+0.2) {#6};
+
+}
+
 
 
 %%% Local Variables:

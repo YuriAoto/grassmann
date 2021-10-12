@@ -31,13 +31,9 @@ import re
 import argparse
 import textwrap
 import logging
+from glob import glob
 
-_loglevels = {'critical': logging.CRITICAL,
-              'error': logging.ERROR,
-              'warning': logging.WARNING,
-              'info': logging.INFO,
-              'debug': logging.DEBUG,
-              'notset': logging.NOTSET}
+from input_output.log import loglevel_from_str
 
 
 class ParseError(Exception):
@@ -61,6 +57,10 @@ def _parser():
         ''')))
     parser.add_argument('--molpro_output',
                         help='Molpro output with the correlated wave function')
+    parser.add_argument('--cc_wf',
+                        help='Molpro output with the CC wave function')
+    parser.add_argument('--ci_wf',
+                        help='Molpro output with the CI wave function')
     parser.add_argument('--geometry',
                         help='A xyz geometry file')
     parser.add_argument('--memory', default='100.0kB',
@@ -72,6 +72,8 @@ def _parser():
                         + ' or transformation matrices,'
                         + ' as Molpro\'s "put" xml file or'
                         + ' npz file')
+    parser.add_argument('--ini_cc_wf',
+                        help='Initial wave function for CC calculations')
     parser.add_argument('--HF_orb',
                         help='Hartree-Fock orbitals'
                         + ' (as Molpro\'s "put" xml file)')
@@ -102,6 +104,9 @@ def _parser():
     parser.add_argument('--at_ref',
                         help='Do only one iteration at reference.',
                         action='store_true')
+    parser.add_argument('--ref_orb',
+                        help='The reference orbitals, passed as a list.',
+                        type=lambda x: list(map(int, x[1:-1].split(','))))
     parser.add_argument('--algorithm',
                         help='the algorithm to be used in the optimisation.'
                         + ' Possible values are: "orb_rotations",'
@@ -119,6 +124,11 @@ def _parser():
                         help='If set, the orbitals are saved in every'
                         + ' iteration of the optimisation, in the files'
                         + 'orb_it_<i_it>.npz',
+                        action='store_true')
+    parser.add_argument('--cc_diag_hess',
+                        help='If set, use the diagonal approximation to'
+                        + ' the Hessian in the optimisation of the distance'
+                        + ' to the CC manifold',
                         action='store_true')
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
@@ -174,6 +184,17 @@ def _assert_molpro_output(file,
         else:
             raise ParseError('File ' + file + ' is not a Molpro output!')
 
+
+def _glob_file(fname, empty_is_none=False):
+    """Glob the file name and return. Raise ParseError if does not lead a unique file"""
+    if fname is None:
+        return None
+    x = glob(fname)
+    if empty_is_none and len(x) == 0:
+        return None
+    if len(x) != 1:
+        raise ParseError(f'{fname} does not represent a single file!')
+    return x[0]
 
 def _check(args):
     """Check if all arguments are OK and improve them, modifying args"""
@@ -249,16 +270,13 @@ def _check(args):
         args.logfilter = re.compile(args.logfilter)
     args.state = args.state if args.state is not None else ''
     if args.loglevel is not None:
-        try:
-            args.loglevel = int(args.loglevel)
-        except ValueError:
-            try:
-                args.loglevel = _loglevels[args.loglevel.lower()]
-            except KeyError:
-                raise ParseError('This is not a valid log level: '
-                                 + args.loglevel)
+        args.loglevel = loglevel_from_str(args.loglevel)
     else:
         args.loglevel = logging.WARNING
+    args.molpro_output = _glob_file(args.molpro_output)
+    args.cc_wf = _glob_file(args.cc_wf, empty_is_none=True)
+    args.ci_wf = _glob_file(args.ci_wf, empty_is_none=True)
+    args.ini_cc_wf = _glob_file(args.ini_cc_wf, empty_is_none=True)
 
 
 def _argvise_file(filename, files_content, indentation):

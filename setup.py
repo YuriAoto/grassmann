@@ -11,24 +11,31 @@ from setuptools import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
-extensions = [
-    Extension("src.integrals.integrals_cy",
-              ["src/integrals/integrals_cy.pyx"]),
-    Extension("src.coupled_cluster.manifold",
-              ["src/coupled_cluster/manifold.pyx"]),
-    Extension("src.wave_functions.singles_doubles",
-              ["src/wave_functions/singles_doubles.pyx"]),
-    Extension("src.wave_functions.strings_rev_lexical_order",
-              ["src/wave_functions/strings_rev_lexical_order.pyx"]),
-    Extension("src.orbitals.occ_orbitals",
-              ["src/orbitals/occ_orbitals.pyx"]),
-    Extension("src.util.array_indices",
-              ["src/util/array_indices.pyx"]),
-    Extension("src.integrals.integrals_cy",
-              ["src/integrals/integrals_cy.pyx"]),
-    Extension("src.hartree_fock.absil",
-              ["src/hartree_fock/absil.pyx"])
-]
+#
+# Cython files (without the .pyx extension)
+#
+all_cython_files = ["src/integrals/integrals_cy",
+                    "src/coupled_cluster/exc_on_string",
+                    "src/coupled_cluster/manifold",
+                    "src/coupled_cluster/manifold_term1",
+                    "src/coupled_cluster/manifold_term2",
+                    "src/coupled_cluster/manifold_hess",
+                    "src/wave_functions/general",
+                    "src/wave_functions/fci",
+                    "src/wave_functions/interm_norm",
+                    "src/wave_functions/cisd",
+                    "src/wave_functions/strings_rev_lexical_order",
+                    "src/orbitals/occ_orbitals",
+                    "src/orbitals/orbital_space",
+                    "src/util/array_indices",
+                    "src/coupled_cluster/cluster_decomposition",
+                    "src/hartree_fock/absil"]
+
+
+extensions = []
+for cy_file in all_cython_files:
+    extensions.append(Extension(cy_file.replace('/', '.'),
+                                [cy_file + '.pyx']))
 
 requires=['numpy',
           'scipy',

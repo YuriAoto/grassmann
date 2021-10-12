@@ -7,7 +7,7 @@ import numpy as np
 
 from dist_grassmann import absil
 from orbitals import orbitals
-from wave_functions import int_norm, cisd
+from wave_functions import interm_norm, cisd
 import tests
 
 molecules = ('H2', 'Li2')
@@ -25,11 +25,11 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
     def test_overlap(self):
         for cisd_sys in tests.test_systems(has_method='CISD',
                                           molecule=molecules):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
+            wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(cisd_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
-                                                wf_CISD.orb_dim,
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            U = tests.construct_random_orbitals(wf_CISD.orbspace.ref,
+                                                wf_CISD.orbspace.full,
                                                 wf_CISD.n_irrep,
                                                 self.prng)
             tests.logger.debug("Int norm WF (%s):\n%s",
@@ -46,11 +46,11 @@ class GenCisdAlgorithmsTestCase(unittest.TestCase):
     def test_create_XC_matrices(self):
         for cisd_sys in tests.test_systems(has_method='CISD',
                                           molecule=molecules):
-            wf_intN = int_norm.IntermNormWaveFunction.from_Molpro(
+            wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(cisd_sys))
-            wf_CISD = cisd.CISD_WaveFunction.from_int_norm(wf_intN)
-            U = tests.construct_random_orbitals(wf_CISD.ref_orb,
-                                                wf_CISD.orb_dim,
+            wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
+            U = tests.construct_random_orbitals(wf_CISD.orbspace.ref,
+                                                wf_CISD.orbspace.full,
                                                 wf_CISD.n_irrep,
                                                 self.prng)
             f_CI, X_CI, C_CI = absil.generate_lin_system(

@@ -112,14 +112,18 @@ def get_slater_det_from_excitation(ref_det, c, alpha_hp, beta_hp):
     
     """
     return SlaterDet(c=c,
-                     alpha_occ=np.array(sorted(
-                         [x for x in ref_det.alpha_occ
-                          if x not in alpha_hp[0]] + alpha_hp[1]),
-                                        dtype=int_dtype),
-                     beta_occ=np.array(sorted(
-                         [x for x in ref_det.beta_occ
-                          if x not in beta_hp[0]] + beta_hp[1]),
-                                       dtype=int_dtype))
+                     alpha_occ=np.sort(
+                         np.concatenate(
+                             (np.array([x for x in ref_det.alpha_occ
+                                        if x not in alpha_hp[0]],
+                                       dtype=int_dtype),
+                              alpha_hp[1]))),
+                     beta_occ=np.sort(
+                         np.concatenate(
+                             (np.array([x for x in ref_det.beta_occ
+                                        if x not in beta_hp[0]],
+                                       dtype=int_dtype),
+                              beta_hp[1]))))
 
 
 class SlaterDet(namedtuple('SlaterDet',

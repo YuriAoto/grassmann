@@ -1,5 +1,5 @@
 cdef class OccOrbital:
-    cdef readonly int pos_in_occ, orb, spirrep
+    cdef readonly int pos_in_occ, orb, orbirp, spirrep
     cdef int _n_occ, _n_irrep
     cdef int[:] _corr_orb, _orbs_before
     cdef bint is_alpha

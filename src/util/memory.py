@@ -54,7 +54,8 @@ class MemoryExceededError(Exception):
     """Exception raised when memory is exceeded"""
     
     def __init__(self, action, mem_required, mem_remaining):
-        super().__init__('Memory limit has been exceeded')
+        super().__init__(f'Memory limit has been exceeded:'
+                         f' req={mem_required}; remaining={mem_remaining}')
         self.action = action
         self.mem_required = mem_required
         self.mem_remaining = mem_remaining
@@ -122,6 +123,12 @@ def show_status(mode='short'):
     if mode == 'short':
         return '   Max. allocation: {1} {0}\n   Max. used: {2} {0}'.format(
             unit(), _maximum_allocation, _maximum_reached)
+    if mode == 'full':
+        return (f'Full memory status (in {_memory_unit}:\n'
+                f'  Total:           {_total_memory}\n'
+                f'  Used:            {_used_memory}\n'
+                f'  Max. allocation: {_maximum_allocation}\n'
+                f'  Max. used:       {_maximum_reached}')
 
 
 def unit():

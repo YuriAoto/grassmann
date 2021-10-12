@@ -7,6 +7,26 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
+_loglevels = {'critical': logging.CRITICAL,
+              'error': logging.ERROR,
+              'warning': logging.WARNING,
+              'info': logging.INFO,
+              'debug': logging.DEBUG,
+              'notset': logging.NOTSET}
+
+
+def loglevel_from_str(x):
+    """Transform a string to a loglevel"""
+    if x is None:
+        return logging.WARNING
+    try:
+        return int(x)
+    except ValueError:
+        try:
+            return _loglevels[x.lower()]
+        except KeyError:
+            raise ParseError(f'This is not a valid log level: {x}')
+
 
 class logtime():
     """A context manager for logging execution time.

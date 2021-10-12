@@ -149,7 +149,7 @@ def calc_U_from_z(z, wf):
         if spirrep == wf.n_irrep and n_param == len(z):
             restricted = True
             break
-        nK = wf.ref_orb[spirrep] * wf.virt_orb[spirrep]
+        nK = wf.orbspace.ref[spirrep] * wf.orbspace.virt[spirrep]
         spirrep_start.append(spirrep_start[-1] + nK)
         n_param += nK
     if n_param != len(z):
@@ -158,31 +158,31 @@ def calc_U_from_z(z, wf):
             + 'len(z) = ' + str(len(z))
             + '\nz:\n' + str(z)
             + '\nn_param = ' + str(n_param)
-            + '; corr_orb = ' + str(wf.corr_orb)
-            + '; virt_orb = ' + str(wf.virt_orb))
+            + '; corr = ' + str(wf.orbspace.corr)
+            + '; virt = ' + str(wf.orbspace.virt))
     U = []
     for spirrep in wf.spirrep_blocks(restricted=restricted):
-        if wf.orb_dim[spirrep] == 0:
+        if wf.orbspace.full[spirrep] == 0:
             U.append(np.zeros((0, 0)))
             logger.info('Adding zero-len array for spirrep %d.',
                         spirrep)
             continue
         if spirrep_start[spirrep] == spirrep_start[spirrep + 1]:
-            K = np.zeros((wf.orb_dim[spirrep],
-                          wf.orb_dim[spirrep]))
+            K = np.zeros((wf.orbspace.full[spirrep],
+                          wf.orbspace.full[spirrep]))
         else:
-            K = np.zeros((wf.orb_dim[spirrep],
-                          wf.orb_dim[spirrep]))
-            K[:wf.ref_orb[spirrep],  # K[i,a]
-              wf.ref_orb[spirrep]:] = (
+            K = np.zeros((wf.orbspace.full[spirrep],
+                          wf.orbspace.full[spirrep]))
+            K[:wf.orbspace.ref[spirrep],  # K[i,a]
+              wf.orbspace.ref[spirrep]:] = (
                   np.reshape(z[spirrep_start[spirrep]:
                                spirrep_start[spirrep + 1]],
-                             (wf.ref_orb[spirrep],
-                              wf.virt_orb[spirrep])))
-            K[wf.ref_orb[spirrep]:,  # K[a,i] = -K[i,a]
-              :wf.ref_orb[spirrep]] = -(
-                  K[:wf.ref_orb[spirrep],
-                    wf.ref_orb[spirrep]:].T)
+                             (wf.orbspace.ref[spirrep],
+                              wf.orbspace.virt[spirrep])))
+            K[wf.orbspace.ref[spirrep]:,  # K[a,i] = -K[i,a]
+              :wf.orbspace.ref[spirrep]] = -(
+                  K[:wf.orbspace.ref[spirrep],
+                    wf.orbspace.ref[spirrep]:].T)
             logger.info('Current K[spirrep=%d] matrix:\n%s',
                         spirrep, K)
         U.append(expm(K))

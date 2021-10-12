@@ -7,7 +7,7 @@ import numpy as np
 from scipy import linalg
 
 import tests
-from wave_functions import cisd, int_norm
+from wave_functions import cisd, interm_norm
 from orbitals import orbitals
 from dist_grassmann import absil
 from util.other import int_array
@@ -229,30 +229,30 @@ class CalcOverlap(unittest.TestCase):
     def setUp(self):
         prng = np.random.RandomState(tests.init_random_state)
         # H2:
-        self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
+        self.intN_wf_H2 = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file('H2__5__sto3g__D2h'))
-        self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
-        self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.ref_orb,
-                                                     self.wf_H2.orb_dim,
+        self.wf_H2 = cisd.CISDWaveFunction.from_interm_norm(self.intN_wf_H2)
+        self.Uid_H2 = orbitals.construct_Id_orbitals(self.wf_H2.orbspace.ref,
+                                                     self.wf_H2.orbspace.full,
                                                      self.wf_H2.n_irrep)
         # Li2:
-        self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
+        self.intN_wf_Li2 = interm_norm.IntermNormWaveFunction.from_Molpro(
             tests.CISD_file('Li2__5__631g__C2v'))
-        self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.CISDWaveFunction.from_interm_norm(self.intN_wf_Li2)
         self.U_Li2 = tests.construct_random_orbitals(
-            self.wf_Li2.ref_orb,
-            self.wf_Li2.orb_dim,
+            self.wf_Li2.orbspace.ref,
+            self.wf_Li2.orbspace.full,
             self.wf_Li2.n_irrep,
             prng)
         self.U_Li2_non_orth = tests.construct_random_orbitals(
-            self.wf_Li2.ref_orb,
-            self.wf_Li2.orb_dim,
+            self.wf_Li2.orbspace.ref,
+            self.wf_Li2.orbspace.full,
             self.wf_Li2.n_irrep,
             prng,
             orthogonalise=False)
         self.Uid_Li2 = orbitals.construct_Id_orbitals(
-            self.wf_Li2.ref_orb,
-            self.wf_Li2.orb_dim,
+            self.wf_Li2.orbspace.ref,
+            self.wf_Li2.orbspace.full,
             self.wf_Li2.n_irrep)
 
     def test_ref_overlap(self):
@@ -326,25 +326,25 @@ class CalcXCmatrices(unittest.TestCase):
     def setUp(self):
         prng = np.random.RandomState(tests.init_random_state)
         # H2:
-        self.intN_wf_H2 = int_norm.IntermNormWaveFunction.from_Molpro(
+        self.intN_wf_H2 = interm_norm.IntermNormWaveFunction.from_Molpro(
             tests.CISD_file('H2__5__sto3g__D2h'))
-        self.wf_H2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_H2)
+        self.wf_H2 = cisd.CISDWaveFunction.from_interm_norm(self.intN_wf_H2)
         self.Uid_H2 = orbitals.construct_Id_orbitals(
-            self.wf_H2.ref_orb,
-            self.wf_H2.orb_dim,
+            self.wf_H2.orbspace.ref,
+            self.wf_H2.orbspace.full,
             self.wf_H2.n_irrep)
         # Li2:
-        self.intN_wf_Li2 = int_norm.IntermNormWaveFunction.from_Molpro(
+        self.intN_wf_Li2 = interm_norm.IntermNormWaveFunction.from_Molpro(
             tests.CISD_file('Li2__5__631g__C2v'))
-        self.wf_Li2 = cisd.CISD_WaveFunction.from_int_norm(self.intN_wf_Li2)
+        self.wf_Li2 = cisd.CISDWaveFunction.from_interm_norm(self.intN_wf_Li2)
         self.U_Li2 = tests.construct_random_orbitals(
-            self.wf_Li2.ref_orb,
-            self.wf_Li2.orb_dim,
+            self.wf_Li2.orbspace.ref,
+            self.wf_Li2.orbspace.full,
             self.wf_Li2.n_irrep,
             prng)
         self.Uid_Li2 = orbitals.construct_Id_orbitals(
-            self.wf_Li2.ref_orb,
-            self.wf_Li2.orb_dim,
+            self.wf_Li2.orbspace.ref,
+            self.wf_Li2.orbspace.full,
             self.wf_Li2.n_irrep)
 
     def test_check_Absil_eq(self):
