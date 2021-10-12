@@ -14,7 +14,7 @@ def _run_SCF(molecule, geometry, basis, max_iter=20):
     molecular_system = MolecularGeometry.from_xyz_file(tests.geom_file(molecule,
                                                                        geometry))
     molecular_system.calculate_integrals(basis, int_meth='ir-wmme')
-    return optimiser.Restricted_Closed_Shell_SCF(molecular_system.integrals,
+    return optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
 						 molecular_system.nucl_rep,
 						 molecular_system.n_elec,
 						 f_out=None,

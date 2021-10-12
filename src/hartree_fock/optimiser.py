@@ -16,16 +16,16 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def Restricted_Closed_Shell_SCF(integrals,
-				nucl_rep,
-				n_elec,
-                                max_iter=20,
-                                grad_thresh=1.0E-5,
-                                f_out=sys.stdout,
-                                n_DIIS=0,
-                                HF_step_type=lambda **x: "RH-SCF",
-                                ini_orb=None):
-    """A Restricted Closed Shell SCF Hartree-Fock procedure
+def Restricted_Closed_Shell_HF(integrals,
+			       nucl_rep,
+			       n_elec,
+                               max_iter=20,
+                               grad_thresh=1.0E-5,
+                               f_out=sys.stdout,
+                               n_DIIS=0,
+                               HF_step_type=lambda **x: "RH-SCF",
+                               ini_orb=None):
+    """A Restricted Closed Shell Hartree-Fock procedure
     
 
     
@@ -62,7 +62,7 @@ def Restricted_Closed_Shell_SCF(integrals,
         Hartree-Fock optimisation, in that iteration
     
     ini_orb (MolecularOrbitals, optional, default=None)
-        Initial orbitals for the SCF procedure
+        Initial orbitals for the HF procedure
     """
     if n_elec % 2 != 0:
         raise ValueError(
@@ -107,9 +107,9 @@ def Restricted_Closed_Shell_SCF(integrals,
                                                       'time in iteration'))
         
     for i_SCF in range(max_iter):
-        logger.info('Starting SCF iteration %d', i_SCF)
+        logger.info('Starting HF iteration %d', i_SCF)
         step_type = HF_step_type(i_SCF=i_SCF, grad=hf_step.grad)
-        with logtime('SCF iteration') as T:
+        with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
                 hf_step.roothan_hall(i_SCF)
                 
@@ -149,17 +149,17 @@ def Restricted_Closed_Shell_SCF(integrals,
     return res
 
 
-def Unrestricted_SCF(integrals,
-		     nucl_rep,
-		     n_elec,
-                     ms2,
-                     max_iter=20,
-                     grad_thresh=1.0E-5,
-                     f_out=sys.stdout,
-                     n_DIIS=0,
-                     HF_step_type=lambda **x: "Absil",
-                     ini_orb=None):
-    """Unrestricted Closed Shell SCF Hartree-Fock procedure
+def Unrestricted_HF(integrals,
+		    nucl_rep,
+		    n_elec,
+                    ms2,
+                    max_iter=20,
+                    grad_thresh=1.0E-5,
+                    f_out=sys.stdout,
+                    n_DIIS=0,
+                    HF_step_type=lambda **x: "Absil",
+                    ini_orb=None):
+    """Unrestricted Hartree-Fock procedure
     
 
     
@@ -199,7 +199,7 @@ def Unrestricted_SCF(integrals,
         Hartree-Fock optimisation, in that iteration
     
     ini_orb (MolecularOrbitals, optional, default=None)
-        Initial orbitals for the SCF procedure
+        Initial orbitals for the HF procedure
     """
     if (n_elec - ms2) % 2 != 0:
         raise ValueError(
@@ -248,10 +248,10 @@ def Unrestricted_SCF(integrals,
                                                       'time in iteration'))
         
     for i_SCF in range(max_iter):
-        logger.info('Starting SCF iteration %d', i_SCF)
+        logger.info('Starting HF iteration %d', i_SCF)
         logger.info('Orbitals: \n%s', hf_step.orb) # override no __str__ do hf_step.orb
         step_type = HF_step_type(i_SCF=i_SCF, grad=hf_step.grad)
-        with logtime('SCF iteration') as T:
+        with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
                 hf_step.roothan_hall(i_SCF)
                 

@@ -8,3 +8,4 @@ from tests.unit.test_cc_exc_on_str import *
 from tests.unit.test_cc_cluster_dec_cy import *
 from tests.unit.test_cc_manifold import *
 from tests.unit.test_orbital_space import *
+from tests.unit.test_hf_absil_cy import *
