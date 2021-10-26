@@ -45,6 +45,7 @@ Similar to min_dist_jac_hess
 """
 
 import numpy as np
+import cython
 
 from molecular_geometry.symmetry import irrep_product
 from coupled_cluster.manifold_term1 cimport (

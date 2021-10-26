@@ -3,6 +3,8 @@
 """
 import unittest
 from math import sqrt
+import cProfile
+import pstats
 
 from scipy.linalg import norm
 import numpy as np
@@ -272,7 +274,7 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
                     tests.CCD_file('Li2__5__sto3g__D2h'))))
         wf.set_ordered_orbitals()
         self.assertEqual(np.array(wf), my_coeff)
-    
+
     @tests.category('LONG')
     def test_li2_sto3g_d2h_alle(self):
         wfcc = IntermNormWaveFunction.from_Molpro(
@@ -589,6 +591,16 @@ class FromIntermNormCCDTestCase(unittest.TestCase):
             
         #     () # 0a 5b -> .....
 
+    @tests.category('LONG', 'PROFILE')
+    def test_li2_sto3g_c2v_alle_profile(self):
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCD_file('Li2__5__sto3g__C2v', allE=True))
+        cProfile.runctx('FCIWaveFunction.from_interm_norm(wfcc)',
+                        globals(), locals(), 'run_stats')
+        p = pstats.Stats('run_stats')
+        p.sort_stats('time')
+        p.print_stats()
+
 
 @tests.category('SHORT')
 class FromIntermNormCCSDTestCase(unittest.TestCase):
@@ -697,6 +709,16 @@ class FromIntermNormCCSDTestCase(unittest.TestCase):
         wf.set_ordered_orbitals()
         self.assertEqual(wf[0, 5], 0.02903510)
         self.assertEqual(wf[5, 0], 0.02903510)
+
+    @tests.category('LONG', 'PROFILE')
+    def test_li2_sto3g_c2v_alle_profile(self):
+        wfcc = IntermNormWaveFunction.from_Molpro(
+            tests.CCSD_file('Li2__5__sto3g__C2v', allE=True))
+        cProfile.runctx('FCIWaveFunction.from_interm_norm(wfcc)',
+                        globals(), locals(), 'run_stats')
+        p = pstats.Stats('run_stats')
+        p.sort_stats('time')
+        p.print_stats()
 
 
 @tests.category('SHORT', 'ESSENTIAL')

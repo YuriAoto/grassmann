@@ -28,3 +28,5 @@ cdef class IntermNormWaveFunction(WaveFunction):
     cdef void _calc_ini_blocks(self)
     cdef double S_contrib_to_norm(self) except -1.0
     cdef double D_contrib_to_norm(self) except -1.0
+    cdef (int, int, int, int,
+          int, int, int, ExcType) indices_of_doubles(self, alpha_hp, beta_hp) except *

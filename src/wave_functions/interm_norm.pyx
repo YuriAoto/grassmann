@@ -1,5 +1,5 @@
-# cython: profile=False
 
+# cython: profile=True
 """An wave function in the intermediate normalisation
 
 Classes:
@@ -28,13 +28,14 @@ from wave_functions.general import WaveFunction
 from wave_functions.slater_det cimport SlaterDet
 from wave_functions.slater_det import SlaterDet
 import wave_functions.strings_rev_lexical_order as str_order
-from coupled_cluster.cluster_decomposition import cluster_dec
+from coupled_cluster.cluster_decomposition cimport ClusterDecomposition
 from coupled_cluster.manifold cimport update_indep_amplitudes
 from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
 from orbitals.orbital_space cimport FullOrbitalSpace
 from orbitals.orbital_space import FullOrbitalSpace
 
+cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 
 def _translate(X, ini, end):
     """X[..., ini, ini+1, ..., end-1, end, ...] -> X[..., ini+1, ..., end-1, end, end, ...]
@@ -1085,7 +1086,11 @@ cdef class IntermNormWaveFunction(WaveFunction):
                      self.n_irrep)]
         return i, a, irrep, exc_type
     
-    def indices_of_doubles(self, alpha_hp, beta_hp):
+    cdef (int, int, int, int,
+          int, int, int, ExcType) indices_of_doubles(self, alpha_hp, beta_hp) except *:
+        cdef int i, j, a, b
+        cdef int irrep_i, irrep_j, irrep_a
+        cdef ExcType exc_type
         if alpha_hp[0].size == 1:
             exc_type = ExcType.AB
             i, irrep_i = self.orbspace.get_local_index(alpha_hp[0][0], True)

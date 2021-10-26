@@ -1,3 +1,4 @@
+# cython: profile=False
 """The orbital spaces
 
 """

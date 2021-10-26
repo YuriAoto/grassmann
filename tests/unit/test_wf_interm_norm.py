@@ -6,7 +6,6 @@ import math
 try:
     import cProfile
     import pstats
-    from pstats import SortKey
     import tracemalloc
 except ImportError:
     profile_modules_not_found = True

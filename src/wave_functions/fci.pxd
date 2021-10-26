@@ -1,6 +1,9 @@
 from wave_functions.slater_det cimport SlaterDet
 from wave_functions.general cimport WaveFunction
+from wave_functions.interm_norm cimport IntermNormWaveFunction
 from orbitals.orbital_space cimport FullOrbitalSpace, OrbitalSpace
+
+cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
 
 cdef class FCIWaveFunction(WaveFunction):
     cdef double [:,:] coefficients

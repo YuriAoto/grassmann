@@ -1,3 +1,4 @@
+# cython: profile=True
 """A FCI-like wave function, normalised to unity
 
 The class defined here stores the wave function coefficients as a matrix
@@ -32,14 +33,16 @@ from wave_functions.interm_norm cimport IntermNormWaveFunction
 from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.slater_det cimport SlaterDet
 from wave_functions.slater_det import SlaterDet, UndefOrbspace
-from coupled_cluster.cluster_decomposition import cluster_dec
+from coupled_cluster.cluster_decomposition cimport ClusterDecomposition
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
+
+cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 
 logger = logging.getLogger(__name__)
 
 
-def contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
+cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
     """Return the contribution of a cluter decomposition
     
     Parameters:
@@ -705,9 +708,32 @@ cdef class FCIWaveFunction(WaveFunction):
         If self.restricted, the code can be improved to exploit the
         fact that _coefficients is symmetric (right??)
         """
+        cdef int ia, ib
+        cdef int[:] aocc, bocc
+        cdef SlaterDet det
         level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         self._ordered_orbs = False
+        # aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
+        # for ia in range(self.coefficients.shape[0]):
+        #     bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
+        #     for ib in range(self.coefficients.shape[1]):
+        #         det = SlaterDet(c=self.coefficients[ia, ib],
+        #                         alpha_occ=aocc, beta_occ=bocc)
+        #         str_order.next_str(bocc)
+        #         if not self.symmetry_allowed_det(det):
+        #             self.coefficients[ia, ib] = 0.0
+        #             continue
+        #         rank, alpha_hp, beta_hp = self.get_exc_info(det)
+        #         if rank == 0:
+        #             self.coefficients[ia, ib] = 1.0
+        #         elif ((rank == 1 and level == 'SD')
+        #               or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
+        #             self.coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
+        #         elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
+        #             self.coefficients[ia, ib] = contribution_from_clusters(
+        #                 alpha_hp, beta_hp, wf, level)
+        #     str_order.next_str(aocc)
         for ia, ib, det in self.enumerate():
             if not self.symmetry_allowed_det(det):
                 self.coefficients[ia, ib] = 0.0
