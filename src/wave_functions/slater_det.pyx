@@ -7,6 +7,9 @@ from util.variables import int_dtype
 from util.other import int_array
 from orbitals.orbital_space cimport FullOrbitalSpace, OrbitalSpace
 from orbitals.orbital_space import FullOrbitalSpace, OrbitalSpace
+from coupled_cluster.exc_on_string cimport exc_on_string
+from coupled_cluster.excitation cimport SDExcitation
+from coupled_cluster.excitation import SDExcitation
 
 
 class UndefOrbspace(Exception):
@@ -141,8 +144,7 @@ cdef class SlaterDet:
     def from_excitation(cls,
                         SlaterDet ref_det,
                         double c,
-                        alpha_hp,
-                        beta_hp):
+                        SDExcitation exc):
         """Create a new SlaterDet as an excitation on top of reference
         
         Parameters:
@@ -153,30 +155,35 @@ cdef class SlaterDet:
         c (float)
             The coefficient of the returned Slater determinant
         
-        alpha_hp (2-tuple of np.array)
-            The alpha holes and particles of the excitation
-        
-        beta_hp (2-tuple of np.array)
-            The beta holes and particles of the excitation
+        exc 
+            The excitation
         
         Return:
         -------
         The new Slater determinant
         
         """
-        return cls(c=c,
-                   alpha_occ=np.sort(
-                       np.concatenate(
-                           (np.array([x for x in ref_det.alpha_occ
-                                      if x not in alpha_hp[0]],
-                                     dtype=int_dtype),
-                            alpha_hp[1]))),
-                   beta_occ=np.sort(
-                       np.concatenate(
-                           (np.array([x for x in ref_det.beta_occ
-                                      if x not in beta_hp[0]],
-                                     dtype=int_dtype),
-                            beta_hp[1]))))
+        cdef int [:] alpha_occ = np.array(ref_det.alpha_occ)
+        cdef int [:] beta_occ = np.array(ref_det.beta_occ)
+        for i in range(exc.alpha_rank):
+            exc_on_string(exc.alpha_h[i], exc.alpha_p[i], alpha_occ, alpha_occ)
+        for i in range(exc.beta_rank):
+            exc_on_string(exc.beta_h[i], exc.beta_p[i], beta_occ, beta_occ)
+        return cls(c=c, alpha_occ=alpha_occ, beta_occ=beta_occ)
+        
+        # return cls(c=c,
+        #            alpha_occ=np.sort(
+        #                np.concatenate(
+        #                    (np.array([x for x in ref_det.alpha_occ
+        #                               if x not in alpha_hp[0]],
+        #                              dtype=int_dtype),
+        #                     alpha_hp[1]))),
+        #            beta_occ=np.sort(
+        #                np.concatenate(
+        #                    (np.array([x for x in ref_det.beta_occ
+        #                               if x not in beta_hp[0]],
+        #                              dtype=int_dtype),
+        #                     beta_hp[1]))))
 
     @classmethod
     def from_orbspace(cls, OrbitalSpace orbspace, int [:] orbs_before):

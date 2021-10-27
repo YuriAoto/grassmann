@@ -13,7 +13,8 @@ import cython
 from libc.stdlib cimport atoi
 
 from util.variables import int_dtype
-
+from coupled_cluster.excitation cimport SDExcitation
+from coupled_cluster.excitation import SDExcitation
 
 default_recipe_files = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../lib/recipes'))
@@ -190,6 +191,7 @@ cdef class ClusterDecomposition:
         cdef int i, j, k, r
         cdef int first_h, first_p, n_alpha_h, n_alpha_p
         cdef int exc_rank, used_rank
+        cdef SDExcitation new_exc
         cdef int n_alpha = alpha_hp[0].shape[0]
         cdef int n_beta = beta_hp[0].shape[0]
         cdef int rank = n_alpha + n_beta
@@ -231,20 +233,15 @@ cdef class ClusterDecomposition:
                 if n_alpha_h != n_alpha_p:
                     use_this_decomposition = False
                     break
-                alpha_hp = ([], [])
-                beta_hp = ([], [])
+                new_exc = SDExcitation()
                 for r in range(exc_rank):
                     if r < n_alpha_h:
-                        alpha_hp[0].append(orbitals[rules[i, first_h + r]])
-                        alpha_hp[1].append(orbitals[rules[i, first_p + r]])
+                        new_exc.add_alpha_hp(orbitals[rules[i, first_h + r]],
+                                             orbitals[rules[i, first_p + r]])
                     else:
-                        beta_hp[0].append(orbitals[rules[i, first_h + r]])
-                        beta_hp[1].append(orbitals[rules[i, first_p + r]])
-                new_decomposition.append((exc_rank,
-                                          (np.array(alpha_hp[0], dtype=int_dtype),
-                                           np.array(alpha_hp[1], dtype=int_dtype)),
-                                          (np.array(beta_hp[0], dtype=int_dtype),
-                                           np.array(beta_hp[1], dtype=int_dtype))))
+                        new_exc.add_beta_hp(orbitals[rules[i, first_h + r]],
+                                            orbitals[rules[i, first_p + r]])
+                new_decomposition.append(new_exc)
                 j += 2 * exc_rank + 1
                 used_rank += exc_rank
             if use_this_decomposition:

@@ -34,6 +34,8 @@ from wave_functions.interm_norm import IntermNormWaveFunction
 from wave_functions.slater_det cimport SlaterDet
 from wave_functions.slater_det import SlaterDet, UndefOrbspace
 from coupled_cluster.cluster_decomposition cimport ClusterDecomposition
+from coupled_cluster.excitation cimport SDExcitation
+from coupled_cluster.excitation import SDExcitation
 import wave_functions.strings_rev_lexical_order as str_order
 from orbitals.orbitals import calc_U_from_z
 
@@ -66,7 +68,7 @@ cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
         new_contribution = d[0]
         add_contr = True
         for cluster_exc in d[1:]:
-            if not cc_wf.symmetry_allowed_exc(cluster_exc[1], cluster_exc[2]):
+            if not cc_wf.symmetry_allowed_exc(cluster_exc):
                 add_contr = False
                 break
             new_contribution *= cc_wf[cluster_exc]
@@ -711,6 +713,7 @@ cdef class FCIWaveFunction(WaveFunction):
         cdef int ia, ib
         cdef int[:] aocc, bocc
         cdef SlaterDet det
+        cdef SDExcitation exc
         level = 'SD' if 'SD' in wf.wf_type else 'D'
         wf_type = 'CC' if 'CC' in wf.wf_type else 'CI'
         self._ordered_orbs = False
@@ -743,7 +746,14 @@ cdef class FCIWaveFunction(WaveFunction):
                 self.coefficients[ia, ib] = 1.0
             elif ((rank == 1 and level == 'SD')
                   or (rank == 2 and (level == 'D' or wf_type == 'CI'))):
-                self.coefficients[ia, ib] = wf[rank, alpha_hp, beta_hp]
+                # ===========tmp!!!!
+                exc = SDExcitation()
+                for i in range(alpha_hp[0].size):
+                    exc.add_alpha_hp(alpha_hp[0][i], alpha_hp[1][i])
+                for i in range(beta_hp[0].size):
+                    exc.add_beta_hp(beta_hp[0][i], beta_hp[1][i])
+                # ------------ tmp!!!!
+                self.coefficients[ia, ib] = wf[exc]
             elif wf_type == 'CC' and (level == 'SD' or rank % 2 == 0):
                 self.coefficients[ia, ib] = contribution_from_clusters(
                     alpha_hp, beta_hp, wf, level)

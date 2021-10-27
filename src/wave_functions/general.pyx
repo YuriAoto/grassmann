@@ -424,27 +424,21 @@ cdef class WaveFunction:
             total_irrep = irrep_product[total_irrep, self.orbspace.get_orb_irrep(p)]
         return total_irrep == self.irrep
     
-    def symmetry_allowed_exc(self, alpha_hp, beta_hp):
+    cpdef bint symmetry_allowed_exc(self, SDExcitation exc):
         """Return True if the excitation is symmetry allowed in this wave function
         
         Parameters:
         -----------
-        alpha_hp (2-tuple of np.array)
-            alpha holes and particles
-        
-        beta_hp (2-tuple of np.array)
-            beta holes and particles
+        exc (SDExcitation)
+            The excitation
         """
-        h_irrep = 0
-        p_irrep = 0
-        for h in alpha_hp[0]:
-            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(h)]
-        for h in beta_hp[0]:
-            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(h)]
-        for p in alpha_hp[1]:
-            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(p)]
-        for p in beta_hp[1]:
-            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(p)]
+        cdef int i, h_irrep = 0, p_irrep = 0
+        for i in range(exc.alpha_rank):
+            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(exc.alpha_h[i])]
+            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(exc.alpha_p[i])]
+        for i in range(exc.beta_rank):
+            h_irrep = irrep_product[h_irrep, self.orbspace.get_orb_irrep(exc.beta_h[i])]
+            p_irrep = irrep_product[p_irrep, self.orbspace.get_orb_irrep(exc.beta_p[i])]
         return h_irrep == p_irrep
 
     @property

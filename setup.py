@@ -16,6 +16,7 @@ from distutils.extension import Extension
 #
 all_cython_files = ["src/integrals/integrals_cy",
                     "src/coupled_cluster/exc_on_string",
+                    "src/coupled_cluster/excitation",
                     "src/coupled_cluster/manifold",
                     "src/coupled_cluster/manifold_term1",
                     "src/coupled_cluster/manifold_term2",

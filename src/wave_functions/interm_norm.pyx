@@ -34,6 +34,8 @@ from orbitals.occ_orbitals cimport OccOrbital
 from orbitals.occ_orbitals import OccOrbital
 from orbitals.orbital_space cimport FullOrbitalSpace
 from orbitals.orbital_space import FullOrbitalSpace
+from coupled_cluster.excitation cimport SDExcitation
+from coupled_cluster.excitation import SDExcitation
 
 cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 
@@ -107,11 +109,11 @@ def singles_contr_from_clusters_fci(alpha_hp, beta_hp, fci_wf):
         new_contribution = d[0]
         add_contr = True
         for cluster_exc in d[1:]:
-            if not fci_wf.symmetry_allowed_exc(cluster_exc[1], cluster_exc[2]):
+            if not fci_wf.symmetry_allowed_exc(cluster_exc):
                 add_contr = False
                 break
             new_contribution *= fci_wf[fci_wf.index(SlaterDet.from_excitation(
-                fci_wf.ref_det, 0.0, cluster_exc[1],cluster_exc[2]))]
+                fci_wf.ref_det, 0.0, cluster_exc))]
         if add_contr:
             C += new_contribution
     return C
@@ -945,7 +947,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         """Set the amplitude associated to that excitation. See class doc."""
         if isinstance(key, int):
             self.amplitudes[key] = value
-        elif len(key) == 3:
+        if isinstance(key, SDExcitation):
             pos = self.pos_in_ampl_for_hp(key)
             if isinstance(pos, tuple):
                 if self.restricted:
@@ -963,7 +965,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
         """Get the amplitude associated to that excitation. See class doc."""
         if isinstance(key, int):
             return self.amplitudes[key]
-        if len(key) == 3:
+        if isinstance(key, SDExcitation):
             pos = self.pos_in_ampl_for_hp(key)
             if isinstance(pos, tuple):
                 if self.restricted:
@@ -1036,17 +1038,14 @@ cdef class IntermNormWaveFunction(WaveFunction):
                 + self.orbspace.corr[self.n_irrep - 1])
         raise ValueError('Excitation type must be AA BB or AB')
 
-    def pos_in_ampl_for_hp(self, key):
-        """Get the position of amplitude(s) associated do key"""
-        if len(key) != 3:
-            raise KeyError('Key must be of holes-particles type')
-        if key[0] == 1:
-            return self.pos_in_ampl(
-                self.indices_of_singles(key[1], key[2]))
-        elif key[0] == 2:
+    def pos_in_ampl_for_hp(self, SDExcitation exc):
+        """Get the position of amplitude(s) associated to the excitation"""
+        if exc.rank() == 1:
+            return self.pos_in_ampl(self.indices_of_singles(exc))
+        elif exc.rank() == 2: # just "else:"?
             (i, j, a, b,
              irrep_i, irrep_j, irrep_a,
-             exc_type) = self.indices_of_doubles(key[1], key[2])
+             exc_type) = self.indices_of_doubles(exc)
             if exc_type in (ExcType.AA, ExcType.BB):
                 return (
                     self.pos_in_ampl((i, j, a, b,
@@ -1068,14 +1067,16 @@ cdef class IntermNormWaveFunction(WaveFunction):
         else:
             raise IndexError('Rank must be 1 or 2!')
     
-    def indices_of_singles(self, alpha_hp, beta_hp):
+    def indices_of_singles(self, SDExcitation exc):
         """Return i, a, irrep, exc_type of single excitation"""
+        cdef int i, a, irrep
+        cdef ExcType exc_type
         exc_type = (ExcType.A
-                    if alpha_hp[0].size == 1 else
+                    if exc.alpha_rank == 1 else
                     ExcType.B)
-        i, a = ((alpha_hp[0][0], alpha_hp[1][0])
+        i, a = ((exc.alpha_h[0], exc.alpha_p[0])
                 if exc_type == ExcType.A else
-                (beta_hp[0][0], beta_hp[1][0]))
+                (exc.beta_h[0], exc.beta_p[0]))
         irrep = self.orbspace.get_orb_irrep(i)
         i -= self.orbspace.orbs_before[irrep]
         a -= self.orbspace.orbs_before[irrep]
@@ -1086,33 +1087,32 @@ cdef class IntermNormWaveFunction(WaveFunction):
                      self.n_irrep)]
         return i, a, irrep, exc_type
     
-    cdef (int, int, int, int,
-          int, int, int, ExcType) indices_of_doubles(self, alpha_hp, beta_hp) except *:
+    def indices_of_doubles(self, SDExcitation exc):
         cdef int i, j, a, b
-        cdef int irrep_i, irrep_j, irrep_a
+        cdef int irrep_i, irrep_j, irrep_a, irrep_b
         cdef ExcType exc_type
-        if alpha_hp[0].size == 1:
+        if exc.alpha_rank == 1:
             exc_type = ExcType.AB
-            i, irrep_i = self.orbspace.get_local_index(alpha_hp[0][0], True)
-            j, irrep_j = self.orbspace.get_local_index(beta_hp[0][0], False)
-            a, irrep_a = self.orbspace.get_local_index(alpha_hp[1][0], True)
-            b, irrep_b = self.orbspace.get_local_index(beta_hp[1][0], False)
+            i, irrep_i = self.orbspace.get_local_index(exc.alpha_h[0], True)
+            j, irrep_j = self.orbspace.get_local_index(exc.beta_h[0], False)
+            a, irrep_a = self.orbspace.get_local_index(exc.alpha_p[0], True)
+            b, irrep_b = self.orbspace.get_local_index(exc.beta_p[0], False)
             if self.restricted:
                 if irrep_j < irrep_i or (irrep_j == irrep_i and j < i):
                     i, irrep_i, j, irrep_j = j, irrep_j, i, irrep_i
                     a, irrep_a, b, irrep_b = b, irrep_b, a, irrep_a
-        elif alpha_hp[0].size == 2:
+        elif exc.alpha_rank == 2:
             exc_type = ExcType.AA
-            i, irrep_i = self.orbspace.get_local_index(alpha_hp[0][0], True)
-            j, irrep_j = self.orbspace.get_local_index(alpha_hp[0][1], True)
-            a, irrep_a = self.orbspace.get_local_index(alpha_hp[1][0], True)
-            b, irrep_b = self.orbspace.get_local_index(alpha_hp[1][1], True)
+            i, irrep_i = self.orbspace.get_local_index(exc.alpha_h[0], True)
+            j, irrep_j = self.orbspace.get_local_index(exc.alpha_h[1], True)
+            a, irrep_a = self.orbspace.get_local_index(exc.alpha_p[0], True)
+            b, irrep_b = self.orbspace.get_local_index(exc.alpha_p[1], True)
         else:
             exc_type = ExcType.BB
-            i, irrep_i = self.orbspace.get_local_index(beta_hp[0][0], False)
-            j, irrep_j = self.orbspace.get_local_index(beta_hp[0][1], False)
-            a, irrep_a = self.orbspace.get_local_index(beta_hp[1][0], False)
-            b, irrep_b = self.orbspace.get_local_index(beta_hp[1][1], False)
+            i, irrep_i = self.orbspace.get_local_index(exc.beta_h[0], False)
+            j, irrep_j = self.orbspace.get_local_index(exc.beta_h[1], False)
+            a, irrep_a = self.orbspace.get_local_index(exc.beta_p[0], False)
+            b, irrep_b = self.orbspace.get_local_index(exc.beta_p[1], False)
         return i, j, a, b, irrep_i, irrep_j, irrep_a, exc_type
 
     def calc_memory(self, calcs_args):
