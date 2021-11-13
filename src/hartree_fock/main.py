@@ -24,26 +24,32 @@ def main(args, f_out):
         HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
 						   molecular_system.nucl_rep,
 						   molecular_system.n_elec,
-                                                   max_iter=args.maxiter,
+                                                   max_iter=args.max_iter,
 						   f_out=f_out,
 						   n_DIIS=args.diis)
     else:
-        HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
-                                                   molecular_system.nucl_rep,
-						   molecular_system.n_elec,
-                                                   max_iter=17,
-						   f_out=f_out,
-                                                   n_DIIS=5)
-        orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
+        orb = None
+        if args.max_iter_scf > 0:
+            HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
+                                                      molecular_system.nucl_rep,
+						      molecular_system.n_elec,
+                                                      max_iter=args.max_iter_scf,
+						      f_out=f_out,
+                                                      n_DIIS=args.diis)
+            orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
+        # def myf(i_scf, grad):
+        #     if i_scf < args.max_iter_scf:
+        #         return 'RH-scf'
+        #     return 'Absil'
         HF = optimiser.Unrestricted_HF(molecular_system.integrals,
-					molecular_system.nucl_rep,
-					molecular_system.n_elec,
-                                        args.ms2,
-                                        max_iter=args.maxiter,
-					f_out=f_out,
-					n_DIIS=args.diis,
-                                        ini_orb=orb,
-                                        grad_thresh=1.0E-5)
+				       molecular_system.nucl_rep,
+				       molecular_system.n_elec,
+                                       args.ms2,
+                                       max_iter=args.max_iter,
+				       f_out=f_out,
+                                       ini_orb=orb,
+                                       n_DIIS=args.diis,
+                                       grad_thresh=1.0E-5)
         
     f_out.write(str(HF))
     return HF

@@ -93,12 +93,7 @@ def Restricted_Closed_Shell_HF(integrals,
     assert hf_step.orb.is_orthonormal(
         integrals.S), "Orbitals are not orthonormal"
         
-    hf_step.i_DIIS = -1  # does this have to be inside hf_step
-    hf_step.grad = np.zeros((hf_step.n_occ, len(hf_step.orb) - hf_step.n_occ,
-                             max(n_DIIS, 1)))
-    hf_step.Dmat = np.zeros((len(hf_step.orb),
-                             len(hf_step.orb),
-                             max(n_DIIS, 1)))
+    hf_step.initialise(HF_step_type(i_SCF=0), True)
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
@@ -111,7 +106,7 @@ def Restricted_Closed_Shell_HF(integrals,
         step_type = HF_step_type(i_SCF=i_SCF, grad=hf_step.grad)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
-                hf_step.roothan_hall(i_SCF)
+                hf_step.roothan_hall(i_SCF, True)
                 
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
@@ -161,7 +156,6 @@ def Unrestricted_HF(integrals,
                     ini_orb=None):
     """Unrestricted Hartree-Fock procedure
     
-
     
     integrals (Integrals)
       	The molecular integrals in the basis
@@ -239,7 +233,7 @@ def Unrestricted_HF(integrals,
         assert hf_step.orb.is_orthonormal(
             integrals.S), "Orbitals are not orthonormal"
 
-    hf_step.initialise(HF_step_type(i_SCF=0))
+    hf_step.initialise(HF_step_type(i_SCF=0), False)
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
@@ -263,7 +257,10 @@ def Unrestricted_HF(integrals,
                 
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
-                
+
+            elif step_type == 'gradient':
+                hf_step.gradient_descent(i_SCF)
+
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
                                  + step_type)

@@ -217,3 +217,6 @@ def test_systems(has_method=None,
             break
     if i == 0:
         raise ValueError('Did not yield anything!!')
+
+def get_references(filename):
+    return os.path.join(main_files_dir, 'references', filename)

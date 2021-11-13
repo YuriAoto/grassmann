@@ -12,8 +12,8 @@ import tests
 
 
 def _run_Absil(molecule, geometry, basis, max_iter=20, ms2=0, kwargsSCF=None):
-    molecular_system = MolecularGeometry.from_xyz_file(tests.geom_file(molecule,
-                                                                       geometry))
+    molecular_system = MolecularGeometry.from_xyz_file(
+        tests.geom_file(molecule, geometry))
     molecular_system.calculate_integrals(basis, int_meth='ir-wmme')
     orb = None
     if kwargsSCF is not None:
@@ -34,7 +34,7 @@ def _run_Absil(molecule, geometry, basis, max_iter=20, ms2=0, kwargsSCF=None):
             
 
 class HFAbsilTestCase(unittest.TestCase):
-    """TestCase for the """
+    """TestCase for the HF-Absil implementation."""
 
     @tests.category('VERY SHORT', 'ESSENTIAL')
     def test_h2_ccpvdz(self):
@@ -45,10 +45,19 @@ class HFAbsilTestCase(unittest.TestCase):
         self.assertAlmostEqual(resHF.energy, -0.852458440109)
         self.assertEqual(resHF.n_iter, 3)
 
+    @tests.category('SHORT', 'ESSENTIAL') #medium
+    def test_h2o_631g_no_convergence(self):
+        resHF = _run_Absil(molecule='H2O',
+                           geometry='Rref_Helgaker',
+                           basis='6-31g')
+        self.assertFalse(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -69.15269335670607)
+        self.assertEqual(resHF.n_iter, 19)
+    
     @tests.category('SHORT', 'ESSENTIAL')
     def test_h2o_631g(self):
         kwargsSCF = {'max_iter': 3, 'n_DIIS': 2}
-        resHF = _run_Absil(molecule='h2o',
+        resHF = _run_Absil(molecule='H2O',
                            geometry='Rref_Helgaker',
                            basis='6-31g',
                            kwargsSCF=kwargsSCF)
@@ -59,7 +68,7 @@ class HFAbsilTestCase(unittest.TestCase):
     @tests.category('SHORT', 'ESSENTIAL')
     def test_h2o_631g_2(self):
         kwargsSCF = {'max_iter': 4, 'n_DIIS': 2}
-        resHF = _run_Absil(molecule='h2o',
+        resHF = _run_Absil(molecule='H2O',
                            geometry='Rref_Helgaker',
                            basis='6-31g',
                            kwargsSCF=kwargsSCF)
@@ -68,10 +77,103 @@ class HFAbsilTestCase(unittest.TestCase):
         self.assertEqual(resHF.n_iter, 2)
 
     @tests.category('SHORT', 'ESSENTIAL')
-    def test_h2o_631g_no_convergence(self):
-        resHF = _run_Absil(molecule='h2o',
-                           geometry='Rref_Helgaker',
+    def test_Be_631g(self):
+        resHF = _run_Absil(molecule='Be',
+                           geometry='at',
+                           basis='6-31g')
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -13.580831335633)
+        self.assertEqual(resHF.n_iter, 6)
+
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_Be_631g_ms22(self):
+        resHF = _run_Absil(molecule='Be',
+                           geometry='at',
+                           basis='6-31g',
+                           ms2=2)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -13.965506285000233)
+        self.assertEqual(resHF.n_iter, 6)
+
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_Be_631g_ms2m2(self):
+        resHF = _run_Absil(molecule='Be',
+                           geometry='at',
+                           basis='6-31g',
+                           ms2=-2)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -13.965506285000)
+        self.assertEqual(resHF.n_iter, 6)
+
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_Be_631g_ms24(self):
+        resHF = _run_Absil(molecule='Be',
+                           geometry='at',
+                           basis='6-31g',
+                           ms2=4)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -10.310318082828122)
+        self.assertEqual(resHF.n_iter, 5)
+
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_Be_631g_ms2m4(self):
+        resHF = _run_Absil(molecule='Be',
+                           geometry='at',
+                           basis='6-31g',
+                           ms2=-4)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -10.310318082828122)
+        self.assertEqual(resHF.n_iter, 5)
+        
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_He2_631g(self):
+        resHF = _run_Absil(molecule='He2',
+                           geometry='1.5',
                            basis='6-31g')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -69.15269335670607)
+        self.assertAlmostEqual(resHF.energy, -4.287735030270)
         self.assertEqual(resHF.n_iter, 19)
+
+    @tests.category('SHORT', 'ESSENTIAL')
+    def test_He2_ccpvdz(self):
+        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        resHF = _run_Absil(molecule='He2',
+                           geometry='1.5',
+                           basis='cc-pVDZ',
+                           kwargsSCF=kwargsSCF)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -5.361487027302651)
+        self.assertEqual(resHF.n_iter, 2)
+
+    @tests.category('SHORT', 'ESSENTIAL') #medium?
+    def test_He8_631g(self):
+        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        resHF = _run_Absil(molecule='He8_cage',
+                           geometry='1.5',
+                           basis='6-31g',
+                           kwargsSCF=kwargsSCF)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -22.841474436008095)
+        self.assertEqual(resHF.n_iter, 2)
+
+    @tests.category('SHORT', 'ESSENTIAL') #medium?
+    def test_Li2_631g(self):
+        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        resHF = _run_Absil(molecule='Li2',
+                           geometry='5',
+                           basis='6-31g',
+                           kwargsSCF=kwargsSCF)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -14.86545209295543)
+        self.assertEqual(resHF.n_iter, 4)
+
+    @tests.category('LONG', 'ESSENTIAL')
+    def test_N2_631g(self):
+        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        resHF = _run_Absil(molecule='N2',
+                           geometry='3',
+                           basis='6-31g',
+                           kwargsSCF=kwargsSCF)
+        self.assertTrue(resHF.success)
+        self.assertAlmostEqual(resHF.energy, -108.33006303532665)
+        self.assertEqual(resHF.n_iter, 3)

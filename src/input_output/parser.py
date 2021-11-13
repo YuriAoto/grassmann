@@ -81,7 +81,7 @@ def _parser():
                         help='Restricted calculation.',
                         action='store_true')
     parser.add_argument('--ms2',
-                        help='The MS of Hartree-Fock calculation.',
+                        help='Two times the MS of Hartree-Fock calculation.',
                         type=int)
     parser.add_argument('--method',
                         help='The method.')
@@ -93,8 +93,12 @@ def _parser():
     parser.add_argument('--WF_templ',
                         help='a Molpro output with a Full CI wave function,'
                         + ' to be used as template')
-    parser.add_argument('--maxiter',
+    parser.add_argument('--max_iter',
                         help='Maximum number of iterations',
+                        type=int)
+    parser.add_argument('--max_iter_scf',
+                        help='Maximum number of iterations of SCF method before'
+                        ' Absil',
                         type=int)
     parser.add_argument('--diis',
                         help='Number of previous iteration steps considered'
@@ -235,8 +239,10 @@ def _check(args):
     else:
         raise ParseError(args.memory
                          + ' is not a valid memory specification')
-    if args.maxiter is None:
-        args.maxiter = 20
+    if args.max_iter is None:
+        args.max_iter = 20
+    if args.max_iter_scf is None:
+        args.max_iter_scf = 0
     elif args.at_ref:
         raise ParseError('--maxiter is not compatible with --at_ref')
     if args.diis is None:
