@@ -61,13 +61,10 @@ class HartreeFockStep():
             pass
         elif step_type == 'Absil':
             self.grad = np.zeros((len(self.orb), self.n_occ))
-            self.g = copy.deepcopy(self.integrals.g._integrals)
-            self.integrals.g.transform_to_ijkl()
         elif step_type == 'orb_rot-Newton':
             pass
         elif step_type == 'gradient':
             self.grad = np.zeros((len(self.orb), self.n_occ))
-            self.integrals.g.transform_to_ijkl()
         else:
             raise ValueError("Unknown type of Hartree-Fock step: "
                              + step_type)
@@ -174,7 +171,7 @@ class HartreeFockStep():
         X, Y = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
         S, Sqrt = self.integrals.S, self.integrals.X
         invS, invSqrt = self.integrals.invS, self.integrals.invX
-        augD = np.zeros((n*N + N_a**2 + N_b**2, n * N))
+        augD = np.zeros((n*N + N_a**2 + N_b**2, n*N))
         augR = np.zeros((n*N + N_a**2 + N_b**2,))
         R, Id = np.empty((n, N)), np.eye(n)
         projX, projY = Id - (X @ X.T @ S), Id - (Y @ Y.T @ S)
@@ -183,67 +180,93 @@ class HartreeFockStep():
         gradX, gradY = self.grad[:, :N_a], self.grad[:, N_a:]
 
 
-        with logtime("Compute Fock three indices cython."):
-            fock_a = absil.fock_three_3(xxt, yyt, h, self.g)
-            fock_b = absil.fock_three_3(yyt, xxt, h, self.g)
+        with logtime("computing Fock matrix using three indices in cython."):
+            fock_a = absil.fock_three_3(xxt, yyt, h, g)
+            fock_b = absil.fock_three_3(yyt, xxt, h, g)
 
+        with logtime("computing the energy."):
+            self.one_el_energy = ((xxt + yyt)*h).sum()
+            self.energy = 0.5*((xxt*fock_a + yyt*fock_b).sum()
+                               + self.one_el_energy)
+            self.two_el_energy = self.energy - self.one_el_energy
 
-        with logtime("Compute the energy."):
-            self.one_el_energy = ((xxt + yyt) * h).sum()
-            self.two_el_energy = 0.5 * ((xxt*fock_a + yyt*fock_b).sum()
-                                        - self.one_el_energy)
-            self.energy = self.one_el_energy + self.two_el_energy
+        with logtime("computing the gradient."):
+            gradX = 2 * fock_a @ X
+            gradY = 2 * fock_b @ Y
 
-
-        # with logtime("Compute the gradient."):
+        # with logtime("computing the gradient using three indices."):
         #     gradX = absil.gradient_three(X, Y, xxt, yyt, h, self.g)
         #     gradY = absil.gradient_three(Y, X, yyt, xxt, h, self.g)
 
+        # with logtime("Gradient using Fock matrix."):
+        #     gradX = absil.grad_fock(X, fock_a, xxt, self.g)
+        #     gradY = absil.grad_fock(Y, fock_b, yyt, self.g)
 
-        with logtime("Gradient with Fock matrix."):
-            gradX = absil.grad_fock(X, fock_a, xxt, self.g)
-            gradY = absil.grad_fock(Y, fock_b, yyt, self.g)
+        # with logtime("Compute the gradient with four indices."):
+        #     gradX = absil.gradient(X, Y, xxt, yyt, h, g)
+        #     gradY = absil.gradient(Y, X, yyt, xxt, h, g)
+        # print(gradXd)
 
-        with logtime("Traditional hessian with 4 indices."):
-            D = absil.directional_derivative(X, Y, xxt, yyt, projX, projY,
-                                             gradX, gradY, invS, h, g)
+        # with logtime("computing the old hessian"):
+        #     D = absil.directional_derivative(X, Y, xxt, yyt, projX, projY,
+        #                                      gradX, gradY, invS, h, g)
+
+        with logtime("computing the hessian in blocks"):
+            if N_a != 0:
+                PX = np.kron(np.eye(N_a), projX)
+                QY = np.kron(np.eye(N_a), projY)
+            if N_b != 0:
+                QX = np.kron(np.eye(N_b), projX)
+                PY = np.kron(np.eye(N_b), projY)
+            inv = np.kron(np.eye(N), invS)
+            D = inv @ absil.hessian_f(X, Y, g, fock_a, fock_b)
+            dir_proj_a = absil.dir_proj(X.T, gradX)
+            dir_proj_b = absil.dir_proj(Y.T, gradY)
+            D[: n*N_a, : n*N_a] -= dir_proj_a
+            D[n*N_a :, n*N_a :] -= dir_proj_b
+            if N_a != 0:
+                D[: n*N_a, : n*N_a] = PX @ D[: n*N_a, : n*N_a]
+                D[: n*N_a, n*N_a :] = QY @ D[: n*N_a, n*N_a :]
+            if N_b != 0:
+                D[n*N_a :, n*N_a :] = PY @ D[n*N_a :, n*N_a :]
+                D[n*N_a :, : n*N_a] = QX @ D[n*N_a :, : n*N_a]
 
         augD[: n*N, :] = D
         gradX, gradY = invS @ gradX, invS @ gradY
         R[:, :N_a], R[:, N_a:] = -projX @ gradX, -projY @ gradY
         R = np.reshape(R, (n*N,), 'F')
-        augR[:n*N] = R
-        
+        augR[: n*N] = R
+
         if N_a != 0:
-            augD[n*N : (n*N + N_a**2), :n*N_a] = np.kron(np.eye(N_a),
-                                                         X.T @ S)
+            augD[n*N : (n*N + N_a**2), : n*N_a] = np.kron(np.eye(N_a),
+                                                          X.T @ S)
         if N_b != 0:
-            augD[(n*N + N_a**2):, n*N_a:] = np.kron(np.eye(N_b),
-                                                    Y.T @ S)
-            
+            augD[(n*N + N_a**2) :, n*N_a :] = np.kron(np.eye(N_b),
+                                                      Y.T @ S)
+
         with logtime("Solving the main equation"):
             eta = np.linalg.lstsq(augD, augR, rcond=None)
-            
+
         if eta[1].size < 1:
             logger.warning("Hessian does not have full rank.")
         elif eta[1] > 1e-10:
             logger.warning("Large conditioning number: %.5e", eta[1])
-            
+
         eta = np.reshape(eta[0], (n, N), 'F')
         logger.debug("eta: \n%s", eta)
-        
+
         if N_a != 0:
             u, s, v = linalg.svd(Sqrt @ eta[:, :N_a], full_matrices=False)
             sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
             X = X @ v.T @ cos + invSqrt @ u @ sin
             self.orb[0][:, :N_a] = absil.gram_schmidt(X, S)
-            
+
         if N_b != 0:
             u, s, v = linalg.svd(Sqrt @ eta[:, N_a:], full_matrices=False)
             sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
             Y = Y @ v.T @ cos + invSqrt @ u @ sin
             self.orb[1][:, :N_b] = absil.gram_schmidt(Y, S)
-            
+
         self.gradNorm = linalg.norm(R)
         
     def newton_orb_rot(self, i_SCF):
@@ -264,26 +287,32 @@ class HartreeFockStep():
         xxt, yyt = X @ X.T, Y @ Y.T
         gradX, gradY = self.grad[:, :N_a], self.grad[:, N_a:]
 
-        with logtime("Compute the energy."):
-            (self.energy, self.one_el_energy,
-             self.two_el_energy) = absil.energy(X, Y, xxt, yyt, h, g)
+        with logtime("computing Fock matrix using three indices in cython."):
+            fock_a = absil.fock_three_3(xxt, yyt, h, g)
+            fock_b = absil.fock_three_3(yyt, xxt, h, g)
 
-        with logtime("Compute the gradient."):
-            gradX = absil.gradient(X, Y, xxt, yyt, h, g)
-            gradY = absil.gradient(Y, X, yyt, xxt, h, g)
+        with logtime("computing the energy."):
+            self.one_el_energy = ((xxt + yyt)*h).sum()
+            self.energy = 0.5*((xxt*fock_a + yyt*fock_b).sum()
+                               + self.one_el_energy)
+            self.two_el_energy = self.energy - self.one_el_energy
+
+        with logtime("computing the gradient."):
+            gradX = 2 * fock_a @ X
+            gradY = 2 * fock_b @ Y
 
         gradX, gradY = invS @ gradX, invS @ gradY
         R[:, :N_a], R[:, N_a:] = -projX @ gradX, -projY @ gradY
 
         if N_a != 0:
             u, s, v = linalg.svd(Sqrt @ gradX, full_matrices=False)
-            sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
+            sin, cos = np.diag(np.sin(0.1 * s)), np.diag(np.cos(0.1 * s))
             X = X @ v.T @ cos + invSqrt @ u @ sin
             self.orb[0][:, :N_a] = absil.gram_schmidt(X, S)
             
         if N_b != 0:
             u, s, v = linalg.svd(Sqrt @ gradY, full_matrices=False)
-            sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
+            sin, cos = np.diag(np.sin(0.1 * s)), np.diag(np.cos(0.1 * s))
             Y = Y @ v.T @ cos + invSqrt @ u @ sin
             self.orb[1][:, :N_b] = absil.gram_schmidt(Y, S)
             
