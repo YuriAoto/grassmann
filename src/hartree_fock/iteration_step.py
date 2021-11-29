@@ -181,8 +181,8 @@ class HartreeFockStep():
 
 
         with logtime("computing Fock matrix using three indices in cython."):
-            fock_a = absil.fock_three_3(xxt, yyt, h, g)
-            fock_b = absil.fock_three_3(yyt, xxt, h, g)
+            fock_a = absil.fock(xxt, yyt, h, g)
+            fock_b = absil.fock(yyt, xxt, h, g)
 
         with logtime("computing the energy."):
             self.one_el_energy = ((xxt + yyt)*h).sum()
@@ -191,25 +191,8 @@ class HartreeFockStep():
             self.two_el_energy = self.energy - self.one_el_energy
 
         with logtime("computing the gradient."):
-            gradX = 2 * fock_a @ X
-            gradY = 2 * fock_b @ Y
-
-        # with logtime("computing the gradient using three indices."):
-        #     gradX = absil.gradient_three(X, Y, xxt, yyt, h, self.g)
-        #     gradY = absil.gradient_three(Y, X, yyt, xxt, h, self.g)
-
-        # with logtime("Gradient using Fock matrix."):
-        #     gradX = absil.grad_fock(X, fock_a, xxt, self.g)
-        #     gradY = absil.grad_fock(Y, fock_b, yyt, self.g)
-
-        # with logtime("Compute the gradient with four indices."):
-        #     gradX = absil.gradient(X, Y, xxt, yyt, h, g)
-        #     gradY = absil.gradient(Y, X, yyt, xxt, h, g)
-        # print(gradXd)
-
-        # with logtime("computing the old hessian"):
-        #     D = absil.directional_derivative(X, Y, xxt, yyt, projX, projY,
-        #                                      gradX, gradY, invS, h, g)
+            gradX = fock_a @ X
+            gradY = fock_b @ Y
 
         with logtime("computing the hessian in blocks"):
             if N_a != 0:
@@ -219,7 +202,7 @@ class HartreeFockStep():
                 QX = np.kron(np.eye(N_b), projX)
                 PY = np.kron(np.eye(N_b), projY)
             inv = np.kron(np.eye(N), invS)
-            D = inv @ absil.hessian_f(X, Y, g, fock_a, fock_b)
+            D = inv @ absil.hessian(X, Y, g, fock_a, fock_b)
             dir_proj_a = absil.dir_proj(X.T, gradX)
             dir_proj_b = absil.dir_proj(Y.T, gradY)
             D[: n*N_a, : n*N_a] -= dir_proj_a

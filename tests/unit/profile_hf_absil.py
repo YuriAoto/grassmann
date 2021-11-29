@@ -38,10 +38,10 @@ def _run_Absil(molecule, geometry, basis, max_iter=5, ms2=0, kwargsSCF=None):
 class HFAbsilProfile(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
-    def test_h2o_631g(self):
-        cProfile.runctx('_run_Absil(molecule="h2o",\
+    def test_H2O_ccPVQZ(self):
+        cProfile.runctx('_run_Absil(molecule="H2O",\
         geometry="Rref_Helgaker",\
-        basis="6-31g")', globals(), locals(), 'run_stats')
+        basis="cc-pvqz")', globals(), locals(), 'run_stats')
         p = pstats.Stats('run_stats')
         p.sort_stats(SortKey.TIME)
         p.print_stats()

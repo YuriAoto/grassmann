@@ -47,11 +47,17 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
     def test_H2O_631g_nc(self):
+        """Test for H2O with basis 6-31g that didn't converge.
+
+        In previous tests this converged to other points because of numerical
+        errors due to computing the gradient and the hessian using other
+        formulas, such as four indices integrals.
+        """
         resHF = _run_Absil(molecule='H2O',
                            geometry='Rref_Helgaker',
                            basis='6-31g')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -68.2838713300199)
+        self.assertAlmostEqual(resHF.energy, -66.79533068073351)
         self.assertEqual(resHF.n_iter, 19)
     
     @tests.category('SHORT', 'ESSENTIAL')
@@ -82,7 +88,7 @@ class HFAbsilTestCase(unittest.TestCase):
                            geometry='Rref_Helgaker',
                            basis='cc-pVDZ')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -63.45784346806053)
+        self.assertAlmostEqual(resHF.energy, -61.157918494248875)
         self.assertEqual(resHF.n_iter, 19)
 
     @tests.category('SHORT', 'ESSENTIAL')
@@ -136,11 +142,17 @@ class HFAbsilTestCase(unittest.TestCase):
         
     @tests.category('SHORT', 'ESSENTIAL')
     def test_He2_631g_nc(self):
+        """Test for He2 with basis 6-31g that didn't converge.
+
+        In previous tests this converged to other points because of numerical
+        errors due to computing the gradient and the hessian using other
+        formulas, such as four indices integrals.
+        """
         resHF = _run_Absil(molecule='He2',
                            geometry='1.5',
                            basis='6-31g')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -3.8052529731313713)
+        self.assertAlmostEqual(resHF.energy, -1.9979936118343424)
         self.assertEqual(resHF.n_iter, 19)
 
     @tests.category('SHORT', 'ESSENTIAL')
