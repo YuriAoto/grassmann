@@ -18,3 +18,4 @@ cdef class ClusterDecomposition:
     
     cdef int[:,:] select_recipe(self, int rank)
     cdef int n_rules(self, int rank)
+    cdef decompose(self, alpha_hp, beta_hp, mode=*)

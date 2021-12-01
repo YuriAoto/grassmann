@@ -1,10 +1,5 @@
-"""
-
-Classes:
---------
-
-OrbitalsSets
-
+# cython: profile=False
+"""The orbital spaces
 
 """
 import numpy as np
@@ -70,15 +65,15 @@ cdef class OrbitalSpace():
        
         """
         cdef int i, x
-        self._n_irrep = 0
+        self.n_irrep = 0
         self._type = orb_type
         if n_irrep:
-            self._n_irrep = n_irrep
+            self.n_irrep = n_irrep
         if dim is not None:
             if len(dim) > 16:
                 raise ValueError('dim must have at most 16 entries.')
             if not n_irrep:
-                self._n_irrep = (len(dim) // 2
+                self.n_irrep = (len(dim) // 2
                                  if self._type == 'F' else
                                  len(dim))
             if orb_type == 'F':
@@ -89,51 +84,51 @@ cdef class OrbitalSpace():
                     self._dim_per_irrep[i] = x
             if orb_type == 'R' or orb_type == 'B':
                 for i, x in enumerate(dim):
-                    self._dim_per_irrep[i + self._n_irrep] = x
-        if self._n_irrep and self._n_irrep not in (1, 2, 4, 8):
+                    self._dim_per_irrep[i + self.n_irrep] = x
+        if self.n_irrep and self.n_irrep not in (1, 2, 4, 8):
             raise ValueError('number of irreps must be 1, 2, 4, or 8.')
 
 
     def __getitem__(self, key):
         if isinstance(key, (int, np.integer)):
-            if key < 0 or key >= 2 * self._n_irrep:
+            if key < 0 or key >= 2 * self.n_irrep:
                 raise IndexError('Orbital ' + str(key)
                                  + ' is out of range for '
                                  + str(self) + '.')
             # if self._type == 'F':
             #     return self._dim_per_irrep[key]
             # if self._type == 'R':
-            #     return self._dim_per_irrep[key % self._n_irrep]
+            #     return self._dim_per_irrep[key % self.n_irrep]
             # if self._type == 'A':
-            #     return self._dim_per_irrep[key] if key < self._n_irrep else 0
+            #     return self._dim_per_irrep[key] if key < self.n_irrep else 0
             # if self._type == 'B':
-            #     return self._dim_per_irrep[key] if key >= self._n_irrep else 0
+            #     return self._dim_per_irrep[key] if key >= self.n_irrep else 0
         return np.array(self._dim_per_irrep)[key]
 
     def __setitem__(self, key, value):
         if isinstance(key, (int, np.integer)):
-            if 0 > key < 2 * self._n_irrep:
+            if 0 > key < 2 * self.n_irrep:
                 raise IndexError('Key ' + str(key)
                                   + ' is out of range for '
                                   + str(self) + '.')
-            if self._type == 'A' and key >= self._n_irrep:
+            if self._type == 'A' and key >= self.n_irrep:
                 raise ValueError(
                     'Cannot set occupation for beta orbital for '
                     + str(self) + '.')
-            if self._type == 'B' and key < self._n_irrep:
+            if self._type == 'B' and key < self.n_irrep:
                 raise ValueError(
                     'Cannot set occupation for alpha orbital for '
                     + str(self) + '.')
         self._dim_per_irrep[key] = value
         if self._type == 'R':
-            if key < self._n_irrep:
-                self._dim_per_irrep[key + self._n_irrep] = value
+            if key < self.n_irrep:
+                self._dim_per_irrep[key + self.n_irrep] = value
             else:
-                self._dim_per_irrep[key % self._n_irrep] = value
+                self._dim_per_irrep[key % self.n_irrep] = value
 
     def __len__(OrbitalSpace self):
         cdef int i, s = 0
-        for i in range(2*self._n_irrep):
+        for i in range(2*self.n_irrep):
             s += self._dim_per_irrep[i]
         return s
 
@@ -144,15 +139,15 @@ cdef class OrbitalSpace():
                 x.append('alpha/beta: [')
             else:
                 x.append('alpha: [')
-            for i in self._dim_per_irrep[:self._n_irrep]:
+            for i in self._dim_per_irrep[:self.n_irrep]:
                 x.append(str(i))
         if self._type != 'A' and self._type != 'R':
             x.append(']; beta: [')
             if self._type == 'F':
-                for i in self._dim_per_irrep[self._n_irrep:2*self._n_irrep]:
+                for i in self._dim_per_irrep[self.n_irrep:2*self.n_irrep]:
                     x.append(str(i))
             else:
-                for i in self._dim_per_irrep[:self._n_irrep]:
+                for i in self._dim_per_irrep[:self.n_irrep]:
                     x.append(str(i))
         x.append(']')
         return ' '.join(x)
@@ -160,17 +155,17 @@ cdef class OrbitalSpace():
     def __array__(self):
         """Return a copy of the array that represents it in Full"""
         cdef int i
-        return np.array([self._dim_per_irrep[i] for i in range(2*self._n_irrep)],
+        return np.array([self._dim_per_irrep[i] for i in range(2*self.n_irrep)],
                         dtype=np.intc)
 
     def __eq__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
-        if self._n_irrep != other._n_irrep:
-            raise ValueError(
-                'Cannot compare OrbitalsSets for different number of irreps')
+        if self.n_irrep != other.n_irrep:
+            raise ValueError('Cannot compare OrbitalsSets'
+                             ' for different number of irreps')
         for i in range((1
                         if self._type == 'R' and other._type == 'R' else
-                        2) * self._n_irrep):
+                        2) * self.n_irrep):
             if self[i] != other[i]:
                 return False
         return True
@@ -178,10 +173,10 @@ cdef class OrbitalSpace():
     def __add__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
         cdef OrbitalSpace new_orbsp
-        if self._n_irrep != other._n_irrep:
-            raise ValueError(
-                'Both instances of OrbitalSpace must have same number of irreps.')
-        new_orbsp = OrbitalSpace(n_irrep=self._n_irrep,
+        if self.n_irrep != other.n_irrep:
+            raise ValueError('Both instances of OrbitalSpace'
+                             ' must have same number of irreps.')
+        new_orbsp = OrbitalSpace(n_irrep=self.n_irrep,
                                  orb_type=self._type
                                  if self._type == other._type else
                                  'F')
@@ -192,9 +187,9 @@ cdef class OrbitalSpace():
     def __iadd__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
         cdef OrbitalSpace new_orbsp
-        if self._n_irrep != other._n_irrep:
-            raise ValueError(
-                'Both instances of OrbitalSpace must have same len.')
+        if self.n_irrep != other.n_irrep:
+            raise ValueError('Both instances of OrbitalSpace'
+                             ' must have same number of irreps.')
         self._type = (self._type
                       if self._type == other._type else
                       'F')
@@ -205,10 +200,10 @@ cdef class OrbitalSpace():
     def __sub__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
         cdef OrbitalSpace new_orbsp
-        if self._n_irrep != other._n_irrep:
-            raise ValueError(
-                'Both instances of OrbitalSpace must have same number of irreps.')
-        new_orbsp = OrbitalSpace(n_irrep=self._n_irrep,
+        if self.n_irrep != other.n_irrep:
+            raise ValueError('Both instances of OrbitalSpace'
+                             ' must have same number of irreps.')
+        new_orbsp = OrbitalSpace(n_irrep=self.n_irrep,
                                  orb_type=self._type
                                  if self._type == other._type else
                                  'F')
@@ -218,9 +213,9 @@ cdef class OrbitalSpace():
 
     def __isub__(OrbitalSpace self, OrbitalSpace other):
         cdef int i
-        if self._n_irrep != other._n_irrep:
-            raise ValueError(
-                'Both instances of OrbitalSpace must have same len.')
+        if self.n_irrep != other.n_irrep:
+            raise ValueError('Both instances of OrbitalSpace'
+                             ' must have same number of irreps.')
         self._type = (self._type
                       if self._type == other._type else
                       'F')
@@ -231,12 +226,12 @@ cdef class OrbitalSpace():
     def set_(OrbitalSpace self, OrbitalSpace other, bint force=False):
         cdef int i
         if force:
-            self._n_irrep = other._n_irrep
+            self.n_irrep = other.n_irrep
             self._type = other._type
         else:
-            if self._n_irrep != other._n_irrep:
-                raise ValueError(
-                    'Both instances of OrbitalSpace must have same len.')
+            if self.n_irrep != other.n_irrep:
+                raise ValueError('Both instances of OrbitalSpace'
+                                 ' must have same number of irreps.')
             self._type = (self._type
                           if self._type == other._type else
                           'F')
@@ -250,8 +245,8 @@ cdef class OrbitalSpace():
         if self._type == 'R':
             return
         if self._type == 'F':
-            for i in range(self._n_irrep):
-                if self._dim_per_irrep[i] != self._dim_per_irrep[i + self._n_irrep]:
+            for i in range(self.n_irrep):
+                if self._dim_per_irrep[i] != self._dim_per_irrep[i + self.n_irrep]:
                     raise ValueError('Cannot restrict ' + str(self) + '.')
             self._type = 'R'
             return
@@ -264,22 +259,51 @@ cdef class OrbitalSpace():
 
 
 cdef class FullOrbitalSpace:
-    """The (dimensions of) orbital space
+    """The (dimensions of) orbital spaces
     
+    
+    The full orbital space is divided into subspaces:
+    
+    
+             alpha                                beta
+    ________________________          ________________________  
+   |                        |        |                        |  \
+   |         virtual        |        |                        |   |
+   |                        |        |         virtual        |   |
+   +------------+-----------+ ------ |                        |   |
+   |            |           | active |                        |   |
+   | correlated |           | ------ |------------+-----------+    > full
+   |            |           |        | correlated |           |   |
+   +------------+ reference |        |------------+           |   |
+   |            |           |        |            | reference |   |
+   |   frozen   |           |        |   frozen   |           |   |
+   |____________|___________|        |____________|___________|  /
+    
+    
+    This division is similar to each irrep. Each of these orbital subspaces
+    is represented by an instance of OrbitalSpace.
+    
+    
+    Atributes:
+    ----------
     n_irrep (int)
         Number of irreducible representations
     
     full (OrbitalSpace)
-        Full dimension of the orbital space of each irrep ("R" type)
+        Full dimension of the orbital space of each irrep. It is always
+        of "R" type.
     
     froz (OrbitalSpace)
-        Number of frozen orbitals per irrep ("R" type)
+        Number of frozen orbitals per irrep. It is always of "R" type.
     
     act (OrbitalSpace)
-        Number of active orbitals per irrep ("A" type)
+        Number of active orbitals per irrep ("A" type). Note that this is
+        the difference between alpha and beta correlated orbitals, and thus
+        is of "A" type.
     
     ref (OrbitalSpace)
-        Number of occupied orbitals per spirrep in reference determinant
+        Number of occupied orbitals per spirrep in reference determinant.
+        This includes the frozen orbitals. It is of "F" type
     
     virt, corr (OrbitalSpace)
         virt = dim - ref
@@ -295,11 +319,10 @@ cdef class FullOrbitalSpace:
     
     n_orb n_orb_nofrozen (int)
         Number of spatial orbitals (with and without frozen orbitals
-    
-
+        
     
     """
-    def __cinit__(self, n_irrep=0):
+    def __init__(self, n_irrep=0):
         self.n_irrep = n_irrep
         self.full = OrbitalSpace(n_irrep=n_irrep)
         self.froz = OrbitalSpace(n_irrep=n_irrep)
@@ -318,15 +341,6 @@ cdef class FullOrbitalSpace:
                 f'========\n'
                 f'frozen:     {self.froz}\n')
     
-    cpdef set_n_irrep(self, int n):
-        self.n_irrep = n
-        self.full._n_irrep = n
-        self.froz._n_irrep = n
-        self.ref._n_irrep = n
-        self.virt._n_irrep = n
-        self.corr._n_irrep = n
-        self.act._n_irrep = n
-
     def __eq__(self, other):
         if self.full != other.full: return False
         if self.froz != other.froz: return False
@@ -336,6 +350,15 @@ cdef class FullOrbitalSpace:
         if self.act != other.act: return False
         return True
 
+    cpdef set_n_irrep(self, int n):
+        self.n_irrep = n
+        self.full.n_irrep = n
+        self.froz.n_irrep = n
+        self.ref.n_irrep = n
+        self.virt.n_irrep = n
+        self.corr.n_irrep = n
+        self.act.n_irrep = n
+
     cpdef set_full(self, OrbitalSpace other, bint update=True):
         self.full.set_(other)
         if update: self.calc_remaining()
@@ -344,14 +367,18 @@ cdef class FullOrbitalSpace:
         self.full += other
         if update: self.calc_remaining()
 
-    cpdef set_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef set_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False,
+                   bint add_to_ref=False):
         self.froz.set_(other)
         if add_to_full: self.full += other
+        if add_to_ref: self.ref += other
         if update: self.calc_remaining()
             
-    cpdef add_to_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
+    cpdef add_to_froz(self, OrbitalSpace other, bint update=True, bint add_to_full=False,
+                   bint add_to_ref=False):
         self.froz += other
         if add_to_full: self.full += other
+        if add_to_ref: self.ref += other
         if update: self.calc_remaining()
 
     cpdef set_ref(self, OrbitalSpace other, bint update=True, bint add_to_full=False):
@@ -374,7 +401,30 @@ cdef class FullOrbitalSpace:
         if add_to_full: self.full += other
         if update: self.calc_remaining()
     
-    cpdef calc_remaining(self):
+    cdef calc_remaining(self):
+        """Calculate the dependent attributes
+        
+        The following attributes are calculated (the "dependent attributes"):
+        
+        virt
+        corr
+        n_orb
+        n_orb_nofrozen
+        orbs_before
+        corr_orbs_before
+        
+        They depend on the other attributes:
+        
+        full
+        ref
+        froz
+        
+        This is more like an implementation choice. One could for instance calculate
+        ref from corr, that is also reasonable.
+        
+        Note that the dependent attributes are overwriten here!
+        
+        """
         cdef int irrep
         self.virt = self.full - self.ref
         self.corr = self.ref - self.froz
@@ -417,3 +467,95 @@ cdef class FullOrbitalSpace:
     cdef inline int first_virtual(self, int spirrep):
         """The index of first virtual orbital of spirrep"""
         return self.orbs_before[spirrep % self.n_irrep] + self.corr[spirrep]
+
+    cdef int get_orb_irrep(self, int orb) except -1:
+        """Return the irrep of orb.
+        
+        Parameters:
+        -----------
+        orb (int)
+            The global orbital index (without frozen orbitals)
+        
+        Return:
+        -------
+        The integer of that irrep
+        
+        """
+        cdef int irrep
+        for irrep in range(self.n_irrep):
+            if orb < self.orbs_before[irrep + 1]:
+                return irrep
+
+    cdef (int, int) get_local_index(self, int p, bint alpha_orb) except *:
+        """Return index of p within its block of corr. or virtual orbitals
+        
+        Given the global index of an orbital, calculates its index within
+        the block of orbitals it belongs
+        
+        Example:
+        --------
+        
+        Parameters:
+        -----------
+        
+        
+        """
+        cdef int irrep, spirrep
+        irrep = self.get_orb_irrep(p)
+        p -= self.orbs_before[irrep]
+        spirrep = irrep + (0
+                           if alpha_orb else
+                           self.n_irrep)
+        if p >= self.corr[spirrep]:
+            p -= self.corr[spirrep]
+        return p, irrep
+        
+    cdef int get_absolute_index(self,
+                                int p,
+                                int irrep,
+                                bint occupied,
+                                bint alpha_orb) except -1:
+        """Return the absolute index of p
+        
+        Given the local index p, within a block of orbitals it belongs,
+        its irrep, and whether it is occupied/virtual or alpha/beta,
+        return its global index (within alpha or beta)
+        
+        It is the inverse of get_local_index
+        
+        Example:
+        --------
+        
+        Parameters:
+        -----------
+        
+        
+        """
+        p += self.orbs_before[irrep]
+        if occupied:
+            p += self.corr[
+                irrep + (0
+                         if alpha_orb or self.restricted else
+                         self.n_irrep)]
+        return p
+
+    cdef int get_abs_corr_index(self, int p, int irrep, bint alpha_orb) except -1:
+        """Return the absolute index of p within correlated orbitals
+        
+        Given the local index p, within a correlated block of orbitals,
+        its irrep, and whether it is alpha/beta,
+        return its global index (within alpha or beta correlated orbitals)
+        
+        It is the inverse of get_local_index
+        
+        Example:
+        --------
+        
+        Parameters:
+        -----------
+        
+        
+        """
+        return p + self.corr_orbs_before[irrep + (0
+                                                  if alpha_orb else
+                                                  self.n_irrep)]

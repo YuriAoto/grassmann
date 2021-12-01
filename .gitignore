@@ -12,4 +12,4 @@ grassmann/test/inputs_outputs/*/*min_dist*
 */*/*.so
 */*/*.html
 */*/*~
-
+*/*/.nfs*

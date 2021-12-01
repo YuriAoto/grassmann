@@ -149,6 +149,7 @@ class run_grassmann:
         self.args = args
         parsed = parse(args)
         self.output = parsed.output
+        self.out_extension = parsed.out_extension
         self.logfile = parsed.logfile
         self.outdir = parsed.outdir
         self.f = None
@@ -219,3 +220,17 @@ class run_grassmann:
                 shutil.rmtree(self.outdir)
             except OSError:
                 pass
+
+    def reference(self, n=''):
+        """The reference file to compare the output
+        
+        The file is obtained from the output file, replacing its extension
+        by f"ref{n}"
+        
+        Parameters:
+        -----------
+        n (str-able, usually str or int. Optional, default = '')
+            The identifier of the reference file, in case of multiple files
+            for the same output.
+        """
+        return self.output.replace(self.out_extension, f'.ref{n}')

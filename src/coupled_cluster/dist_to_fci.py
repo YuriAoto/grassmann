@@ -391,7 +391,7 @@ def calc_dist_to_cc_manifold(wf,
             f_out.flush()
     if f_out is not None:
         f_out.write('-----------------------------------------------------------\n\n')
-    res = MinDistResults(f'Minimun distance to CC{level} manifold')
+    res = MinDistResults(f'Minimum distance to CC{level} manifold')
     res.level = level
     res.success = converged
     if not converged:
@@ -420,9 +420,9 @@ _wf_space_graph_full = """
                    /         into the CC manifold
                   /
                  /
-                /        the regular CI wave function
- -------------------x---CI---------------
-CI manifold         ^
+            ref /        the regular CI wave function
+ --------------X----x---CI---------------
+CI manifold   HF    ^
                  vert CI   the vertical projection
                            into the CI manifold
 """
@@ -442,8 +442,8 @@ _wf_space_graph_no_ci = """
                    /         into the CC manifold
                   /
                  /
-                /
- -------------------x--------------------
+            ref /
+ --------------X----x--------------------
 CI manifold         ^
                  vert CI   the vertical projection
                            into the CI manifold
@@ -464,8 +464,8 @@ _wf_space_graph_no_cc = """
                    /         into the CC manifold
                   /
                  /
-                /        the regular CI wave function
- -------------------x---CI---------------
+            ref /        the regular CI wave function
+ --------------X----x---CI---------------
 CI manifold         ^
                  vert_CI   the vertical projection
                            into the CI manifold
@@ -486,8 +486,8 @@ _wf_space_graph_no_cc_ci = """
                    /         into the CC manifold
                   /
                  /
-                /
- -------------------x--------------------
+            ref /
+ --------------X----x--------------------
 CI manifold         ^
                  vert_CI   the vertical projection
                            into the CI manifold
@@ -506,20 +506,8 @@ class AllDistResults(Results):
     CI and CC manifolds. These are XX__YY and XX__YY_ampl, with the
     distance between XX and YY, in the metric of the intermediate
     normalisation (in the full space) and in the parameter space of
-    the amplitudes (whenever possible). These attributes are:
-    
-    fci__min_d
-    fci__vert
-    fci__cc
-    fci__vert_ci
-    fci__ci
-    min_d__vert
-    min_d__vert_ampl
-    cc__vert
-    cc__vert_ampl
-    cc__min_d
-    cc__min_d_ampl
-    
+    the amplitudes (whenever possible). In this case the attribute should
+    come with "_ampl".
     
     """
     def __init__(self, *args, **kargs):
@@ -530,33 +518,24 @@ class AllDistResults(Results):
     @inside_box
     def __str__(self):
         x = []
-        x.append(f'D(FCI, minD_CC) = {self.fci__min_d:.5f}')
-        try:
-            x.append(f'D(FCI, minD_CC) = {self.fci__min_d_expl:.5f} (explicit calculation)')
-        except AttributeError:
-            pass
-        x.append(f'D(FCI, vert_CC) = {self.fci__vert:.5f}')
-        try:
-            x.append(f'D(FCI, vert_CC) = {self.fci__vert_expl:.5f} (explicit calculation)')
-        except AttributeError:
-            pass
-        x.append(f'D(FCI, vert_CI) = {self.fci__vert_ci:.5f}')
-        if self.has_cc:
-            x.append(f'D(FCI, CC)      = {self.fci__cc:.5f}')
-        if self.has_ci:
-            x.append(f'D(FCI, CI)      = {self.fci__ci:.5f}')
-        x.append('')
-        if self.has_ci and self.has_cc:
-            x.append(f'D(CC, CI)           = {self.ci__cc:.5f} ')
-        x.append('')
-        x.append(f'D(minD_CC, vert_CC) = {self.min_d__vert:.5f} '
-                 + f'({self.min_d__vert_ampl:.5f} in ampl space)')
-        if self.has_cc:
-            x.append(f'D(CC, vert_CC)      = {self.cc__vert:.5f} '
-                     + f'({self.cc__vert_ampl:.5f} in ampl space)')
-            x.append(f'D(CC, minD_CC)      = {self.cc__min_d:.5f} '
-                     + f'({self.cc__min_d_ampl:.5f} in ampl space)')
+        def dist_str(key):
+            to_replace = [('__', ', '),
+                          ('_expl', ''),
+                          ('_ampl', '')
+            ]
+            after_str = ''
+            if '_ampl' in key: after_str += '_ampl'
+            if '_expl' in key: after_str += '_expl'
+            for pattern, repl in to_replace:
+                key = key.replace(pattern, repl)
+            return f'D({key}){after_str}'
 
+        the_distances = [(dist_str(k), k) for k in sorted(self.__dict__) if '__' in k]
+        the_distances.reverse()
+        maxlen = max(list(map(lambda x: len(x[0]), the_distances)))
+        for fmt_k, k in the_distances:
+            spaces = ' ' * (maxlen - len(fmt_k))
+            x.append(f'{fmt_k}{spaces}  {self.__dict__[k]:.5f}')
         return (super().__str__() + '\n'
                 + (_wf_space_graph_full
                    if (self.has_ci and self.has_cc) else
@@ -610,29 +589,38 @@ def calc_all_distances(fci_wf, res_vert, res_min_d, cc_wf, ci_wf, level,
     
     """
     res = AllDistResults(f'Distances among CC{level}/CI{level} wave functions')
-    res.fci__min_d = res_min_d.distance
+    vertCI_wf = IntermNormWaveFunction.from_projected_fci(fci_wf, 'CI' + level)
+    res.ref__FCI = fci_wf.dist_to_ref()
+    res.ref__minD = res_min_d.wave_function_as_fci.dist_to_ref()
+    res.ref__vertCC = res_vert.wave_function_as_fci.dist_to_ref()
+    res.ref__vertCI = vertCI_wf.dist_to_ref()
+    res.FCI__minD = res_min_d.distance
     if explicit_calcs:
-        res.fci__min_d_expl = res_min_d.wave_function_as_fci.dist_to(fci_wf)
-    res.fci__vert = res_vert.distance
+        res.FCI__minD_expl = res_min_d.wave_function_as_fci.dist_to(fci_wf)
+    res.FCI__vertCC = res_vert.distance
     if explicit_calcs:
-        res.fci__vert_expl = res_vert.wave_function_as_fci.dist_to(fci_wf)
-    res.fci__vert_ci = res_vert.distance_ci
-    res.min_d__vert_ampl = res_min_d.wave_function.dist_to(res_vert.wave_function)
-    res.min_d__vert = res_min_d.wave_function_as_fci.dist_to(
+        res.FCI__vertCC_expl = res_vert.wave_function_as_fci.dist_to(fci_wf)
+    res.FCI__vertCI = res_vert.distance_ci
+    if explicit_calcs:
+        res.FCI__vertCI_expl = FCIWaveFunction.from_interm_norm(vertCI_wf).dist_to(fci_wf)
+    res.minD__vertCC_ampl = res_min_d.wave_function.dist_to(res_vert.wave_function)
+    res.minD__vertCC = res_min_d.wave_function_as_fci.dist_to(
         res_vert.wave_function_as_fci)
     if cc_wf is not None:
         res.has_cc = True
         cc_as_fci = FCIWaveFunction.from_interm_norm(cc_wf)
-        res.fci__cc = cc_as_fci.dist_to(fci_wf)
-        res.cc__min_d_ampl = cc_wf.dist_to(res_min_d.wave_function)
-        res.cc__min_d = cc_as_fci.dist_to(res_min_d.wave_function_as_fci)
-        res.cc__vert_ampl = cc_wf.dist_to(res_vert.wave_function)
-        res.cc__vert = cc_as_fci.dist_to(res_vert.wave_function_as_fci)
+        res.ref__CC = cc_as_fci.dist_to_ref()
+        res.FCI__CC = cc_as_fci.dist_to(fci_wf)
+        res.CC__minD = cc_as_fci.dist_to(res_min_d.wave_function_as_fci)
+        res.CC__minD_ampl = cc_wf.dist_to(res_min_d.wave_function)
+        res.CC__vertCC = cc_as_fci.dist_to(res_vert.wave_function_as_fci)
+        res.CC__vertCC_ampl = cc_wf.dist_to(res_vert.wave_function)
     if ci_wf is not None:
         res.has_ci = True
+        res.ref__CI = ci_wf.dist_to_ref()
         ci_as_fci = FCIWaveFunction.from_interm_norm(ci_wf)
-        res.fci__ci = ci_as_fci.dist_to(fci_wf)
+        res.FCI__CI = ci_as_fci.dist_to(fci_wf)
         if cc_wf is not None:
-            res.ci__cc = ci_as_fci.dist_to(cc_as_fci)
+            res.CC__CI = ci_as_fci.dist_to(cc_as_fci)
     res.success = True
     return res

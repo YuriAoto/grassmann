@@ -30,8 +30,8 @@ class CisdFciJacHessTestCase(unittest.TestCase):
             wf_intN = interm_norm.IntermNormWaveFunction.from_Molpro(
                 tests.CISD_file(test_sys))
             wf_CISD = cisd.CISDWaveFunction.from_interm_norm(wf_intN)
-            wf_FCI = fci.FCIWaveFunction.from_Molpro_FCI(
-                tests.FCI_file(test_sys), zero_coefficients=False)
+            wf_FCI = fci.FCIWaveFunction.from_Molpro(tests.FCI_file(test_sys),
+                                                     zero_coefficients=False)
             tests.logger.debug("FCI before:\n%r", wf_FCI)
             wf_FCI.get_coefficients_from_interm_norm_wf(wf_intN)
             tests.logger.debug("CISD:\n%r", wf_CISD)

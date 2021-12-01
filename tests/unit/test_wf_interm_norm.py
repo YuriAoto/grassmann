@@ -3,11 +3,15 @@
 """
 import unittest
 import math
-import cProfile
-import pstats
-from pstats import SortKey
-import tracemalloc
-
+try:
+    import cProfile
+    import pstats
+    import tracemalloc
+except ImportError:
+    profile_modules_not_found = True
+else:
+    profile_modules_not_found = False
+    
 import numpy as np
 
 from wave_functions.fci import FCIWaveFunction
@@ -15,8 +19,8 @@ from wave_functions.interm_norm import IntermNormWaveFunction
 import tests
 from util import memory
 
-
-tracemalloc.start()
+if not profile_modules_not_found:
+    tracemalloc.start()
 
 def createWF():
     mol_system = 'Li2__5__sto3g__D2h'
@@ -25,8 +29,7 @@ def createWF():
     print('before readinf FCI:\n')
     for stat in top_stats:
         print(stat)
-    wf = FCIWaveFunction.from_Molpro_FCI(
-        tests.FCI_file(mol_system, allE=True))
+    wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system, allE=True))
     print('FCI mem: ', wf.mem)    
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics('lineno')
@@ -42,7 +45,8 @@ def createWF():
     for stat in top_stats:
         print(stat)
 
-
+@unittest.skipIf(profile_modules_not_found,
+                 'modules for profiling were not found')
 @tests.category('PROFILE')
 class CheckMemory(unittest.TestCase):
     """Check memory profile"""
@@ -1233,8 +1237,7 @@ class FromProjCCDTestCase(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
     
     def test_h2_sto3g_d2h(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__sto3g__D2h'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__sto3g__D2h'))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCD_file('H2__5__sto3g__D2h'))
@@ -1244,8 +1247,7 @@ class FromProjCCDTestCase(unittest.TestCase):
 
     @unittest.skip('Is this a valid test??')
     def test_h2_631g_d2h_noS(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__631g__D2h'))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file('H2__5__631g__D2h'))
         wf._coefficients[0, 1:] = 0.0
         wf._coefficients[1:, 0] = 0.0
         wf.normalise(mode='intermediate')
@@ -1266,8 +1268,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
     
     def test_h2_sto3g_d2h(self):
         mol_system = 'H2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(mol_system))
@@ -1277,8 +1278,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
     def test_h2_631g_d2h(self):
         mol_system = 'H2__5__631g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(mol_system))
@@ -1288,8 +1288,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
     def test_h2_ccpvdz_d2h(self):
         mol_system = 'H2__5__ccpVDZ__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(mol_system))
@@ -1300,8 +1299,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
     def test_li2_sto3g_d2h(self):
         mol_system = 'Li2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(mol_system))
@@ -1311,8 +1309,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
     def test_li2_to2s_c2v(self):
         mol_system = 'Li2__5__to2s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
             tests.CCSD_file(mol_system))
@@ -1322,7 +1319,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
 
     def test_li2_to3s_c2v(self):
         mol_system = 'Li2__5__to3s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(
+        wf = FCIWaveFunction.from_Molpro(
             tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.from_Molpro(
@@ -1384,8 +1381,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
                  0.000000000000, #                                              (1, 0)
                 -0.050079313551/C0 - (0.002263551723/C0)*(0.002263551723/C0)  # (1, 1)
         ])
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
         self.assertEqual(np.array(proj_cc_wf), my_ampl)
@@ -1422,8 +1418,7 @@ class FromProjCCSDTestCase(unittest.TestCase):
             -0.031932478884/C0, #                                           (0, irrep=0; 0, irrep=0)
             -0.050078119195/C0 - (0.002263754920/C0)*(0.002263754920/C0) #  (0, irrep=4; 0, irrep=4)
             ])
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CCSD")
         self.assertEqual(np.array(proj_cc_wf), my_ampl)
@@ -1439,33 +1434,27 @@ class FromProjCISDTestCase(unittest.TestCase):
     
     def test_h2_sto3g_d2h(self):
         mol_system = 'H2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_631g_d2h(self):
         mol_system = 'H2__5__631g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_h2_ccpvdz_d2h(self):
         mol_system = 'H2__5__ccpVDZ__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         proj_cc_wf.set_eq_tol(atol=1.0E-6, rtol=1.0E-5)
@@ -1473,33 +1462,27 @@ class FromProjCISDTestCase(unittest.TestCase):
 
     def test_li2_sto3g_d2h(self):
         mol_system = 'Li2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to2s_c2v(self):
         mol_system = 'Li2__5__to2s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         self.assertEqual(proj_cc_wf, cc_wf)
 
     def test_li2_to3s_c2v(self):
         mol_system = 'Li2__5__to3s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
-        cc_wf = IntermNormWaveFunction.from_Molpro(
-            tests.CISD_file(mol_system))
+        cc_wf = IntermNormWaveFunction.from_Molpro(tests.CISD_file(mol_system))
         proj_cc_wf = IntermNormWaveFunction.restrict(
             IntermNormWaveFunction.from_projected_fci(wf, "CISD"))
         self.assertEqual(proj_cc_wf, cc_wf)
@@ -1557,8 +1540,7 @@ class FromProjCISDTestCase(unittest.TestCase):
                  0.000000000000, #    (1, 0)
                 -0.050079313551/C0 #  (1, 1)
         ])
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
         self.assertEqual(np.array(proj_cc_wf), my_ampl)
@@ -1595,8 +1577,7 @@ class FromProjCISDTestCase(unittest.TestCase):
             -0.031932478884/C0, # (0, irrep=0; 0, irrep=0)
             -0.050078119195/C0 # (0, irrep=4; 0, irrep=4)
             ])
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         proj_cc_wf = IntermNormWaveFunction.from_projected_fci(wf, "CISD")
         self.assertEqual(np.array(proj_cc_wf), my_ampl)

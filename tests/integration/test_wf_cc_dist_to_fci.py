@@ -30,13 +30,12 @@ class VertDistTwoElecCCDTestCase(unittest.TestCase):
     
     def test_h2_sto3g_d2h(self):
         mol_system = 'H2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         res = vertical_dist_to_cc_manifold(wf, level="D")
         self.assertEqual(res.distance, 0.0)
 
     def test_h2_631g_d2h_noS(self):
-        wf = FCIWaveFunction.from_Molpro_FCI(
-            tests.FCI_file('H2__5__631g__D2h'))
+        wf = FCIWaveFunction.from_Molpro(FCI_file('H2__5__631g__D2h'))
         for i in range(1, wf.shape[0]):
             wf[i, 0] = 0.0
         for i in range(1, wf.shape[1]):
@@ -58,7 +57,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('SHORT')
     def test_h2_sto3g_d2h(self):
         mol_system = 'H2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(CCSD_file(mol_system)))
         res = vertical_dist_to_cc_manifold(wf)
@@ -68,7 +67,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('SHORT')
     def test_h2_631g_d2h(self):
         mol_system = 'H2__5__631g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(CCSD_file(mol_system)))
         res = vertical_dist_to_cc_manifold(wf)
@@ -78,7 +77,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('SHORT')
     def test_h2_ccpvdz_d2h(self):
         mol_system = 'H2__5__ccpVDZ__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(tests.FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(tests.FCI_file(mol_system))
         wf.normalise(mode='intermediate')
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
@@ -91,7 +90,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('LONG')
     def test_li2_sto3g_d2h(self):
         mol_system = 'Li2__5__sto3g__D2h'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system)))
@@ -102,7 +101,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('VERY LONG')
     def test_li2_to2s_c2h(self):
         mol_system = 'Li2__5__to2s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system)))
@@ -113,7 +112,7 @@ class VertDistTwoElecCCSDTestCase(unittest.TestCase):
     @tests.category('VERY LONG')
     def test_li2_to3s_c2h(self):
         mol_system = 'Li2__5__to3s__C2v'
-        wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(mol_system))
+        wf = FCIWaveFunction.from_Molpro(FCI_file(mol_system))
         cc_wf = IntermNormWaveFunction.unrestrict(
             IntermNormWaveFunction.from_Molpro(
                 tests.CCSD_file(mol_system)))
@@ -282,7 +281,7 @@ class VertDistCCSDwfCCSDTestCase(unittest.TestCase):
 
 def _calc_mindist_twoel(molsys, level, diag_hess=False, factor=None):
     """Helper to MinDistTwoElec*TestCase"""
-    wf = FCIWaveFunction.from_Molpro_FCI(FCI_file(molsys))
+    wf = FCIWaveFunction.from_Molpro(FCI_file(molsys))
     if '631g' in molsys and level == 'D':
         wf[0, 1] = 0.0
         wf[1, 0] = 0.0

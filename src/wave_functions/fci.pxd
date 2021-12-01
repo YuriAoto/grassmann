@@ -1,5 +1,9 @@
+from wave_functions.slater_det cimport SlaterDet
 from wave_functions.general cimport WaveFunction
+from wave_functions.interm_norm cimport IntermNormWaveFunction
+from orbitals.orbital_space cimport FullOrbitalSpace, OrbitalSpace
 
+cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
 
 cdef class FCIWaveFunction(WaveFunction):
     cdef double [:,:] coefficients
@@ -12,7 +16,8 @@ cdef class FCIWaveFunction(WaveFunction):
     cdef bint _ordered_orbs
     cdef object _normalisation
     cdef object _sign_change_orbs
-    cdef readonly object ref_det
+    cdef readonly SlaterDet ref_det
     cpdef (int, int) index(self,  det) except *
+    cdef (int, int) set_slater_det(self, SlaterDet det) except *
     cdef int sign_change_orb_from(self, FCIWaveFunction wf) except -1
     cdef int initialize_coeff_matrix(self) except -1
