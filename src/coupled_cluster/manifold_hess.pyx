@@ -141,8 +141,8 @@ cdef int calc_H_ab(double [:] H,
     return calc_H_block_abab(H, double_exc, wf, wf_cc, pos_ini)
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aa(double [:] H,
                          SingleExc single_exc,
                          FCIWaveFunction wf,
@@ -181,8 +181,8 @@ cdef int calc_H_block_aa(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bb(double [:] H,
                          SingleExc single_exc,
                          FCIWaveFunction wf,
@@ -221,8 +221,8 @@ cdef int calc_H_block_bb(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaa(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -283,8 +283,8 @@ cdef int calc_H_block_aaa(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbb(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -348,8 +348,8 @@ cdef int calc_H_block_bbb(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaaa(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,
@@ -415,8 +415,8 @@ cdef int calc_H_block_aaaa(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbbb(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,
@@ -487,8 +487,8 @@ cdef int calc_H_block_bbbb(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_ab(double [:] H,
                          SingleExc single_exc,
                          FCIWaveFunction wf,
@@ -528,8 +528,8 @@ cdef int calc_H_block_ab(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_abb(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -591,8 +591,8 @@ cdef int calc_H_block_abb(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_baa(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -651,8 +651,8 @@ cdef int calc_H_block_baa(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aabb(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,
@@ -716,8 +716,8 @@ cdef int calc_H_block_aabb(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aab(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -777,8 +777,8 @@ cdef int calc_H_block_aab(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bab(double [:] H,
                           SingleExc single_exc,
                           FCIWaveFunction wf,
@@ -838,8 +838,8 @@ cdef int calc_H_block_bab(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_aaab(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,
@@ -905,8 +905,8 @@ cdef int calc_H_block_aaab(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_bbab(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,
@@ -972,8 +972,8 @@ cdef int calc_H_block_bbab(double [:] H,
     return pos
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef int calc_H_block_abab(double [:] H,
                            DoubleExc double_exc,
                            FCIWaveFunction wf,

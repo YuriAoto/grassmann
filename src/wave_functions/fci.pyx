@@ -1,4 +1,4 @@
-# cython: profile=True
+# cython: profile=False
 """A FCI-like wave function, normalised to unity
 
 The class defined here stores the wave function coefficients as a matrix
@@ -44,7 +44,7 @@ cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 logger = logging.getLogger(__name__)
 
 
-cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
+cpdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
     """Return the contribution of a cluter decomposition
     
     Parameters:

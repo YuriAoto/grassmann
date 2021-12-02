@@ -34,8 +34,8 @@ from wave_functions.strings_rev_lexical_order cimport get_index, next_str, ini_s
 from coupled_cluster.exc_on_string cimport exc_on_string
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_a(SingleExc exc,
                     double[:, :] wf,
                     double[:, :] wf_cc,
@@ -64,8 +64,8 @@ cdef double term1_a(SingleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_b(SingleExc exc,
                     double[:, :] wf,
                     double[:, :] wf_cc,
@@ -94,8 +94,8 @@ cdef double term1_b(SingleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aa(DoubleExc exc,
                      double[:, :] wf,
                      double[:, :] wf_cc,
@@ -127,8 +127,8 @@ cdef double term1_aa(DoubleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_bb(DoubleExc exc,
                      double[:, :] wf,
                      double[:, :] wf_cc,
@@ -160,8 +160,8 @@ cdef double term1_bb(DoubleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aaa(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -196,8 +196,8 @@ cdef double term1_aaa(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_bbb(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -232,8 +232,8 @@ cdef double term1_bbb(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aaaa(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -271,8 +271,8 @@ cdef double term1_aaaa(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_bbbb(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -310,8 +310,8 @@ cdef double term1_bbbb(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_ab(DoubleExc exc,
                      double[:, :] wf,
                      double[:, :] wf_cc,
@@ -350,8 +350,8 @@ cdef double term1_ab(DoubleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aab(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -393,8 +393,8 @@ cdef double term1_aab(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_abb(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -436,8 +436,8 @@ cdef double term1_abb(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aaab(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -482,8 +482,8 @@ cdef double term1_aaab(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_aabb(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -528,8 +528,8 @@ cdef double term1_aabb(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_abbb(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -574,8 +574,8 @@ cdef double term1_abbb(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_baa(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -617,8 +617,8 @@ cdef double term1_baa(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_bab(TripleExc exc,
                       double[:, :] wf,
                       double[:, :] wf_cc,
@@ -660,8 +660,8 @@ cdef double term1_bab(TripleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_bbab(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
@@ -706,8 +706,8 @@ cdef double term1_bbab(QuadrupleExc exc,
     return S
 
 
-#@cython.boundscheck(False)  # Deactivate bounds checking
-#@cython.wraparound(False)   # Deactivate negative indexing
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 cdef double term1_abab(QuadrupleExc exc,
                        double[:, :] wf,
                        double[:, :] wf_cc,
