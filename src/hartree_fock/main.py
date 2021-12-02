@@ -50,7 +50,7 @@ def main(args, f_out):
 				       f_out=f_out,
                                        ini_orb=orb,
                                        n_DIIS=args.diis,
-                                       grad_thresh=1.0E-12)
+                                       grad_thresh=1.0E-5)
         
     f_out.write(str(HF))
     return HF

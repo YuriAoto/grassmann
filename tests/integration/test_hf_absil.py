@@ -57,7 +57,7 @@ class HFAbsilTestCase(unittest.TestCase):
                            geometry='Rref_Helgaker',
                            basis='6-31g')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -66.79533068073351)
+        self.assertAlmostEqual(resHF.energy, -68.58118956706662)
         self.assertEqual(resHF.n_iter, 19)
     
     @tests.category('SHORT', 'ESSENTIAL')
@@ -88,7 +88,7 @@ class HFAbsilTestCase(unittest.TestCase):
                            geometry='Rref_Helgaker',
                            basis='cc-pVDZ')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -61.157918494248875)
+        self.assertAlmostEqual(resHF.energy, -62.154788593887375)
         self.assertEqual(resHF.n_iter, 19)
 
     @tests.category('SHORT', 'ESSENTIAL')
@@ -152,7 +152,7 @@ class HFAbsilTestCase(unittest.TestCase):
                            geometry='1.5',
                            basis='6-31g')
         self.assertFalse(resHF.success)
-        self.assertAlmostEqual(resHF.energy, -1.9979936118343424)
+        self.assertAlmostEqual(resHF.energy, -2.0343634735980247)
         self.assertEqual(resHF.n_iter, 19)
 
     @tests.category('SHORT', 'ESSENTIAL')

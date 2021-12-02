@@ -93,7 +93,7 @@ def Restricted_Closed_Shell_HF(integrals,
     assert hf_step.orb.is_orthonormal(
         integrals.S), "Orbitals are not orthonormal"
         
-    hf_step.initialise(HF_step_type(i_SCF=0), True)
+    hf_step.initialise(HF_step_type(i_SCF=0))
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
@@ -106,7 +106,7 @@ def Restricted_Closed_Shell_HF(integrals,
         step_type = HF_step_type(i_SCF=i_SCF, grad=hf_step.grad)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
-                hf_step.roothan_hall(i_SCF, True)
+                hf_step.roothan_hall(i_SCF)
                 
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
@@ -233,7 +233,7 @@ def Unrestricted_HF(integrals,
         assert hf_step.orb.is_orthonormal(
             integrals.S), "Orbitals are not orthonormal"
 
-    hf_step.initialise(HF_step_type(i_SCF=0), False)
+    hf_step.initialise(HF_step_type(i_SCF=0))
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
