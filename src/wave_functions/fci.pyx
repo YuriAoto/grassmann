@@ -44,7 +44,7 @@ cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 logger = logging.getLogger(__name__)
 
 
-cdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
+cpdef double contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level):
     """Return the contribution of a cluter decomposition
     
     Parameters:
