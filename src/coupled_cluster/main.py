@@ -57,7 +57,7 @@ def main(args, f_out):
                                                  level=level,
                                                  f_out=f_out,
                                                  ini_wf=ini_cc_wf,
-                                                 maxiter=args.maxiter,
+                                                 max_iter=args.max_iter,
                                                  diag_hess=args.cc_diag_hess)
         logger.info("Results from min dist to CC manifold:\n%r", res_min_d)
         f_out.write(str(res_min_d))

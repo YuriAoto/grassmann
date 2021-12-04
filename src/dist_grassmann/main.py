@@ -204,7 +204,7 @@ def main(args, f_out):
                 ext_wf,
                 f_out=f_out,
                 ini_U=U,
-                max_iter=args.maxiter,
+                max_iter=args.max_iter,
                 enable_uphill=False,
                 save_all_U_dir=(args.outdir + '/'
                                 if args.save_all_orb else
@@ -213,7 +213,7 @@ def main(args, f_out):
             res = optimiser.optimise_overlap_Absil(
                 ext_wf,
                 f_out=f_out,
-                max_iter=args.maxiter,
+                max_iter=args.max_iter,
                 ini_U=U,
                 save_all_U_dir=(args.outdir + '/'
                                 if args.save_all_orb else
