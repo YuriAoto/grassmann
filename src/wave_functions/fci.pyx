@@ -1,4 +1,4 @@
-# cython: profile=True
+# cython: profile=False
 """A FCI-like wave function, normalised to unity
 
 The class defined here stores the wave function coefficients as a matrix

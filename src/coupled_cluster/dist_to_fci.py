@@ -232,7 +232,7 @@ class MinDistResults(OptResults, DistResults):
 
 def calc_dist_to_cc_manifold(wf,
                              level='SD',
-                             maxiter=10,
+                             max_iter=10,
                              f_out=None,
                              diag_hess=True,
                              save_as_fci_wf=False,
@@ -258,7 +258,7 @@ def calc_dist_to_cc_manifold(wf,
     level (str, optional, default='D'; possible values: 'D', 'SD')
         The level of coupled cluster theory to compare.
 
-    maxiter (int, optional, default=10)
+    max_iter (int, optional, default=10)
         The maximum number of iterations
 
     f_out (File object, optional, default=None)
@@ -332,7 +332,7 @@ def calc_dist_to_cc_manifold(wf,
             '------------------------------------------------------------\n'
             '         Optimising the distance to the CC manifold\n'
             ' it  distance    |Z|         |J|          time in iteration\n')
-    for i_iteration in range(maxiter):
+    for i_iteration in range(max_iter):
         with logtime(f'Starting iteration {i_iteration}') as T_iter:
             if (i_iteration == 0
                 and isinstance(ini_wf, FCIWaveFunction)

@@ -244,7 +244,7 @@ def _check(args):
     if args.max_iter_scf is None:
         args.max_iter_scf = 0
     elif args.at_ref:
-        raise ParseError('--maxiter is not compatible with --at_ref')
+        raise ParseError('--max_iter is not compatible with --at_ref')
     if args.diis is None:
         args.diis = 0
     elif args.diis < 0:

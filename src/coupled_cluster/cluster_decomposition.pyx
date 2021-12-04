@@ -139,8 +139,8 @@ cdef class ClusterDecomposition:
             return 5103000
         raise ValueError('We can handle only up to octuples')
 
-    #@cython.boundscheck(False)  # Deactivate bounds checking
-    #@cython.wraparound(False)   # Deactivate negative indexing
+    @cython.boundscheck(False)  # Deactivate bounds checking
+    @cython.wraparound(False)   # Deactivate negative indexing
     cdef decompose(self, alpha_hp, beta_hp, mode='D'):
         """Carry out the decomposition
         

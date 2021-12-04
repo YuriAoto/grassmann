@@ -303,7 +303,7 @@ def _calc_mindist_twoel(molsys, level, diag_hess=False, factor=None):
                                    f_out=fout,
                                    ini_wf=ini_wf,
                                    diag_hess=diag_hess,
-                                   maxiter=20)
+                                   max_iter=20)
     return res, cc_wf
 
 
@@ -694,7 +694,7 @@ def _calc_mindist(molecular_system, level, diag_hess, factor=None, allE=False):
                                        level=level,
                                        f_out=fout,
                                        diag_hess=diag_hess,
-                                       maxiter=20)
+                                       max_iter=20)
     else:
         ini_wf = IntermNormWaveFunction.unrestrict(cc_wf)
         ini_wf *= factor
@@ -703,7 +703,7 @@ def _calc_mindist(molecular_system, level, diag_hess, factor=None, allE=False):
                                        f_out=fout,
                                        diag_hess=diag_hess,
                                        ini_wf=ini_wf,
-                                       maxiter=20)
+                                       max_iter=20)
     return res, cc_wf
 
 

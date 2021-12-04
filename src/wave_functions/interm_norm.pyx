@@ -1,5 +1,4 @@
-
-# cython: profile=True
+# cython: profile=False
 """An wave function in the intermediate normalisation
 
 Classes:
@@ -39,14 +38,16 @@ from coupled_cluster.excitation import SDExcitation
 
 cdef ClusterDecomposition cluster_dec = ClusterDecomposition()
 
-def _translate(X, ini, end):
+cdef void _translate(int [:] X, int ini, int end):
     """X[..., ini, ini+1, ..., end-1, end, ...] -> X[..., ini+1, ..., end-1, end, end, ...]
     """
+    # In numpy:
     if ini <= end:
         X[ini:end] = X[ini+1:end+1]
     else:
         X[end+1:ini+1] = X[end:ini]
-    # Better for cython??
+    # In Cython:
+    # cdef int ii
     # if ini <= end:
     #     for ii in range(ini, end):
     #         X[ii] = X[ii + 1]
@@ -55,14 +56,47 @@ def _translate(X, ini, end):
     #         alpha_occ[ini-ii] = alpha_occ[end - (ii+1)]
 
 
-def _set_virtpos_for_proj_aa_bb(old_virt_pos_a, old_virt_pos_b,
-                                i, j, a_spirrep, b_spirrep,
-                                occ, corr_orbs_before, corr_orb):
+cdef (int, int) _set_virtpos_for_proj_aa_bb(int old_virt_pos_a,
+                                            int old_virt_pos_b,
+                                            OccOrbital i,
+                                            OccOrbital j,
+                                            int a_spirrep,
+                                            int b_spirrep,
+                                            int [:] occ,
+                                            FullOrbitalSpace orbsp):
     """Helper for from_projected_fci: set position of virtual orbitals
     
+    Obtains the position of virtual orbitals in the excited determinant,
+    in occ, posibly shifing some positions of the occupied orbitals
+    in occ to have the orbitals in ascending order
+    
+    Parameters:
+    -----------
+    old_virt_pos_a, old_virt_pos_b
+        The position of virtual orbitals previously
+    
+    i, j
+        The holes, namely, occupied orbitals that will be excited
+    
+    a_spirrep, b_spirrep
+        Spirrep of virtual orbitals (where the excitation will end)
+    
+    occ
+        The occupied orbitals
+    
+    Return:
+    -------
+    The 2-tuple with the calculated position of where the virtual orbitals
+    should be
+    
+    Side Effect
+    -----------
+    Some entries of occupied orbitals are shifted to have the orbitals
+    in ascending order
+    
     """
-    new_virt_pos_a = corr_orbs_before[a_spirrep] + corr_orb[a_spirrep]
-    new_virt_pos_b = corr_orbs_before[b_spirrep] + corr_orb[b_spirrep]
+    cdef int new_virt_pos_a = orbsp.corr_orbs_before[a_spirrep] + orbsp.corr[a_spirrep]
+    cdef int new_virt_pos_b = orbsp.corr_orbs_before[b_spirrep] + orbsp.corr[b_spirrep]
     new_virt_pos_b += 1
     if j.spirrep <= a_spirrep:
         new_virt_pos_a -= 2
@@ -72,6 +106,10 @@ def _set_virtpos_for_proj_aa_bb(old_virt_pos_a, old_virt_pos_b,
         new_virt_pos_b -= 1
         if j.spirrep <= b_spirrep:
             new_virt_pos_b -= 1
+    elif i.spirrep <= b_spirrep:
+        new_virt_pos_b -= 1 
+        if j.spirrep <= b_spirrep:
+            new_virt_pos_b -= 1 
     if old_virt_pos_a < new_virt_pos_a:
         _translate(occ, old_virt_pos_b, new_virt_pos_b)
         _translate(occ, old_virt_pos_a, new_virt_pos_a)
@@ -736,8 +774,6 @@ cdef class IntermNormWaveFunction(WaveFunction):
                            self._n_ampl):
                 S += self.amplitudes[i]**2
         return sqrt(S)
-
-
     
     @property
     def n_indep_ampl(self):
@@ -1334,7 +1370,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
                         virt_pos_a, virt_pos_b,
                         i, j, a_spirrep, b_spirrep,
-                        alpha_occ, wf.orbspace.corr_orbs_before, wf.orbspace.corr)
+                        alpha_occ, wf.orbspace)
                     alpha_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
                                              + wf.orbspace.corr[a_spirrep])
                     for a in range(wf.orbspace.virt[a_spirrep]):
@@ -1398,7 +1434,7 @@ cdef class IntermNormWaveFunction(WaveFunction):
                     virt_pos_a, virt_pos_b = _set_virtpos_for_proj_aa_bb(
                         virt_pos_a, virt_pos_b,
                         i, j, a_spirrep, b_spirrep,
-                        beta_occ, wf.orbspace.corr_orbs_before, wf.orbspace.corr)
+                        beta_occ, wf.orbspace)
                     beta_occ[virt_pos_a] = (wf.orbspace.orbs_before[a_irrep]
                                             + wf.orbspace.corr[a_spirrep])
                     for a in range(wf.orbspace.virt[a_spirrep]):
