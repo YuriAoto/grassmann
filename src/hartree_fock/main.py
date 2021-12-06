@@ -29,19 +29,21 @@ def main(args, f_out):
 						  n_DIIS=args.diis,
                                                   grad_thresh=1E-05)
     else:
-        orb = None
         if args.max_iter_scf > 0:
-            HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
-                                                      molecular_system.nucl_rep,
-						      molecular_system.n_elec,
-                                                      max_iter=args.max_iter_scf,
-						      f_out=f_out,
-                                                      n_DIIS=args.diis)
-            orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
+            HF = optimiser.Unrestricted_HF(molecular_system.integrals,
+                                          molecular_system.nucl_rep,
+					  molecular_system.n_elec,
+                                          args.ms2,
+                                          max_iter=args.max_iter_scf,
+					  f_out=f_out,
+                                          n_DIIS=args.diis,
+                                          HF_step_type=lambda **x: "RH-SCF")
+##            orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
             # def myf(i_scf, grad):
             #     if i_scf < args.max_iter_scf:
             #         return 'RH-scf'
             #     return 'Absil'
+        orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
         HF = optimiser.Unrestricted_HF(molecular_system.integrals,
 				       molecular_system.nucl_rep,
 				       molecular_system.n_elec,

@@ -5,6 +5,7 @@
 import logging
 import time
 import copy
+from math import sqrt
 
 import numpy as np
 from scipy import linalg
@@ -33,6 +34,7 @@ class HartreeFockStep():
     
     """
     def __init__(self):
+        self.restricted = None
         self.n_DIIS = 0
         self.n_occ = 0
         self.n_occ_alpha = 0
@@ -41,20 +43,28 @@ class HartreeFockStep():
         self.orb = None
         self.energy = None
         self.grad = None
-        self.Dmat = None
+        self.P_a = None
+        self.P_b = None
         self.Fock = None
         self.gradNorm = None
         self.g = None
 
-    def initialise(self, step_type, three_indices):
+    def initialise(self, step_type, three_indices=True):
         if step_type == 'RH-SCF':
             self.i_DIIS = -1
-            self.grad = np.zeros((self.n_occ,
-                                  len(self.orb) - self.n_occ,
+            self.grad = np.zeros((self.n_occ_alpha,
+                                  len(self.orb) - self.n_occ_alpha,
                                   max(self.n_DIIS, 1)))
-            self.Dmat = np.zeros((len(self.orb),
+            self.P_a = np.zeros((len(self.orb),
                                   len(self.orb),
                                   max(self.n_DIIS, 1)))
+            if not self.restricted:
+                self.grad_beta = np.zeros((self.n_occ_beta,
+                                           len(self.orb) - self.n_occ_beta,
+                                           max(self.n_DIIS, 1)))
+                self.P_b = np.zeros((len(self.orb),
+                                           len(self.orb),
+                                           max(self.n_DIIS, 1)))
             if not three_indices:
                 self.integrals.g.transform_to_ijkl()
         elif step_type == 'densMat-SCF':
@@ -68,98 +78,168 @@ class HartreeFockStep():
         else:
             raise ValueError("Unknown type of Hartree-Fock step: "
                              + step_type)
+
+    def calc_density_matrix(self):
+        """Calculate the density matrix (or matrices)
         
-    def roothan_hall(self, i_SCF, three_indices):
-        """Roothan-Hall procedure as described, e.g, in Szabo
-        
+        P = C @ C.T
         """
+        self.P_a[:, :, self.i_DIIS] = np.einsum(
+            'pi,qi->pq',
+            self.orb[0][:, :self.n_occ_alpha],
+            self.orb[0][:, :self.n_occ_alpha])
+        if self.restricted:
+            self.P_a[:, :, self.i_DIIS] = 2 * self.P_a[:, :, self.i_DIIS]
+            logger.debug('Density matrix:\n%r', self.P_a[:, :, self.i_DIIS])
+        else:
+            self.P_b[:, :, self.i_DIIS] = np.einsum(
+                'pi,qi->pq',
+                self.orb[1][:, :self.n_occ_beta],
+                self.orb[1][:, :self.n_occ_beta])
+            logger.debug('Alpha density matrix:\n%r', self.P_a[:, :, self.i_DIIS])
+            logger.debug('Beta density matrix:\n%r', self.P_b[:, :, self.i_DIIS])
+
+    def calc_diis(self, i_SCF):
+        """Calculate DIIS step"""
         if i_SCF < self.n_DIIS:
             cur_n_DIIS = i_SCF
         else:
             cur_n_DIIS = self.n_DIIS
         if self.n_DIIS > 0:
             logger.info('current n DIIS: %d', cur_n_DIIS)
-
-        with logtime('Form the density matrix'):
-            self.Dmat[:, :, self.i_DIIS] = 2 * np.einsum(
-                'pi,qi->pq',
-                self.orb[0][:, :self.n_occ],
-                self.orb[0][:, :self.n_occ])
-            logger.debug('Density matrix:\n%r', self.Dmat[:, :, self.i_DIIS])
-
         if self.n_DIIS > 0 and cur_n_DIIS > 0:
-            with logtime('DIIS step'):
-                util.calculate_DIIS(
-                    self.Dmat, self.grad, cur_n_DIIS, self.i_DIIS)
+            util.calculate_DIIS(self.P_a, self.grad, cur_n_DIIS, self.i_DIIS)
+            if not self.restricted:
+                util.calculate_DIIS(self.P_b, self.grad_beta, cur_n_DIIS, self.i_DIIS)
 
-        with logtime('Form Fock matrix'):
-            if three_indices:
-                # F[mn] = h[mn] + Dmat[rs]*(g[mnrs] - g[mrsn]/2)
-                # The way that einsum is made matters a lot in the time
-                Fock = np.array(self.integrals.h)
-                tmp = np.einsum('rs,Frs->F',
-                                self.Dmat[:, :, self.i_DIIS],
-                                self.integrals.g._integrals)
-                Fock += np.einsum('F,Fmn->mn',
-                                  tmp,
-                                  self.integrals.g._integrals)
-                tmp = np.einsum('rs,Fms->Frm',
-                                self.Dmat[:, :, self.i_DIIS],
-                                self.integrals.g._integrals)
-                Fock -= np.einsum('Frm,Frn->mn',
-                                  tmp,
-                                  self.integrals.g._integrals) / 2
-            else:
-                n, N = len(self.orb), self.n_occ / 2
-                g = self.integrals.g._integrals
-                Fock = np.array(self.integrals.h)
-                for i in range(n):
-                    for j in range(n):
-                        for k in range(n):
-                            for l in range(n):
-                                Fock[i, j] += (self.Dmat[k, l, self.i_DIIS] *
-                                               (g[getindex(i, j, l, k)]
-                                                - g[getindex(i, k, l, j)] / 2))
-                                logger.debug('Fock matrix:\n%r', Fock)
+    def calc_fock_matrix(self):
+        """Calculate the Fock matrix
+        
+        F[mn] = h[mn] + P_a[rs]*(g[mnrs] - g[mrsn]/2)
+        The way that einsum is made matters a lot in the time
+        
+        TODO: integrate restricted and unrestricted codes
+        """
+        if self.restricted:
+            Fock = np.array(self.integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            self.P_a[:, :, self.i_DIIS],
+                            self.integrals.g._integrals)
+            Fock += np.einsum('F,Fmn->mn',
+                              tmp,
+                              self.integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            self.P_a[:, :, self.i_DIIS],
+                            self.integrals.g._integrals)
+            Fock -= np.einsum('Frm,Frn->mn',
+                                   tmp,
+                                   self.integrals.g._integrals) / 2
+            return Fock
+        else:
+            return (absil.fock(self.P_a[:, :, self.i_DIIS],
+                               self.P_b[:, :, self.i_DIIS],
+                               self.integrals.h, self.integrals.g._integrals),
+                    absil.fock(self.P_b[:, :, self.i_DIIS],
+                               self.P_a[:, :, self.i_DIIS],
+                               self.integrals.h, self.integrals.g._integrals))
 
-        with logtime('Calculate Energy'):
-            self.energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
+    def calc_energy(self, Fock):
+        """Calculate the energy
+        
+        TODO: integrate restricted and unrestricted codes
+        """
+        if self.restricted:
+            self.energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
                                        self.integrals.h + Fock) / 2
-            self.one_el_energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
+            self.one_el_energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
                                               self.integrals.h)
-            self.two_el_energy = np.tensordot(self.Dmat[:, :, self.i_DIIS],
+            self.two_el_energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
                                               Fock - self.integrals.h) / 2
-            logger.info(
-                'Electronic energy: %f\nOne-electron energy: %f'
-                + '\nTwo-electron energy: %f',
-                self.energy, self.one_el_energy, self.two_el_energy)
-
+        else:
+            self.one_el_energy = ((self.P_a[:, :, self.i_DIIS]
+                                   + self.P_b[:, :, self.i_DIIS])* self.integrals.h).sum()
+            self.energy = 0.5*((self.P_a[:, :, self.i_DIIS]*Fock[0]
+                                + self.P_b[:, :, self.i_DIIS]*Fock[1]).sum()
+                               + self.one_el_energy)
+            self.two_el_energy = self.energy - self.one_el_energy
+        logger.info(
+            'Electronic energy: %f\nOne-electron energy: %f'
+            + '\nTwo-electron energy: %f',
+            self.energy, self.one_el_energy, self.two_el_energy)
         self.i_DIIS += 1
         if self.i_DIIS >= self.n_DIIS:
             self.i_DIIS = 0
         if self.n_DIIS > 0:
             logger.info('current self.i_DIIS: %d', self.i_DIIS)
-            
-        with logtime('Fock matrix in the MO basis'):
+
+    def calc_mo_fock(self, Fock):
+        if self.restricted:
             F_MO = self.orb[0].T @ Fock @ self.orb[0]
             self.grad[:, :, self.i_DIIS] = F_MO[:self.n_occ, self.n_occ:]
-            self.gradNorm = linalg.norm(self.grad[:, :, self.i_DIIS]) * sqrt2
-            logger.info('Gradient norm = %f', self.gradNorm)
             self.orb.energies = np.array([F_MO[i, i]
                                           for i in range(len(self.orb))])
+            self.gradNorm = linalg.norm(self.grad[:, :, self.i_DIIS]) * sqrt2
+            logger.info('Gradient norm = %f', self.gradNorm)
             if loglevel <= logging.INFO:
                 logger.info('Current orbital energies:\n%r',
                             self.orb.energies)
+        else:
+            F_MO = self.orb[0].T @ Fock[0] @ self.orb[0]
+            self.grad[:, :, self.i_DIIS] = F_MO[:self.n_occ_alpha, self.n_occ_alpha:]
+            self.orb.energies = np.array([F_MO[i, i]
+                                          for i in range(len(self.orb))])
+            F_MO = self.orb[1].T @ Fock[1] @ self.orb[1]
+            self.grad_beta[:, :, self.i_DIIS] = F_MO[:self.n_occ_beta, self.n_occ_beta:]
+            self.orb.energies_beta = np.array([F_MO[i, i]
+                                               for i in range(len(self.orb))])
+            self.gradNorm = sqrt(linalg.norm(self.grad[:, :, self.i_DIIS])**2
+                                 + linalg.norm(self.grad_beta[:, :, self.i_DIIS])**2)
+            if loglevel <= logging.INFO:
+                logger.info('Current orbital energies:\n%r',
+                            self.orb.energies)
+                logger.info('Current beta orbital energies:\n%r',
+                            self.orb.energies_beta)
 
-        with logtime('Fock matrix in the orthogonal basis'):
+    def diag_fock(self, Fock):
+        if self.restricted:
             Fock = self.integrals.X.T @ Fock @ self.integrals.X
             e, C = linalg.eigh(Fock)
+            #        e, C = linalg.eig(self.Fock)
+            #        e_sort_index = np.argsort(e)
+            #        e = e[e_sort_index]
+            #        C = C[:, e_sort_index]
+            # ----- Back to the AO basis
+            self.orb[0][:, :] = self.integrals.X @ C
+        else:
+            fock_a = self.integrals.X.T @ Fock[0] @ self.integrals.X
+            fock_b = self.integrals.X.T @ Fock[1] @ self.integrals.X
+            e, C = linalg.eigh(fock_a)
+            eb, Cb = linalg.eigh(fock_b)
             #        e, C = linalg.eig(Fock)
             #        e_sort_index = np.argsort(e)
             #        e = e[e_sort_index]
             #        C = C[:, e_sort_index]
             # ----- Back to the AO basis
             self.orb[0][:, :] = self.integrals.X @ C
+            self.orb[1][:, :] = self.integrals.X @ Cb
+
+
+    def roothan_hall(self, i_SCF):
+        """Roothan-Hall procedure as described, e.g, in Szabo
+        
+        """
+        with logtime('Form the density matrix'):
+            self.calc_density_matrix()
+        with logtime('DIIS step'):
+            self.calc_diis(i_SCF)
+        with logtime('Form Fock matrix'):
+            Fock = self.calc_fock_matrix()
+        with logtime('Calculate Energy'):
+            self.calc_energy(Fock)
+        with logtime('Fock matrix in the MO basis'):
+            self.calc_mo_fock(Fock)
+        with logtime('Fock matrix in the orthogonal basis'):
+            self.diag_fock(Fock)
 
     def density_matrix_scf(self, i_SCF):
         raise NotImplementedError("Density matrix based SCF")
