@@ -41,6 +41,7 @@ def main(args, f_out):
     molecular_system = MolecularGeometry.from_xyz_file(args.geometry)
     with logtime('Calculate integrals'):
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
+
     HF = optimiser.hartree_fock(molecular_system.integrals,
 				molecular_system.nucl_rep,
 				molecular_system.n_elec,
@@ -51,5 +52,6 @@ def main(args, f_out):
     				f_out=f_out,
 				n_DIIS=args.diis,
                                 HF_step_type=_define_hfstep_func(args.step_type))
+
     f_out.write(str(HF))
     return HF

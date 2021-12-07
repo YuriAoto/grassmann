@@ -1,6 +1,44 @@
-#cython: profile=True
-"""A module with helper functions for Absil's Hartree-Fock."""
+"""A module with helper functions for Absil's Hartree-Fock.
 
+    Common parameters:
+    ------------------
+    C_a (2D np.ndarray of dimension (n, N_a))
+        The spin alpha part of the Slater determinant. n is the size of the
+        basis set and N_a is the number of the spin alpha occupied orbitals
+        in the Slater determinant.
+
+    C_b (2D np.ndarray of dimension (n, N_b))
+        The spin beta part of the Slater determinant. n is the size of the
+        basis set and N_b is the number of the spin beta occupied orbitals
+        in the Slater determinant.
+
+    P_a (2D np.ndarray of dimension (n, n))
+        Density matrix for spin alpha: C_a @ C_a.T
+
+    P_b (2D np.ndarray of dimension (n, n))
+        Density matrix for spin beta: C_b @ C_b.T
+    
+    proj_a (2D np.ndarray of dimension (n, N_a))
+        Projection matrix at H_{C_a}: Id - C_a @ C_a.T @ S
+
+    proj_b (2D np.ndarray of dimension (n, N_b))
+        Projection matrix at H_{C_b}: Id - C_b @ C_b.T @ S
+    
+    grad_a (2D np.ndarray of dimension (n, N_a))
+        The spin alpha part of the gradient of the energy.
+
+    grad_b (2D np.ndarray of dimension (n, N_b))
+        The spin beta part of the gradient of the energy.
+
+    h (2D np.ndarray)
+        One-electron integral matrix.
+
+    g (3D np.ndarray)
+        Two-electron integral matrix.
+
+    S (2D np.ndarray)
+        Overlap matrix.
+"""
 cimport cython
 
 import numpy as np
@@ -9,136 +47,174 @@ from scipy import linalg
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def mixed_spins(double[:, :] X, double[:, :] Y , double[:, :, :] g):
-    cdef int a, b, i, j, p, q, L
-    cdef int n = X.shape[0], N_a = X.shape[1], N_b = Y.shape[1], T = g.shape[0]
-    cdef double[:, :] M = np.zeros((n*N_b, n*N_a))
-    cdef double[:, :, :] tmp1 = np.zeros((T, n, N_a))
-    cdef double[:, :, :] tmp2 = np.zeros((T, n, N_b))
+def common_blocks(double[:, :] C_a, double[:, :] C_b,
+                  double[:, :] P_a, double[:, :] P_b,
+                  double[:, :, :] g):
+    cdef int i, j, k, L, T = g.shape[0], n = C_a.shape[0]
+    cdef int N_a = C_a.shape[1], N_b = C_b.shape[1]
+    cdef double[:] GP_a = np.zeros(T)
+    cdef double[:] GP_b = np.zeros(T)
+    cdef double[:, :, :] GC_a = np.zeros((T, n, N_a))
+    cdef double[:, :, :] GC_b = np.zeros((T, n, N_b))
+    cdef double[:, :, :] GCC_a = np.zeros((T, N_a, N_a))
+    cdef double[:, :, :] GCC_b = np.zeros((T, N_b, N_b))
     cdef double aux
 
     for L in range(T):
-        for a in range(n):
-            for p in range(n):
-                aux = g[L, a, p]
-                for b in range(N_a):
-                    tmp1[L, a, b] += aux * X[p, b]
-                for b in range(N_b):
-                    tmp2[L, a, b] += aux * Y[p, b]
-
-    for L in range(T):
         for i in range(n):
-            for a in range(n):
+            for k in range(n):
+                aux = g[L, i, k]
+                GP_a[L] += aux * P_a[i, k]
+                GP_b[L] += aux * P_b[i, k]
+
+                for j in range(N_a):
+                    GC_a[L, i, j] += aux * C_a[k, j]
+
                 for j in range(N_b):
-                    for b in range(N_a):
-                        M[i + j*n, a + b*n] += 2 * tmp1[L, a, b] * tmp2[L, i, j]
+                    GC_b[L, i, j] += aux * C_b[k, j]
 
-    return np.array(M)
+            for j in range(N_a):
+                aux = C_a[i, j]
+                for k in range(N_a):
+                    GCC_a[L, j, k] += GC_a[L, i, k] * aux
+
+            for j in range(N_b):
+                aux = C_b[i, j]
+                for k in range(N_b):
+                    GCC_b[L, j, k] += GC_b[L, i, k] * aux
+
+    return GP_a, GP_b, GC_a, GC_b, GCC_a, GCC_b
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def non_diag_blocks(double[:, :] W, double[:, :, :] g, int b, int j):
-    cdef int a, i, p, L
-    cdef int n = W.shape[0], T = g.shape[0]
-    cdef double[:, :] M = np.zeros((n, n))
-    cdef double[:, :] tmp1 = np.zeros((T, n)), tmp2 = np.zeros((T, n))
-    cdef double[:] tmp3 = np.zeros(T)
+def fock(double[:] GP_m, double[:] GP_s,
+         double[:, :, :] GC_m, double[:, :, :] GC_s,
+         double[:, :] h, double[:, :, :] g):
+    cdef int i, j, k, L, T = g.shape[0], n = g.shape[1], N = GC_m.shape[2]
+    cdef double[:, :] F = np.array(h)
 
     for L in range(T):
-        for a in range(n):
-            for p in range(n):
-                tmp1[L, a] += g[L, a, p] * W[p, b]
-                tmp2[L, a] += g[L, a, p] * W[p, j]
-            tmp3[L] += tmp1[L, a] * W[a, j]
+        for i in range(n):
+            for j in range(n):
+                F[i, j] += g[L, i, j] * (GP_m[L] + GP_s[L])
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(n):
+                for k in range(N):
+                    F[i, j] -= GC_m[L, i, k] * GC_m[L, j, k]
+
+    return F
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def mixed_spin(double[:, :, :] GC_a, double[:, :, :] GC_b):
+    """Construct the whole mixed spin part of the hessian."""
+    cdef int a, b, i, j, L, T = GC_a.shape[0]
+    cdef int N_a = GC_a.shape[2], N_b = GC_b.shape[2], n = GC_a.shape[1]
+    cdef double[:, :] M = np.zeros((n*N_b, n*N_a))
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(N_b):
+                for a in range(n):
+                    for b in range(N_a):
+                        M[i + j*n, a + b*n] += 2 * GC_a[L, a, b] * GC_b[L, i, j]
+
+    return M
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def non_diag_blocks(double[:, :] C, double[:, :, :] GC,
+                    double[:, :, :] GCC, double[:, :, :] g,
+                    int b, int j):
+    """Construct the non-diagonal blocks of the hessian given b and j."""
+    cdef int a, i, L
+    cdef int n = C.shape[0], T = g.shape[0]
+    cdef double[:, :] M = np.zeros((n, n))
 
     for L in range(T):
         for i in range(n):
             for a in range(n):
-                M[i, a] += (2 * tmp1[L, a] * tmp2[L, i]
-                            - tmp2[L, a] * tmp1[L, i]
-                            - g[L, a, i] * tmp3[L])
+                M[i, a] += (2 * GC[L, a, b] * GC[L, i, j]
+                            - GC[L, a, j] * GC[L, i, b]
+                            - g[L, i, a] * GCC[L, j, b])
 
-    return np.array(M)
+    return M
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def diag_blocks(double[:, :] W, double[:, :, :] g, double[:, :] fock, int b):
-    cdef int a, i, q, s
-    cdef int n = W.shape[0], T = g.shape[0]
-    cdef double[:, :] M = np.zeros((n, n))
-    cdef double[:, :] tmp1 = np.zeros((T, n))
-    cdef double[:, :] tmp2 = np.zeros((T, n))
-    cdef double[:] tmp3 = np.zeros(T)
-    cdef double aux
-
-    for L in range(T):
-        for a in range(n):
-            for s in range(n):
-                aux = W[s, b]
-                tmp1[L, a] += g[L, a, s] * aux
-                tmp2[L, a] += g[L, s, a] * aux
-            tmp3[L] += tmp1[L, a] * W[a, b]
+def diag_blocks(double[:, :] C, double[:, :, :] GC, double[:, :, :] GCC,
+                double[:, :] fock, double[:, :, :] g, int b):
+    """Construct the diagonal blocks of the hessian."""
+    cdef int a, i, L
+    cdef int n = C.shape[0], T = g.shape[0]
+    cdef double[:, :] M = np.array(fock)
 
     for L in range(T):
         for i in range(n):
             for a in range(i + 1):
-                M[i, a] += (g[L, a, i]*tmp3[L] - tmp1[L, a]*tmp2[L, i])
+                M[i, a] -= (g[L, i, a] * GCC[L, b, b]
+                            - GC[L, a, b] * GC[L, i, b])
                 M[a, i] = M[i, a]
 
-    return fock - np.array(M)
+    return M
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def hessian(double[:, :] X, double[:, :] Y, double[:, :, :] g,
-              double[:, :] fock_a, double[:, :] fock_b):
-    cdef int n = X.shape[0], N_a = X.shape[1], N_b = Y.shape[1], T = g.shape[0]
-    cdef int j, b, N = N_a + N_b
+def hessian(double[:, :] C_a, double[:, :] C_b,
+            double[:, :] fock_a, double[:, :] fock_b,
+            double[:, :, :] GC_a, double[:, :, :] GC_b,
+            double[:, :, :] GCC_a, double[:, :, :] GCC_b,
+            double[:, :, :] g):
+    cdef int n = C_a.shape[0], N_a = C_a.shape[1], N_b = C_b.shape[1]
+    cdef int j, b, N = N_a + N_b, T = g.shape[0]
     hess = np.empty((n*N, n*N))
 
-    # custo N_a * N_b * n^2 * L
-    hess[n*N_a :, : n*N_a] = mixed_spins(X, Y, g)
+    # computational cost: N_a * N_b * n^2 * L
+    hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
     hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
 
-    # custo N_a * n^2 * L
+    # computational cost: N_a * n^2 * L
     for b in range(N_a):
-        hess[n*b : n * (b+1), n*b : n * (b+1)] = \
-            diag_blocks(X, g, fock_a, b)
+        hess[n*b : n*(b+1), n*b : n*(b+1)] = \
+            diag_blocks(C_a, GC_a, GCC_a, fock_a, g, b)
 
     for b in range(N_b):
-        hess[n * (b+N_a) : n * (b+N_a+1), n * (b+N_a) : n * (b+N_a+1)] = \
-            diag_blocks(Y, g, fock_b, b)
+        hess[n*(b+N_a) : n*(b+N_a+1), n*(b+N_a) : n*(b+N_a+1)] = \
+            diag_blocks(C_b, GC_b, GCC_b, fock_b, g, b)
 
-    # custo n^2 * N_a^2 * L
+    # computational cost: n^2 * N_a^2 * L
     for j in range(N_a - 1):
         for b in range(j + 1):
-            hess[n*(j + 1) : n*(j + 2), n*b : n * (b+1)] = \
-                non_diag_blocks(X, g, b, j+1)
-            hess[n*b : n * (b+1), n * (j+1) : n * (j+2)] = \
-                hess[n*(j + 1) : n*(j + 2), n*b : n*(b + 1)].T
+            hess[n*(j+1) : n*(j+2), n*b : n*(b+1)] = \
+                non_diag_blocks(C_a, GC_a, GCC_a, g, b, j+1)
+            hess[n*b : n*(b+1), n*(j+1) : n*(j+2)] = \
+                hess[n*(j+1) : n*(j+2), n*b : n*(b+1)].T
 
     for j in range(N_b - 1):
         for b in range(j + 1):
             hess[n*(N_a+j+1) : n*(N_a+j+2), n*(b+N_a) : n*(N_a+b+1)] = \
-                non_diag_blocks(Y, g, b, j+1)
+                non_diag_blocks(C_b, GC_b, GCC_b, g, b, j+1)
             hess[n*(b+N_a) : n*(N_a+b+1), n*(N_a+j+1) : n*(N_a+j+2)] = \
                 hess[n*(N_a+j+1) : n*(N_a+j+2), n*(N_a+b) : n*(N_a+b+1)].T
 
     return hess
 
-def dir_proj(double[:, :] WT, double[:, :] grad):
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def dir_proj(double[:, :] C, double[:, :] grad):
     cdef int a, b, n = grad.shape[0], N = grad.shape[1]
-    cdef double[:, :] aux = np.array(WT) @ np.array(grad)
+    cdef double[:, :] aux = np.transpose(C) @ np.array(grad)
     cdef double[:, :] Id = np.eye(n)
     der = np.zeros((n*N, n*N))
 
-    for a in range(N):
-        for b in range(N):
+    for b in range(N):
+        for a in range(N):
             der[a*n : (a+1)*n, b*n : (b+1)*n] = np.multiply(Id, aux[b, a])
 
     return der
 
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
 def normalize(double[:] v, double[:, :] S):
     """Normalize a vector with respect to an arbitrary basis.
 
@@ -185,51 +261,7 @@ def gram_schmidt(M, double[:, :] S):
             Mi = Mi - t * Mj
             M[:, i] = normalize(Mi, S)
 
-    return np.array(M)
-
-
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
-def fock(double[:,:] P_s, double[:,:] P_t, double[:,:] h, double[:,:,:] g):
-    cdef double[:,:] F = np.array(h)
-    cdef int i, j, k, l, L, n = h.shape[0]
-    cdef double[:] tmp = np.zeros(g.shape[0], dtype=np.float64)
-    cdef double[:] tmp2 = np.zeros(g.shape[0], dtype=np.float64)
-    cdef double[:,:,:] tmp3 = np.zeros((g.shape[0], n, n), dtype=np.float64)
-
-    for L in range(g.shape[0]):
-        for k in range(n):
-            for l in range(n):
-                tmp[L] += g[L, l, k] * P_s[k, l]
-
-    for L in range(g.shape[0]):
-        for i in range(n):
-            for j in range(n):
-                F[i, j] += tmp[L] * g[L, i, j]
-
-    for L in range(g.shape[0]):
-        for k in range(n):
-            for l in range(n):
-                tmp2[L] += g[L, l, k] * P_t[k, l]
-
-    for L in range(g.shape[0]):
-        for i in range(n):
-            for j in range(n):
-                F[i, j] += tmp2[L] * g[L, i, j]
-
-    for L in range(g.shape[0]):
-        for k in range(n):
-            for l in range(n):
-                for i in range(n):
-                    tmp3[L, k, i] += g[L, i, l] * P_s[l, k]
-
-    for L in range(g.shape[0]):
-        for i in range(n):
-            for k in range(n):
-                for j in range(n):
-                    F[i, j] -= tmp3[L, k, i] * g[L, k, j]
-
-    return np.array(F)
+    return M
 
 
 
@@ -249,28 +281,28 @@ cdef int getindex(int i, int j, int k, int l):
     return ijkl
 
 
-def energy(double[:, :] X, double[:, :] Y,
+def energy(double[:, :] C_a, double[:, :] C_b,
            double[:, :] xxt, double[:, :] yyt,
            double[:, :] h, double[:] g):
     """Compute the energy.
 
     Parameters:
     -----------
-    X (2D np.ndarray of dimension (n, N_alpha))
+    C_a (2D np.ndarray of dimension (n, N_a))
         The spin alpha part of the Slater determinant. n is the size of the
-        basis set and N_alpha the number of spin alpha orbitals in the
+        basis set and N_a the number of spin alpha orbitals in the
         Slater determinant.
     
-    Y (2D np.ndarray of dimension (n, N_beta))
+    C_b (2D np.ndarray of dimension (n, N_b))
         The spin beta part of the Slater determinant. n is the size of the
-        basis set and N_beta the number of spin beta orbitals in the
+        basis set and N_b the number of spin beta orbitals in the
         Slater determinant.
     
     xxt (2D np.ndarray of dimension (n, n))
-        Density matrix of the spin alpha part, ie, X @ X.T.
+        Density matrix of the spin alpha part, ie, C_a @ C_a.T.
 
     yyt (2D np.ndarray of dimension (n, n))
-        Density matrix, but for spin beta (Y @ Y.T).
+        Density matrix, but for spin beta (C_b @ C_b.T).
 
     h (2D np.ndarray)
         One-electron integral matrix.
@@ -283,7 +315,7 @@ def energy(double[:, :] X, double[:, :] Y,
     Three doubles: the total, the one-electron and the two-electron energies.
     """
     cdef int j, k, p, q, r, s
-    cdef int n = X.shape[0], N_alpha = X.shape[1], N_beta = Y.shape[1]
+    cdef int n = C_a.shape[0], N_a = C_a.shape[1], N_b = C_b.shape[1]
     cdef double one_elec = 0, two_elec = 0
 
     for p in range(n):
@@ -299,24 +331,24 @@ def energy(double[:, :] X, double[:, :] Y,
     return one_elec + two_elec, one_elec, two_elec
 
 
-def grad_one(double[:, :] X, double[:, :] Y, double[:, :] h):
+def grad_one(double[:, :] C_a, double[:, :] C_b, double[:, :] h):
     """Compute the one-electron gradient.
 
-    The formula for the one-electron gradient is: grad = h @ X, being h the
-    one-electron integrals and X the Slater determinant that you want to compute
-    the gradient at. Here we have X and Y because X is for alpha spin and Y for
+    The formula for the one-electron gradient is: grad = h @ C_a, being h the
+    one-electron integrals and C_a the Slater determinant that you want to compute
+    the gradient at. Here we have C_a and C_b because C_a is for alpha spin and C_b for
     beta spin.
 
     Parameters:
     -----------
-    X (2D np.ndarray of dimension (n, N_alpha))
+    C_a (2D np.ndarray of dimension (n, N_a))
         The spin alpha part of the Slater determinant. n is the size of the
-        basis set and N_alpha is the number of spin alpha orbitals in the
+        basis set and N_a is the number of spin alpha orbitals in the
         Slater determinant.
 
-    Y (2D np.ndarray of dimension (n, N_beta))
+    C_b (2D np.ndarray of dimension (n, N_b))
         The spin beta part of the Slater determinant. n is the size of the
-        basis set and N_beta the number of spin beta orbitals in the
+        basis set and N_b the number of spin beta orbitals in the
         Slater determinant.
 
     h (2D np.ndarray)
@@ -324,13 +356,13 @@ def grad_one(double[:, :] X, double[:, :] Y, double[:, :] h):
 
     Returns:
     --------
-    A 2D np.ndarray of dimension (n, N_alpha + N_beta)).
+    A 2D np.ndarray of dimension (n, N_a + N_b)).
     """
-    cdef int n = X.shape[0], N_alpha = X.shape[1], N_beta = Y.shape[1]
-    cdef double[:, :] grad = np.zeros((n, N_alpha+N_beta))
+    cdef int n = C_a.shape[0], N_a = C_a.shape[1], N_b = C_b.shape[1]
+    cdef double[:, :] grad = np.zeros((n, N_a+N_b))
 
-    grad[:, :N_alpha] = np.array(h) @ np.array(X)
-    grad[:, N_alpha:] = np.array(h) @ np.array(Y)
+    grad[:, :N_a] = np.array(h) @ np.array(C_a)
+    grad[:, N_a:] = np.array(h) @ np.array(C_b)
 
     return np.array(grad)
 
@@ -343,7 +375,7 @@ def aux_grad_two(double[:, :] W, double[:, :] wwt,
     -----------
     W (2D np.ndarray of dimension (n, M))
         One of the parts of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
 
     wwt (2D np.ndarray of dimension (n, n))
         Density matrix, ie, W @ W.T.
@@ -376,41 +408,41 @@ def aux_grad_two(double[:, :] W, double[:, :] wwt,
     return grad
 
 
-def gradtwo(double[:, :] X, double[:, :] Y,
+def gradtwo(double[:, :] C_a, double[:, :] C_b,
             double[:, :] xxt, double[:, :] yyt,
             double[:] g):
     """Build the two-electron gradient matrix.
 
     Parameters:
     -----------
-    X (2D np.ndarray of dimension (n, N_alpha))
+    C_a (2D np.ndarray of dimension (n, N_a))
         The spin alpha part of the Slater determinant. n is the size of the
-        basis set and N_alpha the number of spin alpha orbitals in the
+        basis set and N_a the number of spin alpha orbitals in the
         Slater determinant.
     
-    Y (2D np.ndarray of dimension (n, N_beta))
+    C_b (2D np.ndarray of dimension (n, N_b))
         The spin beta part of the Slater determinant. n is the size of the
-        basis set and N_beta the number of spin beta orbitals in the
+        basis set and N_b the number of spin beta orbitals in the
         Slater determinant.
     
     xxt (2D np.ndarray of dimension (n, n))
-        Density matrix of the spin alpha part, ie, X @ X.T.
+        Density matrix of the spin alpha part, ie, C_a @ C_a.T.
 
     yyt (2D np.ndarray of dimension (n, n))
-        Density matrix, but for spin beta (Y @ Y.T).
+        Density matrix, but for spin beta (C_b @ C_b.T).
 
     g (1D np.ndarray)
         Two-electron integral "matrix".
 
     Returns:
     --------
-    A 2D np.ndarray of dimension (n, N_alpha+N_beta).
+    A 2D np.ndarray of dimension (n, N_a+N_b).
     """
-    cdef int n = X.shape[0], N_alpha = X.shape[1], N_beta = Y.shape[1]
-    cdef double[:, :] grad = np.zeros((n, N_alpha+N_beta))
+    cdef int n = C_a.shape[0], N_a = C_a.shape[1], N_b = C_b.shape[1]
+    cdef double[:, :] grad = np.zeros((n, N_a+N_b))
 
-    grad[:, :N_alpha] = aux_grad_two(N_alpha, n, X, xxt, yyt, g)
-    grad[:, N_alpha:] = aux_grad_two(N_beta, n, Y, yyt, xxt, g)
+    grad[:, :N_a] = aux_grad_two(N_a, n, C_a, xxt, yyt, g)
+    grad[:, N_a:] = aux_grad_two(N_b, n, C_b, yyt, xxt, g)
 
     return np.array(grad)
 
@@ -424,11 +456,11 @@ def gradient_three(double[:, :] W, double[:, :] Z,
     -----------
     W (2D np.ndarray of dimension (n, M))
         One of the parts of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
 
     Z (2D np.ndarray of dimension (n, M))
         The other part of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
     
     wwt (2D np.ndarray of dimension (n, n))
         Density matrix, ie, W @ W.T.
@@ -475,11 +507,11 @@ def gradient(double[:, :] W, double[:, :] Z,
     -----------
     W (2D np.ndarray of dimension (n, M))
         One of the parts of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
 
     Z (2D np.ndarray of dimension (n, M))
         The other part of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
     
     wwt (2D np.ndarray of dimension (n, n))
         Density matrix, ie, W @ W.T.
@@ -558,7 +590,7 @@ def g_eta(double[:, :] W, double[:, :] wwt, double[:, :] zzt,
     -----------
     W (2D np.ndarray of dimension (n, M))
         One of the parts of the Slater determinant (alpha or beta, depend of the
-        caller). n is the size of the basis set and M is N_alpha or N_beta.
+        caller). n is the size of the basis set and M is N_a or N_b.
     
     wwt (2D np.ndarray of dimension (n, n))
         Density matrix, ie, W @ W.T.
@@ -607,41 +639,41 @@ def g_eta(double[:, :] W, double[:, :] wwt, double[:, :] zzt,
 
     return np.array(grad_eta)
 
-def directional_derivative(double[:, :] X, double[:, :] Y,
+def directional_derivative(double[:, :] C_a, double[:, :] C_b,
                            double[:, :] xxt, double[:, :] yyt,
-                           double[:, :] projX, double[:, :] projY,
-                           double[:, :] gradX, double[:, :] gradY,
+                           double[:, :] projC_a, double[:, :] projC_b,
+                           double[:, :] gradC_a, double[:, :] gradC_b,
                            double[:, :] invS, double[:, :] h, double[:] g):
     """Compute the matrix of the Levi-Civita connection, ie, Absil's LHS.
 
     Parameters:
     -----------
-    X (2D np.ndarray of dimension (n, N_alpha))
+    C_a (2D np.ndarray of dimension (n, N_a))
         The spin alpha part of the Slater determinant. n is the size of the
-        basis set and N_alpha the number of spin alpha orbitals in the
+        basis set and N_a the number of spin alpha orbitals in the
         Slater determinant.
 
-    Y (2D np.ndarray of dimension (n, N_beta))
+    C_b (2D np.ndarray of dimension (n, N_b))
         The spin beta part of the Slater determinant. n is the size of the
-        basis set and N_beta the number of spin beta orbitals in the
+        basis set and N_b the number of spin beta orbitals in the
         Slater determinant.
 
     xxt (2D np.ndarray of dimension (n, n))
-        Density matrix of the spin alpha part, ie, X @ X.T.
+        Density matrix of the spin alpha part, ie, C_a @ C_a.T.
 
     yyt (2D np.ndarray of dimension (n, n))
-        Density matrix, but for spin beta (Y @ Y.T).
+        Density matrix, but for spin beta (C_b @ C_b.T).
     
-    projX (2D np.ndarray of dimension (n, N_alpha))
-        Projection matrix at H_X: Id - X @ inv(X.T @ S @ X) @ X.T @ S
+    projC_a (2D np.ndarray of dimension (n, N_a))
+        Projection matrix at H_C_a: Id - C_a @ inv(C_a.T @ S @ C_a) @ C_a.T @ S
 
-    projY (2D np.ndarray of dimension (n, N_beta))
-        Projection matrix at H_Y: Id - Y @ inv(Y.T @ S @ Y) @ Y.T @ S
+    projC_b (2D np.ndarray of dimension (n, N_b))
+        Projection matrix at H_C_b: Id - C_b @ inv(C_b.T @ S @ C_b) @ C_b.T @ S
     
-    gradX (2D np.ndarray of dimension (n, N_alpha))
+    gradC_a (2D np.ndarray of dimension (n, N_a))
         The spin alpha part of the gradient of the energy.
 
-    gradY (2D np.ndarray of dimension (n, N_beta))
+    gradC_b (2D np.ndarray of dimension (n, N_b))
         The spin beta part of the gradient of the energy.
 
     invS (2D np.ndarray of dimension (n, n))
@@ -657,37 +689,37 @@ def directional_derivative(double[:, :] X, double[:, :] Y,
     --------
     A 2D np.ndarray of dimension (n*N, n*N).
     """
-    cdef int n = X.shape[0], N_alpha = X.shape[1], N_beta = Y.shape[1]
-    cdef int N = N_alpha + N_beta, col = 0
-    cdef double[:, :] Xtransp = np.transpose(X), Ytransp = np.transpose(Y)
-    cdef double[:, :] gX = np.empty((n, N_alpha)), gY = np.empty((n, N_beta))
-    cdef double[:, :] E = np.zeros((n, N_alpha)), F = np.zeros((n, N_beta))
+    cdef int n = C_a.shape[0], N_a = C_a.shape[1], N_b = C_b.shape[1]
+    cdef int N = N_a + N_b, col = 0
+    cdef double[:, :] C_atransp = np.transpose(C_a), C_btransp = np.transpose(C_b)
+    cdef double[:, :] gC_a = np.empty((n, N_a)), gC_b = np.empty((n, N_b))
+    cdef double[:, :] E = np.zeros((n, N_a)), F = np.zeros((n, N_b))
     cdef double[:, :] zero = np.zeros((n, n))
     tmp, D = np.zeros((n, N)), np.zeros((n*N, n*N))
 
-    for j in range(N_alpha):
+    for j in range(N_a):
         for i in range(n):
             E[i, j] = 1.0
-            gX = g_eta(X, xxt, yyt, E, np.array(E) @ Xtransp, zero, h, g, Y, F)
-            gY = g_eta(Y, yyt, xxt, F, zero, np.array(E) @ Xtransp, h, g, X, E)
-            tmp[:, :N_alpha] = projX @ (invS @ np.array(gX)
-                                        - np.array(E) @ Xtransp @ gradX)
-            tmp[:, N_alpha:] = projY @ (invS @ np.array(gY))
-            # tmp[:, :N_alpha] = gX
-            # tmp[:, N_alpha:] = gY
+            gC_a = g_eta(C_a, xxt, yyt, E, np.array(E) @ C_atransp, zero, h, g, C_b, F)
+            gC_b = g_eta(C_b, yyt, xxt, F, zero, np.array(E) @ C_atransp, h, g, C_a, E)
+            tmp[:, :N_a] = projC_a @ (invS @ np.array(gC_a)
+                                        - np.array(E) @ C_atransp @ gradC_a)
+            tmp[:, N_a:] = projC_b @ (invS @ np.array(gC_b))
+            # tmp[:, :N_a] = gC_a
+            # tmp[:, N_a:] = gC_b
             D[:, col] = np.reshape(tmp, (n * N,), 'F')
             E[i, j] = 0.0
             col += 1
-    for j in range(N_beta):
+    for j in range(N_b):
         for i in range(n):
             F[i, j] = 1.0
-            gX = g_eta(X, xxt, yyt, E, zero, np.array(F) @ Ytransp, h, g, Y, F)
-            gY = g_eta(Y, yyt, xxt, F, np.array(F) @ Ytransp, zero, h, g, X, E)
-            tmp[:, :N_alpha] = projX @ (invS @ np.array(gX))
-            tmp[:, N_alpha:] = projY @ (invS @ np.array(gY)
-                                        - np.array(F) @ Ytransp @ gradY)
-            # tmp[:, :N_alpha] = gX
-            # tmp[:, N_alpha:] = gY
+            gC_a = g_eta(C_a, xxt, yyt, E, zero, np.array(F) @ C_btransp, h, g, C_b, F)
+            gC_b = g_eta(C_b, yyt, xxt, F, np.array(F) @ C_btransp, zero, h, g, C_a, E)
+            tmp[:, :N_a] = projC_a @ (invS @ np.array(gC_a))
+            tmp[:, N_a:] = projC_b @ (invS @ np.array(gC_b)
+                                        - np.array(F) @ C_btransp @ gradC_b)
+            # tmp[:, :N_a] = gC_a
+            # tmp[:, N_a:] = gC_b
             D[:, col] = np.reshape(tmp, (n * N,), 'F')
             F[i, j] = 0.0
             col += 1
@@ -700,7 +732,7 @@ def directional_derivative(double[:, :] X, double[:, :] Y,
 def verifica_g_eta(double[:, :] W, double[:, :] Z, double[:, :] etaW,
                    double[:, :] etaZ, double[:, :] g_eta, double[:, :] h,
                    double[:] g, double t):
-    """(grad{f}(X+t\eta) - grad{f}(X-t\eta)) / 2t"""
+    """(grad{f}(C_a+t\eta) - grad{f}(C_a-t\eta)) / 2t"""
     cdef int n = W.shape[0], M = W.shape[1], N = Z.shape[1]
     
     tmpW = np.array(W) + t * np.array(etaW)
