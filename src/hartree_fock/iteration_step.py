@@ -261,7 +261,6 @@ class HartreeFockStep():
         xxt, yyt = X @ X.T, Y @ Y.T
         gradX, gradY = self.grad[:, :N_a], self.grad[:, N_a:]
 
-
         with logtime("computing Fock matrix using three indices in cython."):
             fock_a = absil.fock(xxt, yyt, h, g)
             fock_b = absil.fock(yyt, xxt, h, g)

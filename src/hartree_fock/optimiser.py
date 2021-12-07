@@ -175,4 +175,3 @@ def hartree_fock(integrals,
         res.warning = 'No convergence was obtained'
         logger.info('End of Hartree-Fock calculation')
     return res
-
