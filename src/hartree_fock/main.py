@@ -5,6 +5,7 @@ TODO: Loading molecular geometry elsewhere
 
 Yuri Aoto, 2020
 """
+import re
 
 import numpy as np
 
@@ -14,45 +15,41 @@ from input_output.log import logtime
 from orbitals import orbitals
 
 
-def main(args, f_out):
-    """Main function for Hartree-Fock programs"""
+def _define_hfstep_func(hf_step):
+    """Create the function for Hartree-Fock steps from string hf_step"""
+    if hf_step == 'SCF':
+        return lambda i_SCF=None, grad_norm=None: 'RH-SCF'
 
+    if hf_step == 'Absil':
+        return lambda i_SCF=None, grad_norm=None: 'Absil'
+
+    rematch = re.match('SCF-Absil_n(\d+)', hf_step)
+    if rematch:
+        n = int(rematch.group(1))
+        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'Absil'
+
+    rematch = re.match('SCF-Absil_grad(.+)', hf_step)
+    if rematch:
+        g = float(rematch.group(1))
+        return lambda i_SCF=None, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'Absil'
+
+    raise ValueError('Invalid HF step')
+
+
+def main(args, f_out):
+    """Main function for Hartree-Fock"""
     molecular_system = MolecularGeometry.from_xyz_file(args.geometry)
     with logtime('Calculate integrals'):
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
-    if args.restricted:
-        HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
-						  molecular_system.nucl_rep,
-						  molecular_system.n_elec,
-                                                  max_iter=args.max_iter,
-						  f_out=f_out,
-						  n_DIIS=args.diis,
-                                                  grad_thresh=1E-05)
-    else:
-        if args.max_iter_scf > 0:
-            HF = optimiser.Unrestricted_HF(molecular_system.integrals,
-                                          molecular_system.nucl_rep,
-					  molecular_system.n_elec,
-                                          args.ms2,
-                                          max_iter=args.max_iter_scf,
-					  f_out=f_out,
-                                          n_DIIS=args.diis,
-                                          HF_step_type=lambda **x: "RH-SCF")
-##            orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
-            # def myf(i_scf, grad):
-            #     if i_scf < args.max_iter_scf:
-            #         return 'RH-scf'
-            #     return 'Absil'
-        orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
-        HF = optimiser.Unrestricted_HF(molecular_system.integrals,
-				       molecular_system.nucl_rep,
-				       molecular_system.n_elec,
-                                       args.ms2,
-                                       max_iter=args.max_iter,
-				       f_out=f_out,
-                                       ini_orb=orb,
-                                       n_DIIS=args.diis,
-                                       grad_thresh=1.0E-12)
-        
+    HF = optimiser.hartree_fock(molecular_system.integrals,
+				molecular_system.nucl_rep,
+				molecular_system.n_elec,
+                                ms2=args.ms2,
+                                restricted=args.restricted,
+                                max_iter=args.max_iter,
+                                grad_thresh=1E-05,
+    				f_out=f_out,
+				n_DIIS=args.diis,
+                                HF_step_type=_define_hfstep_func(args.step_type))
     f_out.write(str(HF))
     return HF

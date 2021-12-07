@@ -42,11 +42,11 @@ class HartreeFockStep():
         self.integrals = None
         self.orb = None
         self.energy = None
-        self.grad = None
         self.P_a = None
+        self.grad = None
         self.P_b = None
         self.Fock = None
-        self.gradNorm = None
+        self.grad_norm = 100.0
         self.g = None
 
     def initialise(self, step_type, three_indices=True):
@@ -175,11 +175,11 @@ class HartreeFockStep():
     def calc_mo_fock(self, Fock):
         if self.restricted:
             F_MO = self.orb[0].T @ Fock @ self.orb[0]
-            self.grad[:, :, self.i_DIIS] = F_MO[:self.n_occ, self.n_occ:]
+            self.grad[:, :, self.i_DIIS] = F_MO[:self.n_occ_alpha, self.n_occ_alpha:]
             self.orb.energies = np.array([F_MO[i, i]
                                           for i in range(len(self.orb))])
-            self.gradNorm = linalg.norm(self.grad[:, :, self.i_DIIS]) * sqrt2
-            logger.info('Gradient norm = %f', self.gradNorm)
+            self.grad_norm = linalg.norm(self.grad[:, :, self.i_DIIS]) * sqrt2
+            logger.info('Gradient norm = %f', self.grad_norm)
             if loglevel <= logging.INFO:
                 logger.info('Current orbital energies:\n%r',
                             self.orb.energies)
@@ -192,7 +192,7 @@ class HartreeFockStep():
             self.grad_beta[:, :, self.i_DIIS] = F_MO[:self.n_occ_beta, self.n_occ_beta:]
             self.orb.energies_beta = np.array([F_MO[i, i]
                                                for i in range(len(self.orb))])
-            self.gradNorm = sqrt(linalg.norm(self.grad[:, :, self.i_DIIS])**2
+            self.grad_norm = sqrt(linalg.norm(self.grad[:, :, self.i_DIIS])**2
                                  + linalg.norm(self.grad_beta[:, :, self.i_DIIS])**2)
             if loglevel <= logging.INFO:
                 logger.info('Current orbital energies:\n%r',
@@ -246,6 +246,8 @@ class HartreeFockStep():
 
     def newton_absil(self, i_SCF):
         """Hartree-Fock using Newton Method as it's in Absil."""
+        if self.restricted:
+            raise ValueError('Restricted version of Absil not implemented')
         N_a, N_b = self.n_occ_alpha, self.n_occ_beta
         N, n = N_a + N_b, len(self.orb)
         X, Y = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
@@ -330,7 +332,7 @@ class HartreeFockStep():
             Y = Y @ v.T @ cos + invSqrt @ u @ sin
             self.orb[1][:, :N_b] = absil.gram_schmidt(Y, S)
 
-        self.gradNorm = linalg.norm(R)
+        self.grad_norm = linalg.norm(R)
         
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
@@ -379,4 +381,4 @@ class HartreeFockStep():
             Y = Y @ v.T @ cos + invSqrt @ u @ sin
             self.orb[1][:, :N_b] = absil.gram_schmidt(Y, S)
             
-        self.gradNorm = linalg.norm(R)
+        self.grad_norm = linalg.norm(R)

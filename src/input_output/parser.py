@@ -96,10 +96,14 @@ def _parser():
     parser.add_argument('--max_iter',
                         help='Maximum number of iterations',
                         type=int)
-    parser.add_argument('--max_iter_scf',
-                        help='Maximum number of iterations of SCF method before'
-                        ' Absil',
-                        type=int)
+    parser.add_argument('--step_type',
+                        help='How the Hartree Fock steps should behave.'
+                        ' Current options are: SCF, Absil, SCF-Absil_n<n>,'
+                        ' and SCF-Absil_g<g>. <n> should be the number of'
+                        ' steps to be done with SCF, before changig to Absil,'
+                        ' and <g> the norm of the gradien when the method should'
+                        ' change to Absil',
+                        default='SCF')
     parser.add_argument('--diis',
                         help='Number of previous iteration steps considered'
                         ' in the Roothaan-Hall Hartree-Fock with DIIS'
@@ -241,8 +245,6 @@ def _check(args):
                          + ' is not a valid memory specification')
     if args.max_iter is None:
         args.max_iter = 20
-    if args.max_iter_scf is None:
-        args.max_iter_scf = 0
     elif args.at_ref:
         raise ParseError('--max_iter is not compatible with --at_ref')
     if args.diis is None:
