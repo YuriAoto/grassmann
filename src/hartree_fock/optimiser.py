@@ -40,7 +40,8 @@ def hf_initial_orbitals(ini_orb, integrals, restricted):
         if ini_orb.restricted and not restricted:
             raise ValueError('Initial orbitals should be of unrestricted type.')
         orb = MolecularOrbitals(ini_orb)
-        return orb.orthogonalise(X=integrals.X)
+        orb.orthogonalise(X=integrals.X)
+        return orb
 
 
 def hartree_fock(integrals,
@@ -106,8 +107,8 @@ def hartree_fock(integrals,
     hf_step = HartreeFockStep()
     hf_step.restricted = restricted
     hf_step.integrals = integrals
-    hf_step.n_occ_alpha = (n_elec + ms2) // 2
-    hf_step.n_occ_beta = (n_elec - ms2) // 2
+    hf_step.N_a = (n_elec + ms2) // 2
+    hf_step.N_b = (n_elec - ms2) // 2
     hf_step.n_occ = n_elec
     hf_step.n_DIIS = n_DIIS
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
@@ -118,15 +119,15 @@ def hartree_fock(integrals,
                 n_elec,
                 hf_step.n_DIIS)
     if restricted:
-        logger.info('Number of occupied orbitals: %d', hf_step.n_occ_alpha)
+        logger.info('Number of occupied orbitals: %d', hf_step.N_a)
     else:
         logger.info('Number of occupied orbitals: %d (alpha), %d (beta)',
-                    hf_step.n_occ_alpha,
-                    hf_step.n_occ_beta)
+                    hf_step.N_a,
+                    hf_step.N_b)
     hf_step.orb = hf_initial_orbitals(ini_orb, integrals, restricted)
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
-    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=100.0), True)
+    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=100.0))
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',

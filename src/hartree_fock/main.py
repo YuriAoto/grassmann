@@ -42,16 +42,24 @@ def main(args, f_out):
     with logtime('Calculate integrals'):
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
 
+    if args.ini_orb is not None:
+        ini_orb = orbitals.MolecularOrbitals.from_file(args.ini_orb)
+        if not args.restricted:
+            ini_orb = orbitals.MolecularOrbitals.unrestrict(ini_orb)
+    else:
+        ini_orb = None
+
     HF = optimiser.hartree_fock(molecular_system.integrals,
 				molecular_system.nucl_rep,
 				molecular_system.n_elec,
                                 ms2=args.ms2,
                                 restricted=args.restricted,
                                 max_iter=args.max_iter,
-                                grad_thresh=1E-05,
+                                grad_thresh=1E-08,
     				f_out=f_out,
 				n_DIIS=args.diis,
-                                HF_step_type=_define_hfstep_func(args.step_type))
+                                HF_step_type=_define_hfstep_func(args.step_type),
+                                ini_orb=ini_orb)
 
     f_out.write(str(HF))
     return HF

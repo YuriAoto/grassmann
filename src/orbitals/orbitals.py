@@ -480,7 +480,7 @@ class MolecularOrbitals():
         new_orbitals._coefficients = []
         for n in n_orb_per_spirrep:
             new_orbitals._coefficients.append(
-                np.zeros((new_orbitals._basis_len, n)))
+                np.zeros((len(new_orbitals), n)))
         for orb_set in molecule.findall('molpro:orbitals', ns):
             try:
                 spin_shift = get_spin_shift(orb_set.attrib['type'],
