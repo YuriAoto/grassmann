@@ -100,7 +100,7 @@ def hartree_fock(integrals,
     ini_orb (MolecularOrbitals, optional, default=None)
         Initial orbitals for the HF procedure
     """
-    ms2, restricted = _check_nelec_ms(n_elec, restricted, ms2)
+    restricted, ms2 = _check_nelec_ms(n_elec, restricted, ms2)
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
     converged = False
     hf_step = HartreeFockStep()
