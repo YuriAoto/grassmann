@@ -38,7 +38,8 @@ def main(args, f_out):
         found_method = True
         with logtime('Running vertical distance to CC manifold'):
             res_vert = vertical_dist_to_cc_manifold(fci_wf,
-                                                    level=level)
+                                                    level=level,
+                                                    coeff_thr=args.vert_cc_coeff_thr)
         logger.info("Results from vertical dist to CC manifold:\n%r", res_vert)
         f_out.write(str(res_vert))
     

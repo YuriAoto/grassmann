@@ -138,6 +138,12 @@ def _parser():
                         + ' the Hessian in the optimisation of the distance'
                         + ' to the CC manifold',
                         action='store_true')
+    parser.add_argument('--vert_cc_coeff_thr',
+                        help='The threshold for the coefficient of FCI'
+                        ' wave function to skip using the Slater determinant'
+                        ' to count the number of right directions.',
+                        type=float,
+                        default=1.0E-10)
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
