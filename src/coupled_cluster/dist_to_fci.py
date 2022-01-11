@@ -84,19 +84,38 @@ class VertDistResults(DistResults):
         The verical distance from the wave function to the CI manifold,
         in the metric induced by intermediate normalisation.
     
-    right_dir (dictionary)
+    coeff_thr (list of floats)
+        The parameter coeff_thr passed to vertical_dist_to_cc_manifold.
+    
+    right_dir (list of dictionary)
         Indicates how many coefficients are in the "right direction" compared
-        to the CC manifold. The keys are the ranks, and the values are 2-tuples,
+        to the CC manifold.
+        The list is ordered as coeff_thr, and each entry is a dictionary,
+        that indicates how many coefficients are in the right direction
+        when considering the corresponding threshold for the coefficient
+        of the list coeff_thr.
+        The keys are the ranks, and the values are 2-tuples,
         that show at [0] how many directions are curved towards the wave
         function and at [1] the total number of such directions. Example:
         
-        {'T': (10,12),
+        for coeff_thr = [1e-6, 1e-3]
+        
+        [{'T': (10,12),
         'Q': (5,5),
-        '5': (1,1)}
+        '5': (1,1)},
+        {'T': (8,10),
+        'Q': (2,4),
+        '5': (1,1)}]
         
         Means:
+        When considering only coefficients larger than 1e-6:
         10 out of 12 triples are in the right direction
         5 out of 5 quadruples are in the right direction
+        1 out of 1 quintuples are in the right direction
+        
+        When considering only coefficients larger than 1e-3:
+        8 out of 10 triples are in the right direction
+        2 out of 4 quadruples are in the right direction
         1 out of 1 quintuples are in the right direction
     
     """
@@ -105,15 +124,47 @@ class VertDistResults(DistResults):
         x = [super().__str__().replace('D(FCI', 'D_vert(FCI')]
         x.append('Number of excitations where the CC manifold\n'
                  + '   curves towards the wave function:')
-        for rank, n in self.right_dir.items():
-            x.append(f'{rank}: {n[0]} of {n[1]}')
+        rank_info = []
+        len_info = 0
+        for rank in self.right_dir[0]:
+            rank_info.append([f'{rank}: '])
+            for r_dir in self.right_dir:
+                rkinfo = (f'{r_dir[rank][0]} of {r_dir[rank][1]}'
+                          if r_dir[rank][1] else '')
+                rank_info[-1].append(rkinfo)
+                if len(rkinfo) > len_info:
+                    len_info = len(rkinfo)
+        len_info = str(len_info)
+        fmt_h = '{:>' + len_info + '.1e}'
+        fmt = '{:>' + len_info + '}'
+        x.append('   ' + '  '.join(map(fmt_h.format, self.coeff_thr)))
+        for rkinfo in rank_info:
+            x.append(rkinfo[0] + '  '.join(map(fmt.format, rkinfo[1:])))
         return '\n'.join(x)
+
+
+def _check_right_direction(cc_towards_wf, rank, right_dir, coeff_thr, abs_c):
+    """Check if in the right direction, and update right_dir
+    
+    Helper to vertical_dist_to_cc_manifold, to update
+    the list of dicts right_dir.
+    
+    """
+    rank = _str_excitation(rank)
+    if rank not in right_dir[0]:
+        for r_dir in right_dir:
+            r_dir[rank] = [0, 0]
+    for i, check in enumerate(map(lambda c_thrs: abs_c > c_thrs, coeff_thr)):
+        if check:
+            right_dir[i][rank][1] += 1
+            if cc_towards_wf:
+                right_dir[i][rank][0] += 1
 
 
 def vertical_dist_to_cc_manifold(wf,
                                  level='SD',
                                  recipes_f=None,
-                                 coeff_thr=1.0E-10):
+                                 coeff_thr=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
     """Calculate the vertical distance on the CC manifold
     
     This function is intended to compare the wave function to the
@@ -156,9 +207,10 @@ def vertical_dist_to_cc_manifold(wf,
         The files that describe the cluster decomposition.
         See decompose for the details
     
-    coeff_thr (float, optional, default=1.0E-10)
+    coeff_thr (list of floats, optional, default=[1e-6, 1e-5, ... 1e-1])
         Slater determinants with coefficients lower than this
-        threshold value are ignored in the analysis
+        thresholds value are ignored in the analysis.
+        See VertDistResults for a proper description.
     
     Return:
     -------
@@ -177,32 +229,39 @@ def vertical_dist_to_cc_manifold(wf,
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
     norm_ci = 0.0
     norm = 0.0
-    right_dir = {}
+    right_dir = [{} for i in range(len(coeff_thr))]
+    min_coeff_thr = min(coeff_thr)
     for det in wf:
         if not wf.symmetry_allowed_det(det):
             continue
         rank, alpha_hp, beta_hp = wf.get_exc_info(det)
-        if rank == 1 and level_is_sd:
-            if cc_wf[rank, alpha_hp, beta_hp] != det.c:
-                raise Exception('Not consistent!!')
+# ----------
+# This test was done to check consistency of the implementation
+# Now, after changing __getitem__ of IntermNormWaveFunction,
+# this does not wark, as it requires an SDExcitation.
+# FCIWaveFunction.get_exc_info, however, returns
+# rank, alpha_hp, beta_hp, separated, as it can be a higher order
+# excitation... We will disable this test, although one can create
+# an SDExcitation.  
+#
+#
+#        if rank == 1 and level_is_sd:
+#            if cc_wf[rank, alpha_hp, beta_hp] != det.c:
+#                raise Exception('Not consistent!!')
+# ----------
         if rank > 2 and (level_is_sd or rank % 2 == 0):
             C = contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
             norm_contribution = (det.c - C)**2
             norm_ci += det.c**2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution
-            if abs(det.c) > coeff_thr:
-                rank = _str_excitation(rank)
-                if rank not in right_dir:
-                    right_dir[rank] = [0, 1]
-                else:
-                    right_dir[rank][1] += 1
-                if cc_towards_wf:
-                    right_dir[rank][0] += 1
+            abs_c = abs(det.c)
+            if abs_c > min_coeff_thr:
+                _check_right_direction(cc_towards_wf, rank, right_dir, coeff_thr, abs_c)
             logger.info(logfmt,
                         det,
                         C,
-                        C/det.c if (abs(det.c) > coeff_thr) else f'{C}/{det.c}',
+                        C/det.c if (abs(det.c) > min_coeff_thr) else f'{C}/{det.c}',
                         norm_contribution,
                         cc_towards_wf)
         elif (not level_is_sd) and rank % 2 == 1:
@@ -210,11 +269,14 @@ def vertical_dist_to_cc_manifold(wf,
             norm += det.c**2
             norm_ci += det.c**2
             logger.info('Adding .c² to the norm: det = %s', det)
-    tolog = ['Number of excitations where the CC manifold\n'
-             + '   curves towards the wave function:']
-    for rank, n in right_dir.items():
-        tolog.append(f'{rank}: {n[0]} of {n[1]}')
-    logger.info('\n'.join(tolog))
+    if loglevel <= logging.INFO:
+        tolog = ['Number of excitations where the CC manifold\n'
+                 + '   curves towards the wave function:']
+        for i, c_thr in enumerate(coeff_thr):
+            tolog.append(f'For coeff threshold of {c_thr}')
+            for rank, n in right_dir[i].items():
+                tolog.append(f'{rank}: {n[0]} of {n[1]}')
+        logger.info('\n'.join(tolog))
     res = VertDistResults(f'Vertical distance to CC{level} manifold')
     res.success = True
     res.level = level
@@ -222,6 +284,7 @@ def vertical_dist_to_cc_manifold(wf,
     res.distance_ci = math.sqrt(norm_ci)
     res.wave_function = cc_wf
     res.right_dir = right_dir
+    res.coeff_thr = coeff_thr
     return res
 
 

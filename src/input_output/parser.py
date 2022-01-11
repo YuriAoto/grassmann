@@ -139,11 +139,12 @@ def _parser():
                         + ' to the CC manifold',
                         action='store_true')
     parser.add_argument('--vert_cc_coeff_thr',
-                        help='The threshold for the coefficient of FCI'
+                        help='The thresholds for the coefficients of FCI'
                         ' wave function to skip using the Slater determinant'
-                        ' to count the number of right directions.',
-                        type=float,
-                        default=1.0E-10)
+                        ' to count the number of right directions.'
+                        ' This should be a list of floats',
+                        type=lambda x: list(map(float, x[1:-1].split(','))),
+                        default=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
     parser.add_argument('-l', '--loglevel',
