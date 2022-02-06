@@ -71,7 +71,7 @@ def _parser():
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'
                         + ' as Molpro\'s "put" xml file or'
-                        + ' npz file')
+                        + ' npz file. Can be Hcore or SAD for HF')
     parser.add_argument('--ini_cc_wf',
                         help='Initial wave function for CC calculations')
     parser.add_argument('--HF_orb',
@@ -265,7 +265,8 @@ def _check(args):
                 and os.path.isfile(args.ini_orb)):
             pass
         else:
-            _assert_molpro_output(args.ini_orb, can_be_xml=True)
+            if args.ini_orb not in ('Hcore', 'SAD'):
+                _assert_molpro_output(args.ini_orb, can_be_xml=True)
     if args.method is None:
         if args.geometry is None:
             args.method = 'dist_Grassmann'

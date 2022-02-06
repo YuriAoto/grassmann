@@ -227,5 +227,7 @@ class MolecularGeometry():
             The method to calculate the integrals
         """
         self.atomic_basis_set = basis_set
+        for at in self:
+            at.basis = basis_set
         self.integrals = integrals.Integrals(self, basis_set,
                                              method=int_meth)

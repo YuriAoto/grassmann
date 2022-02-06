@@ -324,7 +324,106 @@ class MolecularOrbitals():
         else:
             return cls.from_array((integrals.X @ C, integrals.X @ C), 1,
                                   integrals=integrals, restricted=False)
+
+    @classmethod
+    def from_dens(cls, P, restricted, integrals, method='Fock'):
+        """Obtain orbitals from a density
         
+        The density is not necessarily a true density.
+        
+        Parameters:
+        -----------
+        P (2-tuple of np.arrays)
+            Alpha and beta densities
+        
+        restricted (bool)
+            If True, restricted orbitals are obtained from the average
+            density
+        
+        integrals (Integrals)
+            Molecular integrals
+        
+        method (str, optional, default='Fock')
+            The procedure to obtain the orbitals.
+            Currently the only method implemented is forming
+            the Fock matrix and diagonalizing it (a SCF step).
+        
+        TODO: Ideally, this should be done using internals of hartree_fock.
+        However, that module needs some clean up to make it usable from
+        outside
+        
+        """
+        if restricted:
+            P[0] = (P[0] + P[1])/2
+            Fock_a = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals) / 2
+            Fock_a = integrals.invS @ Fock_a
+        else:
+            Fock_a = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Frs->F',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            Fock_b = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_b += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Frs->F',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_b += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_b -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals)
+
+        if restricted:
+            Fock_a = integrals.X.T @ Fock_a @ integrals.X
+            e, C = eigh(Fock_a)
+            orb_a = integrals.X @ C
+            return cls.from_array(orb_a, 1, name='From SAD', integrals=integrals)
+        else:
+            Fock_a = integrals.X.T @ Fock_a @ integrals.X
+            Fock_b = integrals.X.T @ Fock_b @ integrals.X
+            e, C = eigh(Fock_a)
+            eb, Cb = eigh(Fock_b)
+            orb_a = integrals.X @ C
+            orb_b = integrals.X @ Cb
+            return cls.from_array((orb_a, orb_b), 1, name='From SAD', integrals=integrals,
+                                  restricted=False)
+
     @classmethod
     def from_array(cls, C, n_irrep,
                    name='Coefficients from array',
