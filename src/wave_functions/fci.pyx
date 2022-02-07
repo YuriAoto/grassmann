@@ -1469,6 +1469,71 @@ cdef class FCIWaveFunction(WaveFunction):
         if metric == 'IN':
             return str_order.eucl_distance(self.coefficients,
                                            other.coefficients)
+
+    def dist_by_rank(self, FCIWaveFunction other,
+                     metric='IN',
+                     normalise=True):
+        """Distance by rank between self and other
+        
+        Parameters:
+        -----------
+        other (FCIWaveFunction)
+            The wave function to which the distance will be calculated
+        
+        metric (str, optional, default='IN')
+            metric to calculate the distance.
+            Possible values are:
+            'IN' - Intermediate normalisation
+            'overlap' - The overlap between self and other
+                        (that is not exactly the distance, but related to)
+        
+        normalise (bool, optional, default=False)
+            If True, normalise the wave function in a compatible way
+            with the metric option
+        
+        Return:
+        -------
+        A 9-len numpy ndarray of floats, with the contribution of excitations
+        of rank in entry [rank]
+        
+        Side Effect:
+        ------------
+        If normalise is True, the wave function is changed!
+        The wave function self might change its convention for orbital
+        ordering to be the same as other
+        
+        """
+        cdef int ia, ib
+        cdef int[:] aocc, bocc
+        cdef SlaterDet det
+        dist = np.zeros(9)
+        if other.ordered_orbs and not self.ordered_orbs:
+            self.set_ordered_orbitals()
+        elif not other.ordered_orbs and self.ordered_orbs:
+            self.set_max_coincidence_orbitals()
+        if normalise:
+            if metric == 'IN':
+                self.normalise(mode='intermediate')
+                other.normalise(mode='intermediate')
+            else:
+                self.normalise(mode='unit')
+                other.normalise(mode='unit')
+        if metric == 'IN':
+            for ia, ib, det in self.enumerate():
+                rank, alpha_hp, beta_hp = self.get_exc_info(det)
+                dist[rank] += (self.coefficients[ia, ib] - other.coefficients[ia, ib])**2
+            ### Alternative: is this faster???
+            # aocc = np.arange(self.n_corr_alpha, dtype=int_dtype)
+            # for ia in range(self.coefficients.shape[0]):
+            #     bocc = np.arange(self.n_corr_beta, dtype=int_dtype)
+            #     for ib in range(self.coefficients.shape[1]):
+            #         rank, alpha_hp, beta_hp = self.get_exc_info(
+            #             SlaterDet(c=self.coefficients[ia, ib],
+            #                       alpha_occ=aocc, beta_occ=bocc))
+            #         dist[rank] += (self.coefficients[ia, ib] - other.coefficients[ia, ib])**2
+            #         str_order.next_str(bocc)
+            #     str_order.next_str(aocc)
+            return np.sqrt(dist)
     
     def dist_to_ref(self, metric='IN'):
         """Distance to the reference Slater determinant

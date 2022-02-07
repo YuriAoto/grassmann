@@ -35,6 +35,16 @@ _str_excitation_list = ['R',
 def _str_excitation(x):
     return _str_excitation_list[x] if x < 5 else str(x)
 
+def _str_by_rank(by_rank):
+    x = []
+    x.append(f' by rank:          S          D          T          Q')
+    x.append(f'        : '
+             + ' '.join([f'{d:10.8f}' for d in by_rank[1:5]]))
+    x.append(f'                   5          6          7          8')
+    x.append(f'        : '
+             + ' '.join([f'{d:10.8f}' for d in by_rank[5:]]))
+    return '\n'.join(x)
+
 
 class DistResults(Results):
     """Results of calculations of distances to the CC manifold
@@ -52,15 +62,27 @@ class DistResults(Results):
     level (str, 'D' or 'SD')
         The coupled cluster level.
     
+    norm_rank (9-len np.ndarray of int)
+        The contribution by rank for the distance. The following must hold:
+        distance == sqrt(sum[i**2 for i in norm_rank])
+    
     """
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs)
         self._wave_function_as_fci = None
     
+    def check_dist_by_rank(self):
+        d = math.sqrt(sum([i**2 for i in self.norm_rank]))
+        return (f'dist:       {self.distance:.8}\n'
+                f'from rank:  {d:.8}\n'
+                f'difference: {self.distance-d:.8}\n')
+    
     @inside_box
     def __str__(self):
         x = [super().__str__()]
-        x.append(f'D(FCI, CC{self.level} manifold) = {self.distance:.8f}\n')
+        x.append(f'D(FCI, CC{self.level} manifold) = {self.distance:.8f}')
+        x.append(_str_by_rank(self.norm_rank))
+#        x.append(self.check_dist_by_rank())
         return '\n'.join(x)
     
     @property
@@ -83,6 +105,10 @@ class VertDistResults(DistResults):
     distance_ci (float)
         The verical distance from the wave function to the CI manifold,
         in the metric induced by intermediate normalisation.
+    
+    norm_ci_rank (9-len np.ndarray of int)
+        The contribution by rank for the distance_ci. The following must hold:
+        distance_ci == sqrt(sum[i**2 for i in norm_ci_rank])
     
     coeff_thr (list of floats)
         The parameter coeff_thr passed to vertical_dist_to_cc_manifold.
@@ -116,12 +142,21 @@ class VertDistResults(DistResults):
         When considering only coefficients larger than 1e-3:
         8 out of 10 triples are in the right direction
         2 out of 4 quadruples are in the right direction
-        1 out of 1 quintuples are in the right direction
+        1 out of 1 quintuples are in the right direction]
     
     """
+    def check_dist_by_rank_ci(self):
+        d = math.sqrt(sum([i**2 for i in self.norm_ci_rank]))
+        return (f'dist:       {self.distance_ci:.8}\n'
+                f'from rank:  {d:.8}\n'
+                f'difference: {self.distance_ci-d:.8}\n')
+    
     @inside_box
     def __str__(self):
         x = [super().__str__().replace('D(FCI', 'D_vert(FCI')]
+        x.append(f'D(FCI, CI{self.level} manifold) = {self.distance_ci:.8f}')
+        x.append(_str_by_rank(self.norm_ci_rank))
+#        x.append(self.check_dist_by_rank_ci())
         x.append('Number of excitations where the CC manifold\n'
                  + '   curves towards the wave function:')
         rank_info = []
@@ -229,12 +264,15 @@ def vertical_dist_to_cc_manifold(wf,
     cc_wf = IntermNormWaveFunction.from_projected_fci(wf, 'CC' + level)
     norm_ci = 0.0
     norm = 0.0
+    norm_rank = np.zeros(9)
+    norm_ci_rank = np.zeros(9)
     right_dir = [{} for i in range(len(coeff_thr))]
     min_coeff_thr = min(coeff_thr)
     for det in wf:
         if not wf.symmetry_allowed_det(det):
             continue
         rank, alpha_hp, beta_hp = wf.get_exc_info(det)
+        c2 = det.c**2
 # ----------
 # This test was done to check consistency of the implementation
 # Now, after changing __getitem__ of IntermNormWaveFunction,
@@ -252,9 +290,11 @@ def vertical_dist_to_cc_manifold(wf,
         if rank > 2 and (level_is_sd or rank % 2 == 0):
             C = contribution_from_clusters(alpha_hp, beta_hp, cc_wf, level)
             norm_contribution = (det.c - C)**2
-            norm_ci += det.c**2
+            norm_ci += c2
             cc_towards_wf = det.c * C >= 0
             norm += norm_contribution
+            norm_rank[rank] += norm_contribution
+            norm_ci_rank[rank] += c2
             abs_c = abs(det.c)
             if abs_c > min_coeff_thr:
                 _check_right_direction(cc_towards_wf, rank, right_dir, coeff_thr, abs_c)
@@ -266,8 +306,10 @@ def vertical_dist_to_cc_manifold(wf,
                         cc_towards_wf)
         elif (not level_is_sd) and rank % 2 == 1:
             #  rank > 2 or (rank, level) == (1, 'D'):
-            norm += det.c**2
-            norm_ci += det.c**2
+            norm += c2
+            norm_ci += c2
+            norm_rank[rank] += c2
+            norm_ci_rank[rank] += c2
             logger.info('Adding .c² to the norm: det = %s', det)
     if loglevel <= logging.INFO:
         tolog = ['Number of excitations where the CC manifold\n'
@@ -282,6 +324,8 @@ def vertical_dist_to_cc_manifold(wf,
     res.level = level
     res.distance = math.sqrt(norm)
     res.distance_ci = math.sqrt(norm_ci)
+    res.norm_ci_rank = np.sqrt(norm_ci_rank)
+    res.norm_rank = np.sqrt(norm_rank)
     res.wave_function = cc_wf
     res.right_dir = right_dir
     res.coeff_thr = coeff_thr
@@ -464,6 +508,7 @@ def calc_dist_to_cc_manifold(wf,
     if save_as_fci_wf:
         res.wave_function_as_fci = cc_wf_as_fci
     res.norm = (normZ, normJ)
+    res.norm_rank = wf.dist_by_rank(cc_wf_as_fci, metric='IN')
     res.n_iter = i_iteration
     return res
 
