@@ -38,10 +38,10 @@ def _str_excitation(x):
 def _str_by_rank(by_rank):
     x = []
     x.append(f' by rank:          S          D          T          Q')
-    x.append(f'        : '
+    x.append(f'          '
              + ' '.join([f'{d:10.8f}' for d in by_rank[1:5]]))
     x.append(f'                   5          6          7          8')
-    x.append(f'        : '
+    x.append(f'          '
              + ' '.join([f'{d:10.8f}' for d in by_rank[5:]]))
     return '\n'.join(x)
 
