@@ -251,7 +251,7 @@ def vertical_dist_to_cc_manifold(wf,
     -------
     An instance of VertDistResults.    
     """
-    logfmt = '\n'.join(['det = %s',
+    logfmt = '\n'.join(['det = %s; rank = %s',
                         'C dec = %s',
                         'C dec/C = %s',
                         '(C dec - C)^2 = %s',
@@ -299,7 +299,7 @@ def vertical_dist_to_cc_manifold(wf,
             if abs_c > min_coeff_thr:
                 _check_right_direction(cc_towards_wf, rank, right_dir, coeff_thr, abs_c)
             logger.info(logfmt,
-                        det,
+                        det, rank,
                         C,
                         C/det.c if (abs(det.c) > min_coeff_thr) else f'{C}/{det.c}',
                         norm_contribution,
