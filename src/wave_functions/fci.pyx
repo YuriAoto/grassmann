@@ -898,7 +898,7 @@ cdef class FCIWaveFunction(WaveFunction):
                 elif 'Spin quantum number:' in line:
                     self.Ms = float(line.split()[3])
                 elif 'Molecular orbitals read from record' in line:
-                    if 'RHF' in line:
+                    if 'RHF' in line or 'MCSCF/NATURAL' in line:
                         # TO HANDLE RESTRICTED=TRUE WE NEED TO IMPROVE
                         # corr_orbs_before, PERHAPS OTHER THINGS
                         self.restricted = False
