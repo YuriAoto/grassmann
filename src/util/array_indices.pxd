@@ -1,0 +1,7 @@
+cpdef int triangular(int n)
+cpdef int n_from_triang(int i, int j)
+cpdef (int, int) ij_from_triang(int n)
+cpdef int n_from_triang_with_diag(int i, int j)
+cpdef (int, int) ij_from_triang_with_diag(int n)
+cpdef int n_from_rect(int i, int j, int m)
+cpdef (int, int) ij_from_rect(int n, int m)

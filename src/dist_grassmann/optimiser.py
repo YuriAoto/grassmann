@@ -25,11 +25,11 @@ from collections import namedtuple
 import numpy as np
 from scipy import linalg
 
-from util import logtime
-from wave_functions.general import Wave_Function
-from wave_functions.cisd import Wave_Function_CISD
+from input_output.log import logtime
+from wave_functions.general import WaveFunction
+from wave_functions.cisd import CISDWaveFunction
 from . import absil
-import orbitals as orb
+from orbitals import orbitals
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -106,7 +106,7 @@ def optimise_overlap_orbRot(wf,
     Parameters:
     -----------
     
-    wf (dGr_general_WF.Wave_Function)
+    wf (wave_functions.general.WaveFunction)
         The external wave function
     
     max_iter (int, default = 20)
@@ -139,7 +139,7 @@ def optimise_overlap_orbRot(wf,
         (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
         This should be consistent to the spin and symmetry of the external
         wave function.
-        If None is given, uses wf.ref_occ.
+        If None is given, uses wf.orbspace.ref.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
         ATTENTION! Currently not implemented!
@@ -198,7 +198,7 @@ def optimise_overlap_orbRot(wf,
     TODO:
     -----
     
-    Implement calculation for occupation other than ref_occ. See
+    Implement calculation for occupation other than orbspace.ref. See
     commented line below
 
     """
@@ -211,12 +211,12 @@ def optimise_overlap_orbRot(wf,
         max_iter = 1
     if ini_U is None:
         U = []
-        # ini_occ = occupation if occupation is not None else wf.ref_occ
+        # ini_occ = occupation if occupation is not None else wf.orbspace.ref
         for i in wf.spirrep_blocks(restricted=restricted):
-            U.append(np.identity(wf.orb_dim[i % wf.n_irrep]))
+            U.append(np.identity(wf.orbspace.full[i % wf.n_irrep]))
         cur_wf = copy.copy(wf)
     else:
-        U = orb.complete_orb_space(ini_U, wf.orb_dim)
+        U = orbitals.complete_orb_space(ini_U, wf.orbspace.full)
         cur_wf = wf.change_orb_basis(U)
     if f_out is not None:
         fmt_full = '{0:<5d}  {1:<11.8f}  {2:<11.8f}  {3:<11.8f}  {4:s}\n'
@@ -308,7 +308,7 @@ def optimise_overlap_orbRot(wf,
         with logtime('Calculating norm of ΔK') as T_norm_Z:
             normZ = linalg.norm(z)
         if at_reference:
-            U = orb.calc_U_from_z(z, cur_wf)
+            U = orbitals.calc_U_from_z(z, cur_wf)
         elapsed_time = T_norm_Z.relative_to(T_start)
         if f_out is not None:
             f_out.write(fmt_full.
@@ -392,7 +392,7 @@ def optimise_overlap_Absil(ci_wf,
     Parameters:
     -----------
     
-    ci_wf (dGr_general_WF.Wave_Function)
+    ci_wf (wave_functions.general.WaveFunction)
         The external wave function
     
     max_iter (int, default = 20)
@@ -425,7 +425,7 @@ def optimise_overlap_Absil(ci_wf,
         (n_a^1, ..., n_a^g, n_b^1, ..., n_b^g)
         This should be consistent to the spin and symmetry of the external
         wave function.
-        If None is given, uses ci_wf.ref_occ.
+        If None is given, uses ci_wf.orbspace.ref.
         If ini_U is given, this occupation is not considered, and the
         implicit occupation given by the number of columns of U is used.
         Currently: not implemented!
@@ -471,9 +471,9 @@ def optimise_overlap_Absil(ci_wf,
     implement restricted calculations
     calculate n_pos_H_eigVal
     """
-    if not isinstance(ci_wf, Wave_Function):
+    if not isinstance(ci_wf, WaveFunction):
         raise ValueError(
-            'ci_wf should be an instance of dGr_general_WF.Wave_Function.')
+            'ci_wf should be an instance of WaveFunction.')
     n_pos_eigV = None
     converged_eta = False
     converged_C = False
@@ -481,10 +481,10 @@ def optimise_overlap_Absil(ci_wf,
     f = None
     if only_C and only_eta:
         raise ValueError('Do not set both only_C and only_eta to True!')
-    restricted = isinstance(ci_wf, Wave_Function_CISD)
+    restricted = isinstance(ci_wf, CISDWaveFunction)
     if ini_U is None:
         U = []
-        ini_occ = occupation if occupation is not None else ci_wf.ref_occ
+        ini_occ = occupation if occupation is not None else ci_wf.orbspace.ref
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             U.append(np.identity(
                 ci_wf.orb_dim[i % ci_wf.n_irrep])[:, :(ini_occ[i])])
@@ -498,21 +498,22 @@ def optimise_overlap_Absil(ci_wf,
                                  + ' (for restricted calculations).')
         else:
             if len(ini_U) != 2 * ci_wf.n_irrep:
-                raise ValueError('ini_U must be a list,'
-                                 + ' of lenght 2 * ci_wf.n_irrep of numpy.array'
-                                 + ' (for unrestricted calculations).'
-                                 + ' Current value: ' + str(len(ini_U)))
+                raise ValueError(
+                    'ini_U must be a list,'
+                    ' of lenght 2 * ci_wf.n_irrep of numpy.array'
+                    ' (for unrestricted calculations).'
+                    ' Current value: ' + str(len(ini_U)))
         sum_n_a = sum_n_b = 0
         for i in ci_wf.spirrep_blocks(restricted=restricted):
             i_irrep = i % ci_wf.n_irrep
-            if ini_U[i].shape[0] != ci_wf.orb_dim[i_irrep]:
+            if ini_U[i].shape[0] != ci_wf.orbspace.full[i_irrep]:
                 raise ValueError(
                     ('Shape error in ini_U {0:} for irrep {1:}:'
                      + ' U.shape[0] = {2:} != {3:} = ci_wf.orb_dim').
                     format('alpha' if i < ci_wf.n_irrep else 'beta',
                            i_irrep,
                            ini_U[i].shape[0],
-                           ci_wf.orb_dim[i_irrep]))
+                           ci_wf.orbspace.full[i_irrep]))
             if i < ci_wf.n_irrep:
                 sum_n_a += ini_U[i].shape[1]
             else:
@@ -577,7 +578,7 @@ def optimise_overlap_Absil(ci_wf,
                     lin_sys_solution[0][slice_XC[i]],
                     U[i].shape, order=('C'
                                        if isinstance(ci_wf,
-                                                     Wave_Function_CISD) else
+                                                     CISDWaveFunction) else
                                        'F')))
                 norm_eta_i = linalg.norm(eta[-1])
                 if norm_eta_i < zero_skip_linalg:

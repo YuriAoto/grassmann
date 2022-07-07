@@ -1,0 +1,80 @@
+Grassmann
+Exploring the geometry of the electronic wave functions space
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: 1548a634c2398e6c11f7a3be1165beec1abfc46c
+
+Directory:
+/home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/Li2__5__sto3g__D2h
+
+Command:
+../../../Grassmann --memory 1000.0 --method CCSD_full_analysis --molpro_output FCI_allE.out
+
+Starting at 03 Jun 2021 - 12:03
+
+
+============================================================
+Results for Vertical distance to CCSD manifold:
+Success = True
+D_vert(FCI, CCSD manifold) = 0.00542557
+
+Number of excitations where the CC manifold
+   curves towards the wave function:
+T: 232 of 352
+Q: 574 of 636
+5: 282 of 400
+6: 106 of 106
+============================================================
+------------------------------------------------------------
+         Optimising the distance to the CC manifold
+ it  distance    |Z|         |J|          time in iteration
+  0  0.005426    8.294e-04   8.919e-04    0:01:08.787536
+  1  0.005357    4.099e-07   4.360e-07    0:01:13.106958
+  2  0.005357    4.912e-14   5.101e-14    0:01:17.956970
+-----------------------------------------------------------
+
+
+============================================================
+Results for Minimun distance to CCSD manifold:
+Success = True
+D(FCI, CCSD manifold) = 0.00535711
+
+Distance = 0.005357114724825252
+============================================================
+
+============================================================
+Results for Distances among CC/CI wave functions:
+Success = True
+
+    
+                          CC manifold
+                            / 
+                    FCI    /
+                          minD CC   CC wave function
+                         /          closest to FCI
+                        /           
+                       /
+                      /
+                     /
+                    vert CC  the vertical projection
+                   /         into the CC manifold
+                  /  
+                 /
+                /
+ -------------------x--------------------
+CI manifold         ^            
+                 vert CI   the vertical projection
+                           into the CI manifold
+
+D(FCI, minD CC) = 0.00536
+D(FCI, vert CC) = 0.00543
+D(FCI, vert CI) = 0.00617
+
+D(minD CC, vert CC) = 0.00086 (0.00084 in ampl space)
+============================================================
+
+Memory usage:
+   Max. allocation: 112.5 kB
+   Max. used: 338.5546875 kB
+Ending at 03 Jun 2021 - 12:11
+Total time: 0:08:11.101753

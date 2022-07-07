@@ -1,0 +1,166 @@
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick]
+
+  \node (import) at (\X{-50}, \Y{-23}) [anchor=west]
+  {\texttt{from wave\_functions import int\_norm}};
+  \node (import) at (\X{-50}, \Y{-20}) [anchor=west]
+  {\texttt{from coupled\_cluster import ccsd}};
+
+  % ======
+  \node (start)  at (\X{25}, \Y{-23})
+  [startend, text width=\W{3}]{};
+  % ------
+
+  % ======
+  \node (init)  at (\X{25}, \Y{-13})
+  [algstep, text width=\W{50}]
+  {
+    \textbf{Initialisation}\vspT
+    {$\Psi_{CC}$ as instance of \texttt{int\_norm.IntermNormWaveFunction}}\vsp
+  };
+  % ------
+
+  % ======
+  \node (F)  at (\X{25}, \Y{0})
+  [algstep, text width=\W{25}, hyperlink node=sec:ccsd_inter_matrix]
+  {
+    \textbf{$F^I$ matrix}\vspT
+    \texttt{ccsd.make\_F}\vsp
+  };
+  % ------
+
+  % ======
+  \node (ener)  at (\X{-30}, \Y{0})
+  [algstep, text width=\W{15}, hyperlink node=sec:ccsd_energy]
+  {
+    \textbf{Energy}\vspT
+    \texttt{ccsd.energy}\vsp
+  };
+  % ------
+
+  % ================================================
+  \node (res) at (\X{18}, \Y{48})
+  [algmultistep, text width=\W{70}, hyperlink node=sec:ccsd_res]
+  {
+    \begin{minipage}[t][15cm]{1.0\textwidth}
+      \centering
+      \textbf{Set residual}\vspT
+      \texttt{ccsd.equation}\vsp
+    \end{minipage}
+  };
+  % ------
+
+  % ======
+  \node (conv)  at (\X{-30}, \Y{18})
+  [algtest, text width=\W{11}, aspect=2]
+  {
+    {$|\Omega| < \epsilon$}%\vsp
+    { or}\vsp
+    {i = maxit ?}
+  };
+  % ------
+
+  % ======
+  \node (end)  at (\X{-30}, \Y{33})
+  [startend, text width=\W{3}]{};
+  % ------
+
+  % ======
+  \node (u)  at (\X{17.5}, \Y{18})
+  [algstep, text width=\W{15},aspect=2.5]
+  {
+    \textbf{u matrix}\vspT
+    \texttt{ccsd.make\_u}\vsp
+  };
+  % ------
+  
+  % ======
+  \node (cc_version)  at (\X{17.5}, \Y{35})
+  [algtest, text width=\W{15},aspect=2.5]
+  {
+    \textbf{CC version?}\vspT
+  };
+  % -----
+
+    % ======
+  \node (res_doub) at (\X{35}, \Y{55})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
+    \texttt{ccsd.\_res\_doubles}\vsp
+  };
+  % ------
+
+  
+  % ======
+  \node (res_t1_sing) at (\X{0}, \Y{55})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_sing]
+  {
+    \textbf{Singles, $\Omega_i^a$}\vspT
+    \texttt{ccsd.\_res\_t1\_singles}\vsp
+  };
+  % ------
+
+  % ======
+  \node (res_t1_doub) at (\X{0}, \Y{75})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Doubles, $\Omega_{ij}^{ab}$}\vspT
+    \texttt{ccsd.\_res\_t1\_doubles}\vsp
+  };
+  % ------
+  
+  % ======
+  \node (updater) at (\X{35}, \Y{75})
+  [algstep, text width=\W{30}, hyperlink node=sec:ccsd_res_doub]
+  {
+    \textbf{Updater,$\Delta t_{i}^{a}$, $\Delta t_{ij}^{ab}$}\vspT
+    \texttt{ccsd.updater}\vsp
+  };
+  % ------  
+  
+  
+  % ------------------------------------------------
+
+  
+  % ======
+  \node (update) at (\X{18}, \Y{100})
+  [algstep, text width=\W{60}, hyperlink node=sec:ccsd_update]
+  {
+    \textbf{Update amplitudes}\vspT
+    \texttt{int\_norm.IntermNormWaveFunction.update\_amplitudes}\vsp
+  };
+  % ------
+
+
+  \draw [->] (start.270) -- (init.90);
+  \draw [->] (init.270) -- (F.90);
+  \draw [->] (F.180) -- (ener.0);
+  \draw [->] (ener.270) -- (conv.90);
+  \draw [->, condNo] (conv.0) -- (u.180);
+  \draw [->, condYes] (conv.270) -- (end.90);
+  \draw [->] (u.270) -- (cc_version.90);
+  \draw [->] (cc_version.180) .. controls +(left:1) and +(up:1) ..  (res_t1_sing.90) node[midway,above,rotate=70] {CCSD};
+  \draw [->] (cc_version.0) .. controls +(right:1) and +(up:1) ..  (res_doub.90) node[midway,above,rotate=-70] {CCD};
+  \draw [->] (res_t1_sing.270) -- (res_t1_doub.90);
+  \draw [->] (res_doub.270) -- (updater.90);
+  \draw [->] (res_t1_doub.0) -- (updater.180);
+  \draw [->] (updater.270) .. controls +(down:1) and +(up:1) .. (update.90);
+
+  \algloop{update.270}{110}{-10}{ener.90}
+ % \algloop{update.270}{110}{-10}{ener.130}
+  
+
+  % ------
+
+\end{tikzpicture}
+\end{center}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

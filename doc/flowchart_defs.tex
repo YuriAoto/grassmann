@@ -1,0 +1,167 @@
+% Definitions and styles for the flowcharts
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+\tikzset{
+  startend/.style={
+    align=center,
+    circle,
+    minimum size=3mm,
+    rounded corners=1mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=red!70
+  },
+  algtest/.style={
+    align=center,
+    diamond,
+    aspect=1,
+    minimum size=6mm,
+    rounded corners=0mm,
+    very thick,
+    text badly centered,
+    draw=black!50,
+    top color=white,
+    bottom color=green!30
+  },
+  algcond/.style={
+    align=center,
+    rectangle,
+    minimum size=6mm,
+    rounded corners=3mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=blue!20
+  },
+  condYes/.style={
+    very thick,
+    draw=green,
+    postaction={decoration={
+        text along path,
+        text={Yes},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  condTrue/.style={
+    very thick,
+    draw=green,
+    postaction={decoration={
+        text along path,
+        text={True},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  condNo/.style={
+    very thick,
+    draw=red,
+    postaction={decoration={
+        text along path,
+        text={No},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  condFalse/.style={
+    very thick,
+    draw=red,
+    postaction={decoration={
+        text along path,
+        text={False},
+        text align={center},
+        raise=0.1cm},
+      decorate}
+  },
+  algmultistep/.style={
+    align=center,
+    rectangle,
+    minimum size=6mm,
+    rounded corners=3mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=white
+  },
+  algstep/.style={
+    align=center,
+    rectangle,
+    minimum size=6mm,
+    rounded corners=3mm,
+    very thick,
+    draw=black!50,
+    top color=white,
+    bottom color=black!20
+  },
+  hyperlink node/.style={
+    alias=sourcenode,
+    append after command={
+      let     \p1 = (sourcenode.north west),
+      \p2=(sourcenode.south east),
+      \n1={\x2-\x1},
+      \n2={\y1-\y2} in
+      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)]
+      {\hyperlink{#1}{\XeTeXLinkBox{\phantom{\rule{\n1}{\n2}}}}}
+      % xelatex needs \XeTeXLinkBox, won't create a link unless it
+      % finds text --- rules don't work without \XeTeXLinkBox.
+      % Still builds correctly with pdflatex and lualatex
+    }
+  },
+  class/.style={
+    align=left,
+    rectangle split,
+    rectangle split parts=3,
+    rectangle split part fill={blue!20,white,white},
+    minimum size=6mm,
+    rounded corners=0mm,
+    very thick,
+    draw=black!50,
+  }
+}
+
+% Line spacings:
+\newcommand{\vspT}{\\\vspace{0.2cm}}  % After node's title
+\newcommand{\vsp}{\\\vspace{0.1cm}}   % inside node
+
+% Positioning of nodes:
+
+% width: \W{100} should be the maximum to be used (100% of paper)
+\newcommand{\W}[1]{#1*5}
+
+% x position:
+%  \X is compatible with \W:
+%    \X{0} is the center of the page
+%    \X{-50} is the leftmost margin (that can be used)
+%    \X{50} is the rightmost margin (that can be used)
+\newcommand{\X}[1]{#1*0.182}
+
+% Position in y: inverted: top of the page has lower value than bottom
+\newcommand{\Y}[1]{-#1*0.182}
+
+\newcommand{\algloop}[4]{
+  \draw [->, rounded corners=5mm] (#1) -- ( #1 |- \X{-100},\Y{#2})  --  (\X{-50}, \Y{#2}) --
+  (\X{-50}, \Y{#3}) -- ( #4 |- \X{-15}, \Y{#3}) -- (#4);
+}
+
+\newcommand{\algloopsmall}[6]{
+  \draw [->, rounded corners=3mm] (#1) -- ( #1 |- \X{-100},\Y{#2})  --  (\X{#3}, \Y{#2}) --
+  (\X{#3}, \Y{#4}) -- ( #5 |- \X{-15}, \Y{#4}) -- (#5);
+  \node [anchor=west] at (\X{#3}, \Y{#4}+0.2) {#6};
+
+}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

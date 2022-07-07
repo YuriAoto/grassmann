@@ -9,33 +9,29 @@ import os
 import sys
 import logging
 import traceback
+from datetime import datetime as dt
 
-import parser
+import git
+
+from input_output.log import LogFilter, logtime
+from util import memory
+from input_output import parser
 from main import main_grassmann
-from molpro_util import MolproInputError
+from input_output.molpro import MolproInputError
 
-assert sys.version_info >= (3, 5)
 try:
-    cmd_line_args = parser.parse_cmd_line()
+    assert sys.version_info >= (3, 6)
+except AssertionError:
+    sys.exit('Python version 3.6 or later is required.')
+
+try:
+    args = parser.parse()
 except parser.ParseError as e:
     sys.exit(str(e))
 
-if cmd_line_args.output is None:
-    if cmd_line_args.input_is_geom:
-        cmd_line_args.output = (cmd_line_args.basename[:-4] + '.out')
-    else:
-        name_extra = cmd_line_args.state
-        if name_extra:
-            name_extra = '_' + name_extra
-        if cmd_line_args.at_ref:
-            name_extra = '_atRef'
-        cmd_line_args.output = (cmd_line_args.basename
-                                + '.min_dist' + name_extra)
-
-all_files = [cmd_line_args.output,
-             cmd_line_args.output + '.log',
-             cmd_line_args.output + '_U.npz',
-             cmd_line_args.output + '_all_U']
+all_files = [args.output,
+             args.logfile,
+             args.outdir]
 
 if any(map(os.path.exists, all_files)):
     i_backup = '_0'
@@ -49,57 +45,75 @@ if any(map(os.path.exists, all_files)):
         except FileNotFoundError:
             pass
 
-if cmd_line_args.save_all_U:
-    os.mkdir(all_files[3])
-
 log_format = ('%(levelname)s: %(funcName)s - %(filename)s:'
               + '\n%(message)s\n')
-logging.basicConfig(filename=all_files[1],
+logging.basicConfig(filename=args.logfile,
                     format=log_format,
                     filemode='w',
-                    level=cmd_line_args.loglevel)
+                    level=args.loglevel)
+logging.logThreads = 0
+logging.logProcesses = 0
 logger = logging.getLogger(__name__)
-
-
-class myLogFilter():
-    """Define a filter for logging, to be attached to all handlers."""
-    def filter(self, rec):
-        """Return a boolean, indicating whether rec will be logged or not."""
-        if rec.funcName == '__enter__':
-            rec.funcName = 'Entering time management'
-        elif rec.funcName == '__exit__':
-            rec.funcName = 'Finishing time management'
-        if cmd_line_args.logfilter is not None:
-            return not cmd_line_args.logfilter.search(rec.funcName) is None
-        # Uncomment this to check for possible records to filter
-        # print()
-        # print(rec)
-        # print(rec.__dict__)
-        # print()
-        return True
-
-
 for handler in logging.root.handlers:
-    handler.addFilter(myLogFilter())
-f_out = None
+    handler.addFilter(LogFilter(args.logfilter))
+
 with_error = False
-try:
-    f_out = open(cmd_line_args.output, 'w')
-    main_grassmann(cmd_line_args, f_out)
-except MolproInputError as e:
-    with_error = True
-    error_msg = ('Error in Molpro file ' + str(e.file_name)
-                 + ', line number ' + str(e.line_number) + ':\n'
-                 + str(e.line) + '\n' + e.msg)
-except Exception as e:
-    with_error = True
-    error_msg = ('Error: ' + str(e)
-                 + '\nHere is the traceback:\n' + traceback.format_exc())
-finally:
-    if with_error and f_out is not None:
-        f_out.write('\n' + error_msg)
-    if f_out is not None:
-        f_out.close()
-    if with_error:
-        sys.exit(error_msg)
-exit()
+with open(args.output, 'w') as f_out:
+    def toout(x='', add_new_line=True):
+        f_out.write(x + ('\n' if add_new_line else ''))
+
+    try:
+        grassmann_dir = os.path.dirname(os.path.abspath(__file__))
+        if 'src' in grassmann_dir[-4:]:
+            grassmann_dir = os.path.normpath(os.path.join(grassmann_dir, '..'))
+        git_repo = git.Repo(grassmann_dir)
+        git_sha = git_repo.head.object.hexsha
+        memory.set_total_memory(args.memory[0], unit=args.memory[1])
+        toout('Grassmann')
+        toout('Exploring the geometry of the electronic wave functions space')
+        toout('Yuri Aoto - 2018, 2019, 2020')
+        toout()
+        toout('Current git commit: ' + git_sha)
+        toout()
+        toout('Directory:\n' + args.wdir)
+        toout()
+        toout('Command:\n' + ' '.join(args.sys_argv))
+        if args.files_content:
+            toout()
+            toout(''.join(args.files_content))
+        toout()
+        with logtime('Main program') as T:
+            toout(f'Starting at {dt.fromtimestamp(T.ini_time):%d %b %Y - %H:%M}\n')
+            main_grassmann(args, f_out)
+    except MolproInputError as e:
+        with_error = True
+        error_msg = ('Error in Molpro file ' + str(e.file_name)
+                     + ', line number ' + str(e.line_number) + ':\n'
+                     + str(e.line) + '\n' + e.msg)
+        stdout_error_msg = error_msg
+    except memory.MemoryExceededError as e:
+        with_error = True
+        error_msg = ('The memory limit of {0} {1} has been exceeded:'
+                     + '\nAt "{2}" we needed {3} {1},'
+                     + '\nbut we had only {4} {1}.').format(
+                         args.memory[0],
+                         args.memory[1],
+                         e.action,
+                         e.mem_required,
+                         e.mem_remaining)
+        stdout_error_msg = error_msg
+    except Exception as e:
+        with_error = True
+        error_msg = ('Error: ' + str(e)
+                     + '\nHere is the traceback:\n' + traceback.format_exc())
+        stdout_error_msg = 'Error: ' + str(e)
+    finally:
+        if with_error and f_out is not None:
+            f_out.write('\n' + error_msg)
+        f_out.write('\nMemory usage:\n')
+        f_out.write(memory.show_status() + '\n')
+        f_out.write(f'Ending at {dt.fromtimestamp(T.end_time):%d %b %Y - %H:%M}\n')
+        f_out.write(f'Total time: {T.elapsed_time}\n')
+        if with_error:
+            sys.exit(stdout_error_msg)
+sys.exit()

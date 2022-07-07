@@ -1,0 +1,53 @@
+Grassmann
+Exploring the geometry of the electronic wave functions space
+Yuri Aoto - 2018, 2019, 2020
+
+Current git commit: 3d84e37b2a2b382615f217f72a9ccf16fc58ad55
+
+Directory:
+/home/yuriaoto/Documents/Codes/grassmann
+
+Command:
+/home/yuriaoto/Documents/Codes/grassmann/src/Grassmann --method dist_Grassmann --molpro_output /home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/H2__5__ccpVDZ__D2h/CISD.out
+
+Starting at 07 Feb 2021 - 12:34
+
+From command line and input:
+External wave function, |extWF>: /home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/H2__5__ccpVDZ__D2h/CISD.out
+Orbital basis of |extWF>: /home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/H2__5__ccpVDZ__D2h/CISD.out
+Hartree-Fock orbitals, |minE>: /home/yuriaoto/Documents/Codes/grassmann/tests/inputs_outputs/H2__5__ccpVDZ__D2h/CISD.out
+Using the optimiser based on the geometry of the Grassmannian.
+ See: P-A Absil et. al,
+      Acta Applicandae Mathematicae 80, 199-220, 2004.
+   Algorithm specific for CISD wave function.
+State: 
+Log level: WARNING
+qpy job ID: not in qpy
+
+External wave function (|extWF>) is: CISD
+Using |WFref> (the reference of |extWF>) as |minE>.
+|<WFref|extWF>| =   0.78181588
+Restricted calculation
+Number of alpha and beta electrons: 1 1
+Dim. of core orb. space:  alpha/beta: [ 0 0 0 0 0 0 0 0 ]
+Dim. of ref. determinant: alpha/beta: [ 1 0 0 0 0 0 0 0 ]
+Dim. of orbital space:    alpha/beta: [ 3 1 1 0 3 1 1 0 ]
+
+Starting optimisation
+------------------------------
+it.    f            |η|          |C|          time in iteration
+0      0.78181588   0.10887010   0.11935595   0:00:00.006555
+1      0.79089561   0.00167320   0.00187733   0:00:00.006022
+2      0.79089783   0.00000001   0.00000001   0:00:00.005948
+------------------------------
+Iterations converged!
+WARNING: Unknown number of positive eigenvalue(s) of Hessian.
+|<minD|extWF>| =   0.79089783
+|<minE|minD>| =   0.98855277
+
+
+Memory usage:
+   Max. allocation: 0.1484375 kB
+   Max. used: 0.1953125 kB
+Ending at 07 Feb 2021 - 12:34
+Total time: 0:00:00.029043

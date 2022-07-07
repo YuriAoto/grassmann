@@ -1,0 +1,326 @@
+\hypertarget{chap:cc_man}{}
+\chapter{The coupled-cluster manifold}
+\label{sec:cc_man}
+\chaptermark{CC manifold}
+\chapterauthor{}
+
+{History:
+  
+  \begin{tabular}{l@{ - }l}
+     2021 & Start\\
+  \end{tabular}
+}\vspace{3cm}
+
+
+\section{Notation}
+
+\begin{center}
+  \begin{tabular}{ll}
+    \hline
+    \Hamilt    & The electronic Hamiltonian \\
+    $\Phi_0$ & The reference Slater determinant \\
+    $i,j,k,l,...$ & indices associated to occupied orbitals in $\Phi_0$\\
+    $a,b,c,d,...$ & indices associated to virtual orbitals of $\Phi_0$\\
+    $\Psi$ & An arbitrary (correlated) wave function\\
+    $\Psi_0$ & The FCI wave function associated of the ground state\\
+    $\Psi_{CC}$ & An element of the CC-manifold:\\
+               & A coupled-cluster like wave function, not necessarily\\
+               & that one that solves the CC equations.\\
+             & (when the excitation level is implicit by the context\\
+                  & or not important)\\
+    $\Psi_{CCD}$ & An element of the CCD manifold\\
+    $\Psi_{CCSD}$ & An element of the CCSD manifold\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\newpage
+\section{Introduction}
+
+In this chapter we describe the main equations used to study how the coupled-cluster manifold
+(the CC manifold)
+is related to an arbitrary wave function,\footnote{
+  These wave functions are not totally arbitrary:
+  we will require them to be eigenfunctions of $S_z$.
+  Except for this, they will be arbritrary FCI-like wave functions.
+  }
+usually the exact ground state wave function.
+We receive as input this arbitrary wave function ($\Psi_0$) and we compare it with the manifold
+of coupled-cluster wave functions ($\Psi_{CC}$).
+
+\section{The distance in the intermediate normalisation}
+\hypertarget{sec:dist_interm_norm}{}
+\label{sec:dist_interm_norm}
+
+Let $\Phi_0$ be our reference Slater determinant.
+Any state not orthogonal to $\Phi_0$ can be uniquely written in the intermediate normalisation as:
+\begin{equation}
+  \Psi = \Phi_0 + \sum_{I \ne I_0} c_I \Phi_I\,,
+\end{equation}
+where $\Phi_I$ are excited Slater determinants (relative to $\Phi_0$).
+The distance between two such wave functions is:
+\begin{equation}\label{eq:dist_intem_norm}
+  \begin{split}
+    D_\text{IN}(\Psi,\Psi') &= |\Psi - \Psi'|\\
+    &=\sqrt{\sum_{I \ne I_0} (c_I - c'_I)^2 }\\
+  \end{split}
+\end{equation}
+
+\section{To be in the right side of the CC manifold}
+
+Let $\Psi_0$ be an arbitrary wave function.
+We want to check if the CC manifold ``curves towards it'':
+We can see a CC  manifold as obtained from the CI manifold (of corresponding type:
+CID $\leftrightarrow$ CCD, CISD $\leftrightarrow$ CCSD, etc)
+after ``curving'' it.
+It is expected that, being CC more accurate that CI, this ``curving'' goes towards the exact
+ground state wave function.
+This is what we want to investigate, and the precise definition is given below.
+
+\section{The vertical distance and the vertical ``projection''}
+
+\subsection{The CCD manifold}
+
+The CCD manifold is made by all wave functions of the type:
+\begin{equation}
+  \Psi_{CCD} = e^{T_2} \Phi_0 = (1 + T_2 + \frac{1}{2!}T_2^2 + \frac{1}{3!}T_2^3 + ...) \Phi_0\,,
+\end{equation}
+where $T_2$ is defined by:
+\begin{equation}
+  T_2 = \sum_{\mathclap{\substack{
+        i<j\\
+        a<b}}} t_{ij}^{ab} a_{ij}^{ab}\,.
+\end{equation}
+Thus, the wave functions at the CCD manifold are linear combinations of the reference ($\Phi_0$) determinant,
+of double excitations on top of $\Phi_0$ ($\Phi_{ij}^{ab}$), and higher-rank even excited determinants:
+quadruply excited determinants, sextuply excitated determinants, etc.
+For each one of these higher-rank excited determinant, its coefficient is given as a sum of products
+of $t_{ij}^{ab}$, that are the coefficients of the doubly excited determinants.
+Using Szabo's notation, these are
+\begin{equation}
+  c_{ijkl}^{abcd} = t_{ij}^{ab} * t_{kl}^{cd}\,,
+\end{equation}
+for quadruply excited determinants,
+\begin{equation}
+  c_{ijklmn}^{abcdef} = t_{ij}^{ab} * t_{kl}^{cd} * t_{mn}^{ef}\,,
+\end{equation}
+for sextuply excited determinants, etc.
+
+The way that these are expressed in terms of $t_{ij}^{ab}$ can be obtained by expanding the operator $e^{T_2}$.
+This has been done by Lehtola and coauthors \cite{}.
+They report in their paper the \emph{cluster decomposition} of the FCI wave function,
+and show how each CI coefficient is decomposed in amplitudes.
+for the case with no truncation in the cluster operator $T$).
+Whenever we consider only the $T_2$ operator,
+we can simply neglect all contribution from amplitudes other than doubles.
+For instance:
+\begin{equation}
+  \begin{split}
+    c_{ijkl}^{abcd} =
+    & \phantom{+} t_{ij}^{ab}t_{kl}^{cd} - t_{ij}^{ac}t_{kl}^{bd} + t_{ij}^{ad}t_{kl}^{bc}\\
+  & + t_{ij}^{bc}t_{kl}^{ad} - t_{ij}^{bd}t_{kl}^{ac} + t_{ij}^{cd}t_{kl}^{ab}\\
+  & - t_{ik}^{ab}t_{jl}^{cd} + t_{ik}^{ac}t_{jl}^{bd} - t_{ik}^{ad}t_{jl}^{bc}\\
+  & - t_{ik}^{bc}t_{jl}^{ad} + t_{ik}^{bd}t_{jl}^{ac} - t_{ik}^{cd}t_{jl}^{ab}\\
+  & + t_{il}^{ab}t_{jk}^{cd} - t_{il}^{ac}t_{jk}^{bd} + t_{il}^{ad}t_{jk}^{bc}\\
+  & + t_{il}^{bc}t_{jk}^{ad} - t_{il}^{bd}t_{jk}^{ac} + t_{il}^{cd}t_{jk}^{ab}
+  \end{split}
+\end{equation}
+This rules for the decomposition until eight-rank excitations can be obtained
+from Lehtola's Github repository.
+The decomposition is done in \texttt{wave\_functions.fci.cluster\_decompose}.
+Note, however, that the above rules hold when we consider occupied orbitals
+in the reference coming before the virtuals (for each alpha or beta parts).
+If the orbitals are ordered in a different way a sign correction should be applied.
+
+For each one of the higher-rank excited determinant (quadruples, etc),
+we say that the CCD manifold bends towards the FCI wave function in that direction if
+the sign of $c_I$ in the FCI wave function is the same as of the corresponding cluster expansion
+in doubles, using the coefficients of doubles of the same wave function.
+For instance, if the FCI wave function is given in the intermediate normalization,
+the CCD manifold bends toward FCI in the direction of $\Phi_{ijkl}^{abcd}$ if:
+\begin{equation}
+  \frac{c_{ij}^{ab} * c_{kl}^{cd}}{c_{ijkl}^{abcd}} > 0\,.
+\end{equation}
+Furthermore,
+the \emph{vertical distance} between the wave function $\Psi_0$ and the CCD manifold is obtained as
+\begin{equation}
+  D_\text{IN}(\Psi_0, \Psi_0^{CCD,vert})\,,
+\end{equation}
+where $\Psi_0^{CCD,vert}$ is the CCD wave function
+with the same double amplitudes as the coefficients of double excitations as in $\Psi_0$:
+\begin{equation}
+  \begin{split}
+    D_{CCD}^{vert}(\Psi_0) =& D_{IN}(\Psi_0, \Psi_0^{CCD,vert})\\
+    =& \sqrt{
+      \sum_i^a (c_i^a)^2
+      + \sum_{i<j<k}^{a<b<c} (c_{ijk}^{abc})^2
+      + \sum_{i<j<k<l}^{a<b<c<d}(c_{ijkl}^{abcd} - c_{ij}^{ab} * c_{kl}^{cd})^2 + \dots
+    }
+  \end{split}
+\end{equation}
+
+The calculation of the vertical distance between $\Psi_0$ and the CCD manifold,
+as well as the check if the manifold curves towards $\Psi_0$,
+is made at \texttt{coupled\_cluster.dist\_to\_fci.vertical\_dist\_to\_cc\_manifold}.
+
+\subsection{The CCSD manifold}
+We will extend the ideas and equations discussed above to the CCSD manifold,
+formed by the wave functions of the form:
+\begin{equation}
+  \Psi_{CCSD} = e^{T_1 + T_2} \Phi_0 =
+  \left(1 + T_1 + T_2 + \frac{1}{2!}(T_1 + T_2)^2 + \frac{1}{3!}(T_1 + T_2)^3 + ...\right) \Phi_0\,,
+\end{equation}
+where $T_1$ is further defined by:
+\begin{equation}
+  T_1 = \sum_{i,a} t_i^a a_i^a\,.
+\end{equation}
+
+Now the CC wave functions contain not only even rank excitations,
+but also singles, triples, etc.
+The decomposition triple and higher rank excitations in terms of single and doubles \emph{amplitudes}
+can be done as before, following the work of Lehtola.
+However, now we cannot use the coefficients of double and single excitations in $\Psi_0$
+directly, since the amplitudes of singles also contribute to the coefficient of doubly excited
+determinants in the CCSD wave function
+Thus, we have first to extract the contribution of singles
+from the coefficients of doubles in $\Psi_0$:
+\begin{equation}\label{eq:extract_S_from_D}
+  t_{ij}^{ab} = c_{ij}^{ab} - c_i^a * c_j^b\,.
+\end{equation}
+Note that $c_i^a = t_i^a$.
+
+Thus, we say that the CCSD manifold curves towards $\Psi_0$ in the direction of
+$\Phi_{ijk}^{abc}$ if
+\begin{equation}
+  \frac{c_{ijk}^{abc}}{c_{i}^{a} * t_{jk}^{bc}} > 0\,,
+\end{equation}
+and that the CCSD manifold curves towards $\Psi_0$ in the direction of
+$\Phi_{ijkl}^{abcd}$ if
+\begin{equation}
+  \frac{c_{ijkl}^{abcd}}
+  {c_{i}^{a} * c_{j}^{b} * c_{k}^{c} * c_{l}^{d}
+    + c_{i}^{a} * c_{j}^{b} * t_{kl}^{cd}
+    + t_{ij}^{ab} * t_{kl}^{cd}} > 0\,.
+\end{equation}
+
+Finally the \emph{vertical distance} between the wave function $\Psi_0$
+and the CCSD manifold is obtained as
+$D_\text{IN}(\Psi_0, \Psi_0^{CCSD,vert})$, where $\Psi_0^{CCSD,vert}$ is the CCSD wave function
+with the same single amplitudes as the coefficients of single excitations as in $\Psi_0$,
+but doubles amplitudes given by Equation~\eqref{eq:extract_S_from_D}:
+\begin{equation}
+  \begin{split}
+    D_{CCSD}^{vert}(\Psi_0) &= 
+    D_{IN}(\Psi_0, \Psi_0^{CCSD,vert})\\
+    &= \sqrt{
+      \sum_{i<j<k}^{a<b<c}
+      (c_{ijk}^{abc} - c_{i}^{a} * t_{jk}^{bc})^2
+      + \sum_{i<j<k<l}^{a<b<c<d}
+      (c_{ijkl}^{abcd}
+      - c_{i}^{a} * c_{j}^{b} * c_{k}^{c} * c_{l}^{d}
+      - c_{i}^{a} * c_{j}^{b} * t_{kl}^{cd}
+      - t_{ij}^{ab} * t_{kl}^{cd})^2 + \dots
+    }
+  \end{split}
+\end{equation}
+
+\section{The distance to the coupled-cluster manifold}
+\hypertarget{sec:dist_cc_man}{}
+\label{sec:dist_cc_man}
+
+For the CI manifold, the vertical projection of an arbitrary wave function
+is the point of the manifold that maximises the distance between the manifold
+and the wave function, that is just the vertical distance.
+For the coupled-cluster manifold, however, this is no longer true, since it is curved.
+We will assume that there is a point in the coupled cluster manifold that minimises the
+distance (in the intermediate normalisation) to a given wave function.
+Since this manifold is not compact this is not necessarily true,
+but seems a reasonable assumption if the wave function is the exact ground state
+wave function for a well behaved system.
+To find the point at this manifold that minimises this distance a optimisation has to be done.
+
+The goal is to find $\Psi_{CC}^{minD}$ at the CC manifold (of a given level)
+such that
+\begin{equation}\label{eq:dist_CC_FCI}
+  D_{IN}(\Psi_0, \Psi_{CC})^2 = \braket{\Psi_0 - \Psi_{CC}}{\Psi_0 - \Psi_{CC}}
+\end{equation}
+is minimum for all $\Psi_{CC} \in U_{CC}$.
+Minimising the square of the distance is just a matter of convenience.
+Since the manifold is already parametrised by the amplitudes,
+we will use them, stored in a vector $\mathbf{t}$ whose elements are $t_\rho$.
+Applying the stationary condition we have:
+\begin{equation}\label{eq:cc_minD_jac}
+  \begin{split}
+    0 =& \frac{\partial}{\partial t_\rho} D_{IN}(\Psi_0, \Psi_{CC}(\mathbf{t}))^2\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_\rho}\\
+    =& 2 \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})} = J_\rho(\mathbf{t})\,.
+  \end{split}
+\end{equation}
+The wave function $\Psi_0$ must be in the intermediate normalisation.
+$\Phi_\rho = \tau_\rho\Phi_0$ and the last equality holds because $\tau_\rho$ commutes with
+the cluster operator.
+The Hessian, needed for a Newton optimisation:
+\begin{equation}\label{eq:cc_minD_hess}
+  \begin{split}
+    H_{\sigma\rho}(\mathbf{t}) =
+    & 2\left( \mel{\Phi_\sigma}{e^{T(\mathbf{t})^\dagger}e^{T(\mathbf{t})}}{\Phi_\rho}
+      + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{e^{T(\mathbf{t})}}{\Phi_{\rho\sigma}} \right)\\
+    & 2\left( \mel{\Psi_{CC}(\mathbf{t})}{\tau_\sigma^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}
+    + \mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\sigma\tau_\rho}{\Psi_{CC}(\mathbf{t})} \right)\,.
+  \end{split}
+\end{equation}
+
+If these quantities are calculated, the Newton step is obtained as:
+\begin{equation}\label{eq:cc_minD_update}
+  \mathbf{t}_\text{new} = \mathbf{t} + \mathbf{z}\,,
+\end{equation}
+where
+\begin{equation}\label{eq:cc_minD_z}
+  \mathbf{z}
+  = - \left(\mathbf{H}(\mathbf{t})\right)^{-1}\mathbf{J}(\mathbf{t})
+  = - \left(\tfrac{1}{2}\mathbf{H}(\mathbf{t})\right)^{-1}
+  \left(\tfrac{1}{2}\mathbf{J}(\mathbf{t})\right)\,.
+\end{equation}
+This is implemented at \texttt{coupled\_cluster.dist\_to\_fci.calc\_dist\_to\_cc\_manifold}.
+What is more challenging, and time consuming, is the calculation of $\mathbf{J}(\mathbf{t})$ and
+$\mathbf{H}(\mathbf{t})$.
+This is done in\\ \texttt{coupled\_cluster.manifold.min\_dist\_jac\_hess}.
+
+\subsection{One possible approximation to the Hessian}
+\hypertarget{sec:cc_man_appr_hess}{}
+\label{sec:cc_man_appr_hess}
+
+It is clear from the equations above that the calculation of the Hessian is the most time consuming.
+However, although the Jacobian must be accurate to obtain the minimum of the distance,
+the Hessian can be approximate.
+One possible approximation, inspired in traditional coupled cluster theory,
+is to use only the diagonal elements of the Hessian:
+
+\begin{equation}\label{eq:cc_minD_hess_diag}
+  \begin{split}
+    H_{\rho\rho}(\mathbf{t}) =
+    2\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}\,,
+  \end{split}
+\end{equation}
+where we used the fact that $\tau_\rho\tau_\rho = 0$
+(we would remove electrons twice of the same spin-orbital).
+It is not clear if this would be a good approximation
+(namely, that the off diagonal terms are indeed lower than the diagonal),
+but the simplicity suggests that it is worth trying.
+With this:
+\begin{equation}\label{eq:cc_minD_z_diag}
+  z_\rho
+  = - \frac{J_\rho(\mathbf{t})}{H_{\rho\rho}(\mathbf{t})}
+  = - \frac{\mel{\Psi_{CC}(\mathbf{t}) - \Psi_0}{\tau_\rho}{\Psi_{CC}(\mathbf{t})}}
+  {\mel{\Psi_{CC}(\mathbf{t})}{\tau_\rho^\dagger\tau_\rho}{\Psi_{CC}(\mathbf{t})}}\,.
+\end{equation}
+
+\newpage
+\subsection{Flowchart: \texttt{coupled\_cluster.dist\_to\_fci.calc\_dist\_to\_cc\_manifold}}
+
+\input{cc_minD_flowchart}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

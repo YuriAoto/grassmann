@@ -1,0 +1,126 @@
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick,
+  ]
+
+  \node (import) at (\X{-50}, \Y{-18}) [anchor=west]
+  {\texttt{from coupled\_cluster import manifold as cc\_manifold}};
+  \node (import) at (\X{-50}, \Y{-15}) [anchor=west]
+  {\texttt{from wave\_functions import fci, interm\_norm}};
+
+  % ======
+  \node (init)  at (\X{20}, \Y{-15})
+  [algstep, text width=\W{30}]
+  {
+    \textbf{Input}\vspT
+    {The $\Psi_0$ wave function in the intermediate normalisation and with ordered orbitals}\vsp
+    {Initial $\Psi_{CC}$ wave function}\vsp
+  };
+  % ------
+
+  % ======
+  \node (cc_wf)  at (\X{0}, \Y{3})
+  [algstep, text width=\W{55}]
+  {
+    \textbf{$\Psi_{CC}$ as a FCI wave function}\vspT
+    \texttt{fci.WaveFunctionFCI.from\_int\_norm}\vsp
+    {\scriptsize($\Psi_{CC}$ in FCI representation with ordered orbitals)}
+  };
+  % ------
+
+  % ======
+  \node (dist)  at (\X{0}, \Y{18})
+  [algstep, text width=\W{50}, hyperlink node=sec:dist_interm_norm]
+  {
+    \textbf{Distance between $\Psi_0$ and $\Psi_{CC}$}\vspT
+    {Eq.~\eqref{eq:dist_intem_norm}, at \texttt{fci.WaveFunctionFCI.dist\_to}}\vsp
+  };
+  % ------
+
+  % ======
+  \node (conv)  at (\X{0}, \Y{29})
+  [algcond, text width=\W{35}]
+  {
+    \textbf{Converged?}\vspT
+    {$|\mathbf{J}| < \epsilon_J$ and $|\mathbf{H}^{-1}\mathbf{J}| < \epsilon_z$}\vsp
+  };
+  % ------
+
+  
+  % ================================================
+  \node (jachess) at (\X{0}, \Y{60})
+  [algmultistep, text width=\W{60}, hyperlink node=sec:dist_cc_man]
+  {
+    \textbf{Set Jacobian and Hessian}\vspT
+    \begin{minipage}[t][7cm]{1.0\textwidth}
+      \centering
+      \texttt{cc\_manifold.min\_dist\_jac\_hess}
+    \end{minipage}
+  };
+
+  % ======
+  \node (jac) at (\X{0}, \Y{56})
+  [algstep, text width=\W{30}]
+  {
+    \textbf{Set Jacobian, $\mathbf{J}_{\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_jac}}\vsp
+  };
+  % ------
+
+  % ======
+  \node (hess) at (\X{0}, \Y{69})
+  [algstep, text width=\W{40}]
+  {
+    \textbf{Set Hessian, $\mathbf{H}_{\sigma\rho}$}\vspT
+    {Eq.~\eqref{eq:cc_minD_hess}, running over all $\sigma$}\vsp
+    {Or, if approximate diagonal Hessian,\\
+      calculates directly Eq.~\eqref{eq:cc_minD_z_diag}}
+  };
+  % ------
+  
+  % ------------------------------------------------
+
+  % ======
+  \node (solve_z) at (\X{0}, \Y{89})
+  [algstep, text width=\W{30}]
+  {
+    \textbf{Find the update vector, $\mathbf{z}$}\vspT
+%%%    \texttt{interm\_norm.IntermNormWF.update\_amplitudes}\vsp
+    {Eq.~\eqref{eq:cc_minD_z}}
+  };
+  % ------
+  
+  % ======
+  \node (update) at (\X{0}, \Y{101})
+  [algstep, text width=\W{50}]
+  {
+    \textbf{Update amplitudes, $\mathbf{t}_\text{new}$}\vspT
+    \texttt{interm\_norm.IntermNormWF.update\_amplitudes}\vsp
+    {Eq.~\eqref{eq:cc_minD_update}}
+  };
+  % ------
+
+  \draw [->] (init.270) .. controls ++(270:0.9) and ++(90:0.9) .. (cc_wf.50);
+  \draw [->] (cc_wf.270) -- (dist.90);
+  \draw [->] (dist.270) -- (conv.90);
+  \draw [->, condYes] (conv.0) -- (\X{30}, \Y{29});
+  \draw [->, condNo] (conv.270) -- (jachess.90);
+  \draw [->] (jachess.south) -- (solve_z.north);
+  \draw [->] (solve_z.south) -- (update.north);
+  \algloop{update.270}{109}{-10}{cc_wf.130}
+
+  \algloopsmall{hess.270}{79}{-25}{49}{jac.90}{Over all $\rho$}
+
+
+\end{tikzpicture}
+\end{center}
+
+ 	
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

@@ -1,0 +1,144 @@
+
+\begin{center}
+\footnotesize
+\begin{tikzpicture}[
+  ->,
+  double,
+  very thick]
+
+\node (test) at (0,0) [class, text width=\W{27}]{\textbf{IntermNormWaveFunction}
+\nodepart{second}
++ norm : float\\
++ singles : list[np.array]\\
++ doubles : list[np.array]
+\nodepart{third}
++ get\_irrep ( i : int, alpha\_orb : int )\\
++ ij\_from\_N ( N : int )\\
++ N\_from\_ij ( i : int, j : int, i\_irrep : int, j\_irrep : int, exc\_type : str)};
+
+\node (NormCI_WF) at (0,-5) [class, text width=\W{27}]{\textbf{NormCI\_WaveFunction}
+\nodepart{second}
++ has\_FCI\_structure : bool};
+
+\node (CISD_WF) at (0,-8) [class, text width=\W{27}]{\textbf{CISD\_WaveFunction}
+\nodepart{second}
++ C0 : float\\
++ Cs ; list of 2D np.ndarrays\\
++ Cd ; list of 2D np.ndarrays\\
++ Csd ; list of 4D np.ndarrays};
+
+\node (FCI_WF) at (0,-12) [class, text width=\W{27}]{\textbf{WaveFunctionFCI}
+\nodepart{second}
+};
+
+\node (SlaterD) at (\X{40},-10) [class, text width=\W{27}]{\textbf{SlaterDet}
+\nodepart{second}
++ c : float\\
++ occupation : list of np.arrays of int};
+
+\node (ExcSlaterD) at (\X{40},-13) [class, text width=\W{27}]{\textbf{ExcitedSlaterDet}
+\nodepart{second}
+ ??};
+
+
+
+\node (test2) at (\X{40},\Y{0}) [class, text width=\W{27}]{\textit{\textbf{WaveFunction}}
+\nodepart{second}
++ restricted : bool\\
++ point\_group : str\\
++ n\_irre : int\\
++ n\_core : OrbitalsSets\\
++ n\_act : OrbitalsSets\\
++ orb\_dim : OrbitalsSets\\
++ ref\_occ : OrbitalsSets\\
++ n\_ext : OrbitalsSets\\
++ n\_corr\_orb : OrbitalsSets\\
++ n\_alpha, n\_beta, n\_elec, n\_corr\_alpha, n\_corr\_beta, n\_corr\_elec, n\_orb, n\_orb\_nocore: int\\
++ WF\_type : str\\
++ source : str};
+
+\node (test3) at (\X{80},\Y{0}) [class, text width=\W{15}]{\textbf{OrbitalSets}
+\nodepart{second}
++ occ\_type : str
+};
+
+\node (MO) at (\X{0},\Y{85}) [class, text width=\W{20}]{\textbf{MolecularOrbital}
+\nodepart{second}
++ name : str\\
++ n\_irrep : int\\
++ restricted : bool\\
++ in\_the\_basis : str\\
++ sym\_adapted\_basis : bool\\
++ energies : 1D ndarray
+};
+
+\node (Atom) at (\X{50},\Y{35}) [class, text width=\W{20}]{\textbf{Atom}
+\nodepart{second}
++ element : str\\
++ coord : array of floats\\
++ label : str
+};
+
+
+\node (MG) at (\X{80},\Y{30}) [class, text width=\W{20}]{\textbf{MolecularGeometry}
+\nodepart{second}
++ name : str\\
+- \_atoms : array of Atoms\\
++ atomic\_basis\_set : str\\
++ integrals : Integrals\\
++ charge : int = 0\\
+- \_nuc\_rep : float\\
+- \_n\_elec : int
+};
+
+\node (Int) at (\X{80},\Y{80}) [class, text width=\W{20}]{\textbf{Integrals}
+\nodepart{second}
++ basis\_set : str\\
++ mol\_geo : MolecularOrbital\\
++ n\_func : int\\
++ S : np.ndarray (??)\\
++ h : np.ndarray (??)\\
++ g : np.ndarray (??)\\
++ X : (??)
+};
+
+\node (Note) at (\X{65},\Y{55}) [shape=rectangle, draw, text width=\W{25}]{Note: MolecularGeomtry does not need to know the basis used\\
+  and more than one set of integrals can be generated for the same Geom.\\
+This link can be unidiretional};
+
+\node (Note2) at (\X{25},\Y{85}) [shape=rectangle, draw, text width=\W{25}]{Note: One or more MolecularOrbital can be linked with an Integrals object,\\
+  but Integrals doesn't need to be linked to any of them.};
+
+
+
+\draw [-{Triangle[open]}] (test) -- (test2);
+\draw [-{Triangle[open]}] (NormCI_WF) -- (test2);
+\draw [-{Triangle[open]}] (CISD_WF) -- (test2);
+\draw [-{Triangle[open]}] (FCI_WF) -- (test2);
+%__
+\draw [<-{Turned Square[open]}] (test3) -- (test2);
+\node [below left = -0.6cm and 0.1cm of test3] {6};
+\node [above left = -0.6cm and 0.1cm of test3] {define orbitals};
+\node [below right = -5cm and 0.1cm of test2] {1};
+%--
+%__
+\draw [{Turned Square[open]}->] (MG) -- (Atom);
+\node [above left = -3.1cm and 0.1cm of MG] {1};
+\node [below right = -2.6cm and 0.05cm of Atom] {formed by};
+\node [above right = -1.9cm and 0.1cm of Atom] {0..};
+%--
+%__
+\draw [-] (Int)  -- (MG);
+\node [below right = 0.1cm and -2cm of MG]{1};
+\node [above left = 0.1cm and -2cm of Int]{1};
+%--
+
+
+
+\end{tikzpicture}
+\end{center}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:

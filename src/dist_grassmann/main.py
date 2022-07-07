@@ -3,20 +3,19 @@
 
 """
 import os
-import datetime
-import time
 import logging
 
 import numpy as np
 from scipy import linalg
 
-from util import dist_from_ovlp, ovlp_Slater_dets, logtime
-import orbitals as orb
+from input_output.log import logger, logtime
+from wave_functions import molpro
+from .metric import dist_from_ovlp, ovlp_Slater_dets
+from orbitals import orbitals as orb
 from . import optimiser
-import molpro_util
 import wave_functions
 
-logger = logging.getLogger(__name__)
+
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
@@ -49,8 +48,8 @@ def main(args, f_out):
                          abs(ovlp),
                          extra))
 
-    toout('From command line and environment:')
-    toout('External wave function, |extWF>: ' + args.input_file)
+    toout('From command line and input:')
+    toout('External wave function, |extWF>: ' + args.molpro_output)
     if args.WF_templ is not None:
         toout('Template for |extWF>: ' + args.WF_templ)
     toout('Orbital basis of |extWF>: ' + args.WF_orb)
@@ -85,28 +84,22 @@ def main(args, f_out):
     toout()
     # ----- loading wave function
     with logtime('Reading wave function'):
-        ext_wf = molpro_util.load_wave_function(
-            args.input_file,
-            WF_templ=args.WF_templ,
+        ext_wf = molpro.load_wave_function(
+            args.molpro_output,
             use_CISD_norm=not args.at_ref,
             wf_obj_type=('cisd'
                          if args.algorithm == 'CISD_Absil' else
-                         ('int_norm'
+                         ('interm_norm'
                           if args.algorithm == 'general_Absil' else
                           'fci')))
-    if args.at_ref:
-        ext_wf.use_CISD_norm = False
-    if (isinstance(ext_wf, wave_functions.fci.Wave_Function_Norm_CI)
-        and 'Absil' in args.algorithm
-            and not args.at_ref):
-        raise Exception('algorithm CISD_Absil is not compatible with'
-                        + 'fci.Wave_Function_Norm_CI')
+    # if args.at_ref:
+    #     ext_wf.use_CISD_norm = False
     logger.debug('External wave function:\n %r', ext_wf)
-    toout('External wave function (|extWF>) is: ' + ext_wf.WF_type)
+    toout('External wave function (|extWF>) is: ' + ext_wf.wf_type)
     if loglevel <= logging.DEBUG and args.algorithm == 'general_Absil':
         x = []
-        for I in ext_wf.string_indices():
-            x.append(str(I) + ': ' + str(ext_wf[I]))
+        for Index in ext_wf.string_indices():
+            x.append(str(Index) + ': ' + str(ext_wf[Index]))
         logger.debug('The determinants:\n' + '\n'.join(x))
     if args.HF_orb != args.WF_orb:
         toout('Using as |minE> a Slater determinant different than |WFref>')
@@ -129,7 +122,7 @@ def main(args, f_out):
         else:
             print_ovlp_D('minE', 'WFref',
                          ovlp_Slater_dets(HF_in_basis_of_refWF,
-                                          ext_wf.ref_occ))
+                                          ext_wf.orbspace.ref))
     else:
         toout('Using |WFref> (the reference of |extWF>) as |minE>.')
     print_ovlp_D('WFref', 'extWF', ext_wf.C0)
@@ -149,8 +142,8 @@ def main(args, f_out):
             U = orb.MolecularOrbitals.from_file(args.ini_orb).in_the_basis_of(
                 orb.MolecularOrbitals.from_file(args.WF_orb))
     else:
-        U = orb.construct_Id_orbitals(ext_wf.ref_occ,
-                                      ext_wf.orb_dim,
+        U = orb.construct_Id_orbitals(ext_wf.orbspace.ref,
+                                      ext_wf.orbspace.full,
                                       (1
                                        if restricted else
                                        2) * ext_wf.n_irrep,
@@ -160,13 +153,13 @@ def main(args, f_out):
           'Unrestricted calculation')
     toout('Number of alpha and beta electrons: {0:d} {1:d}'.
           format(ext_wf.n_alpha, ext_wf.n_beta))
-    toout('Dim. of core orb. space:  {0:}'.
-          format(ext_wf.n_core))
-    toout('Dim. of ref. determinant: {0:}'.
-          format(ext_wf.ref_occ))
-    toout('Dim. of orbital space:    {0:}'.
-          format(ext_wf.orb_dim))
+    toout(f'Orbital space:\n{ext_wf.orbspace}\n')
     toout()
+    if args.save_all_orb or args.save_final_orb:
+        try:
+            os.mkdir(args.outdir)
+        except FileExistsError:
+            pass
     if args.at_ref:
         toout('Calculation at the reference wave function',
               add_new_line=False)
@@ -179,9 +172,9 @@ def main(args, f_out):
                 f_out=None,
                 at_reference=True)
         toout('-' * 30)
-        if not ('CCD' in ext_wf.WF_type or 'BCCD' in ext_wf.WF_type):
+        if not ('CCD' in ext_wf.wf_type or 'BCCD' in ext_wf.wf_type):
             toout('|J|  = |t_i^a|    = {0:.7f}'.format(res.norm[1]))
-            if 'CCSD' in ext_wf.WF_type:
+            if 'CCSD' in ext_wf.wf_type:
                 toout('T1 diagnostic     = {0:.7f}'.format(
                     res.norm[1] / np.sqrt(2 * ext_wf.n_corr_elec)))
             toout('|ΔK| = |H^-1 @ J| = {0:.7f}'.format(res.norm[0]))
@@ -190,7 +183,7 @@ def main(args, f_out):
         ovlp_with_1st_it = ovlp_Slater_dets((2 * res.U)
                                             if restricted else
                                             res.U,
-                                            ext_wf.ref_occ)
+                                            ext_wf.orbspace.ref)
         print_ovlp_D('refWF', '1st it',
                      ovlp_with_1st_it,
                      with_dist=False)
@@ -211,19 +204,19 @@ def main(args, f_out):
                 ext_wf,
                 f_out=f_out,
                 ini_U=U,
-                max_iter=args.maxiter,
+                max_iter=args.max_iter,
                 enable_uphill=False,
-                save_all_U_dir=(args.output + '_all_U/'
-                                if args.save_all_U else
+                save_all_U_dir=(args.outdir + '/'
+                                if args.save_all_orb else
                                 None))
         else:
             res = optimiser.optimise_overlap_Absil(
                 ext_wf,
                 f_out=f_out,
-                max_iter=args.maxiter,
+                max_iter=args.max_iter,
                 ini_U=U,
-                save_all_U_dir=(args.output + '_all_U/'
-                                if args.save_all_U else
+                save_all_U_dir=(args.outdir + '/'
+                                if args.save_all_orb else
                                 None))
         toout('-' * 30)
         logger.info('Optimisation completed')
@@ -274,15 +267,16 @@ def main(args, f_out):
  external wave function (|extWF>) to the one that makes |minD>
  the first determinant.""")
         final_U = (orb.complete_orb_space(res.U, ext_wf.orb_dim)
-                   if args.save_full_U else
+                   if args.save_full_orb else
                    res.U)
-        np.savez(args.output + '_U', *final_U)
+        if args.save_final_orb:
+            np.savez(args.outdir + '/U_minD', *final_U)
         if args.HF_orb != args.WF_orb:
             print_ovlp_D('refWF', 'minD',
                          ovlp_Slater_dets((2 * res.U)
                                           if restricted else
                                           res.U,
-                                          ext_wf.ref_occ))
+                                          ext_wf.orbspace.ref))
             for spirrep, Ui in enumerate(U):
                 if Ui.shape[1] > 0:
                     res.U[spirrep] = np.matmul(
@@ -291,5 +285,5 @@ def main(args, f_out):
                      ovlp_Slater_dets((2 * res.U)
                                       if restricted else
                                       res.U,
-                                      ext_wf.ref_occ))
+                                      ext_wf.orbspace.ref))
     toout()

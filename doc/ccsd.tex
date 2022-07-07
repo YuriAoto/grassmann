@@ -1,0 +1,392 @@
+\hypertarget{chap:ccsd}{}
+\chapter{Closed shell coupled cluster with singles and doubles}
+\label{sec:ccsd}
+\chaptermark{CCSD}
+\chapterauthor{}
+
+{History:
+  
+  \begin{tabular}{l@{ - }l}
+     2020 & Start\\
+  \end{tabular}
+}\vspace{3cm}
+
+
+\section{Notation}
+
+\begin{center}
+  \begin{tabular}{ll}
+    \hline
+    \Hamilt    & The electronic Hamiltonian \\
+    $g_{pqrs}$ & Two electron integrals over spatial orbitals \\
+               & $= \int dr_1 dr_2 \frac{\phi^*_p(r_1)\phi^*_r(r_2)\phi_q(r_1)\phi_s(r_2)}{r_{12}}$\\
+    $L_{pqrs}$ & $= 2g_{pqrs} - g_{psrq}$\\
+               & (as suggested in \cite{})\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\newpage
+\section{Introduction}
+
+The general equations of coupled cluster theory are ``deceptively simple'',
+as R. Bartlet has stated \cite{}:
+\begin{equation}
+  E = \mel{\Phi_0}{e^{-T}\Hamilt e^T}{\Phi_0}
+\end{equation}
+\begin{equation}\label{eq:gen_ccsd_ampl_eq}
+  0 = \mel{\Phi_\mu}{e^{-T}\Hamilt e^T}{\Phi_0}\,\\\
+\end{equation}
+where $\Phi_0$ is the reference Slater determinant,
+$\Hamilt$ is the electronic Hamiltonian,
+and
+\begin{equation}
+  T = \sum_\mu t_\mu \tau_\mu
+\end{equation}
+is the cluster operator, with amplitudes $t_\mu$ associated to the excitations $\tau_\mu$.
+The amplitudes are obtained after solving equations \eqref{eq:gen_ccsd_ampl_eq},
+where $\ket{\Phi_\mu} = \tau_\mu \ket{\Phi_0}$ is the Slater determinant
+obtained after acting the excitation $\tau_\mu$ on top of $\ket{\Phi_0}$.
+
+These equations can be made specific to a particular case,
+and put in terms of the molecular integrals.
+This is done in Section 13.7 of reference \cite{}, that we followed closely in the present
+implementation.
+Below we show the main equations.
+Some of them are directly obtained from \cite{},
+whereas in other cases we have adapted them to a form that is more directly related to our implementation.
+In section \ref{sec:ccsd_flowchart} we have a flowchart that show,
+as precisely as we could make,
+the connection between the equations and the code.
+
+\section{The wave function}
+
+The CCD and the CCSD wave functions are:
+\begin{equation}
+  \Psi_{CCSD} = e^{T_1 + T_2}\Phi_0
+\end{equation}
+\begin{equation}
+  \Psi_{CCD} = e^{T_2}\Phi_0
+\end{equation}
+The operators are defined as:
+\begin{equation}
+  T_1 = \sum_{i,a} t_i^a E_i^a = \sum_{i,a} t_i^a (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+\end{equation}
+\begin{equation}
+  \begin{split}
+    T_2 =& \frac{1}{2}\sum_{i,j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} E_i^aE_j^b\\
+    =& \sum_{i \le j,a,b} t_{ij}^{ab} (a_{a\alpha}^\dagger a_{i\alpha} + a_{a\beta}^\dagger a_{i\beta})
+    (a_{b\alpha}^\dagger a_{j\alpha} + a_{b\beta}^\dagger a_{j\beta})
+  \end{split}
+\end{equation}
+
+The wave function is stored in the class \texttt{wave\_functions.interm\_norm.IntermNormWF}
+
+
+\section{Equations}
+
+\subsection{Intermediary Matrices}
+\hypertarget{sec:ccsd_inter_matrix}{}
+\label{sec:ccsd_inter_matix}
+We can define three matrices that speed up calculations at the cost of memory.
+They are:
+\begin{align}
+    u_{ij}^{ab}&=2t_{ij}^{ab}-t_{ji}^{ab}\\
+    L_{pqrs}&=2g_{pqrs}-g_{psrq}\\
+    F_{mn}^I&=h_{mn}+\sum_l(2g_{mnll}-g_{mlln})=h_{mn}+\sum_lL_{mnll}
+\end{align}
+
+Note that $u$ has the same symmetry as $t$:
+\begin{equation}
+  u_{ji}^{ba}=2t_{ji}^{ba}-t_{ij}^{ba}=2t_{ij}^{ab}-t_{ji}^{ab}=u_{ij}^{ab},
+\end{equation}
+$L$ the same as $g$ and $F^I$ the same as $h$.
+
+In section~\ref{sec:ccsd_t1_trans} we intorduce the T1-transformation for $h$ and $g$.
+The transformed intermediary matrices (${\tilde L}$ and ${\tilde F}^I$) can be obtained in tow ways:
+calculating the elements using the T1-transformed $h$ and $g$ matrices;
+or transforming the $F^I$ and $L$ matrices.
+The $F^I$ matrix is transformed as the $h$ matrix, following the eq.~\ref{eq:h_transformation},
+and $L$ as the $g$ matrix, following eq.~\ref{eq:g_transformation}.
+In the follow sections the equations do not depends on isolated $h$ elements only $F^I$,
+so the $\tilde h$ matrix is not necessary and we need, starting from the $F^I$ matrix, only to calculate the $\tilde F^I$ one.
+
+\subsection{Energy}
+\hypertarget{sec:ccsd_energy}{}
+\label{sec:ccsd_energy}
+
+\begin{equation}
+  \begin{split}
+    E =& \mel{\Phi_0}{e^{-T}\Hamilt e^T}{\Phi_0}\\
+    =& \mel{\Phi_0}{\Hamilt e^T}{\Phi_0}\\
+    =& E_{HF} + \sum_{aibj}(t_{ij}^{ab} + t_i^at_j^b) L_{iajb}
+  \end{split}
+\end{equation}
+
+Due to the next section result, $L_{iajb}={\tilde L}_{iajb}$ (eq.~\ref{eq:t1g_iajb}), so in the implementation both matrices can be used. 
+
+\subsection{T1-Transformed MO Integrals}
+\hypertarget{sec:ccsd_t1_trans}{}
+\label{sec:ccsd_t1_trans}
+
+The T1-transformation depends on the $\mathbf{t}_1$ matrix defined as
+\begin{gather}
+  \mathbf{t}_1=
+  \begin{bmatrix}
+    0     & 0\\
+    t_i^a & 0
+  \end{bmatrix},
+\end{gather}
+where $t_i^a$ are the amplitudes associated to the single excitation.
+Be careful with the index, because $(\mathbf{t}_1)_{ai}=t_i^a$ (maybe we should change this).
+The one-electron T1-transformed molecular orbital integral can be writen as
+\begin{equation}
+  \label{eq:h_transformation}
+  {\tilde h}_{pq}=h_{pq}-\sum_r(\mathbf{t}_1)_{pr}h_{rq}+\sum_sh_{ps}(\mathbf{t}_1^T)_{qs}-\sum_{rs}(\mathbf{t}_1)_{pr}h_{rs}(\mathbf{t}_1^T)_{qs}
+\end{equation}
+However, there is no need to construct the $\mathbf{t}_1$ matrix if we split the last equation in four cases:
+\begin{align}
+  \htil{ij}&=\h{ij}+\sum_c\h{ic}t_{j}^{c}\\
+  \htil{ai}&=\h{ai}-\sum_kt_{k}^{a}\h{ki}+\sum_c\h{ac}t_{i}^{c}-\sum_{ck}t_{k}^{a}\h{kc}t_{i}^{c}\\
+  \htil{ia}&=\h{ia}\\
+  \htil{ab}&=\h{ab}-\sum_kt_{k}^{a}\h{kb}
+\end{align}
+
+For the two-electron molecular orbital integral we have a similar expression:
+\begin{equation}
+    \label{eq:g_transformation}
+  \begin{split}
+    \gtil{pqrs}=g_{pqrs}&-\sum_t(\mathbf{t}_1)_{pt}g_{tqrs}+\sum_ug_{purs}(\mathbf{t}_1^T)_{qu}-\sum_m(\mathbf{t}_1)_{rm}g_{pqms}+\sum_ng_{pqrn}(\mathbf{t}_1^T)_{sn}\\
+    &-\sum_{tu}(\mathbf{t}_1)_{pt}g_{turs}(\mathbf{t}_1^T)_{qu}+\sum_{tm}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqms}-\sum_{tn}(\mathbf{t}_1)_{pt}g_{tqrn}(\mathbf{t}_1^T)_{sn}\\
+    &-\sum_{um}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}+\sum_{un}g_{purn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}-\sum_{mn}(\mathbf{t}_1)_{rm}g_{pq}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tum}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tums}(\mathbf{t}_1^T)_{qu}-\sum_{tun}(\mathbf{t}_1)_{pt}g_{turn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tmn}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tqmn}(\mathbf{t}_1^T)_{sn}-\sum_{umn}(\mathbf{t}_1)_{rm}g_{pumn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}\\
+    &+\sum_{tumn}(\mathbf{t}_1)_{pt}(\mathbf{t}_1)_{rm}g_{tumn}(\mathbf{t}_1^T)_{qu}(\mathbf{t}_1^T)_{sn}
+  \end{split}
+\end{equation}
+
+This expression can be divided in 16 cases, that can be further simplified by symmetry.
+\begin{align}
+  \gtil{ijkl}=&\g{ijkl}+\orbsum{e}(\g{iekl}\ampl{j}{e}+\g{ijke}\ampl{l}{e})+\orbsum{ef}\g{iekf}\ampl{j}{e}\ampl{l}{f}\label{eq:t1g_ijkl}\\
+%  &=\g{ijkl}+\orbsum{e}\bigg[\bigg(\g{iekl}+\orbsum{f}\g{iekf}\ampl{l}{f}\bigg)\ampl{i}{e}+\g{ijke}\ampl{j}{e}\bigg]\\
+  \gtil{ijka}=&\g{ijka}+\orbsum{e}\g{ieka}\ampl{j}{e}\label{eq:t1g_ijka}\\ 
+  \gtil{ijak}=&\g{ijak}+\orbsum{e}(\g{ieak}\ampl{j}{e}+\g{ijae}\ampl{k}{e})-\orbsum{l}\ampl{l}{a}\g{ijlk}\nonumber\\
+  &+\orbsum{ef}\g{ieaf}\ampl{j}{e}\ampl{l}{f}-\orbsum{el}\ampl{l}{a}(\g{ielk}\ampl{j}{e}+\g{ijle}\ampl{k}{e})-\orbsum{efl}\ampl{l}{a}\g{ielf}\ampl{j}{e}\ampl{k}{f}\label{eq:t1g_ijak}\\
+  \gtil{iajk}=&\gtil{jkia}\label{eq:t1g_iajk}\\
+  \gtil{aijk}=&\gtil{jkai}\label{eq:t1g_aijk}\\
+  \gtil{ijab}=&\g{ijab}+\orbsum{e}\g{ieab}\ampl{j}{e}-\orbsum{l}\ampl{l}{a}\g{ijlb}-\orbsum{el}\ampl{l}{a}\g{ielb}\ampl{j}{e}\label{eq:t1g_ijab}\\
+  \gtil{iajb}=&\g{iajb}\label{eq:t1g_iajb}\\
+  \gtil{aijb}=&\g{aijb}+\orbsum{e}\g{aejb}\ampl{i}{e}-\orbsum{l}\ampl{l}{a}\g{lijb}-\orbsum{el}\ampl{l}{a}\g{lejb}\ampl{i}{e}\label{eq:t1g_aijb}\\
+  \gtil{iabj}=&\gtil{bjia}\label{eq:t1g_iabj}\\
+  \gtil{aibj}=&\g{aibj}+\orbsum{e}(\g{aebj}\ampl{i}{e}+\g{aibe}\ampl{j}{e})-\orbsum{l}(\ampl{l}{a}\g{libj}+\ampl{l}{b}\g{ailj})\nonumber\\
+  &+\orbsum{ef}\g{aebf}\ampl{i}{e}\ampl{j}{f}-\orbsum{el}(\ampl{l}{a}\g{lebj}\ampl{i}{e}+\ampl{l}{b}\g{aelj}\ampl{i}{e}+\ampl{l}{a}\g{libe}\ampl{j}{e}+\ampl{l}{b}\g{aile}\ampl{j}{e})\nonumber\\
+  &+\orbsum{lk}\ampl{l}{a}\ampl{k}{b}\g{likj}+\orbsum{ekl}(\ampl{l}{a}\ampl{k}{b}\g{lekj}\ampl{i}{e}+\ampl{l}{a}\ampl{k}{b}\g{like}\ampl{j}{e})\nonumber\\
+  &-\orbsum{efl}(\ampl{l}{a}\g{lebf}\ampl{i}{e}\ampl{j}{f}+\ampl{l}{b}\g{aelf}\ampl{i}{e}\ampl{j}{f})+\orbsum{lkef}\ampl{l}{a}\ampl{k}{b}\g{lekf}\ampl{i}{e}\ampl{j}{f}\label{eq:t1g_aibj}\\
+  \gtil{abij}=&\gtil{ijab}\label{eq:t1g_abij}\\
+  \gtil{iabc}=&\g{iabc}-\orbsum{l}\ampl{l}{b}\g{ialc}\label{eq:t1g_iabc}\\
+  \gtil{aibc}=&\g{aibc}+\orbsum{e}\g{aebc}\ampl{i}{e}-\orbsum{l}(\ampl{l}{a}\g{libc}+\ampl{l}{b}\g{ailc})\nonumber\\
+  &-\orbsum{el}(\ampl{l}{a}\g{lebc}\ampl{i}{e}+\ampl{l}{b}\g{aelc}\ampl{i}{e})+\orbsum{lk}\ampl{l}{a}\ampl{k}{b}\g{likc}+\orbsum{elk}\ampl{l}{a}\ampl{k}{b}\g{lekc}\ampl{i}{e}\label{eq:t1g_aibc}\\
+  \gtil{abic}=&\gtil{icab}\label{eq:t1g_abic}\\
+  \gtil{abci}=&\gtil{ciab}\label{eq:t1g_abci}\\
+  \gtil{abcd}=&\g{abcd}-\orbsum{l}(\ampl{l}{a}\g{lbcd}+\ampl{l}{c}\g{abld})+\orbsum{kl}\ampl{l}{a}\ampl{k}{c}\g{lbkc}\label{eq:t1g_abcd}
+\end{align}
+
+Note that, due to symmetry, only 9 cases must be computed ( equations \ref{eq:t1g_ijkl}, \ref{eq:t1g_ijka}, \ref{eq:t1g_ijak}, \ref{eq:t1g_ijab}, \ref{eq:t1g_aijb}, \ref{eq:t1g_aibj}, \ref{eq:t1g_iabc}, \ref{eq:t1g_aibc} and \ref{eq:t1g_abcd}).
+Moreover, only part of the equations \ref{eq:t1g_ijkl}, \ref{eq:t1g_aibj} and \ref{eq:t1g_abcd} must be calculated.
+If we impose $i\ge k$, $a\ge b$ and $i\ge j$, and $a\ge c$, respectively, we generate all elements for theses three cases.
+Last, for the equation \ref{eq:t1g_iajb} there is no transformation and the values can be copied from the original matrix.
+
+
+\subsection{Residuals}
+\hypertarget{sec:ccsd_res}{}
+\label{sec:ccsd_res}
+
+\subsubsection{Singles}
+\hypertarget{sec:ccsd_res_sing}{}
+\label{sec:ccsd_res_sing}
+
+
+\begin{equation}
+  \begin{split}
+    \Omega_i^a=\Omega_i^{a(A1)}+\Omega_i^{a(B1)}+\Omega_i^{a(C1)}+\Omega_i^{a(D1)}
+  \end{split}
+\end{equation}
+where
+\begin{align}
+  \Omega_i^{a(A1)}&=\orbsum{ckd}\uampl{ki}{cd}\gtil{kcad}\\
+  \Omega_i^{a(B1)}&=-\orbsum{ckl}\uampl{kl}{ac}\gtil{kilc}\\
+  \Omega_i^{a(C1)}&=\orbsum{ck}\uampl{ik}{ac}\Ftil{kc}=\orbsum{ck}\uampl{ik}{ac}\F{kc}\\
+  \Omega_i^{a(D1)}&=\Ftil{ai}
+\end{align}
+
+%Other way to open this equation is
+%
+%\begin{equation}
+%  \begin{split}
+%    \Omega_i^a&={\tilde h}_{ai}+\sum_k\{2\gtil{aikk}-\gtil{akki}\\
+%    &+\sum_c[(2\ampl{ik}{ac}-\ampl{ki}{ac}){\tilde h}_{kc}+(2\ampl{ik}{ac}-\ampl{ki}{ac})\sum_l(2\gtil{kcll}-\gtil{kllc})\\
+%    &+\sum_d(2\ampl{ki}{cd}-\ampl{ik}{cd})\gtil{adkc}-\sum_l(2\ampl{kl}{ac}-\ampl{lk}{ac})\gtil{kilc}]\}\\
+%    &={\tilde h}_{ai}+\orbsum{k}\{{\tilde L}_{aikk}+\sum_c[u_{ik}^{ac}{\tilde h}_{kc}+u_{ik}^{ac}\sum_l({\tilde L}_{kcll})+\sum_d(u_{ki}^{cd}\gtil{adkc})\\
+%      &-\sum_l(u_{kl}^{ac}\gtil{kilc})]\}
+%   \end{split}
+%\end{equation}
+
+\subsubsection{Doubles}
+\hypertarget{sec:ccsd_res_doub}{}
+\label{sec:ccsd_res_doub}
+
+\begin{equation}
+  \begin{split}
+    \label{eq:omega_double}
+    \Omega_{ij}^{ab}=\Omega_{ij}^{ab(A2)}+\Omega_{ij}^{ab(B2)}+\Omega_{ij}^{ab(C2)}+\Omega_{ji}^{ba(C2)}+\Omega_{ij}^{ab(D2)}+\Omega_{ji}^{ba(D2)}+\Omega_{ij}^{ab(E2)}+\Omega_{ji}^{ba(E2)}
+  \end{split}
+\end{equation}
+where
+\begin{align}
+  \Omega_{ij}^{ab(A2)}&=\gtil{aibj}+\orbsum{cd}\ampl{ij}{cd}\gtil{acbd}\label{eq:omega_A2}\\
+  \Omega_{ij}^{ab(B2)}&=\orbsum{kl}\ampl{kl}{ab}\bigg(\gtil{kilj}+\orbsum{cd}\ampl{ij}{cd}\gtil{kcld}\bigg)\\
+  \Omega_{ij}^{ab(C2)}&=-\frac{1}{2}\orbsum{ck}\ampl{kj}{bc}\bigg(\gtil{kiac}-\frac{1}{2}\orbsum{dl}\ampl{li}{ad}\gtil{kdlc}\bigg)-\orbsum{ck}\ampl{ki}{bc}\bigg(\gtil{kjac}-\frac{1}{2}\orbsum{dl}\ampl{lj}{ad}\gtil{kdlc}\bigg)\\
+  \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\orbsum{ck}\uampl{jk}{bc}\bigg(\Ltil{aikc}+\frac{1}{2}\orbsum{dl}\uampl{il}{ad}\Ltil{ldkc}\bigg)\\
+  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\Ftil{bc}-\orbsum{dkl}\uampl{kl}{bd}\gtil{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\Ftil{kj}+\orbsum{cdl}\uampl{lj}{cd}\gtil{kdlc}\bigg)
+\end{align}
+
+
+%Other way to open this equation is
+%
+%\begin{equation}
+%  \begin{split}
+%    \Omega_{ij}^{ab}&=\gtil{aibj}\\%
+%    &+\orbsum{c}[\ampl{ij}{ac}({\tilde h}_{bc}+\orbsum{k}2\gtil{bckk}-\gtil{bkkc})+\ampl{ji}{bc}({\tilde h}_{ac}+\orbsum{k}2\gtil{ackk}-\gtil{akkc})+\sum_d\ampl{ij}{cd}\gtil{acbd}]\\
+%    &+\orbsum{k}[\ampl{ik}{ab}({\tilde h}_{kj}+\orbsum{l}2\gtil{kjll}-\gtil{kllj})+\ampl{jk}{ba}({\tilde h}_{ki}+\orbsum{l}2\gtil{kill}-\gtil{klli})+\sum_l\ampl{kl}{ab}\gtil{kilj}]\\
+%    &+\orbsum{c}\orbsum{k}\{-2^{-1}\ampl{kj}{bc}\gtil{kiac}-\ampl{ki}{bc}\gtil{kjac}-2^{-1}\ampl{ki}{ac}\gtil{kjbc}-\ampl{kj}{ac}\gtil{kibc}\\
+%    &+(\ampl{jk}{bc}-2^{-1}\ampl{kj}{bc})(2\gtil{aikc}-\gtil{acki})+(\ampl{ik}{ac}-2^{-1}\ampl{ki}{ac})(2\gtil{bjkc}-\gtil{bckj})\\
+%    &+\orbsum{d}\orbsum{l}[\ampl{kl}{ab}\ampl{ij}{cd}+\ampl{kj}{bd}\ampl{li}{ac}+2^{-1}\ampl{ki}{bd}\ampl{lj}{ac}+\ampl{ki}{ad}\ampl{lj}{bc}+2^{-1}\ampl{kj}{ad}\ampl{li}{bc}\\
+%    &+2\ampl{jl}{bd}\ampl{ik}{ac}-\ampl{jl}{bc}\ampl{ik}{ad}-\ampl{jl}{bd}\ampl{ki}{ac}-\ampl{lj}{bd}\ampl{ik}{ac}+2^{-1}\ampl{jl}{bc}\ampl{ki}{ad}+2^{-1}\ampl{lj}{bc}\ampl{ik}{ad}+2^{-1}\ampl{lj}{bd}\ampl{ki}{ac}-4^{-1}\ampl{lj}{bc}\ampl{ki}{ad}\\
+%    &+2\ampl{il}{ad}\ampl{jk}{bc}-\ampl{il}{ac}\ampl{jk}{bd}-\ampl{il}{ad}\ampl{kj}{bc}-\ampl{li}{ad}\ampl{jk}{bc}+2^{-1}\ampl{il}{ac}\ampl{kj}{bd}+2^{-1}\ampl{li}{ac}\ampl{jk}{bd}+2^{-1}\ampl{li}{ad}\ampl{kj}{bc}-4^{-1}\ampl{li}{ac}\ampl{kj}{bd}\\
+%    &-\ampl{ij}{ad}(2\ampl{lk}{bc}-\ampl{kl}{bc})-\ampl{ik}{ab}(2\ampl{lj}{dc}-\ampl{jl}{dc}))-\ampl{ji}{bd}(2\ampl{lk}{ac}-\ampl{kl}{ac})-\ampl{jk}{ba}(2\ampl{li}{dc}-\ampl{il}{dc})]\gtil{kcld}\}
+%  \end{split}
+%\end{equation}
+
+During the calculation the largest matrix is the $\tilde g$, the number of distinct elements is $\frac{n^4+n^2}{2}$, where $n$ is the number of orbitals (occupied and virtual).
+The second largest matrix is the $g$, whose number of distinct elements is $\frac{n^4}{8}+\frac{n^3}{4}+\frac{3n^2}{8}+\frac{n}{4}$.
+In the residual equations we can see each $\tilde g$ elements being used only once\footnote{$\gtil{iajb}$ is the only exception, but this term is not affected by the transformation (eq.~\ref{eq:t1g_iajb}) and, consequently, it is already saved in memory.}.
+This allow us to calculate a block of the total $\tilde g$ matrix use and erase it.
+In this case, the, common, largest block $\gtil{abcd}$ will have $\frac{n_v^4}{8}+\frac{n_v^3}{4}+\frac{3n_v^2}{8}+\frac{n_v}{4}$ unique elements, reducing the considerably the max amount of memory requires.
+Using these information, we can rewrite the doubles residual equation as:
+\begin{align}
+  \Omega_{ij}^{ab(A2')}&=\underline{\gtil{aibj}}\label{eq:omega_A2_prime}\\
+  \Omega_{ij}^{ab(A2'')}&=\orbsum{cd}\ampl{ij}{cd}\underline{\gtil{acbd}}\\
+  \Omega_{ij}^{ab(B2)}&=\orbsum{kl}\ampl{kl}{ab}\bigg(\underline{\gtil{kilj}}+\orbsum{cd}\ampl{ij}{cd}\g{kcld}\bigg)\\
+  \Omega_{ij}^{ab(C2)}&=-\frac{1}{4}\orbsum{ck}\ampl{kj}{bc}\bigg(2\underline{\gtil{kiac}}-\orbsum{dl}\ampl{li}{ad}\g{kdlc}\bigg)-\frac{1}{2}\orbsum{ck}\ampl{ki}{bc}\bigg(2\underline{\gtil{kjac}}-\orbsum{dl}\ampl{lj}{ad}\g{kdlc}\bigg)\label{eq:omega_C2_2}\\
+  \Omega_{ij}^{ab(D2)}&=\frac{1}{2}\orbsum{ck}\uampl{jk}{bc}\bigg(\underline{\Ltil{aikc}}+\frac{1}{2}\orbsum{dl}\uampl{il}{ad}\Lmat{ldkc}\bigg)\label{eq:omega_D2_2}\\
+  \Omega_{ij}^{ab(E2)}&=\orbsum{c}\ampl{ij}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)-\orbsum{k}\ampl{ik}{ab}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)\label{eq:omega_E2_2}
+\end{align}
+where $\Omega_{ij}^{ab(A2')}+\Omega_{ij}^{ab(A2'')}=\Omega_{ij}^{ab(A2)}$ (eq.~\ref{eq:omega_A2}) and the transformations needed are underlined.
+In the C2 term the two underline terms are the same.
+In total it is used four times, due to the permutation, eq.~\ref{eq:omega_double}.
+Note that $\Omega_{ij}^{ab}$ has the same symmetry as the amplitudes, but its components lost this property, for example, $\Omega_{ij}^{ab(C2)}\neq\Omega_{ji}^{ba(C2)}$. We can reorganize the $\Omega_{ji}^{ba(C2)}$ element as:
+\begin{equation}
+    \Omega_{ji}^{ba(C2)}=-\frac{1}{2}\orbsum{ck}\ampl{ki}{ac}\underline{\gtil{kjbc}}+\frac{1}{4}\orbsum{ck}\ampl{kj}{bc}\orbsum{dl}\ampl{li}{ad}\g{kdlc}-\orbsum{ck}\ampl{kj}{ac}\underline{\gtil{kibc}}+\frac{1}{2}\ampl{ki}{bc}\orbsum{dl}\ampl{lj}{ad}\g{kdlc}.
+\end{equation}
+Summing this equation with the \ref{eq:omega_C2_2} we obtain an element with the same symmetry as the complete $\Omega_{ij}^{ab}$:
+\begin{equation}
+    \Omega_{ij}^{ab(C2)}+\Omega_{ji}^{ba(C2)}=-\orbsum{ck}\bigg(\frac{1}{2}\ampl{ki}{ac}\underline{\gtil{kjbc}}+\ampl{ki}{bc}\underline{\gtil{kjac}}+\frac{1}{2}\ampl{kj}{bc}\underline{\gtil{kiac}}+\ampl{kj}{ac}\underline{\gtil{kibc}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{1}{2}\ampl{kj}{bc}\ampl{li}{ad}\g{kdlc}+\ampl{ki}{bc}\ampl{lj}{ad}\g{kdlc}\bigg).
+\end{equation}
+In the cases where: $a = b$ and $i \neq j$, we have
+\begin{equation}
+    \Omega_{ij}^{aa(C2)}+\Omega_{ji}^{aa(C2)}=-\frac{3}{2}\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kjac}}+\ampl{kj}{ac}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{kj}{ac}\ampl{li}{ad}\g{kdlc}\bigg);
+\end{equation}
+$a \neq b$ and $i = j$,
+\begin{equation}
+    \Omega_{ii}^{ab(C2)}+\Omega_{ii}^{ba(C2)}=-\frac{3}{2}\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kibc}}+\ampl{ki}{bc}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{ki}{bc}\ampl{li}{ad}\g{kdlc}\bigg);
+\end{equation}
+and $a = b$ and $i = j$,
+\begin{equation}
+    \Omega_{ii}^{aa(C2)}+\Omega_{ii}^{aa(C2)}=-3\orbsum{ck}\bigg(\ampl{ki}{ac}\underline{\gtil{kiac}}\bigg) +\orbsum{ck}\orbsum{dl}\bigg(\frac{3}{2}\ampl{ki}{ac}\ampl{li}{ad}\g{kalc}\bigg)=2\Omega_{ii}^{aa(C2)}.
+\end{equation}
+
+The same occurs with the D2 and E2 terms and in the same rewrite in the same way:
+\begin{align}
+  \Omega_{ij}^{ab(D2)}+\Omega_{ji}^{ba(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{jk}{bc}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{bjkc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{jk}{bc}\uampl{il}{ad}\Lmat{ldkc},\\
+  \Omega_{ij}^{aa(D2)}+\Omega_{ji}^{aa(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{jk}{ac}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{ajkc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{jk}{ac}\uampl{il}{ad}\Lmat{ldkc},\\
+    \Omega_{ii}^{ab(D2)}+\Omega_{ii}^{ba(D2)}&=\frac{1}{2}\orbsum{ck}\bigg(\uampl{ik}{bc}\underline{\Ltil{aikc}}+\uampl{ik}{ac}\underline{\Ltil{bikc}}\bigg)+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{ik}{bc}\uampl{il}{ad}\Lmat{ldkc},\\
+     \Omega_{ii}^{aa(D2)}+\Omega_{ii}^{aa(D2)}&=\orbsum{ck}\uampl{ik}{ac}\underline{\Ltil{aikc}}+\frac{1}{2}\orbsum{ck}\orbsum{dl}\uampl{ik}{ac}\uampl{il}{ad}\Lmat{ldkc};
+\end{align}
+\begin{align}
+  \Omega_{ij}^{ab(E2)}+\Omega_{ji}^{ba(E2)} &=\orbsum{c}\ampl{ij}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)+\orbsum{c}\ampl{ji}{bc}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+  &-\orbsum{k}\ampl{ik}{ab}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)-\orbsum{k}\ampl{jk}{ba}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+    \Omega_{ij}^{aa(E2)}+\Omega_{ji}^{aa(E2)} &=\orbsum{c}\bigg(\ampl{ij}{ac}+\ampl{ij}{ca}\bigg)\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+    &-\orbsum{k}\ampl{ik}{aa}\bigg(\underline{\Ftil{kj}}+\orbsum{cdl}\uampl{lj}{cd}\g{kdlc}\bigg)-\orbsum{k}\ampl{jk}{aa}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+   \Omega_{ii}^{ab(E2)}+\Omega_{ii}^{ba(E2)} &=\orbsum{c}\ampl{ii}{ac}\bigg(\underline{\Ftil{bc}}-\orbsum{dkl}\uampl{kl}{bd}\g{ldkc}\bigg)+\orbsum{c}\ampl{ii}{bc}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)\nonumber\\
+      &-\orbsum{k}\bigg(\ampl{ik}{ab}+\ampl{ik}{ba}\bigg)\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg),\\
+   \Omega_{ii}^{aa(E2)}+\Omega_{ii}^{aa(E2)} &=\orbsum{c}2\ampl{ii}{ac}\bigg(\underline{\Ftil{ac}}-\orbsum{dkl}\uampl{kl}{ad}\g{ldkc}\bigg)-\orbsum{k}2\ampl{ik}{aa}\bigg(\underline{\Ftil{ki}}+\orbsum{cdl}\uampl{li}{cd}\g{kdlc}\bigg).
+  \end{align}
+
+\subsection{Amplitudes update}
+\hypertarget{sec:ccsd_update}{}
+\label{sec:ccsd_update}
+
+\begin{equation}
+  t_\mu = t_\mu + \Delta t_\mu
+\end{equation}
+
+\begin{equation}
+  \Delta t_i^a = - \frac{\Omega_i^a(\mathbf{t})}{\epsilon_a - \epsilon_i}
+\end{equation}
+
+\begin{equation}
+  \Delta t_{ij}^{ab} = -\frac{\Omega_{ij}^{ab}(\mathbf{t})}
+  {\epsilon_a + \epsilon_b - \epsilon_i - \epsilon_j}
+\end{equation}
+
+\newpage
+\section{Data Management}
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{c|c|c|c|c}
+    Matrix & Similar to    & Object & Min Size & Max Size\\
+    \hline
+    \ampl{ij}{ab}    & \uampl{ij}{ab}, $\Omega_{ij}^{ab}$ & 1D nparray &$\frac{(n_o+1)*n_o}{2}*n_v^2$&$(n_o*n_v)^2$\\
+    \ampl{i}{a}      & $\Omega_{i}^{a}$ & 1D nparray &$n_o*n_v$&$n_o*n_v$\\
+
+    \h{pq}      &\F{pq}      & 2D nparray & $\frac{(n+1)*n}{2}$ &$n^2$ \\
+    \htil{pq}   &\Ftil{pq}   & 2D nparray & $n^2$ &$n^2$ \\
+    \htil{ij}   &\Ftil{ij}   & 2D nparray & $n_o^2$ &$n_o^2$ \\
+    \htil{ai}   &\Ftil{ai},\htil{ia},\Ftil{ia}   & 2D nparray & $n_o*n_v$ &$n_o*n_v$ \\
+    \htil{ab}   &\Ftil{ab}   & 2D nparray & $n_v^2$ &$n_v^2$ \\
+    \g{pqrs}    &\Lmat{pqrs} & 1D nparray & $\frac{n^4}{8}+\frac{n^3}{4}+\frac{3n^2}{8}+\frac{n}{4}$ &$n^4$ \\
+    \gtil{pqrs}    &\Ltil{pqrs} & ?? & $\frac{n^4+n^2}{2}$ &$n^4$ \\
+    \gtil{ijkl}    &\Ltil{ijkl} & 1D nparray & $\frac{n_o^4+n_o^2}{2}$ &$n_o^4$ \\
+    \multirow{2}{*}{\gtil{ijka}}    &\Ltil{ijka},\gtil{ijak},\gtil{iajk},\gtil{aijk}, & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o^3*n_v$} &\multirow{2}{*}{$n_o^3*n_v$} \\
+    &\Ltil{ijak},\Ltil{iajk},\Ltil{aijk} &  &  & \\
+    \multirow{2}{*}{\gtil{ijab}}    &\Ltil{ijab},\gtil{abij},\Ltil{abij} & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o^2*n_v^2$} &\multirow{2}{*}{$n_o^2*n_v^2$} \\
+    &\Ltil{iabj},\gtil{aijb},\gtil{iabj},\Ltil{iabj}&  & & \\
+    \gtil{iajb}    &\Ltil{iajb},\gtil{aibj},\Ltil{aibj} & ?? & $\frac{n_o^2*n_v^2+n_o*n_v^2}{2}$ &$n_o^2*n_v^2$ \\
+    \multirow{2}{*}{\gtil{iabc}}    &\Ltil{iabc},\gtil{aibc},\gtil{abic},\gtil{abci}, & \multirow{2}{*}{4D nparray} & \multirow{2}{*}{$n_o*n_v^3$} &\multirow{2}{*}{$n_o*n_v^3$} \\
+                       &  \Ltil{aibc},\Ltil{abic},\Ltil{abci}           &  & & \\
+    \gtil{abcd}    &\Ltil{abcd} & 1D nparray & $\frac{n_v^4+n_v^2}{2}$ &$n_v^4$ \\
+  \end{tabular}
+\end{table}
+\begin{enumerate}
+\item{}$\Omega$ has the same structure as the amplitudes ($t$) and can be saved in the same object type;
+\item{}$g$ matrix is necessary during all calculation, but all $\tilde g$ blocks can be used one time and discarded;
+\item{}$h$ is used only to generate the inactive Fock matrix ($F^I$), before it can be deleted or stored in the HD;
+\item{}When needed calculate $L$ and transform it should be more efficient than transform the $\tilde g$ elements to calculate $\tilde L$;
+\item{}$u$ occupies a small space (if compared with $g$ and $\tilde g$) and is used in many steps. Save this matrix can reduce the operation number with a low memory cost;
+\item{}Equation~\ref{eq:t1g_aibj} results can be save directly in the $\Omega_{ij}^{ab}$ matrix, eq.~\ref{eq:omega_A2_prime};
+\item{}The terms in parenthesis in equations~\ref{eq:omega_C2_2}, \ref{eq:omega_D2_2} and \ref{eq:omega_E2_2} can be calculated overwriting the respective $\tilde g$ or $\tilde F^I$ matrices;
+\end{enumerate}
+
+\newpage
+\section{Flowchart}
+\label{sec:ccsd_flowchart}
+
+\input{ccsd_flowchart}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "grassmann_doc.tex"
+%%% End:
