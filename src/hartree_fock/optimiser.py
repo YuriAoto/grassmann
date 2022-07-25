@@ -150,7 +150,13 @@ def hartree_fock(integrals,
                 
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
-                
+
+            elif step_type == 'lagrange':
+                hf_step.newton_lagrange(i_SCF)
+
+            elif step_type == 'gradient':
+                hf_step.gradient_descent(i_SCF)
+
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
                                  + step_type)

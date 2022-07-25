@@ -22,11 +22,22 @@ def _define_hfstep_func(hf_step):
 
     if hf_step == 'Absil':
         return lambda i_SCF=None, grad_norm=None: 'Absil'
+    
+    if hf_step == 'lagrange':
+        return lambda i_SCF=None, grad_norm=None: 'lagrange'
+
+    if hf_step == 'gradient':
+        return lambda i_SCF=None, grad_norm=None: 'gradient'
 
     rematch = re.match('SCF-Absil_n(\d+)', hf_step)
     if rematch:
         n = int(rematch.group(1))
         return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'Absil'
+
+    rematch = re.match('SCF-Lagrange_n(\d+)', hf_step)
+    if rematch:
+        n = int(rematch.group(1))
+        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'lagrange'
 
     rematch = re.match('SCF-Absil_grad(.+)', hf_step)
     if rematch:

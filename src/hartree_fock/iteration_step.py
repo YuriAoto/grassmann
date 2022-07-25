@@ -19,7 +19,7 @@ from . import absilnp
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
-
+np.set_printoptions(linewidth=200)
 class HartreeFockStep():
     """The iteration step in a Hartree-Fock optimisation
     
@@ -46,6 +46,8 @@ class HartreeFockStep():
 
     def initialise(self, step_type):
         if step_type == 'RH-SCF':
+            self.eta_lambda_a = np.zeros((self.N_a**2,))
+            self.eta_lambda_b = np.zeros((self.N_b**2,))
             self.i_DIIS = -1
             self.grad = np.zeros((self.N_a,
                                   len(self.orb) - self.N_a,
@@ -63,12 +65,59 @@ class HartreeFockStep():
 
         elif step_type == 'densMat-SCF':
             pass
+
         elif step_type == 'Absil':
-            pass
+            self.i_DIIS = -1
+            self.grad = np.zeros((self.N_a,
+                                  len(self.orb) - self.N_a,
+                                  max(self.n_DIIS, 1)))
+            self.P_a = np.zeros((len(self.orb),
+                                  len(self.orb),
+                                  max(self.n_DIIS, 1)))
+            if not self.restricted:
+                self.grad_beta = np.zeros((self.N_b,
+                                           len(self.orb) - self.N_b,
+                                           max(self.n_DIIS, 1)))
+                self.P_b = np.zeros((len(self.orb),
+                                           len(self.orb),
+                                     max(self.n_DIIS, 1)))
+
         elif step_type == 'orb_rot-Newton':
             pass
         elif step_type == 'gradient':
-            pass
+            self.i_DIIS = -1
+            self.grad = np.zeros((self.N_a,
+                                  len(self.orb) - self.N_a,
+                                  max(self.n_DIIS, 1)))
+            self.P_a = np.zeros((len(self.orb),
+                                  len(self.orb),
+                                  max(self.n_DIIS, 1)))
+            if not self.restricted:
+                self.grad_beta = np.zeros((self.N_b,
+                                           len(self.orb) - self.N_b,
+                                           max(self.n_DIIS, 1)))
+                self.P_b = np.zeros((len(self.orb),
+                                           len(self.orb),
+                                     max(self.n_DIIS, 1)))
+
+        elif step_type == 'lagrange':
+            self.i_DIIS = -1
+            self.grad = np.zeros((self.N_a,
+                                  len(self.orb) - self.N_a,
+                                  max(self.n_DIIS, 1)))
+            self.P_a = np.zeros((len(self.orb),
+                                  len(self.orb),
+                                  max(self.n_DIIS, 1)))
+            if not self.restricted:
+                self.grad_beta = np.zeros((self.N_b,
+                                           len(self.orb) - self.N_b,
+                                           max(self.n_DIIS, 1)))
+                self.P_b = np.zeros((len(self.orb),
+                                           len(self.orb),
+                                     max(self.n_DIIS, 1)))
+            self.eta_lambda_a = np.zeros((self.N_a**2,))
+            self.eta_lambda_b = np.zeros((self.N_b**2,))
+
         else:
             raise ValueError("Unknown type of Hartree-Fock step: "
                              + step_type)
@@ -128,7 +177,7 @@ class HartreeFockStep():
             self.Fock_a -= np.einsum('Frm,Frn->mn',
                                      tmp,
                                      self.integrals.g._integrals) / 2
-        else:            
+        else:
             self.Fock_a = absil.fock(self.blocks[0], self.blocks[1],
                                      self.blocks[2], self.blocks[3],
                                      self.integrals.h, self.integrals.g._integrals)
@@ -317,20 +366,26 @@ class HartreeFockStep():
         eta = np.reshape(eta[0], (n, N), 'F')
         logger.debug('eta: \n%s', eta)
 
+        # print(C_a.T @ S @ eta[:, :N_a])
+        # print(C_b.T @ S @ eta[:, N_a:])
+        # print(np.allclose(C_a.T @ S @ C_a, np.eye(N_a)))
         with logtime('updating the point'):
             if N_a != 0:
-                u, s, v = linalg.svd(Sqrt @ eta[:, :N_a], full_matrices=False)
+                u, s, v = linalg.svd(invSqrt @ eta[:, :N_a], full_matrices=False)
                 sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[0][:, :N_a] = absil.gram_schmidt(C_a @ v.T @ cos
-                                                           + invSqrt @ u @ sin,
-                                                          S)
+                self.orb[0][:, :N_a] = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+                # temp2 = np.copy(temp)
+                # self.orb[0][:, :N_a] = absil.gram_schmidt(temp, S)
+                # print('alfa', np.allclose(temp2, self.orb[0][:, :N_a]))
 
             if N_b != 0:
-                u, s, v = linalg.svd(Sqrt @ eta[:, N_a:], full_matrices=False)
+                u, s, v = linalg.svd(invSqrt @ eta[:, N_a:], full_matrices=False)
                 sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[1][:, :N_b] = absil.gram_schmidt(C_b @ v.T @ cos
-                                                           + invSqrt @ u @ sin,
-                                                          S)
+                self.orb[1][:, :N_b] = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
+                # temp2 = np.copy(temp)
+                # self.orb[1][:, :N_b] = C_b @ v.T @ cos @ v + Sqrt @ u @ sin @ v
+                # self.orb[1][:, :N_b] = absil.gram_schmidt(temp, S)
+                # print('beta', np.allclose(temp2, self.orb[1][:, :N_b]))
         
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
@@ -339,43 +394,137 @@ class HartreeFockStep():
         """Hartree-Fock using Gradient Descent Method."""
         N_a, N_b = self.N_a, self.N_b
         N, n = N_a + N_b, len(self.orb)
-        X, Y = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
         S, Sqrt = self.integrals.S, self.integrals.X
         invS, invSqrt = self.integrals.invS, self.integrals.invX
-        augD = np.zeros((n*N + N_a**2 + N_b**2, n * N))
-        augR = np.zeros((n*N + N_a**2 + N_b**2,))
-        R, Id = np.empty((n, N)), np.eye(n)
-        projX, projY = Id - (X @ X.T @ S), Id - (Y @ Y.T @ S)
-        g, h = self.integrals.g._integrals, self.integrals.h
-        xxt, yyt = X @ X.T, Y @ Y.T
-        gradX, gradY = self.grad[:, :N_a], self.grad[:, N_a:]
+        h, g = self.integrals.h, self.integrals.g._integrals
 
-        with logtime("computing Fock matrix using three indices in cython."):
-            fock_a = absil.fock_three_3(xxt, yyt, h, g)
-            fock_b = absil.fock_three_3(yyt, xxt, h, g)
+        self.calc_density_matrix()
+        P_a = self.P_a[:, :, self.i_DIIS]
+        P_b = self.P_b[:, :, self.i_DIIS]
+        R = np.zeros((n*N,))
+        Id = np.eye(n)
+        proj_a, proj_b = Id - P_a @ S, Id - P_b @ S
 
-        with logtime("computing the energy."):
-            self.one_el_energy = ((xxt + yyt)*h).sum()
-            self.energy = 0.5*((xxt*fock_a + yyt*fock_b).sum()
-                               + self.one_el_energy)
-            self.two_el_energy = self.energy - self.one_el_energy
+        with logtime('computing common blocks'):
+            self.blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
 
-        with logtime("computing the gradient."):
-            gradX = 2 * fock_a @ X
-            gradY = 2 * fock_b @ Y
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
 
-        gradX, gradY = invS @ gradX, invS @ gradY
-        R[:, :N_a], R[:, N_a:] = -projX @ gradX, -projY @ gradY
-        self.grad_norm = linalg.norm(R)
+        with logtime('computing the energy'):
+            self.calc_energy()
+
+        with logtime('computing the gradient'):
+            grad_a = self.Fock_a @ C_a
+            logger.debug('gradient spin alpha:\n%r', grad_a)
+            grad_b = self.Fock_b @ C_b
+            logger.debug('gradient spin beta:\n%r', grad_b)
+
+        grad_a, grad_b = 2*invS @ grad_a, 2*invS @ grad_b
+        self.grad_norm = linalg.norm(grad_a + grad_b)
 
         if N_a != 0:
-            u, s, v = linalg.svd(Sqrt @ gradX, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.1 * s)), np.diag(np.cos(0.1 * s))
-            X = X @ v.T @ cos + invSqrt @ u @ sin
-            self.orb[0][:, :N_a] = absil.gram_schmidt(X, S)
+            u, s, v = linalg.svd(-invSqrt @ grad_a, full_matrices=False)
+            sin, cos = np.diag(np.sin(0.015 * s)), np.diag(np.cos(0.015 * s))
+            C_a = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+            # self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
+            self.orb[0][:, :N_a] = C_a
             
         if N_b != 0:
-            u, s, v = linalg.svd(Sqrt @ gradY, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.1 * s)), np.diag(np.cos(0.1 * s))
-            Y = Y @ v.T @ cos + invSqrt @ u @ sin
-            self.orb[1][:, :N_b] = absil.gram_schmidt(Y, S)
+            u, s, v = linalg.svd(-invSqrt @ grad_b, full_matrices=False)
+            sin, cos = np.diag(np.sin(0.015 * s)), np.diag(np.cos(0.015 * s))
+            C_b = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
+            # self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
+            self.orb[1][:, :N_b] = C_b
+
+    def newton_lagrange(self, i_SCF):
+        """Hartree-Fock using Newton's Method with Lagrange multipliers."""
+        if self.restricted:
+            raise ValueError('Restricted version of Lagrange Newton\'s not\
+            implemented')
+        N_a, N_b = self.N_a, self.N_b
+        N, n = N_a + N_b, len(self.orb)
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
+        S, Sqrt = self.integrals.S, self.integrals.X
+        invS, invSqrt = self.integrals.invS, self.integrals.invX
+        h, g = self.integrals.h, self.integrals.g._integrals
+
+        self.calc_density_matrix()
+        P_a = self.P_a[:, :, self.i_DIIS]
+        P_b = self.P_b[:, :, self.i_DIIS]
+        L = np.zeros((n*N + N_a**2 + N_b**2, n*N + N_a**2 + N_b**2))
+        R = np.zeros((n*N + N_a**2 + N_b**2,))
+
+        with logtime('computing common blocks'):
+            self.blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
+
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
+
+        with logtime('computing the energy'):
+            self.calc_energy()
+
+        with logtime('computing the gradient'):
+            grad_a = self.Fock_a @ C_a
+            Jg_a = np.zeros((N_a**2, n*N_a))
+            e_j = np.zeros((N_a, 1))
+            temp_one = C_a.T @ S
+            for j in range(N_a):
+                e_j[j] = 1.0
+                Jg_a[:, j*n : n*(j + 1)] = np.kron(e_j, temp_one) + np.kron(temp_one, e_j)
+                e_j[j] = 0.0
+            logger.debug('gradient spin alpha:\n%r', grad_a)
+            grad_b = self.Fock_b @ C_b
+            Jg_b = np.zeros((N_b**2, n*N_b))
+            e_j = np.zeros((N_b, 1))
+            temp_one = C_b.T @ S
+            for j in range(N_b):
+                e_j[j] = 1.0
+                Jg_b[:, j*n : n*(j + 1)] = np.kron(e_j, temp_one) + np.kron(temp_one, e_j)
+                e_j[j] = 0.0
+            logger.debug('gradient spin beta:\n%r', grad_b)
+
+        with logtime('computing the hessian'):
+            hess = absil.hessian(C_a, C_b, self.Fock_a, self.Fock_b,
+                                 self.blocks[2], self.blocks[3],
+                                 self.blocks[4], self.blocks[5], g)
+            hess[:n*N_a, :n*N_a] -= np.kron(np.reshape(self.eta_lambda_a, (N_a, N_a),'F').T, S)
+            hess[n*N_a:n*N, n*N_a:n*N] -= np.kron(np.reshape(self.eta_lambda_b, (N_b, N_b), 'F').T, S)
+            logger.debug('hessian:\n%r', hess)
+
+        Jg_a = 0.5*Jg_a
+        Jg_b = 0.5*Jg_b
+        L[: n*N, : n*N] = hess
+        L[n*N : n*N + N_a**2, : n*N_a] = Jg_a
+        L[n*N + N_a**2:, n*N_a : n*N] = Jg_b
+        L[:n*N_a, n*N:n*N + N_a**2] = -Jg_a.T
+        L[n*N_a:n*N, n*N + N_a**2:] = -Jg_b.T
+        Jg_a = Jg_a.T @ self.eta_lambda_a
+        Jg_b = Jg_b.T @ self.eta_lambda_b
+        Jg_a = np.reshape(Jg_a, (n*N_a,), 'F')
+        Jg_b = np.reshape(Jg_b, (n*N_b,) , 'F')
+        R[: n*N_a] = -np.reshape(grad_a, (n*N_a,), 'F') + Jg_a
+        R[n*N_a : n*N] = -np.reshape(grad_b, (n*N_b,), 'F') + Jg_b
+        R[n*N : n*N + N_a**2] = 0.5*np.reshape(np.eye(N_a) - C_a.T @ S @ C_a, (N_a**2,), 'F')
+        R[n*N + N_a**2:] = 0.5*np.reshape(np.eye(N_b) - C_b.T @ S @ C_b, (N_b**2,) , 'F')
+        self.grad_norm = linalg.norm(R)
+
+        with logtime('solving the main equation'):
+            eta = np.linalg.lstsq(L, R, rcond=None)
+
+        if eta[1].size < 1:
+            logger.warning('Hessian does not have full rank')
+        elif eta[1] > 1e-10:
+            logger.warning('Large conditioning number: %.5e', eta[1])
+
+        eta_C = np.reshape(eta[0][: n*N], (n, N), 'F')
+        self.eta_lambda_a += eta[0][n*N : n*N + N_a**2]
+        self.eta_lambda_b += eta[0][n*N + N_a**2:]
+        logger.debug('eta: \n%s', eta_C)
+
+        with logtime('updating the point'):
+            if N_a:
+                self.orb[0][:, :N_a] += eta_C[:, :N_a]
+            if N_b:
+                self.orb[1][:, :N_b] += eta_C[:, N_a:]

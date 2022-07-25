@@ -17,21 +17,23 @@ def _run_Absil(molecule, geometry, basis, max_iter=20, ms2=0, kwargsSCF=None):
     molecular_system.calculate_integrals(basis, int_meth='ir-wmme')
     orb = None
     if kwargsSCF is not None:
-        HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
-                                                  molecular_system.nucl_rep,
-						  molecular_system.n_elec,
-                                                  f_out=None,
-                                                  **kwargsSCF)
+        HF = optimiser.hartree_fock(molecular_system.integrals,
+                                    molecular_system.nucl_rep,
+				    molecular_system.n_elec,
+                                    restricted=True,
+                                    f_out=None,
+                                    **kwargsSCF)
         orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
-    return optimiser.Unrestricted_HF(molecular_system.integrals,
-				     molecular_system.nucl_rep,
-				     molecular_system.n_elec,
-                                     ms2=ms2,
-                                     max_iter=max_iter,
-                                     ini_orb=orb,
-                                     f_out=None,
-                                     grad_thresh=1.0E-5)
-            
+    return optimiser.hartree_fock(molecular_system.integrals,
+				  molecular_system.nucl_rep,
+				  molecular_system.n_elec,
+                                  ms2=ms2,
+                                  restricted=False,
+                                  max_iter=max_iter,
+                                  ini_orb=orb,
+                                  f_out=None,
+                                  grad_thresh=1.0E-5)
+
 
 class HFAbsilTestCase(unittest.TestCase):
     """TestCase for the HF-Absil implementation."""
