@@ -43,6 +43,7 @@ class HartreeFockStep():
         self.grad_norm = 100.0
         self.g = None
         self.blocks = None
+        self.grad_norm_restriction = 100.0
 
     def initialise(self, step_type):
         if step_type == 'RH-SCF':
@@ -390,6 +391,55 @@ class HartreeFockStep():
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
 
+    def gradient_descent_a(self, i_SCF):
+        """Hartree-Fock using Gradient Descent Method."""
+        N_a, N_b = self.N_a, self.N_b
+        N, n = N_a + N_b, len(self.orb)
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
+        S, Sqrt = self.integrals.S, self.integrals.X
+        invS, invSqrt = self.integrals.invS, self.integrals.invX
+        h, g = self.integrals.h, self.integrals.g._integrals
+
+        self.calc_density_matrix()
+        P_a = self.P_a[:, :, self.i_DIIS]
+        P_b = self.P_b[:, :, self.i_DIIS]
+        R = np.zeros((n*N,))
+        Id = np.eye(n)
+        proj_a, proj_b = Id - P_a @ S, Id - P_b @ S
+
+        with logtime('computing common blocks'):
+            self.blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
+
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
+
+        with logtime('computing the energy'):
+            self.calc_energy()
+
+        with logtime('computing the gradient'):
+            grad_a = self.Fock_a @ C_a
+            logger.debug('gradient spin alpha:\n%r', grad_a)
+            grad_b = self.Fock_b @ C_b
+            logger.debug('gradient spin beta:\n%r', grad_b)
+
+        grad_a, grad_b = 2*proj_a @ invS @ grad_a, 2*proj_b @ invS @ grad_b
+        self.grad_norm = linalg.norm(grad_a) + linalg.norm(grad_b)
+
+        if N_a != 0:
+            u, s, v = linalg.svd(-invSqrt @ grad_a, full_matrices=False)
+            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
+            C_a = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+            print(np.allclose(np.eye(N_a), C_a.T @ S @ C_a))
+            # self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
+            self.orb[0][:, :N_a] = C_a
+
+        if N_b != 0:
+            u, s, v = linalg.svd(-invSqrt @ grad_b, full_matrices=False)
+            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
+            C_b = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
+            # self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
+            self.orb[1][:, :N_b] = C_b
+
     def gradient_descent(self, i_SCF):
         """Hartree-Fock using Gradient Descent Method."""
         N_a, N_b = self.N_a, self.N_b
@@ -421,22 +471,24 @@ class HartreeFockStep():
             grad_b = self.Fock_b @ C_b
             logger.debug('gradient spin beta:\n%r', grad_b)
 
-        grad_a, grad_b = 2*invS @ grad_a, 2*invS @ grad_b
-        self.grad_norm = linalg.norm(grad_a + grad_b)
+        grad_a, grad_b = 2*proj_a @ invS @ grad_a, 2*proj_b @ invS @ grad_b
+        self.grad_norm = linalg.norm(grad_a) + linalg.norm(grad_b)
 
         if N_a != 0:
             u, s, v = linalg.svd(-invSqrt @ grad_a, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.015 * s)), np.diag(np.cos(0.015 * s))
+            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
             C_a = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+            print(np.allclose(np.eye(N_a), C_a.T @ S @ C_a))
             # self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
             self.orb[0][:, :N_a] = C_a
-            
+
         if N_b != 0:
             u, s, v = linalg.svd(-invSqrt @ grad_b, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.015 * s)), np.diag(np.cos(0.015 * s))
+            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
             C_b = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
             # self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
             self.orb[1][:, :N_b] = C_b
+
 
     def newton_lagrange(self, i_SCF):
         """Hartree-Fock using Newton's Method with Lagrange multipliers."""
@@ -450,6 +502,10 @@ class HartreeFockStep():
         invS, invSqrt = self.integrals.invS, self.integrals.invX
         h, g = self.integrals.h, self.integrals.g._integrals
 
+        O_a = np.copy(C_a)
+        O_b = np.copy(C_b)
+        self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
+        self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
         self.calc_density_matrix()
         P_a = self.P_a[:, :, self.i_DIIS]
         P_b = self.P_b[:, :, self.i_DIIS]
@@ -464,6 +520,24 @@ class HartreeFockStep():
 
         with logtime('computing the energy'):
             self.calc_energy()
+            print(self.energy)
+
+        self.orb[0][:, :N_a] = O_a
+        self.orb[1][:, :N_b] = O_b
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
+        self.calc_density_matrix()
+        P_a = self.P_a[:, :, self.i_DIIS]
+        P_b = self.P_b[:, :, self.i_DIIS]
+
+        with logtime('computing common blocks'):
+            self.blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
+
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
+
+        with logtime('computing the energy'):
+            # self.calc_energy()
+            print(self.energy)
 
         with logtime('computing the gradient'):
             grad_a = self.Fock_a @ C_a
@@ -508,7 +582,8 @@ class HartreeFockStep():
         R[n*N_a : n*N] = -np.reshape(grad_b, (n*N_b,), 'F') + Jg_b
         R[n*N : n*N + N_a**2] = 0.5*np.reshape(np.eye(N_a) - C_a.T @ S @ C_a, (N_a**2,), 'F')
         R[n*N + N_a**2:] = 0.5*np.reshape(np.eye(N_b) - C_b.T @ S @ C_b, (N_b**2,) , 'F')
-        self.grad_norm = linalg.norm(R)
+        self.grad_norm = linalg.norm(R[:n*N])
+        self.grad_norm_restriction = linalg.norm(R[n*N:])
 
         with logtime('solving the main equation'):
             eta = np.linalg.lstsq(L, R, rcond=None)

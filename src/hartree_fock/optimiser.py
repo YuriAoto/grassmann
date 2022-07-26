@@ -132,6 +132,7 @@ def hartree_fock(integrals,
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
                                                       '|Gradient|',
+                                                      '|Restriction|',
                                                       'step',
                                                       'time in iteration'))
         
@@ -164,7 +165,7 @@ def hartree_fock(integrals,
         if f_out is not None:
             f_out.write(util.fmt_HF_iter_general.format(
                 i_SCF, nucl_rep + hf_step.energy,
-                hf_step.grad_norm, step_type, T.elapsed_time))
+                hf_step.grad_norm, hf_step.grad_norm_restriction, step_type, T.elapsed_time))
             f_out.flush()
             
         if hf_step.grad_norm < grad_thresh:

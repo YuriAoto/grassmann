@@ -13,7 +13,8 @@ fmt_HF_header = '{0:<5s}  {1:<16s}  {2:<16s}  {3:s}\n'
 fmt_HF_iter = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:s}\n'
 
 fmt_HF_header_general = '{0:<5s}  {1:<16s}  {2:<16s}  {3:6s}  {4:s}\n'
-fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:6s}  {4:s}\n'
+# fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:6s}  {4:s}\n'
+fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f} {3:<16.12f}  {4:6s}  {5:s}\n'
 
 
 def calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
