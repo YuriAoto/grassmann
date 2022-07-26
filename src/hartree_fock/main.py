@@ -13,7 +13,7 @@ from . import optimiser
 from molecular_geometry.molecular_geometry import MolecularGeometry
 from input_output.log import logtime
 from orbitals import orbitals
-
+from hartree_fock import starting_orbitals
 
 def _define_hfstep_func(hf_step):
     """Create the function for Hartree-Fock steps from string hf_step"""
@@ -53,13 +53,6 @@ def main(args, f_out):
     with logtime('Calculate integrals'):
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
 
-    if args.ini_orb is not None:
-        ini_orb = orbitals.MolecularOrbitals.from_file(args.ini_orb)
-        if not args.restricted:
-            ini_orb = orbitals.MolecularOrbitals.unrestrict(ini_orb)
-    else:
-        ini_orb = None
-
     HF = optimiser.hartree_fock(molecular_system.integrals,
 				molecular_system.nucl_rep,
 				molecular_system.n_elec,
@@ -70,7 +63,9 @@ def main(args, f_out):
     				f_out=f_out,
 				n_DIIS=args.diis,
                                 HF_step_type=_define_hfstep_func(args.step_type),
-                                ini_orb=ini_orb)
-
-    f_out.write(str(HF))
+                                ini_orb=starting_orbitals.initial_orbitals(args.ini_orb,
+                                                                           molecular_system,
+                                                                           args.restricted)
+    )
+    if f_out is not None: f_out.write(str(HF))
     return HF

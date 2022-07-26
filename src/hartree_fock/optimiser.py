@@ -28,33 +28,18 @@ def _check_nelec_ms(n_elec, restricted, ms2):
                          ' an even number of electrons and ms=0')
     return restricted, ms2
 
-def hf_initial_orbitals(ini_orb, integrals, restricted):
-    if ini_orb is None:
-        logger.info('Using eigenvectors of orthogonalised h as starting guess')
-        return MolecularOrbitals.from_eig_h(
-            integrals,
-            integrals.basis_set + '(AO)',
-            restricted=restricted)
-    else:
-        logger.info('Using orbitals given by the user as initial guess.')
-        if ini_orb.restricted and not restricted:
-            raise ValueError('Initial orbitals should be of unrestricted type.')
-        orb = MolecularOrbitals(ini_orb)
-        orb.orthogonalise(X=integrals.X)
-        return orb
-
 
 def hartree_fock(integrals,
 		 nucl_rep,
 		 n_elec,
+                 ini_orb,
                  ms2=None,
                  restricted=None,
                  max_iter=20,
                  grad_thresh=1.0E-5,
                  f_out=sys.stdout,
                  n_DIIS=0,
-                 HF_step_type=lambda **x: "RH-SCF",
-                 ini_orb=None):
+                 HF_step_type=lambda **x: "RH-SCF"):
     """A general Hartree-Fock procedure
 
     
@@ -66,6 +51,9 @@ def hartree_fock(integrals,
 
     n_elec (int)
     	The number of electrons (must be even)
+    
+    ini_orb (MolecularOrbitals)
+        Initial orbitals for the HF procedure
 
     ms2 (int)
         Two times MS (n alpha minus n beta).
@@ -97,9 +85,6 @@ def hartree_fock(integrals,
             "RH-SCF", "densMat-SCF", "Absil", "orb_rot-Newton"
         that will dictate which method should be used in the
         Hartree-Fock optimisation, in that iteration
-    
-    ini_orb (MolecularOrbitals, optional, default=None)
-        Initial orbitals for the HF procedure
     """
     restricted, ms2 = _check_nelec_ms(n_elec, restricted, ms2)
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
@@ -124,10 +109,10 @@ def hartree_fock(integrals,
         logger.info('Number of occupied orbitals: %d (alpha), %d (beta)',
                     hf_step.N_a,
                     hf_step.N_b)
-    hf_step.orb = hf_initial_orbitals(ini_orb, integrals, restricted)
+    hf_step.orb = MolecularOrbitals(ini_orb)
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
-    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=100.0))
+    hf_step.initialise('RH-SCF')
     
     if f_out is not None:
         f_out.write(util.fmt_HF_header_general.format('it.', 'E',
@@ -172,11 +157,12 @@ def hartree_fock(integrals,
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
-
+    hf_step.calc_density_matrix()
     hf_step.orb.name = 'RHF' if restricted else 'UHF'
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
     res.orbitals = hf_step.orb
+    res.density = hf_step.P_a[:, :, hf_step.i_DIIS], hf_step.P_b[:, :, hf_step.i_DIIS]
     res.success = converged
     res.n_iter = i_SCF
     if not converged:
