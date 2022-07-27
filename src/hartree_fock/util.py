@@ -4,7 +4,8 @@
 import logging
 
 import numpy as np
-from scipy.linalg import solve
+from scipy.linalg import solve, svd
+from . import absil
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
@@ -12,9 +13,12 @@ loglevel = logging.getLogger().getEffectiveLevel()
 fmt_HF_header = '{0:<5s}  {1:<16s}  {2:<16s}  {3:s}\n'
 fmt_HF_iter = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:s}\n'
 
-fmt_HF_header_general = '{0:<5s}  {1:<16s}  {2:<16s}  {3:6s}  {4:s}\n'
-# fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:6s}  {4:s}\n'
-fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f} {3:<16.12f}  {4:6s}  {5:s}\n'
+write_header = \
+    'it.     E                |Gradient|      |Restr.|   step    time in iteration)\n'
+#    12345678901234567890123456789012345678901234567890123456789012345678901234567890123456
+
+fmt_HF_iter_general = '{0:<5d}  {1:<16.12f}  {2:<16.12f}           {4:6s}  {5:s}\n'
+fmt_HF_iter_gen_lag = '{0:<5d}  {1:<16.12f}  {2:<16.12f}  {3:<.4f}  {4:6s}  {5:s}\n'
 
 
 def calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
@@ -73,3 +77,43 @@ def calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
         Dmat[:, :, i_DIIS] += w[k] * Dmat[:, :, k]
     logger.debug('Density matrix (after DIIS):\n%r',
                  Dmat[:, :, i_DIIS])
+
+
+def geodesic(C, eta, S, Sqrt, invSqrt, t=1):
+    """Calculates the geodesic at the Grassmannian
+    
+    
+    Parameters:
+    -----------
+    C (ndarray, of shape (n,N))
+        The orbital coefficients (that is, an element at the Stiefel)
+    
+    eta (ndarray, of shape (n,N))
+        The direction at the horizontal space:
+        
+        C.T @ S @ eta = 0
+        
+    S (ndarray, shape (n,n))
+        The overlap matrix of the basis set    
+    
+    Sqrt (ndarray, shape (n,n))
+        The square root of the overlap matrix S. It is the X matrix of Szabo
+    
+    invSqrt (ndarray, shape (n,n))
+        The inverse of Sqrt
+    
+    t (float, optional, default=1)
+        The step to calculate the geodesic
+
+    
+    Returns:
+    --------
+    A np.array of shape (n, N), with the orbital coefficients
+    
+    
+    """
+    u, s, v = svd(invSqrt @ eta, full_matrices=False)
+    sin, cos = np.diag(np.sin(t*s)), np.diag(np.cos(t*s))
+    temp = (C @ v.T @ cos + Sqrt @ u @ sin) @ v
+#    return temp
+    return absil.gram_schmidt(temp, S)

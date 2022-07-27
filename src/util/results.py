@@ -51,7 +51,7 @@ class Results:
         if self.error is not None:
             x.append('error = ' + str(self.error))
         if self.warning is not None:
-            x.append('warning = ' + str(self.error))
+            x.append('warning = ' + str(self.warning))
         return '\n'.join(x)
 
 
