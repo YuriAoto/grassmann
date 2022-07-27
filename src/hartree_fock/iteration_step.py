@@ -44,6 +44,7 @@ class HartreeFockStep():
         self.g = None
         self.blocks = None
         self.grad_norm_restriction = 100.0
+        self.large_cond_number = []
 
     def initialise(self, step_type):
         if step_type == 'RH-SCF':
@@ -363,30 +364,21 @@ class HartreeFockStep():
             logger.warning('Hessian does not have full rank')
         elif eta[1] > 1e-10:
             logger.warning('Large conditioning number: %.5e', eta[1])
+            self.large_cond_number.append(i_SCF)
 
         eta = np.reshape(eta[0], (n, N), 'F')
         logger.debug('eta: \n%s', eta)
-
-        # print(C_a.T @ S @ eta[:, :N_a])
-        # print(C_b.T @ S @ eta[:, N_a:])
-        # print(np.allclose(C_a.T @ S @ C_a, np.eye(N_a)))
+        logger.info('Is C.T @ S @ eta close to zero: %s (alpha); %s (beta)',
+                    np.allclose(C_a.T @ S @ eta[:, :N_a], np.zeros((N_a, N_a))),
+                    np.allclose(C_b.T @ S @ eta[:, :N_a], np.zeros((N_a, N_a))))
         with logtime('updating the point'):
             if N_a != 0:
-                u, s, v = linalg.svd(invSqrt @ eta[:, :N_a], full_matrices=False)
-                sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[0][:, :N_a] = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
-                # temp2 = np.copy(temp)
-                # self.orb[0][:, :N_a] = absil.gram_schmidt(temp, S)
-                # print('alfa', np.allclose(temp2, self.orb[0][:, :N_a]))
-
+                self.orb[0][:, :N_a] = util.geodesic(C_a, eta[:, :N_a], S, Sqrt, invSqrt)
             if N_b != 0:
-                u, s, v = linalg.svd(invSqrt @ eta[:, N_a:], full_matrices=False)
-                sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[1][:, :N_b] = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
-                # temp2 = np.copy(temp)
-                # self.orb[1][:, :N_b] = C_b @ v.T @ cos @ v + Sqrt @ u @ sin @ v
-                # self.orb[1][:, :N_b] = absil.gram_schmidt(temp, S)
-                # print('beta', np.allclose(temp2, self.orb[1][:, :N_b]))
+                self.orb[1][:, :N_b] = util.geodesic(C_b, eta[:, N_a:], S, Sqrt, invSqrt)
+        logger.info('Is C.T @ S @ C close to the identity: %s (alpha); %s (beta)',
+                    np.allclose(C_a.T @ S @ C_a, np.eye(N_a)),
+                    np.allclose(C_b.T @ S @ C_b, np.eye(N_a)))
         
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
@@ -426,19 +418,9 @@ class HartreeFockStep():
         self.grad_norm = linalg.norm(grad_a) + linalg.norm(grad_b)
 
         if N_a != 0:
-            u, s, v = linalg.svd(-invSqrt @ grad_a, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
-            C_a = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
-            print(np.allclose(np.eye(N_a), C_a.T @ S @ C_a))
-            # self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
-            self.orb[0][:, :N_a] = C_a
-
+            self.orb[0][:, :N_a] = util.geodesic(C_a, -grad_a, S, Sqrt, invSqrt, t=0.024)
         if N_b != 0:
-            u, s, v = linalg.svd(-invSqrt @ grad_b, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
-            C_b = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
-            # self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
-            self.orb[1][:, :N_b] = C_b
+            self.orb[1][:, :N_b] = util.geodesic(C_b, -grad_b, S, Sqrt, invSqrt, t=0.024)
 
     def gradient_descent(self, i_SCF):
         """Hartree-Fock using Gradient Descent Method."""
@@ -497,15 +479,29 @@ class HartreeFockStep():
             implemented')
         N_a, N_b = self.N_a, self.N_b
         N, n = N_a + N_b, len(self.orb)
-        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
         S, Sqrt = self.integrals.S, self.integrals.X
         invS, invSqrt = self.integrals.invS, self.integrals.invX
         h, g = self.integrals.h, self.integrals.g._integrals
 
-        O_a = np.copy(C_a)
-        O_b = np.copy(C_b)
-        self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
-        self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
+        with logtime('Orthogonalizing coefficients and calculating the energy'):
+            O_a = np.copy(self.orb[0][:, :N_a])
+            O_b = np.copy(self.orb[1][:, :N_b])
+            self.orb[0][:, :N_a] = absil.gram_schmidt(self.orb[0][:, :N_a], S)
+            self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
+            self.calc_density_matrix()
+            self.blocks = absil.common_blocks(self.orb[0][:, :N_a],
+                                              self.orb[1][:, :N_b],
+                                              self.P_a[:, :, self.i_DIIS],
+                                              self.P_b[:, :, self.i_DIIS],
+                                              g)
+            with logtime('computing Fock matrix'):
+                self.calc_fock_matrix()
+            with logtime('computing the energy'):
+                self.calc_energy()
+
+        self.orb[0][:, :N_a] = O_a
+        self.orb[1][:, :N_b] = O_b
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
         self.calc_density_matrix()
         P_a = self.P_a[:, :, self.i_DIIS]
         P_b = self.P_b[:, :, self.i_DIIS]
@@ -517,27 +513,6 @@ class HartreeFockStep():
 
         with logtime('computing Fock matrix'):
             self.calc_fock_matrix()
-
-        with logtime('computing the energy'):
-            self.calc_energy()
-            print(self.energy)
-
-        self.orb[0][:, :N_a] = O_a
-        self.orb[1][:, :N_b] = O_b
-        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
-        self.calc_density_matrix()
-        P_a = self.P_a[:, :, self.i_DIIS]
-        P_b = self.P_b[:, :, self.i_DIIS]
-
-        with logtime('computing common blocks'):
-            self.blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
-
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-
-        with logtime('computing the energy'):
-            # self.calc_energy()
-            print(self.energy)
 
         with logtime('computing the gradient'):
             grad_a = self.Fock_a @ C_a

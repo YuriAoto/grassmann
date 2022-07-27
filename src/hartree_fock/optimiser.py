@@ -115,11 +115,7 @@ def hartree_fock(integrals,
     hf_step.initialise('RH-SCF')
     
     if f_out is not None:
-        f_out.write(util.fmt_HF_header_general.format('it.', 'E',
-                                                      '|Gradient|',
-                                                      '|Restriction|',
-                                                      'step',
-                                                      'time in iteration'))
+        f_out.write(util.write_header)
         
     for i_SCF in range(max_iter):
         logger.info('Starting HF iteration %d', i_SCF)
@@ -148,9 +144,15 @@ def hartree_fock(integrals,
                                  + step_type)
         
         if f_out is not None:
-            f_out.write(util.fmt_HF_iter_general.format(
-                i_SCF, nucl_rep + hf_step.energy,
-                hf_step.grad_norm, hf_step.grad_norm_restriction, step_type, T.elapsed_time))
+            f_out.write((util.fmt_HF_iter_gen_lag
+                         if step_type == 'lagrange' else
+                         util.fmt_HF_iter_general).format(
+                             i_SCF,
+                             nucl_rep + hf_step.energy,
+                             hf_step.grad_norm,
+                             hf_step.grad_norm_restriction,
+                             step_type,
+                             T.elapsed_time))
             f_out.flush()
             
         if hf_step.grad_norm < grad_thresh:
@@ -165,7 +167,17 @@ def hartree_fock(integrals,
     res.density = hf_step.P_a[:, :, hf_step.i_DIIS], hf_step.P_b[:, :, hf_step.i_DIIS]
     res.success = converged
     res.n_iter = i_SCF
+    if hf_step.large_cond_number:
+        res.warning = 'Large conditioning number at iterations: '
+        if len(hf_step.large_cond_number) == 1:
+            res.warning += f'{hf_step.large_cond_number[0]}'
+        if len(hf_step.large_cond_number) == 2:
+            res.warning += f'{hf_step.large_cond_number[0]}, {hf_step.large_cond_number[-1]}'
+        if len(hf_step.large_cond_number) > 3:
+            res.warning += f'{hf_step.large_cond_number[0]}, ..., {hf_step.large_cond_number[-1]}'
+            res.warning += \
+                '\n          (look for "Large conditioning number" at the log file)'
+            
     if not converged:
-        res.warning = 'No convergence was obtained'
         logger.info('End of Hartree-Fock calculation')
     return res

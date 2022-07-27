@@ -123,7 +123,7 @@ def calc_at_dens(element, basis):
                     ms2=1 if ATOMS.index(element) % 2 else 0,
                     restricted=False,
                     max_iter=30,
-                    diis=5,
+                    diis=1,
                     step_type='SCF',
                     ini_orb='Hcore'
     )
