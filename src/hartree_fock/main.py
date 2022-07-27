@@ -44,6 +44,11 @@ def _define_hfstep_func(hf_step):
         g = float(rematch.group(1))
         return lambda i_SCF=None, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'Absil'
 
+    rematch = re.match('Gradient-Lagrange_n(\d+)', hf_step)
+    if rematch:
+        n = int(rematch.group(1))
+        return lambda i_SCF=0, grad_norm=None: 'gradient' if i_SCF < n else 'lagrange'
+
     raise ValueError('Invalid HF step')
 
 

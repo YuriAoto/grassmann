@@ -362,6 +362,7 @@ class HartreeFockStep():
         if eta[1].size < 1:
             logger.warning('Hessian does not have full rank')
         elif eta[1] > 1e-10:
+            print('oi')
             logger.warning('Large conditioning number: %.5e', eta[1])
 
         eta = np.reshape(eta[0], (n, N), 'F')
@@ -374,24 +375,29 @@ class HartreeFockStep():
             if N_a != 0:
                 u, s, v = linalg.svd(invSqrt @ eta[:, :N_a], full_matrices=False)
                 sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[0][:, :N_a] = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+                # print(np.allclose(np.eye(N_a), self.orb[0][:, :N_a].T @ S @ self.orb[0][:, :N_a]))
+                # self.orb[0][:, :N_a] = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
+                temp = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
                 # temp2 = np.copy(temp)
-                # self.orb[0][:, :N_a] = absil.gram_schmidt(temp, S)
+                self.orb[0][:, :N_a] = absil.gram_schmidt(temp, S)
+                # self.orb[0][:, :N_a] = temp
                 # print('alfa', np.allclose(temp2, self.orb[0][:, :N_a]))
 
             if N_b != 0:
                 u, s, v = linalg.svd(invSqrt @ eta[:, N_a:], full_matrices=False)
                 sin, cos = np.diag(np.sin(s)), np.diag(np.cos(s))
-                self.orb[1][:, :N_b] = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
+                # self.orb[1][:, :N_b] = (C_b @ v.T @ cos + invSqrt @ u @ sin) @ v
+                temp = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
                 # temp2 = np.copy(temp)
                 # self.orb[1][:, :N_b] = C_b @ v.T @ cos @ v + Sqrt @ u @ sin @ v
-                # self.orb[1][:, :N_b] = absil.gram_schmidt(temp, S)
+                self.orb[1][:, :N_b] = absil.gram_schmidt(temp, S)
+                # self.orb[1][:, :N_b] = temp
                 # print('beta', np.allclose(temp2, self.orb[1][:, :N_b]))
         
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
 
-    def gradient_descent_a(self, i_SCF):
+    def gradient_descent(self, i_SCF):
         """Hartree-Fock using Gradient Descent Method."""
         N_a, N_b = self.N_a, self.N_b
         N, n = N_a + N_b, len(self.orb)
@@ -427,20 +433,19 @@ class HartreeFockStep():
 
         if N_a != 0:
             u, s, v = linalg.svd(-invSqrt @ grad_a, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
+            sin, cos = np.diag(np.sin(0.08 * s)), np.diag(np.cos(0.08 * s))
             C_a = (C_a @ v.T @ cos + Sqrt @ u @ sin) @ v
-            print(np.allclose(np.eye(N_a), C_a.T @ S @ C_a))
             # self.orb[0][:, :N_a] = absil.gram_schmidt(C_a, S)
             self.orb[0][:, :N_a] = C_a
 
         if N_b != 0:
             u, s, v = linalg.svd(-invSqrt @ grad_b, full_matrices=False)
-            sin, cos = np.diag(np.sin(0.024 * s)), np.diag(np.cos(0.024 * s))
+            sin, cos = np.diag(np.sin(0.08 * s)), np.diag(np.cos(0.08 * s))
             C_b = (C_b @ v.T @ cos + Sqrt @ u @ sin) @ v
             # self.orb[1][:, :N_b] = absil.gram_schmidt(C_b, S)
             self.orb[1][:, :N_b] = C_b
 
-    def gradient_descent(self, i_SCF):
+    def gradient_descent_a(self, i_SCF):
         """Hartree-Fock using Gradient Descent Method."""
         N_a, N_b = self.N_a, self.N_b
         N, n = N_a + N_b, len(self.orb)
