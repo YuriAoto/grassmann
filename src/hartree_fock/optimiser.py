@@ -110,16 +110,17 @@ def hartree_fock(integrals,
                     hf_step.N_a,
                     hf_step.N_b)
     hf_step.orb = MolecularOrbitals(ini_orb)
+
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
-    hf_step.initialise('RH-SCF')
+    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=hf_step.grad_norm))
     
     if f_out is not None:
         f_out.write(util.write_header)
         
     for i_SCF in range(max_iter):
-        logger.info('Starting HF iteration %d', i_SCF)
         step_type = HF_step_type(i_SCF=i_SCF, grad_norm=hf_step.grad_norm)
+        logger.info('Starting HF iteration %d', i_SCF)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
                 hf_step.roothan_hall(i_SCF)
@@ -142,7 +143,7 @@ def hartree_fock(integrals,
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
                                  + step_type)
-        
+
         if f_out is not None:
             f_out.write((util.fmt_HF_iter_gen_lag
                          if step_type == 'lagrange' else
@@ -150,7 +151,7 @@ def hartree_fock(integrals,
                              i_SCF,
                              nucl_rep + hf_step.energy,
                              hf_step.grad_norm,
-                             hf_step.grad_norm_restriction,
+                             hf_step.norm_restriction,
                              step_type,
                              T.elapsed_time))
             f_out.flush()

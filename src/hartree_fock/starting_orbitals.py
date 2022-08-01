@@ -93,7 +93,7 @@ def superpos_atdens(molecular_system):
         mol_dens_b[offset:offset + len_atbas,
                    offset:offset + len_atbas] = atomic_dens[atbas][1]
         offset += len_atbas
-    return mol_dens_a, mol_dens_b
+    return (mol_dens_a + mol_dens_b) / 2, (mol_dens_a + mol_dens_b) / 2
 
 
 class _SADargs:

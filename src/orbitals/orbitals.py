@@ -277,6 +277,7 @@ class MolecularOrbitals():
             self.in_the_basis = ''
             self.sym_adapted_basis = False
             self.energies = None
+            self.energies_beta = None
         else:
             self.__dict__ = deepcopy(source.__dict__)
 
@@ -320,10 +321,11 @@ class MolecularOrbitals():
         e, C = eigh(h_orth)
         if restricted:
             return cls.from_array(integrals.X @ C, 1,
-                                  integrals=integrals)
+                                  integrals=integrals, energies=e)
         else:
             return cls.from_array((integrals.X @ C, integrals.X @ C), 1,
-                                  integrals=integrals, restricted=False)
+                                  integrals=integrals, energies=e,
+                                  restricted=False)
 
     @classmethod
     def from_dens(cls, P, restricted, integrals, method='Fock'):
@@ -413,7 +415,8 @@ class MolecularOrbitals():
             Fock_a = integrals.X.T @ Fock_a @ integrals.X
             e, C = eigh(Fock_a)
             orb_a = integrals.X @ C
-            return cls.from_array(orb_a, 1, name='From SAD', integrals=integrals)
+            return cls.from_array(orb_a, 1, name='From SAD',
+                                  integrals=integrals, energies=e)
         else:
             Fock_a = integrals.X.T @ Fock_a @ integrals.X
             Fock_b = integrals.X.T @ Fock_b @ integrals.X
@@ -421,13 +424,16 @@ class MolecularOrbitals():
             eb, Cb = eigh(Fock_b)
             orb_a = integrals.X @ C
             orb_b = integrals.X @ Cb
-            return cls.from_array((orb_a, orb_b), 1, name='From SAD', integrals=integrals,
+            return cls.from_array((orb_a, orb_b), 1, name='From SAD',
+                                  integrals=integrals,
+                                  energies=e,
                                   restricted=False)
 
     @classmethod
     def from_array(cls, C, n_irrep,
                    name='Coefficients from array',
                    integrals=None,
+                   energies=None,
                    restricted=True):
         """Load orbitals from a ndarray-like object
         
@@ -456,6 +462,9 @@ class MolecularOrbitals():
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
+        new_orbitals.energies = energies
+        if not restricted:
+            new_orbitals.energies_beta = energies
 
         if isinstance(C, tuple):
             for Ci in C:
