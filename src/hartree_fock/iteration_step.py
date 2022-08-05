@@ -474,8 +474,10 @@ class HartreeFockStep():
         with logtime('Orthogonalizing coefficients and computing the energy'):
             temp_a = np.copy(self.orb[0][:, :N_a])
             temp_b = np.copy(self.orb[1][:, :N_b])
-            self.orb[0][:, :N_a] = absil.gram_schmidt(self.orb[0][:, :N_a], S)
-            self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
+            if N_a:
+                self.orb[0][:, :N_a] = absil.gram_schmidt(self.orb[0][:, :N_a], S)
+            if N_b:
+                self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
             self.calc_density_matrix()
             self.blocks = absil.common_blocks(self.orb[0][:, :N_a],
                                               self.orb[1][:, :N_b],
@@ -503,46 +505,54 @@ class HartreeFockStep():
             self.calc_fock_matrix()
 
         with logtime('computing the gradient'):
-            grad_energy_a = np.reshape(self.Fock_a @ C_a, (n*N_a,), 'F')
-            jacob_restr_a = np.empty((N_a**2, N_a*n))
-            e_j = np.zeros((N_a, 1))
-            for j in range(N_a):
-                e_j[j] = 1.0
-                jacob_restr_a[:, n*j : n*(j+1)] = np.kron(aux_a, e_j)
-                jacob_restr_a[N_a*j : N_a*(j+1), n*j : n*(j+1)] += aux_a
-                e_j[j] = 0.0
-            logger.debug('gradient spin alpha:\n%r', grad_energy_a)
-            grad_energy_b = np.reshape(self.Fock_b @ C_b, (n*N_b,), 'F')
-            jacob_restr_b = np.empty((N_b**2, N_b*n))
-            e_j = np.zeros((N_b, 1))
-            for j in range(N_b):
-                e_j[j] = 1.0
-                jacob_restr_b[:, n*j : n*(j+1)] = np.kron(aux_b, e_j)
-                jacob_restr_b[N_b*j : N_b*(j+1), n*j : n*(j+1)] += aux_b
-                e_j[j] = 0.0
-            jacob_restr_a, jacob_restr_b = 0.5*jacob_restr_a, 0.5*jacob_restr_b
-            logger.debug('gradient spin beta:\n%r', grad_energy_b)
+            if N_a:
+                grad_energy_a = np.reshape(self.Fock_a @ C_a, (n*N_a,), 'F')
+                jacob_restr_a = np.empty((N_a**2, N_a*n))
+                e_j = np.zeros((N_a, 1))
+                for j in range(N_a):
+                    e_j[j] = 1.0
+                    jacob_restr_a[:, n*j : n*(j+1)] = np.kron(aux_a, e_j)
+                    jacob_restr_a[N_a*j : N_a*(j+1), n*j : n*(j+1)] += aux_a
+                    e_j[j] = 0.0
+                jacob_restr_a = 0.5*jacob_restr_a
+                logger.debug('gradient spin alpha:\n%r', grad_energy_a)
+            if N_b:
+                grad_energy_b = np.reshape(self.Fock_b @ C_b, (n*N_b,), 'F')
+                jacob_restr_b = np.empty((N_b**2, N_b*n))
+                e_j = np.zeros((N_b, 1))
+                for j in range(N_b):
+                    e_j[j] = 1.0
+                    jacob_restr_b[:, n*j : n*(j+1)] = np.kron(aux_b, e_j)
+                    jacob_restr_b[N_b*j : N_b*(j+1), n*j : n*(j+1)] += aux_b
+                    e_j[j] = 0.0
+                jacob_restr_b = 0.5*jacob_restr_b
+                logger.debug('gradient spin beta:\n%r', grad_energy_b)
 
         with logtime('computing the hessian'):
             hess = absil.hessian(C_a, C_b, self.Fock_a, self.Fock_b,
                                  self.blocks[2], self.blocks[3],
                                  self.blocks[4], self.blocks[5], g)
-            hess[:n*N_a, :n*N_a] -= np.kron(self.energies.T, S)
-            hess[n*N_a:n*N, n*N_a:n*N] -= np.kron(self.energies_beta.T, S)
+            if N_a:
+                hess[:n*N_a, :n*N_a] -= np.kron(self.energies.T, S)
+            if N_b:
+                hess[n*N_a:n*N, n*N_a:n*N] -= np.kron(self.energies_beta.T, S)
             logger.debug('hessian:\n%r', hess)
 
         hess_Lag[: n*N, : n*N] = hess
-        hess_Lag[n*N : n*N + N_a**2, : n*N_a] = jacob_restr_a
-        hess_Lag[n*N + N_a**2 :, n*N_a : n*N] = jacob_restr_b
-        hess_Lag[: n*N_a, n*N : n*N + N_a**2] = -jacob_restr_a.T
-        hess_Lag[n*N_a : n*N, n*N + N_a**2 :] = -jacob_restr_b.T
 
-        jacob_restr_a = jacob_restr_a.T @ np.reshape(self.energies, (N_a**2,), 'F')
-        jacob_restr_b = jacob_restr_b.T @ np.reshape(self.energies_beta, (N_b**2,), 'F')
-        grad_Lag[: n*N_a] = grad_energy_a - jacob_restr_a
-        grad_Lag[n*N_a : n*N] = grad_energy_b - jacob_restr_b
-        grad_Lag[n*N : n*N + N_a**2] = 0.5*np.reshape(aux_a @ C_a - np.eye(N_a), (N_a**2,), 'F')
-        grad_Lag[n*N + N_a**2:] = 0.5*np.reshape(aux_b @ C_b - np.eye(N_b), (N_b**2,) , 'F')
+        if N_a:
+            hess_Lag[n*N : n*N + N_a**2, : n*N_a] = jacob_restr_a
+            hess_Lag[: n*N_a, n*N : n*N + N_a**2] = -jacob_restr_a.T
+            jacob_restr_a = jacob_restr_a.T @ np.reshape(self.energies, (N_a**2,), 'F')
+            grad_Lag[: n*N_a] = grad_energy_a - jacob_restr_a
+            grad_Lag[n*N : n*N + N_a**2] = 0.5*np.reshape(aux_a @ C_a - np.eye(N_a), (N_a**2,), 'F')
+        if N_b:
+            hess_Lag[n*N + N_a**2 :, n*N_a : n*N] = jacob_restr_b
+            hess_Lag[n*N_a : n*N, n*N + N_a**2 :] = -jacob_restr_b.T
+            jacob_restr_b = jacob_restr_b.T @ np.reshape(self.energies_beta, (N_b**2,), 'F')
+            grad_Lag[n*N_a : n*N] = grad_energy_b - jacob_restr_b
+            grad_Lag[n*N + N_a**2:] = 0.5*np.reshape(aux_b @ C_b - np.eye(N_b), (N_b**2,) , 'F')
+
         self.grad_norm = linalg.norm(grad_Lag[:n*N])
         self.norm_restriction = linalg.norm(grad_Lag[n*N:])
 

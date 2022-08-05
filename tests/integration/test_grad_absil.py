@@ -5,44 +5,44 @@ from hartree_fock import optimiser
 from molecular_geometry.molecular_geometry import MolecularGeometry
 
 
-def _check_gradient(X, Y, h, g, t):
-    n, N_a = X.shape
-    _, N_b = Y.shape
-    M = np.zeros((n, N_a + N_b))
+def build_numeric_gradient(C_a, C_b, h, g, t):
+    n, N_a = C_a.shape
+    _, N_b = C_b.shape
+    numeric_grad = np.zeros((n, N_a + N_b))
 
-    yyt = Y @ Y.T
+    P_b = C_b @ C_b.T
     for i in range(n):
         for j in range(N_a):
-            X[i, j] += t
-            xxt = X @ X.T
-            fock_a = build_fock(xxt, yyt, h, g)
-            fock_b = build_fock(yyt, xxt, h, g)
-            energyp = 0.5 * ((xxt + yyt)*h + xxt*fock_a + yyt*fock_b).sum()
-            X[i, j] -= 2 * t
-            xxt = X @ X.T
-            fock_a = build_fock(xxt, yyt, h, g)
-            fock_b = build_fock(yyt, xxt, h, g)
-            energym = 0.5 * ((xxt + yyt)*h + xxt*fock_a + yyt*fock_b).sum()
-            M[i, j] = (energyp - energym) / (2 * t)
-            X[i, j] += t
+            C_a[i, j] += t
+            P_a = C_a @ C_a.T
+            fock_a = build_fock(P_a, P_b, h, g)
+            fock_b = build_fock(P_b, P_a, h, g)
+            energyp = 0.5 * ((P_a + P_b)*h + P_a*fock_a + P_b*fock_b).sum()
+            C_a[i, j] -= 2 * t
+            P_a = C_a @ C_a.T
+            fock_a = build_fock(P_a, P_b, h, g)
+            fock_b = build_fock(P_b, P_a, h, g)
+            energym = 0.5 * ((P_a + P_b)*h + P_a*fock_a + P_b*fock_b).sum()
+            numeric_grad[i, j] = (energyp - energym) / (2 * t)
+            C_a[i, j] += t
 
-    xxt = X @ X.T
+    P_a = C_a @ C_a.T
     for i in range(n):
         for j in range(N_b):
-            Y[i, j] += t
-            yyt = Y @ Y.T
-            fock_a = build_fock(xxt, yyt, h, g)
-            fock_b = build_fock(yyt, xxt, h, g)
-            energyp = 0.5 * ((xxt + yyt)*h + xxt*fock_a + yyt*fock_b).sum()
-            Y[i, j] -= 2 * t
-            yyt = Y @ Y.T
-            fock_a = build_fock(xxt, yyt, h, g)
-            fock_b = build_fock(yyt, xxt, h, g)
-            energym = 0.5 * ((xxt + yyt)*h + xxt*fock_a + yyt*fock_b).sum()
-            M[i, N_a+j] = (energyp - energym) / (2 * t)
-            Y[i, j] += t
+            C_b[i, j] += t
+            P_b = C_b @ C_b.T
+            fock_a = build_fock(P_a, P_b, h, g)
+            fock_b = build_fock(P_b, P_a, h, g)
+            energyp = 0.5 * ((P_a + P_b)*h + P_a*fock_a + P_b*fock_b).sum()
+            C_b[i, j] -= 2 * t
+            P_b = C_b @ C_b.T
+            fock_a = build_fock(P_a, P_b, h, g)
+            fock_b = build_fock(P_b, P_a, h, g)
+            energym = 0.5 * ((P_a + P_b)*h + P_a*fock_a + P_b*fock_b).sum()
+            numeric_grad[i, N_a+j] = (energyp - energym) / (2 * t)
+            C_b[i, j] += t
 
-    return M
+    return numeric_grad
 
 def build_fock(Ps, Pt, h, g):
     """Compute Fock matrix.
@@ -60,8 +60,8 @@ def build_fock(Ps, Pt, h, g):
 
     return Fock
 
-def grad_fock(W, F, Ps, g):
-    grad = 2 * (F @ W)
+def grad_fock(C, fock, Ps, g):
+    grad = 2 * (fock @ C)
     return grad
 
 
@@ -71,10 +71,10 @@ class GradientTestFock(unittest.TestCase):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test_H2_ccpvdz(self):
-        X = np.load(tests.get_references('Orb__H2__5__ccpvdz.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__H2__5__ccpvdz.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('H2', '5'))
@@ -82,19 +82,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_H2O_631g(self):
-        X = np.load(tests.get_references('Orb__H2O__Req__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__H2O__Req__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('H2O', 'Req'))
@@ -102,19 +101,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Be_631g(self):
-        X = np.load(tests.get_references('Orb__Be__at__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__Be__at__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Be', 'at'))
@@ -122,22 +120,21 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Be_631g_ms22(self):
-        X = np.load(tests.get_references('Orb_alpha__Be__at__631g__2ms2.npy'))
-        Y = np.load(tests.get_references('Orb_beta__Be__at__631g__2ms2.npy'))
-        n, N_a = X.shape
-        n, N_b = Y.shape
-        xxt = X @ X.T
-        yyt = Y @ Y.T
-        grad = np.zeros((n, N_a + N_b))
+        C_a = np.load(tests.get_references('Orb_alpha__Be__at__631g__2ms2.npy'))
+        C_b = np.load(tests.get_references('Orb_beta__Be__at__631g__2ms2.npy'))
+        n, N_a = C_a.shape
+        n, N_b = C_b.shape
+        P_a = C_a @ C_a.T
+        P_b = C_b @ C_b.T
+        grad = np.empty((n, N_a + N_b))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Be', 'at'))
@@ -145,23 +142,22 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock_a = build_fock(xxt, yyt, h, g)
-        fock_b = build_fock(yyt, xxt, h, g)
-        grad[:, :N_a] = grad_fock(X, fock_a, xxt, g)
-        grad[:, N_a:] = grad_fock(Y, fock_b, yyt, g)
-        numeric_grad = _check_gradient(X, Y, h, g, 0.001)
-        zeros = np.zeros((n, N_a + N_b))
+        fock_a = build_fock(P_a, P_b, h, g)
+        fock_b = build_fock(P_b, P_a, h, g)
+        grad[:, :N_a] = grad_fock(C_a, fock_a, P_a, g)
+        grad[:, N_a:] = grad_fock(C_b, fock_b, P_b, g)
+        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Be_631g_ms2m2(self):
-        X = np.load(tests.get_references('Orb_alpha__Be__at__631g__2msm2.npy'))
-        Y = np.load(tests.get_references('Orb_beta__Be__at__631g__2msm2.npy'))
-        n, N_a = X.shape
-        n, N_b = Y.shape
-        xxt = X @ X.T
-        yyt = Y @ Y.T
-        grad = np.zeros((n, N_a + N_b))
+        C_a = np.load(tests.get_references('Orb_alpha__Be__at__631g__2msm2.npy'))
+        C_b = np.load(tests.get_references('Orb_beta__Be__at__631g__2msm2.npy'))
+        n, N_a = C_a.shape
+        n, N_b = C_b.shape
+        P_a = C_a @ C_a.T
+        P_b = C_b @ C_b.T
+        grad = np.empty((n, N_a + N_b))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Be', 'at'))
@@ -169,23 +165,22 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock_a = build_fock(xxt, yyt, h, g)
-        fock_b = build_fock(yyt, xxt, h, g)
-        grad[:, :N_a] = grad_fock(X, fock_a, xxt, g)
-        grad[:, N_a:] = grad_fock(Y, fock_b, yyt, g)
-        numeric_grad = _check_gradient(X, Y, h, g, 0.001)
-        zeros = np.zeros((n, N_a + N_b))
+        fock_a = build_fock(P_a, P_b, h, g)
+        fock_b = build_fock(P_b, P_a, h, g)
+        grad[:, :N_a] = grad_fock(C_a, fock_a, P_a, g)
+        grad[:, N_a:] = grad_fock(C_b, fock_b, P_b, g)
+        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Be_631g_ms24(self):
-        X = np.load(tests.get_references('Orb_alpha__Be__at__631g__2ms4.npy'))
-        Y = np.load(tests.get_references('Orb_beta__Be__at__631g__2ms4.npy'))
-        n, N_a = X.shape
-        n, N_b = Y.shape
-        xxt = X @ X.T
-        yyt = Y @ Y.T
-        grad = np.zeros((n, N_a + N_b))
+        C_a = np.load(tests.get_references('Orb_alpha__Be__at__631g__2ms4.npy'))
+        C_b = np.load(tests.get_references('Orb_beta__Be__at__631g__2ms4.npy'))
+        n, N_a = C_a.shape
+        n, N_b = C_b.shape
+        P_a = C_a @ C_a.T
+        P_b = C_b @ C_b.T
+        grad = np.empty((n, N_a + N_b))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Be', 'at'))
@@ -193,23 +188,22 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock_a = build_fock(xxt, yyt, h, g)
-        fock_b = build_fock(yyt, xxt, h, g)
-        grad[:, :N_a] = grad_fock(X, fock_a, xxt, g)
-        grad[:, N_a:] = grad_fock(Y, fock_b, yyt, g)
-        numeric_grad = _check_gradient(X, Y, h, g, 0.001)
-        zeros = np.zeros((n, N_a + N_b))
+        fock_a = build_fock(P_a, P_b, h, g)
+        fock_b = build_fock(P_b, P_a, h, g)
+        grad[:, :N_a] = grad_fock(C_a, fock_a, P_a, g)
+        grad[:, N_a:] = grad_fock(C_b, fock_b, P_b, g)
+        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Be_631g_ms2m4(self):
-        X = np.load(tests.get_references('Orb_alpha__Be__at__631g__2msm4.npy'))
-        Y = np.load(tests.get_references('Orb_beta__Be__at__631g__2msm4.npy'))
-        n, N_a = X.shape
-        n, N_b = Y.shape
-        xxt = X @ X.T
-        yyt = Y @ Y.T
-        grad = np.zeros((n, N_a + N_b))
+        C_a = np.load(tests.get_references('Orb_alpha__Be__at__631g__2msm4.npy'))
+        C_b = np.load(tests.get_references('Orb_beta__Be__at__631g__2msm4.npy'))
+        n, N_a = C_a.shape
+        n, N_b = C_b.shape
+        P_a = C_a @ C_a.T
+        P_b = C_b @ C_b.T
+        grad = np.empty((n, N_a + N_b))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Be', 'at'))
@@ -217,20 +211,19 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock_a = build_fock(xxt, yyt, h, g)
-        fock_b = build_fock(yyt, xxt, h, g)
-        grad[:, :N_a] = grad_fock(X, fock_a, xxt, g)
-        grad[:, N_a:] = grad_fock(Y, fock_b, yyt, g)
-        numeric_grad = _check_gradient(X, Y, h, g, 0.001)
-        zeros = np.zeros((n, N_a + N_b))
+        fock_a = build_fock(P_a, P_b, h, g)
+        fock_b = build_fock(P_b, P_a, h, g)
+        grad[:, :N_a] = grad_fock(C_a, fock_a, P_a, g)
+        grad[:, N_a:] = grad_fock(C_b, fock_b, P_b, g)
+        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_He2_631g(self):
-        X = np.load(tests.get_references('Orb__He2__1.5__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__He2__1.5__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('He2', '1.5'))
@@ -238,19 +231,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_He2_ccpvdz(self):
-        X = np.load(tests.get_references('Orb__He2__1.5__ccpvdz.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__He2__1.5__ccpvdz.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('He2', '1.5'))
@@ -258,19 +250,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_He8_631g(self):
-        X = np.load(tests.get_references('Orb__He8_cage__1.5__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__He8_cage__1.5__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('He8_cage', '1.5'))
@@ -278,19 +269,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_Li2_631g(self):
-        X = np.load(tests.get_references('Orb__Li2__5__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__Li2__5__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('Li2', '5'))
@@ -298,19 +288,18 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
 
     def test_N2_631g(self):
-        X = np.load(tests.get_references('Orb__N2__3__631g.npy'))
-        n, N = X.shape
-        xxt = X @ X.T
-        grad = np.zeros((n, 2*N))
+        C = np.load(tests.get_references('Orb__N2__3__631g.npy'))
+        n, N = C.shape
+        P = C @ C.T
+        grad = np.empty((n, 2*N))
 
         molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file('N2', '3'))
@@ -318,10 +307,9 @@ class GradientTestFock(unittest.TestCase):
 
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(xxt, xxt, h, g)
-        grad[:, :N] = grad_fock(X, fock, xxt, g)
-        grad[:, N:] = grad_fock(X, fock, xxt, g)
-        numeric_grad = _check_gradient(X, X, h, g, 0.001)
-        zeros = np.zeros((n, 2*N))
+        fock = build_fock(P, P, h, g)
+        grad[:, :N] = grad_fock(C, fock, P, g)
+        grad[:, N:] = grad_fock(C, fock, P, g)
+        numeric_grad = build_numeric_gradient(C, C, h, g, 0.001)
 
-        self.assertEqual(zeros, grad - numeric_grad)
+        self.assertEqual(grad, numeric_grad)
