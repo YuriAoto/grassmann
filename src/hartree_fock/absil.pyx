@@ -280,7 +280,6 @@ cdef int getindex(int i, int j, int k, int l):
 
     return ijkl
 
-
 def energy(double[:, :] C_a, double[:, :] C_b,
            double[:, :] xxt, double[:, :] yyt,
            double[:, :] h, double[:] g):
@@ -330,7 +329,6 @@ def energy(double[:, :] C_a, double[:, :] C_b,
 
     return one_elec + two_elec, one_elec, two_elec
 
-
 def grad_one(double[:, :] C_a, double[:, :] C_b, double[:, :] h):
     """Compute the one-electron gradient.
 
@@ -365,7 +363,6 @@ def grad_one(double[:, :] C_a, double[:, :] C_b, double[:, :] h):
     grad[:, N_a:] = np.array(h) @ np.array(C_b)
 
     return np.array(grad)
-
 
 def aux_grad_two(double[:, :] W, double[:, :] wwt,
                  double[:, :] zzt, double[:] g):
@@ -407,7 +404,6 @@ def aux_grad_two(double[:, :] W, double[:, :] wwt,
 
     return grad
 
-
 def gradtwo(double[:, :] C_a, double[:, :] C_b,
             double[:, :] xxt, double[:, :] yyt,
             double[:] g):
@@ -445,7 +441,6 @@ def gradtwo(double[:, :] C_a, double[:, :] C_b,
     grad[:, N_a:] = aux_grad_two(N_b, n, C_b, yyt, xxt, g)
 
     return np.array(grad)
-
 
 def gradient_three(double[:, :] W, double[:, :] Z,
                    double[:, :] wwt, double[:, :] zzt,
@@ -497,7 +492,6 @@ def gradient_three(double[:, :] W, double[:, :] Z,
 
     return np.array(grad)
 
-
 def gradient(double[:, :] W, double[:, :] Z,
              double[:, :] wwt, double[:, :] zzt,
              double[:, :] h, double[:] g):
@@ -546,6 +540,7 @@ def gradient(double[:, :] W, double[:, :] Z,
                                           - g[getindex(p, s, q, a)]))
 
     return np.array(grad)
+
 def grad_fock_three(double[:,:] W, double[:,:] F, double[:,:] wwt, double[:] g):
     cdef double[:,:] grad = 2 * (np.array(F) @ np.array(W))
     cdef int i, j, k, n = W.shape[0], N = W.shape[1]
@@ -560,7 +555,6 @@ def grad_fock_three(double[:,:] W, double[:,:] F, double[:,:] wwt, double[:] g):
                                          - g[getindex(a, j, k, i)]))
 
     return np.array(grad)
-
 
 def grad_fock(double[:,:] W, double[:,:] F, double[:,:] wwt, double[:, :, :] g):
     cdef double[:,:] grad = 2 * (np.array(F) @ np.array(W))
@@ -577,9 +571,6 @@ def grad_fock(double[:,:] W, double[:,:] F, double[:,:] wwt, double[:, :, :] g):
                                               - g[L, a, j] * g[L, k, i]))
 
     return np.array(grad)
-
-
-
 
 def g_eta(double[:, :] W, double[:, :] wwt, double[:, :] zzt,
           double[:, :] etaW, double[:, :] etaWwt, double[:, :] etaZzt,
@@ -726,9 +717,6 @@ def directional_derivative(double[:, :] C_a, double[:, :] C_b,
 
     return D
 
-
-
-
 def verifica_g_eta(double[:, :] W, double[:, :] Z, double[:, :] etaW,
                    double[:, :] etaZ, double[:, :] g_eta, double[:, :] h,
                    double[:] g, double t):
@@ -742,5 +730,5 @@ def verifica_g_eta(double[:, :] W, double[:, :] Z, double[:, :] etaW,
     tmpZ -= 2 * t * np.array(etaZ)
     ini -= gradient(tmpW, tmpZ, tmpW @ tmpW.T, tmpZ @ tmpZ.T, h, g)
     ini /= 2 * t
-    
+
     return ini - g_eta

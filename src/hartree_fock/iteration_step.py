@@ -494,8 +494,7 @@ class HartreeFockStep():
         self.calc_density_matrix()
 
         with logtime('computing common blocks'):
-            self.blocks = absil.common_blocks(C_a,
-                                              C_b,
+            self.blocks = absil.common_blocks(C_a, C_b,
                                               self.P_a[:, :, self.i_DIIS],
                                               self.P_b[:, :, self.i_DIIS],
                                               g)
@@ -542,15 +541,20 @@ class HartreeFockStep():
         if N_a:
             hess_Lag[n*N : n*N + N_a**2, : n*N_a] = jacob_restr_a
             hess_Lag[: n*N_a, n*N : n*N + N_a**2] = -jacob_restr_a.T
-            jacob_restr_a = jacob_restr_a.T @ np.reshape(self.energies, (N_a**2,), 'F')
+            jacob_restr_a = jacob_restr_a.T @ np.reshape(self.energies,
+                                                         (N_a**2,), 'F')
             grad_Lag[: n*N_a] = grad_energy_a - jacob_restr_a
-            grad_Lag[n*N : n*N + N_a**2] = 0.5*np.reshape(aux_a @ C_a - np.eye(N_a), (N_a**2,), 'F')
+            grad_Lag[n*N : n*N + N_a**2] = 0.5*np.reshape(aux_a @ C_a
+                                                          - np.eye(N_a),
+                                                          (N_a**2,), 'F')
         if N_b:
             hess_Lag[n*N + N_a**2 :, n*N_a : n*N] = jacob_restr_b
             hess_Lag[n*N_a : n*N, n*N + N_a**2 :] = -jacob_restr_b.T
-            jacob_restr_b = jacob_restr_b.T @ np.reshape(self.energies_beta, (N_b**2,), 'F')
+            jacob_restr_b = jacob_restr_b.T @ np.reshape(self.energies_beta,
+                                                         (N_b**2,), 'F')
             grad_Lag[n*N_a : n*N] = grad_energy_b - jacob_restr_b
-            grad_Lag[n*N + N_a**2:] = 0.5*np.reshape(aux_b @ C_b - np.eye(N_b), (N_b**2,) , 'F')
+            grad_Lag[n*N + N_a**2:] = 0.5*np.reshape(aux_b @ C_b - np.eye(N_b),
+                                                     (N_b**2,) , 'F')
 
         self.grad_norm = linalg.norm(grad_Lag[:n*N])
         self.norm_restriction = linalg.norm(grad_Lag[n*N:])
