@@ -15,7 +15,6 @@ from input_output.log import logtime
 from . import util
 from . import absil
 from . import absilnp
-from . import lagrange
 
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
