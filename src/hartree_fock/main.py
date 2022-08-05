@@ -49,17 +49,18 @@ def main(args, f_out):
     else:
         ini_orb = None
 
-    HF = optimiser.hartree_fock(molecular_system.integrals,
-				molecular_system.nucl_rep,
-				molecular_system.n_elec,
-                                ms2=args.ms2,
-                                restricted=args.restricted,
-                                max_iter=args.max_iter,
-                                grad_thresh=1E-08,
-    				f_out=f_out,
-				n_DIIS=args.diis,
-                                HF_step_type=_define_hfstep_func(args.step_type),
-                                ini_orb=ini_orb)
-
+    with logtime('Hartree-Fock optimisation') as T:
+        HF = optimiser.hartree_fock(molecular_system.integrals,
+                                    molecular_system.nucl_rep,
+                                    molecular_system.n_elec,
+                                    ms2=args.ms2,
+                                    restricted=args.restricted,
+                                    max_iter=args.max_iter,
+                                    grad_thresh=1E-08,
+                                    f_out=f_out,
+                                    n_DIIS=args.diis,
+                                    HF_step_type=_define_hfstep_func(args.step_type),
+                                    ini_orb=ini_orb)
+    HF.totaltime = T.end_time - T.ini_time
     f_out.write(str(HF))
     return HF
