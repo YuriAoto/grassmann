@@ -4,6 +4,7 @@
 """
 import re
 from collections import namedtuple
+from tempfile import NamedTemporaryFile
 
 from ase_dataset import g2_1, g2_2
 
@@ -43,9 +44,8 @@ def _make_geom_file(positions, symbols):
     'OHH'
     
     """
-    fname = f'{symbols}_fromdataset.xyz'
-    with open(fname, 'w') as f:
+    with NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(f'{len(positions)}\nFrom the data set: symbols\n')
         for at, symb in zip(positions, re.findall('[A-Z][a-z]*', symbols)):
             f.write(f'{symb} {at[0]} {at[1]} {at[2]}\n')
-    return fname
+    return f.name

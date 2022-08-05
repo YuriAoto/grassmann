@@ -31,8 +31,7 @@ all_cython_files = ["src/integrals/integrals_cy",
                     "src/orbitals/orbital_space",
                     "src/util/array_indices",
                     "src/coupled_cluster/cluster_decomposition",
-                    "src/hartree_fock/absil",
-                    "src/hartree_fock/lagrange"]
+                    "src/hartree_fock/absil"]
 
 
 extensions = []
