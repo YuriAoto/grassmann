@@ -46,7 +46,7 @@ def _basis_filename(basis, wmme_dir):
     + -> pl
     * -> st
     ( -> lbr
-    ) -> lrbr
+    ) -> rbr
     
     """
     replaced_name = (basis.
@@ -171,6 +171,10 @@ def _from_molpro_to_wmme(basis):
         else:
             line = line[:comment_pos]
         lspl = list(map(lambda x: x.strip(), line.split(',')))
+        if line == 'spherical':
+            # This Molpro keyword enforces spherical basis functions and
+            # are in the basis set pulled from basissetexchange.
+            continue
         if not line or 'basis={' == line:
             continue
         if lspl[0] == 'c':
@@ -272,8 +276,8 @@ def _fetch_from_basis_set_exchange(basis, atoms):
     
     Return:
     -------
-    A list of tuples:
-    Each element of this list is the following tuple:
+    A list of the namedtuples BasisInfo:
+    Each element of this list is the following:
     (basis, atomic number, basis set information)
     
     Raise:
@@ -349,9 +353,9 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
                 basis)
         newb = []
         for at in b:
-            newb.append(BasisInfo(name=at[0],
-                                  atom=at[1],
-                                  basis=_from_molpro_to_wmme(at[2])))
+            newb.append(BasisInfo(name=at.name,
+                                  atom=at.atom,
+                                  basis=_from_molpro_to_wmme(at.basis)))
         _write_basis(newb, wmme_dir)
     return file_name
 
