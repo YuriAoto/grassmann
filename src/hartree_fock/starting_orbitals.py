@@ -53,9 +53,9 @@ def initial_orbitals(ini_orb, molecular_system, restricted):
                                            restricted,
                                            molecular_system.integrals)
     logger.info(f'{logmsg}: from file {ini_orb}')
-    orb = orbitals.MolecularOrbitals.from_file(ini_orb)
+    orb = MolecularOrbitals.from_file(ini_orb)
     if not args.restricted:
-        orb = orbitals.MolecularOrbitals.unrestrict(orb)
+        orb = MolecularOrbitals.unrestrict(orb)
     if orb.restricted and not restricted:
         raise ValueError('Initial orbitals should be of unrestricted type.')
     orb.orthogonalise(X=molecular_system.integrals.X)

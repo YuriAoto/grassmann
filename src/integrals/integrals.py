@@ -592,7 +592,14 @@ class Two_Elec_Int():
         self._format = 'ijkl'
         self._integrals = g_in_new_format
 
-        
+    def transform_to_4D(self):
+        """Transform integrals to a 4D format"""
+        n = self.n_func
+        g_in_new_format = np.einsum('Fij,Fkl->ijkl',
+                                    self._integrals,
+                                    self._integrals)
+        self._format = '4D'
+        self._integrals = g_in_new_format
 
 
 #####OLD#####
