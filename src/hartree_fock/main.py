@@ -58,9 +58,16 @@ def _define_hfstep_func(hf_step):
 def main(args, f_out):
     """Main function for Hartree-Fock"""
     molecular_system = MolecularGeometry.from_xyz_file(args.geometry)
-    with logtime('Calculate integrals'):
+    with logtime('Setting integrals'):
         molecular_system.calculate_integrals(args.basis, int_meth='ir-wmme')
-
+    diis_info = optimiser.DiisInfo(n=args.diis,
+                                   at_F=args.diis_at_F,
+                                   at_P=args.diis_at_P)
+    if args.grad_type is None:
+        grad_type = 'F_occ_virt' if args.diis_at_P else 'F_asym'
+    else:
+        grad_type = args.grad_type
+    
     with logtime('Hartree-Fock optimisation') as T:
         HF = optimiser.hartree_fock(molecular_system.integrals,
                                     molecular_system.nucl_rep,
@@ -68,9 +75,10 @@ def main(args, f_out):
                                     ms2=args.ms2,
                                     restricted=args.restricted,
                                     max_iter=args.max_iter,
-                                    grad_thresh=1E-06,
+                                    grad_thresh=1E-08,
+                                    grad_type=grad_type,
                                     f_out=f_out,
-                                    n_DIIS=args.diis,
+                                    diis_info=diis_info,
                                     HF_step_type=_define_hfstep_func(args.step_type),
                                     ini_orb=starting_orbitals.initial_orbitals(args.ini_orb,
                                                                                molecular_system,

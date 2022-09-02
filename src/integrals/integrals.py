@@ -17,6 +17,7 @@ import numpy as np
 from scipy import linalg
 
 from input_output.parser import ParseError
+from input_output.log import logtime
 import integrals.integrals_cy
 from molecular_geometry.periodic_table import ATOMS_NAME, ATOMS
 
@@ -46,7 +47,7 @@ def _basis_filename(basis, wmme_dir):
     + -> pl
     * -> st
     ( -> lbr
-    ) -> lrbr
+    ) -> rbr
     
     """
     replaced_name = (basis.
@@ -171,6 +172,10 @@ def _from_molpro_to_wmme(basis):
         else:
             line = line[:comment_pos]
         lspl = list(map(lambda x: x.strip(), line.split(',')))
+        if line == 'spherical':
+            # This Molpro keyword enforces spherical basis functions and
+            # are in the basis set pulled from basissetexchange.
+            continue
         if not line or 'basis={' == line:
             continue
         if lspl[0] == 'c':
@@ -272,8 +277,8 @@ def _fetch_from_basis_set_exchange(basis, atoms):
     
     Return:
     -------
-    A list of tuples:
-    Each element of this list is the following tuple:
+    A list of the namedtuples BasisInfo:
+    Each element of this list is the following:
     (basis, atomic number, basis set information)
     
     Raise:
@@ -349,9 +354,9 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
                 basis)
         newb = []
         for at in b:
-            newb.append(BasisInfo(name=at[0],
-                                  atom=at[1],
-                                  basis=_from_molpro_to_wmme(at[2])))
+            newb.append(BasisInfo(name=at.name,
+                                  atom=at.atom,
+                                  basis=_from_molpro_to_wmme(at.basis)))
         _write_basis(newb, wmme_dir)
     return file_name
 
@@ -456,7 +461,8 @@ class Integrals():
                     format(at.element, at.coord[0], at.coord[1], at.coord[2]))
         f.close()
         try:
-            Output = check_output(cmd, shell=False)
+            with logtime('Calculating integrals (call to IR-WMME)'):
+                Output = check_output(cmd, shell=False)
             if (version_info) >= (3, 0):
                 Output = Output.decode("utf-8")
         except CalledProcessError as e:
@@ -588,7 +594,14 @@ class Two_Elec_Int():
         self._format = 'ijkl'
         self._integrals = g_in_new_format
 
-        
+    def transform_to_4D(self):
+        """Transform integrals to a 4D format"""
+        n = self.n_func
+        g_in_new_format = np.einsum('Fij,Fkl->ijkl',
+                                    self._integrals,
+                                    self._integrals)
+        self._format = '4D'
+        self._integrals = g_in_new_format
 
 
 #####OLD#####

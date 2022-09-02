@@ -3,6 +3,7 @@
 """
 import sys
 import logging
+from collections import namedtuple
 
 import numpy as np
 
@@ -29,6 +30,10 @@ def _check_nelec_ms(n_elec, restricted, ms2):
     return restricted, ms2
 
 
+DiisInfo = namedtuple('DiisInfo',
+                      ['n', 'at_F', 'at_P'])
+
+
 def hartree_fock(integrals,
 		 nucl_rep,
 		 n_elec,
@@ -37,8 +42,9 @@ def hartree_fock(integrals,
                  restricted=None,
                  max_iter=20,
                  grad_thresh=1.0E-5,
+                 grad_type='F_occ_virt',
+                 diis_info=None,
                  f_out=sys.stdout,
-                 n_DIIS=0,
                  HF_step_type=lambda **x: "RH-SCF"):
     """A general Hartree-Fock procedure
 
@@ -68,14 +74,18 @@ def hartree_fock(integrals,
     
     grad_thresh (float, optional, default=1.0E-5)
 	Threshold for the norn of the gradient
+
+    grad_type (str, optional, default='F_occ_virt')
+        Gradient type for SCF. Possible valies are:
+            'F_occ_virt' - occupied-virtual block of Fock matrix
+            'F_asym' - anti-symmetric part of generalized Fock matrix
+    
+    diis_info (int, optional, default=None)
+        Information regarding Diis
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
         If None the iterations are not printed.
-    
-    n_DIIS (int, optional, default=0)
-        maximum diminsion of the iterative subspace in DIIS
-        0 means that DIIS is not used
     
     HF_step_type (callable, optional, default=lambda **x:"RH-SCF")
         A callable that receives the following arguments:
@@ -95,14 +105,17 @@ def hartree_fock(integrals,
     hf_step.N_a = (n_elec + ms2) // 2
     hf_step.N_b = (n_elec - ms2) // 2
     hf_step.n_occ = n_elec
-    hf_step.n_DIIS = n_DIIS
+    hf_step.diis_info = (DiisInfo(n=0, at_F=False, at_P=False)
+                         if diis_info is None else
+                         diis_info)
+    hf_step.grad_type = grad_type
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'
-                'n DIIS: %d\n',
+                'DIIS: %s\n',
                 nucl_rep,
                 n_elec,
-                hf_step.n_DIIS)
+                hf_step.diis_info)
     if restricted:
         logger.info('Number of occupied orbitals: %d', hf_step.N_a)
     else:
@@ -169,7 +182,11 @@ def hartree_fock(integrals,
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
     res.orbitals = hf_step.orb
-    res.density = hf_step.P_a[:, :, hf_step.i_DIIS], hf_step.P_b[:, :, hf_step.i_DIIS]
+    logger.debug('Final orbitals:\n%s', res.orbitals)
+    if restricted:
+        res.density = hf_step.P_a
+    else:
+        res.density = hf_step.P_a, hf_step.P_b
     res.success = converged
     res.n_iter = i_SCF
     if hf_step.large_cond_number:
