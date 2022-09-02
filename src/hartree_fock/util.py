@@ -80,7 +80,7 @@ def calculate_DIIS(Dmat, grad, cur_n_DIIS, i_DIIS):
 
 
 def geodesic(C, eta, S, Sqrt, invSqrt, t=1):
-    """Calculates the geodesic at the Grassmannian
+    """Computes the geodesic of the Grassmannian
     
     
     Parameters:
@@ -109,8 +109,7 @@ def geodesic(C, eta, S, Sqrt, invSqrt, t=1):
     Returns:
     --------
     A np.array of shape (n, N), with the orbital coefficients
-    
-    
+
     """
     u, s, v = svd(invSqrt @ eta, full_matrices=False)
     sin, cos = np.diag(np.sin(t*s)), np.diag(np.cos(t*s))

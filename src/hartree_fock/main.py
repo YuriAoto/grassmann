@@ -29,6 +29,9 @@ def _define_hfstep_func(hf_step):
     if hf_step == 'gradient':
         return lambda i_SCF=None, grad_norm=None: 'gradient'
 
+    if hf_step == 'gradient-lagrange':
+        return lambda i_SCF=None, grad_norm=None: 'gradient-lagrange'
+
     rematch = re.match('SCF-Absil_n(\d+)', hf_step)
     if rematch:
         n = int(rematch.group(1))
@@ -65,14 +68,14 @@ def main(args, f_out):
                                     ms2=args.ms2,
                                     restricted=args.restricted,
                                     max_iter=args.max_iter,
-                                    grad_thresh=1E-08,
+                                    grad_thresh=1E-06,
                                     f_out=f_out,
                                     n_DIIS=args.diis,
                                     HF_step_type=_define_hfstep_func(args.step_type),
                                     ini_orb=starting_orbitals.initial_orbitals(args.ini_orb,
                                                                                molecular_system,
                                                                                args.restricted)
-        )
+                                    )
     HF.totaltime = T.end_time - T.ini_time
     if f_out is not None: f_out.write(str(HF))
     return HF

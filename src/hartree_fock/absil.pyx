@@ -125,6 +125,25 @@ def mixed_spin(double[:, :, :] GC_a, double[:, :, :] GC_b):
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
+def mixed_spin_2(double[:, :, :] GC_a, double[:, :] C_b, double[:, :, :] g):
+    """Construct the whole mixed spin part of the hessian."""
+    cdef int a, b, i, j, L, T = g.shape[0]
+    cdef int N_a = GC_a.shape[2], N_b = C_b.shape[1], n = C_b.shape[0]
+    cdef double[:, :] M = np.zeros((n*N_b, n*N_a))
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(N_b):
+                for a in range(n):
+                    for b in range(N_a):
+                        for q in range(n):
+                            M[i + j*n, a + b*n] += (GC_a[L, a, b]*C_b[q, j]
+                                                    *(g[L, i, q] + g[L, q, i]))
+
+    return M
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
 def non_diag_blocks(double[:, :] C, double[:, :, :] GC,
                     double[:, :, :] GCC, double[:, :, :] g,
                     int b, int j):
@@ -172,7 +191,9 @@ def hessian(double[:, :] C_a, double[:, :] C_b,
     hess = np.empty((n*N, n*N))
 
     # computational cost: N_a * N_b * n^2 * L
-    hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
+    # hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
+    # hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
+    hess[n*N_a :, : n*N_a] = mixed_spin_2(GC_a, C_b, g)
     hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
 
     # computational cost: N_a * n^2 * L

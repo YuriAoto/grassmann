@@ -114,23 +114,23 @@ def hartree_fock(integrals,
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
     assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
     hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=hf_step.grad_norm))
-    
+
     if f_out is not None:
         f_out.write(util.write_header)
-        
+
     for i_SCF in range(max_iter):
         step_type = HF_step_type(i_SCF=i_SCF, grad_norm=hf_step.grad_norm)
         logger.info('Starting HF iteration %d', i_SCF)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
                 hf_step.roothan_hall(i_SCF)
-                
+
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
-                
+
             elif step_type == 'Absil':
                 hf_step.newton_absil(i_SCF)
-                
+
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
 
@@ -139,6 +139,9 @@ def hartree_fock(integrals,
 
             elif step_type == 'gradient':
                 hf_step.gradient_descent(i_SCF)
+
+            elif step_type == 'gradient-lagrange':
+                hf_step.gradient_descent_lagrange(i_SCF)            
 
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
@@ -155,11 +158,12 @@ def hartree_fock(integrals,
                              step_type,
                              T.elapsed_time))
             f_out.flush()
-            
+
         if hf_step.grad_norm < grad_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
+
     hf_step.calc_density_matrix()
     hf_step.orb.name = 'RHF' if restricted else 'UHF'
     res = OptResults(kind_of_calc)
@@ -178,7 +182,7 @@ def hartree_fock(integrals,
             res.warning += f'{hf_step.large_cond_number[0]}, ..., {hf_step.large_cond_number[-1]}'
             res.warning += \
                 '\n          (look for "Large conditioning number" at the log file)'
-            
+
     if not converged:
         logger.info('End of Hartree-Fock calculation')
     return res
