@@ -17,6 +17,7 @@ import numpy as np
 from scipy import linalg
 
 from input_output.parser import ParseError
+from input_output.log import logtime
 import integrals.integrals_cy
 from molecular_geometry.periodic_table import ATOMS_NAME, ATOMS
 
@@ -460,7 +461,8 @@ class Integrals():
                     format(at.element, at.coord[0], at.coord[1], at.coord[2]))
         f.close()
         try:
-            Output = check_output(cmd, shell=False)
+            with logtime('Calculating integrals (call to IR-WMME)'):
+                Output = check_output(cmd, shell=False)
             if (version_info) >= (3, 0):
                 Output = Output.decode("utf-8")
         except CalledProcessError as e:

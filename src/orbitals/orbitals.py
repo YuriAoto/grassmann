@@ -356,16 +356,16 @@ class MolecularOrbitals():
         
         """
         if restricted:
-            P[0] = (P[0] + P[1])/2
+            P = (P[0] + P[1])/2
             Fock_a = np.array(integrals.h)
             tmp = np.einsum('rs,Frs->F',
-                            P[0],
+                            P,
                             integrals.g._integrals)
             Fock_a += np.einsum('F,Fmn->mn',
                                 tmp,
                                 integrals.g._integrals)
             tmp = np.einsum('rs,Fms->Frm',
-                            P[0],
+                            P,
                             integrals.g._integrals)
             Fock_a -= np.einsum('Frm,Frn->mn',
                                 tmp,

@@ -104,11 +104,21 @@ def _parser():
                         ' and <g> the norm of the gradien when the method should'
                         ' change to Absil',
                         default='SCF')
+    parser.add_argument('--grad_type',
+                        help='How the SCF gradient is calculated')
     parser.add_argument('--diis',
                         help='Number of previous iteration steps considered'
                         ' in the Roothaan-Hall Hartree-Fock with DIIS'
                         ' acceleration.',
                         type=int)
+    parser.add_argument('--diis_at_F',
+                        help='Apply DIIS for the Fock matrix in SCF.',
+                        action='store_const',
+                        const=True)
+    parser.add_argument('--diis_at_P',
+                        help='Apply DIIS for the density matrix in SCF.',
+                        action='store_const',
+                        const=True)
     parser.add_argument('--at_ref',
                         help='Do only one iteration at reference.',
                         action='store_true')
@@ -256,8 +266,13 @@ def _check(args):
         raise ParseError('--max_iter is not compatible with --at_ref')
     if args.diis is None:
         args.diis = 0
-    elif args.diis < 0:
-        raise ParseError('--diis can\'t be negative')
+        args.diis_at_F = False
+        args.diis_at_P = False
+    else:
+        if args.diis < 0:
+            raise ParseError('--diis can\'t be negative')
+        if args.diis_at_F is None and args.diis_at_P is None:
+            args.diis_at_F = True
     if args.ini_orb is not None:
         if args.at_ref:
             raise ParseError('--ini_orb is not compatible with --at_ref')

@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 np.set_printoptions(linewidth=250)
+
 class HartreeFockStep():
     """The iteration step in a Hartree-Fock optimisation
     
     """
     def __init__(self):
         self.restricted = None
-        self.n_DIIS = 0
         self.n_occ = 0
         self.N_a = 0
         self.N_b = 0
@@ -35,9 +35,15 @@ class HartreeFockStep():
         self.energy = None
         self.P_a = None
         self.P_b = None
+        self.grad_type = None
+        self.grad_occvirtF = None # Do ew really need both? Unify with grad from other methods
         self.grad = None
+        self.grad_b = None
         self.Fock_a = None
         self.Fock_b = None
+        self.diis_info = None
+        self.diis_a = None
+        self.diis_b = None
         self.one_el_energy = None
         self.two_el_energy = None
         self.grad_norm = 100.0
@@ -48,58 +54,54 @@ class HartreeFockStep():
         self.energies = None
         self.energies_beta = None
 
+    @property
+    def n(self):
+        """The basis set size: the dimension of spatial orbitals space"""
+        return len(self.orb)
+
+    @property
+    def grad_shape(self):
+        """The shape of gradient. It depends on grad_occvirtF"""
+        return ((self.N_a, self.n - self.N_a)
+                if self.grad_occvirtF else
+                (self.n, self.n))
+
+    @property
+    def grad_b_shape(self):
+        """The shape of beta gradient. It depends on grad_occvirtF"""
+        return ((self.N_b, self.n - self.N_b)
+                if self.grad_occvirtF else
+                (self.n, self.n))
+
+    def _init_P(self):
+        self.P_a = np.zeros((self.n, self.n))
+        if not self.restricted:
+            self.P_b = np.zeros((self.n, self.n))
+
     def initialise(self, step_type):
+        """Initialize matrices"""
         if step_type == 'RH-SCF':
-            self.i_DIIS = -1
-            self.grad = np.zeros((self.N_a,
-                                  len(self.orb) - self.N_a,
-                                  max(self.n_DIIS, 1)))
-            self.P_a = np.zeros((len(self.orb),
-                                  len(self.orb),
-                                  max(self.n_DIIS, 1)))
+            self.grad_occvirtF = True if self.grad_type == 'F_occ_virt' else False
+            self.diis_a = util.Diis(self.diis_info.n)
             if not self.restricted:
-                self.grad_beta = np.zeros((self.N_b,
-                                           len(self.orb) - self.N_b,
-                                           max(self.n_DIIS, 1)))
-                self.P_b = np.zeros((len(self.orb),
-                                           len(self.orb),
-                                           max(self.n_DIIS, 1)))
+                self.diis_b = util.Diis(self.diis_info.n)
 
         elif step_type == 'densMat-SCF':
             pass
 
         elif step_type == 'Absil':
-            self.i_DIIS = -1
-            self.P_a = np.zeros((len(self.orb),
-                                 len(self.orb),
-                                 max(self.n_DIIS, 1)))
-            if not self.restricted:
-                self.P_b = np.zeros((len(self.orb),
-                                           len(self.orb),
-                                     max(self.n_DIIS, 1)))
-
+            self._init_P()
+        
         elif step_type == 'orb_rot-Newton':
             pass
+        
         elif step_type == 'gradient':
-            self.i_DIIS = -1
-            self.P_a = np.zeros((len(self.orb),
-                                  len(self.orb),
-                                  max(self.n_DIIS, 1)))
-            if not self.restricted:
-                self.P_b = np.zeros((len(self.orb),
-                                           len(self.orb),
-                                     max(self.n_DIIS, 1)))
+            self._init_P()
 
         elif step_type == 'lagrange':
-            self.i_DIIS = -1
+            self._init_P()
             self.energies = np.diag(self.orb.energies[:self.N_a])
-            self.P_a = np.zeros((len(self.orb),
-                                  len(self.orb),
-                                  max(self.n_DIIS, 1)))
             if not self.restricted:
-                self.P_b = np.zeros((len(self.orb),
-                                     len(self.orb),
-                                     max(self.n_DIIS, 1)))
                 self.energies_beta = np.diag(self.orb.energies_beta[:self.N_b])
 
         else:
@@ -108,36 +110,21 @@ class HartreeFockStep():
 
     def calc_density_matrix(self):
         """Calculate the density matrix (or matrices)
-
+        
         P = C @ C.T
         """
-        self.P_a[:, :, self.i_DIIS] = np.einsum(
-            'pi,qi->pq',
-            self.orb[0][:, :self.N_a],
-            self.orb[0][:, :self.N_a])
+        self.P_a = np.einsum('pi,qi->pq',
+                             self.orb[0][:, :self.N_a],
+                             self.orb[0][:, :self.N_a])
         if self.restricted:
-            self.P_a[:, :, self.i_DIIS] = 2 * self.P_a[:, :, self.i_DIIS]
-            logger.debug('Density matrix:\n%r', self.P_a[:, :, self.i_DIIS])
+            self.P_a = 2 * self.P_a
+            logger.debug('Density matrix:\n%r', self.P_a)
         else:
-            self.P_b[:, :, self.i_DIIS] = np.einsum(
-                'pi,qi->pq',
-                self.orb[1][:, :self.N_b],
-                self.orb[1][:, :self.N_b])
-            logger.debug('Alpha density matrix:\n%r', self.P_a[:, :, self.i_DIIS])
-            logger.debug('Beta density matrix:\n%r', self.P_b[:, :, self.i_DIIS])
-
-    def calc_diis(self, i_SCF):
-        """Calculate DIIS step"""
-        if i_SCF < self.n_DIIS:
-            cur_n_DIIS = i_SCF
-        else:
-            cur_n_DIIS = self.n_DIIS
-        if self.n_DIIS > 0:
-            logger.info('current n DIIS: %d', cur_n_DIIS)
-        if self.n_DIIS > 0 and cur_n_DIIS > 0:
-            util.calculate_DIIS(self.P_a, self.grad, cur_n_DIIS, self.i_DIIS)
-            if not self.restricted:
-                util.calculate_DIIS(self.P_b, self.grad_beta, cur_n_DIIS, self.i_DIIS)
+            self.P_b = np.einsum('pi,qi->pq',
+                                 self.orb[1][:, :self.N_b],
+                                 self.orb[1][:, :self.N_b])
+            logger.debug('Alpha density matrix:\n%r', self.P_a)
+            logger.debug('Beta density matrix:\n%r', self.P_b)
 
     def calc_fock_matrix(self):
         """Calculate the Fock matrix
@@ -150,17 +137,18 @@ class HartreeFockStep():
         if self.restricted:
             self.Fock_a = np.array(self.integrals.h)
             tmp = np.einsum('rs,Frs->F',
-                            self.P_a[:, :, self.i_DIIS],
+                            self.P_a,
                             self.integrals.g._integrals)
             self.Fock_a += np.einsum('F,Fmn->mn',
                                      tmp,
                                      self.integrals.g._integrals)
             tmp = np.einsum('rs,Fms->Frm',
-                            self.P_a[:, :, self.i_DIIS],
+                            self.P_a,
                             self.integrals.g._integrals)
             self.Fock_a -= np.einsum('Frm,Frn->mn',
                                      tmp,
                                      self.integrals.g._integrals) / 2
+            logger.debug('Fock matrix:\n%s', self.Fock_a)
         else:
             self.Fock_a = absil.fock(self.blocks[0], self.blocks[1],
                                      self.blocks[2], self.blocks[3],
@@ -168,6 +156,8 @@ class HartreeFockStep():
             self.Fock_b = absil.fock(self.blocks[1], self.blocks[0],
                                      self.blocks[3], self.blocks[2],
                                      self.integrals.h, self.integrals.g._integrals)
+            self.Fock_a = np.asarray(self.Fock_a)
+            self.Fock_b = np.asarray(self.Fock_b)
 
     def calc_energy(self):
         """Calculate the energy
@@ -175,61 +165,59 @@ class HartreeFockStep():
         TODO: integrate restricted and unrestricted codes
         """
         if self.restricted:
-            self.energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
-                                       self.integrals.h + self.Fock_a) / 2
-            self.one_el_energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
-                                              self.integrals.h)
-            self.two_el_energy = np.tensordot(self.P_a[:, :, self.i_DIIS],
-                                              self.Fock_a - self.integrals.h) / 2
+            self.energy = np.tensordot(self.P_a, self.integrals.h + self.Fock_a)/2
+            self.one_el_energy = np.tensordot(self.P_a, self.integrals.h)
+            self.two_el_energy = np.tensordot(self.P_a, self.Fock_a - self.integrals.h)/2
         else:
-            self.one_el_energy = ((self.P_a[:, :, self.i_DIIS]
-                                   + self.P_b[:, :, self.i_DIIS])* self.integrals.h).sum()
-            self.energy = 0.5*((self.P_a[:, :, self.i_DIIS]*self.Fock_a
-                                + self.P_b[:, :, self.i_DIIS]*self.Fock_b).sum()
+            self.one_el_energy = ((self.P_a + self.P_b)* self.integrals.h).sum()
+            self.energy = 0.5*((self.P_a*self.Fock_a
+                                + self.P_b*self.Fock_b).sum()
                                + self.one_el_energy)
             self.two_el_energy = self.energy - self.one_el_energy
-        logger.info(
-            'Electronic energy: %f\nOne-electron energy: %f'
-            + '\nTwo-electron energy: %f',
-            self.energy, self.one_el_energy, self.two_el_energy)
-        self.i_DIIS += 1
-        if self.i_DIIS >= self.n_DIIS:
-            self.i_DIIS = 0
-        if self.n_DIIS > 0:
-            logger.info('current self.i_DIIS: %d', self.i_DIIS)
+        logger.info('Electronic energy: %f\nOne-electron energy: %f'
+                    '\nTwo-electron energy: %f',
+                    self.energy, self.one_el_energy, self.two_el_energy)
 
-    def calc_mo_fock(self):
-        if self.restricted:
+    def calc_SCF_grad(self):
+        if self.grad_occvirtF:
             F_MO = self.orb[0].T @ self.Fock_a @ self.orb[0]
-            self.grad[:, :, self.i_DIIS] = F_MO[:self.N_a, self.N_a:]
+            self.grad = F_MO[:self.N_a, self.N_a:]
             self.orb.energies = np.array([F_MO[i, i]
                                           for i in range(len(self.orb))])
-            self.grad_norm = linalg.norm(self.grad[:, :, self.i_DIIS]) * sqrt2
-            logger.info('Gradient norm = %f', self.grad_norm)
-            if loglevel <= logging.INFO:
+            if not self.restricted:
+                F_MO = self.orb[1].T @ self.Fock_b @ self.orb[1]
+                self.grad_b = F_MO[:self.N_b, self.N_b:]
+                self.orb.energies_beta = np.array([F_MO[i, i]
+                                                   for i in range(len(self.orb))])
+        else:
+            tmp = self.Fock_a @ self.P_a @ self.integrals.S
+            self.grad = tmp - tmp.T
+            if not self.restricted:
+                tmp = self.Fock_b @ self.P_b @ self.integrals.S
+                self.grad_b = tmp - tmp.T
+        self.grad_norm = (linalg.norm(self.grad) * sqrt2
+                          if self.restricted else
+                          sqrt(linalg.norm(self.grad)**2
+                               + linalg.norm(self.grad_b)**2))
+        logger.info('Gradient norm = %f', self.grad_norm)
+        if self.restricted:
+            logger.debug('Gradient:\n%s', self.grad)
+            if loglevel <= logging.INFO and self.grad_occvirtF:
                 logger.info('Current orbital energies:\n%r',
                             self.orb.energies)
         else:
-            F_MO = self.orb[0].T @ self.Fock_a @ self.orb[0]
-            self.grad[:, :, self.i_DIIS] = F_MO[:self.N_a, self.N_a:]
-            self.orb.energies = np.array([F_MO[i, i]
-                                          for i in range(len(self.orb))])
-            F_MO = self.orb[1].T @ self.Fock_b @ self.orb[1]
-            self.grad_beta[:, :, self.i_DIIS] = F_MO[:self.N_b, self.N_b:]
-            self.orb.energies_beta = np.array([F_MO[i, i]
-                                               for i in range(len(self.orb))])
-            self.grad_norm = sqrt(linalg.norm(self.grad[:, :, self.i_DIIS])**2
-                                 + linalg.norm(self.grad_beta[:, :, self.i_DIIS])**2)
-            if loglevel <= logging.INFO:
+            logger.debug('Gradient (alpha):\n%s', self.grad)
+            logger.debug('Gradient (beta):\n%s', self.grad_b)
+            if self.grad_occvirtF:
                 logger.info('Current orbital energies:\n%r',
-                            self.orb.energies)
-                logger.info('Current beta orbital energies:\n%r',
+                            self.orb.energies_beta)
+                logger.info('Current orbital energies:\n%r',
                             self.orb.energies_beta)
 
     def diag_fock(self):
         if self.restricted:
-            self.Fock_a = self.integrals.X.T @ self.Fock_a @ self.integrals.X
-            e, C = linalg.eigh(self.Fock_a)
+            Fock_orth = self.integrals.X.T @ self.Fock_a @ self.integrals.X
+            e, C = linalg.eigh(Fock_orth)
             #        e, C = linalg.eig(self.Fock)
             #        e_sort_index = np.argsort(e)
             #        e = e[e_sort_index]
@@ -258,20 +246,30 @@ class HartreeFockStep():
         """Roothan-Hall procedure as described, e.g, in Szabo"""
         with logtime('Form the density matrix'):
             self.calc_density_matrix()
-        with logtime('DIIS step'):
-            self.calc_diis(i_SCF)
+        if self.diis_info.at_P:
+            with logtime('DIIS step'):
+                if i_SCF:
+                    self.P_a = self.diis_a.calculate(self.grad, self.P_a)
+                    if not self.restricted:
+                        self.P_b = self.diis_b.calculate(self.grad_b, self.P_b)
         with logtime('computing common blocks'):
-            self.blocks = absil.common_blocks(self.orb[0][:, :self.N_a],
-                                              self.orb[1][:, :self.N_b],
-                                              self.P_a[:, :, self.i_DIIS],
-                                              self.P_b[:, :, self.i_DIIS],
-                                              self.integrals.g._integrals)
+            if not self.restricted: # Hm... probably change this to common_blocks in restricted
+                self.blocks = absil.common_blocks(self.orb[0][:, :self.N_a],
+                                                  self.orb[1][:, :self.N_b],
+                                                  self.P_a,
+                                                  self.P_b,
+                                                  self.integrals.g._integrals)
         with logtime('Form Fock matrix'):
             self.calc_fock_matrix()
         with logtime('Calculate Energy'):
             self.calc_energy()
-        with logtime('Fock matrix in the MO basis'):
-            self.calc_mo_fock()
+        with logtime('Calculate Gradient'):
+            self.calc_SCF_grad()
+        if self.diis_info.at_F:
+            with logtime('DIIS step'):
+                self.Fock_a = self.diis_a.calculate(self.grad, self.Fock_a)
+                if not self.restricted:
+                    self.Fock_b = self.diis_b.calculate(self.grad_b, self.Fock_b)
         with logtime('Fock matrix in the orthogonal basis'):
             self.diag_fock()
 
@@ -290,8 +288,8 @@ class HartreeFockStep():
         h, g = self.integrals.h, self.integrals.g._integrals
 
         self.calc_density_matrix()
-        P_a = self.P_a[:, :, self.i_DIIS]
-        P_b = self.P_b[:, :, self.i_DIIS]
+        P_a = self.P_a
+        P_b = self.P_b
         L = np.zeros((n*N + N_a**2 + N_b**2, n*N))
         R = np.zeros((n*N + N_a**2 + N_b**2,))
         Id = np.eye(n)
@@ -379,8 +377,8 @@ class HartreeFockStep():
         h, g = self.integrals.h, self.integrals.g._integrals
 
         self.calc_density_matrix()
-        P_a = self.P_a[:, :, self.i_DIIS]
-        P_b = self.P_b[:, :, self.i_DIIS]
+        P_a = self.P_a
+        P_b = self.P_b
         R = np.zeros((n*N,))
         Id = np.eye(n)
         proj_a, proj_b = Id - P_a @ S, Id - P_b @ S
@@ -418,8 +416,8 @@ class HartreeFockStep():
         h, g = self.integrals.h, self.integrals.g._integrals
 
         self.calc_density_matrix()
-        P_a = self.P_a[:, :, self.i_DIIS]
-        P_b = self.P_b[:, :, self.i_DIIS]
+        P_a = self.P_a
+        P_b = self.P_b
         R = np.zeros((n*N,))
         Id = np.eye(n)
         proj_a, proj_b = Id - P_a @ S, Id - P_b @ S
@@ -480,8 +478,8 @@ class HartreeFockStep():
             self.calc_density_matrix()
             self.blocks = absil.common_blocks(self.orb[0][:, :N_a],
                                               self.orb[1][:, :N_b],
-                                              self.P_a[:, :, self.i_DIIS],
-                                              self.P_b[:, :, self.i_DIIS],
+                                              self.P_a,
+                                              self.P_b,
                                               g)
             with logtime('computing Fock matrix'):
                 self.calc_fock_matrix()
@@ -495,8 +493,8 @@ class HartreeFockStep():
 
         with logtime('computing common blocks'):
             self.blocks = absil.common_blocks(C_a, C_b,
-                                              self.P_a[:, :, self.i_DIIS],
-                                              self.P_b[:, :, self.i_DIIS],
+                                              self.P_a,
+                                              self.P_b,
                                               g)
 
         with logtime('computing Fock matrix'):
