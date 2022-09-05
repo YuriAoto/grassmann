@@ -120,7 +120,10 @@ def calc_at_dens(element, basis):
         f.write(f'{element} 0.0 0.0 0.0\n')
     args = _SADargs(geometry=fname,
                     basis=basis,
-                    ms2=1 if ATOMS.index(element) % 2 else 0,
+                    ms2=ATOMS.index(element) % 2,
+                    charge=0,
+#                    ms2=0,
+#                    charge=ATOMS.index(element) % 2,
                     restricted=False,
                     max_iter=30,
                     diis=5,

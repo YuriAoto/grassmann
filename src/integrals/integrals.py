@@ -484,11 +484,17 @@ class Integrals():
             raise Exception('Cannot orthogonalise S: ' +
                             'Overlap integrals not calculated yet.')
         s, self.X = linalg.eigh(self.S)
-        for j in range(len(s)):
-            if abs(s[j]) < 0.000001:
-                raise Exception('LD problems in basis functions, s=' + str(s))
-            for i in range(len(s)):
-                self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        if method == 'canonical':
+            for j in range(len(s)):
+                if abs(s[j]) < 0.000001:
+                    raise Exception('LD problems in basis functions, s=' + str(s))
+                for i in range(len(s)):
+                    self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        elif method == 'symmetrical':
+            # S @ U = U @ s; X = U @ s^-{0.5} @ U.T = U.T @ s^{-0.25} @ s^{-0.25} @ U
+            self.X = self.X @ np.diag(s**(-.5)) @ self.X.T
+        else:
+            raise ValueError(f'Unknown orthogonalization method: {method}')
         if loglevel <= logging.DEBUG:
             logger.debug('X:\n%r', self.X)
             logger.debug('XSX:\n%r', self.X.T @ self.S @ self.X)

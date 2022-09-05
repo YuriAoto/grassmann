@@ -64,14 +64,14 @@ def main(args, f_out):
                                    at_F=args.diis_at_F,
                                    at_P=args.diis_at_P)
     if args.grad_type is None:
-        grad_type = 'F_occ_virt' if args.diis_at_P else 'F_asym'
+        grad_type = 'F_occ_virt' if args.diis and args.diis_at_P else 'F_asym'
     else:
         grad_type = args.grad_type
     
     with logtime('Hartree-Fock optimisation') as T:
         HF = optimiser.hartree_fock(molecular_system.integrals,
                                     molecular_system.nucl_rep,
-                                    molecular_system.n_elec,
+                                    molecular_system.n_elec - args.charge,
                                     ms2=args.ms2,
                                     restricted=args.restricted,
                                     max_iter=args.max_iter,
