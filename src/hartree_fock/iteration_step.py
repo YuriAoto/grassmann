@@ -17,13 +17,6 @@ from . import absil
 from . import absilnp
 
 
-
-# testing
-import sys
-sys.path.append('/home/yuriaoto/Codes/third_parties/ir-wmme.20200228/')
-from diis import FDiisContext
-
-
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
@@ -91,9 +84,7 @@ class HartreeFockStep():
         if step_type == 'RH-SCF':
             self.grad_occvirtF = True if self.grad_type == 'F_occ_virt' else False
             self.diis_a = util.Diis(self.diis_info.n)
-            #self.diis_a = FDiisContext(self.diis_info.n)
             if not self.restricted:
-                #self.diis_b = FDiisContext(self.diis_info.n)
                 self.diis_b = util.Diis(self.diis_info.n)
 
         elif step_type == 'densMat-SCF':
@@ -279,10 +270,8 @@ class HartreeFockStep():
             self.calc_SCF_grad()
         if self.diis_info.at_F:
             with logtime('DIIS step'):
-                #self.Fock_a, xxx, yyy = self.diis_a.Apply(self.Fock_a, self.grad)
                 self.Fock_a = self.diis_a.calculate(self.grad, self.Fock_a)
                 if not self.restricted:
-                    #self.Fock_b, xxx, yyy = self.diis_b.Apply(self.Fock_b, self.grad_b)
                     self.Fock_b = self.diis_b.calculate(self.grad_b, self.Fock_b)
         with logtime('Fock matrix in the orthogonal basis'):
             self.diag_fock()

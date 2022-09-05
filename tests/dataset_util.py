@@ -18,6 +18,8 @@ def iterate_over_dataset(dataset_name):
         this_dataset = g2_1.data
     elif dataset_name == 'g2_2':
         this_dataset = g2_2.data
+    elif dataset_name == 'g2_12':
+        this_dataset = {**g2_1.data, **g2_2.data}
         
     for mol, data in this_dataset.items():
         yield mol, _make_args(data)
