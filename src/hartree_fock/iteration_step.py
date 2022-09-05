@@ -16,6 +16,14 @@ from . import util
 from . import absil
 from . import absilnp
 
+
+
+# testing
+import sys
+sys.path.append('/home/yuriaoto/Codes/third_parties/ir-wmme.20200228/')
+from diis import FDiisContext
+
+
 logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
@@ -83,7 +91,9 @@ class HartreeFockStep():
         if step_type == 'RH-SCF':
             self.grad_occvirtF = True if self.grad_type == 'F_occ_virt' else False
             self.diis_a = util.Diis(self.diis_info.n)
+            #self.diis_a = FDiisContext(self.diis_info.n)
             if not self.restricted:
+                #self.diis_b = FDiisContext(self.diis_info.n)
                 self.diis_b = util.Diis(self.diis_info.n)
 
         elif step_type == 'densMat-SCF':
@@ -158,6 +168,8 @@ class HartreeFockStep():
                                      self.integrals.h, self.integrals.g._integrals)
             self.Fock_a = np.asarray(self.Fock_a)
             self.Fock_b = np.asarray(self.Fock_b)
+            logger.debug('Fock matrix (alpha):\n%s', self.Fock_a)
+            logger.debug('Fock matrix (beta):\n%s', self.Fock_b)
 
     def calc_energy(self):
         """Calculate the energy
@@ -195,10 +207,12 @@ class HartreeFockStep():
             if not self.restricted:
                 tmp = self.Fock_b @ self.P_b @ self.integrals.S
                 self.grad_b = tmp - tmp.T
-        self.grad_norm = (linalg.norm(self.grad) * sqrt2
-                          if self.restricted else
-                          sqrt(linalg.norm(self.grad)**2
-                               + linalg.norm(self.grad_b)**2))
+        if self.restricted:
+            self.grad_norm = linalg.norm(self.grad) / sqrt2
+        else:
+            self.grad_norm = sqrt(linalg.norm(self.grad)**2
+                                  + linalg.norm(self.grad_b)**2)
+            
         logger.info('Gradient norm = %f', self.grad_norm)
         if self.restricted:
             logger.debug('Gradient:\n%s', self.grad)
@@ -267,8 +281,10 @@ class HartreeFockStep():
             self.calc_SCF_grad()
         if self.diis_info.at_F:
             with logtime('DIIS step'):
+                #self.Fock_a, xxx, yyy = self.diis_a.Apply(self.Fock_a, self.grad)
                 self.Fock_a = self.diis_a.calculate(self.grad, self.Fock_a)
                 if not self.restricted:
+                    #self.Fock_b, xxx, yyy = self.diis_b.Apply(self.Fock_b, self.grad_b)
                     self.Fock_b = self.diis_b.calculate(self.grad_b, self.Fock_b)
         with logtime('Fock matrix in the orthogonal basis'):
             self.diag_fock()

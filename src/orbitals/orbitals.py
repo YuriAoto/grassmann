@@ -339,8 +339,8 @@ class MolecularOrbitals():
             Alpha and beta densities
         
         restricted (bool)
-            If True, restricted orbitals are obtained from the average
-            density
+            If True, restricted orbitals are obtained from the total
+            (alpha + beta) densities
         
         integrals (Integrals)
             Molecular integrals
@@ -356,7 +356,7 @@ class MolecularOrbitals():
         
         """
         if restricted:
-            P = (P[0] + P[1])/2
+            P = (P[0] + P[1])
             Fock_a = np.array(integrals.h)
             tmp = np.einsum('rs,Frs->F',
                             P,
@@ -370,7 +370,6 @@ class MolecularOrbitals():
             Fock_a -= np.einsum('Frm,Frn->mn',
                                 tmp,
                                 integrals.g._integrals) / 2
-            Fock_a = integrals.invS @ Fock_a
         else:
             Fock_a = np.array(integrals.h)
             tmp = np.einsum('rs,Frs->F',

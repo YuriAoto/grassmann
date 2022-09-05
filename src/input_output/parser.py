@@ -83,6 +83,10 @@ def _parser():
     parser.add_argument('--ms2',
                         help='Two times the MS of Hartree-Fock calculation.',
                         type=int)
+    parser.add_argument('--charge',
+                        help='Electronic charge.',
+                        default=0,
+                        type=int)
     parser.add_argument('--method',
                         help='The method.')
     parser.add_argument('--WF_orb',

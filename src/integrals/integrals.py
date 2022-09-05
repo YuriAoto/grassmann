@@ -478,17 +478,23 @@ class Integrals():
         self.g = Two_Elec_Int.from_wmme_fint2e(wmme_fint2e_file, self.n_func)
         rmtree(wmmeBasePath)
     
-    def orthogonalise_S(self, method='canonical'):
+    def orthogonalise_S(self, method='symmetrical'):
         """Calculate self.X, that orthogonalise the atomic basis functions."""
         if self.S is None:
             raise Exception('Cannot orthogonalise S: ' +
                             'Overlap integrals not calculated yet.')
         s, self.X = linalg.eigh(self.S)
-        for j in range(len(s)):
-            if abs(s[j]) < 0.000001:
-                raise Exception('LD problems in basis functions, s=' + str(s))
-            for i in range(len(s)):
-                self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        if method == 'canonical':
+            for j in range(len(s)):
+                if abs(s[j]) < 0.000001:
+                    raise Exception('LD problems in basis functions, s=' + str(s))
+                for i in range(len(s)):
+                    self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        elif method == 'symmetrical':
+            self.X *= (s**(-.25))[np.newaxis,:]
+            self.X = np.dot(self.X, self.X.T)
+        else:
+            raise ValueError(f'Unknown orthogonalization method: {method}')
         if loglevel <= logging.DEBUG:
             logger.debug('X:\n%r', self.X)
             logger.debug('XSX:\n%r', self.X.T @ self.S @ self.X)

@@ -112,10 +112,17 @@ def hartree_fock(integrals,
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'
-                'DIIS: %s\n',
+                'DIIS: %s\n'
+                'Restricted: %s\n'
+                '2ms: %s\n'
+                'grad type: %s\n',
                 nucl_rep,
                 n_elec,
-                hf_step.diis_info)
+                hf_step.diis_info,
+                restricted,
+                ms2,
+                grad_type
+    )
     if restricted:
         logger.info('Number of occupied orbitals: %d', hf_step.N_a)
     else:
