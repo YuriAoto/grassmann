@@ -478,7 +478,7 @@ class Integrals():
         self.g = Two_Elec_Int.from_wmme_fint2e(wmme_fint2e_file, self.n_func)
         rmtree(wmmeBasePath)
     
-    def orthogonalise_S(self, method='symmetrical'):
+    def orthogonalise_S(self, method='canonical'):
         """Calculate self.X, that orthogonalise the atomic basis functions."""
         if self.S is None:
             raise Exception('Cannot orthogonalise S: ' +
@@ -491,8 +491,8 @@ class Integrals():
                 for i in range(len(s)):
                     self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
         elif method == 'symmetrical':
-            self.X *= (s**(-.25))[np.newaxis,:]
-            self.X = np.dot(self.X, self.X.T)
+            # S @ U = U @ s; X = U @ s^-{0.5} @ U.T = U.T @ s^{-0.25} @ s^{-0.25} @ U
+            self.X = self.X @ np.diag(s**(-.5)) @ self.X.T
         else:
             raise ValueError(f'Unknown orthogonalization method: {method}')
         if loglevel <= logging.DEBUG:

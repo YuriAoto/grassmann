@@ -123,16 +123,12 @@ class HartreeFockStep():
         
         P = C @ C.T
         """
-        self.P_a = np.einsum('pi,qi->pq',
-                             self.orb[0][:, :self.N_a],
-                             self.orb[0][:, :self.N_a])
+        self.P_a = self.orb[0][:, :self.N_a] @ self.orb[0][:, :self.N_a].T
         if self.restricted:
             self.P_a = 2 * self.P_a
             logger.debug('Density matrix:\n%r', self.P_a)
         else:
-            self.P_b = np.einsum('pi,qi->pq',
-                                 self.orb[1][:, :self.N_b],
-                                 self.orb[1][:, :self.N_b])
+            self.P_b = self.orb[1][:, :self.N_b] @ self.orb[1][:, :self.N_b].T
             logger.debug('Alpha density matrix:\n%r', self.P_a)
             logger.debug('Beta density matrix:\n%r', self.P_b)
 
