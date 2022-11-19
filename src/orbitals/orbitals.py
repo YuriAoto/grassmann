@@ -277,7 +277,7 @@ class MolecularOrbitals():
             self.in_the_basis = ''
             self.sym_adapted_basis = False
             self.energies = None
-            self.energies_beta = None
+            self.energies_b = None
         else:
             self.__dict__ = deepcopy(source.__dict__)
 
@@ -463,7 +463,7 @@ class MolecularOrbitals():
         new_orbitals.restricted = restricted
         new_orbitals.energies = energies
         if not restricted:
-            new_orbitals.energies_beta = energies
+            new_orbitals.energies_b = energies
 
         if isinstance(C, tuple):
             for Ci in C:

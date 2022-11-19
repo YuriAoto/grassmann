@@ -47,43 +47,28 @@ from scipy import linalg
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def common_blocks(double[:, :] C_a, double[:, :] C_b,
-                  double[:, :] P_a, double[:, :] P_b,
-                  double[:, :, :] g):
-    cdef int i, j, k, L, T = g.shape[0], n = C_a.shape[0]
-    cdef int N_a = C_a.shape[1], N_b = C_b.shape[1]
-    cdef double[:] GP_a = np.zeros(T)
-    cdef double[:] GP_b = np.zeros(T)
-    cdef double[:, :, :] GC_a = np.zeros((T, n, N_a))
-    cdef double[:, :, :] GC_b = np.zeros((T, n, N_b))
-    cdef double[:, :, :] GCC_a = np.zeros((T, N_a, N_a))
-    cdef double[:, :, :] GCC_b = np.zeros((T, N_b, N_b))
+def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
+    cdef int i, j, k, L, T = g.shape[0], n = C.shape[0], N = C.shape[1]
+    cdef double[:] GP = np.zeros(T)
+    cdef double[:, :, :] GC = np.zeros((T, n, N))
+    cdef double[:, :, :] GCC = np.zeros((T, N, N))
     cdef double aux
 
     for L in range(T):
         for i in range(n):
             for k in range(n):
                 aux = g[L, i, k]
-                GP_a[L] += aux * P_a[i, k]
-                GP_b[L] += aux * P_b[i, k]
+                GP[L] += aux * P[i, k]
 
-                for j in range(N_a):
-                    GC_a[L, i, j] += aux * C_a[k, j]
+                for j in range(N):
+                    GC[L, i, j] += aux * C[k, j]
 
-                for j in range(N_b):
-                    GC_b[L, i, j] += aux * C_b[k, j]
+            for j in range(N):
+                aux = C[i, j]
+                for k in range(N):
+                    GCC[L, j, k] += GC[L, i, k] * aux
 
-            for j in range(N_a):
-                aux = C_a[i, j]
-                for k in range(N_a):
-                    GCC_a[L, j, k] += GC_a[L, i, k] * aux
-
-            for j in range(N_b):
-                aux = C_b[i, j]
-                for k in range(N_b):
-                    GCC_b[L, j, k] += GC_b[L, i, k] * aux
-
-    return GP_a, GP_b, GC_a, GC_b, GCC_a, GCC_b
+    return GP, GC, GCC
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
@@ -191,10 +176,10 @@ def hessian(double[:, :] C_a, double[:, :] C_b,
     hess = np.empty((n*N, n*N))
 
     # computational cost: N_a * N_b * n^2 * L
-    # hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
-    # hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
-    hess[n*N_a :, : n*N_a] = mixed_spin_2(GC_a, C_b, g)
+    hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
     hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
+    # hess[n*N_a :, : n*N_a] = mixed_spin_2(GC_a, C_b, g)
+    # hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
 
     # computational cost: N_a * n^2 * L
     for b in range(N_a):

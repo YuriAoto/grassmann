@@ -92,7 +92,7 @@ def hartree_fock(integrals,
             i_SCF (int)
             grad (np.ndarray, optional)
         and return one of the following strings:
-            "RH-SCF", "densMat-SCF", "Absil", "orb_rot-Newton"
+            "RH-SCF", "densMat-SCF", "RRN", "orb_rot-Newton"
         that will dictate which method should be used in the
         Hartree-Fock optimisation, in that iteration
     """
@@ -148,20 +148,20 @@ def hartree_fock(integrals,
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
 
-            elif step_type == 'Absil':
-                hf_step.newton_absil(i_SCF)
+            elif step_type == 'RRN':
+                hf_step.RRN(i_SCF)
 
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
 
-            elif step_type == 'lagrange':
-                hf_step.newton_lagrange(i_SCF)
+            elif step_type == 'NMLM':
+                hf_step.NMLM(i_SCF)
 
-            elif step_type == 'gradient':
-                hf_step.gradient_descent(i_SCF)
+            elif step_type == 'RGD':
+                hf_step.RGD(i_SCF)
 
-            elif step_type == 'gradient-lagrange':
-                hf_step.gradient_descent_lagrange(i_SCF)            
+            elif step_type == 'GDLM':
+                hf_step.GDLM(i_SCF)            
 
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
@@ -169,7 +169,7 @@ def hartree_fock(integrals,
 
         if f_out is not None:
             f_out.write((util.fmt_HF_iter_gen_lag
-                         if step_type == 'lagrange' else
+                         if step_type in {'NMLM', 'GDLM'} else
                          util.fmt_HF_iter_general).format(
                              i_SCF,
                              nucl_rep + hf_step.energy,

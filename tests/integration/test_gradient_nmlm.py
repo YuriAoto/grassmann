@@ -105,18 +105,14 @@ def build_analytic_gradient(C_a, C_b, fock_a, fock_b, S):
     invS = np.linalg.inv(S)
 
     if N_a:
-        # grad_energy_a = np.reshape(2*fock_a @ C_a, (n*N_a,), 'F')
-        # jacob_restr_a = np.reshape(2*S @ C_a @ energies_a, (n*N_a,), 'F')
-        grad_energy_a = np.reshape(2*invS @ fock_a @ C_a, (n*N_a,), 'F')
-        jacob_restr_a = np.reshape(2*C_a @ energies_a, (n*N_a,), 'F')
+        grad_energy_a = np.reshape(2*fock_a @ C_a, (n*N_a,), 'F')
+        jacob_restr_a = np.reshape(2*S @ C_a @ energies_a, (n*N_a,), 'F')
         analytic_grad[: n*N_a] = grad_energy_a - jacob_restr_a
         analytic_grad[n*N : n*N + N_a**2] = np.reshape(restr_a, (N_a**2,), 'F')
 
     if N_b:
-        # grad_energy_b = np.reshape(2*fock_b @ C_b, (n*N_b,), 'F')
-        # jacob_restr_b = np.reshape(2*S @ C_b @ energies_b, (n*N_b,), 'F')
-        grad_energy_b = np.reshape(2*invS @ fock_b @ C_b, (n*N_b,), 'F')
-        jacob_restr_b = np.reshape(2*C_b @ energies_b, (n*N_b,), 'F')
+        grad_energy_b = np.reshape(2*fock_b @ C_b, (n*N_b,), 'F')
+        jacob_restr_b = np.reshape(2*S @ C_b @ energies_b, (n*N_b,), 'F')
         analytic_grad[n*N_a : n*N] = grad_energy_b - jacob_restr_b
         analytic_grad[n*N + N_a**2:] = np.reshape(restr_b, (N_b**2,) , 'F')
 

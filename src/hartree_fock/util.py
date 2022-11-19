@@ -81,7 +81,7 @@ class Diis:
     def add_to_matrices(self, e, *parameters):
         if self.e is None:
             self.init_matrices(e, *parameters)
-        self.e[self.i, :] = e.flatten()
+        self.e[self.i, :] = e.flatten()*2
         for i, p in enumerate(parameters):
             self.all_parameters[i][self.i, :] = p.flatten()
         logger.debug('DIIS stored e:\n%s', self.e)
@@ -99,19 +99,19 @@ class Diis:
         B[:self.n, :self.n] = np.einsum('pi,qi->pq',
                                         self.e[:self.n, :],
                                         self.e[:self.n, :])
+        B0 = np.copy(B)
         fScale = sum([np.log(B[i,i].real) for i in range(self.n)])
         fScale = np.exp(fScale/self.n)
         B[:self.n, :self.n] /= fScale
         B[:self.n, self.n] = B[self.n, :self.n] = -1.0
         a = np.zeros(self.n + 1)
         a[self.n] = -1.0
-        return B, a
+        return B, B0, a
 
     def solve(self, B, a, use_lstsq=False):
         """Solve Bw = a, the linear system of DIIS"""
         if use_lstsq:
-            w = lstsq(B, a)
-            w = w[0]
+            w = lstsq(B, a)[0]
         else:
             w = solve(B, a)
         logger.debug('DIISs Bw - a:\n%r', B@w - a)
@@ -183,15 +183,16 @@ class Diis:
         increase_i = kargs['increase_i'] if 'increase_i' in kargs else True
         if self.n_max > 0: self.add_to_matrices(e, *parameters)
         if self.n > 1:
-            B, a = self.set_system()
+            B, B0, a = self.set_system()
             w = self.solve(B, a)
             w /= sum(w[:-1])
             logger.debug('DIIS:\n\n'
                          'current i=%i; dimension n=%i\n'
+                         'B0 matrix:\n%s\n'
                          'B matrix:\n%s\n'
                          'a vector:\n%s\n'
                          'solution w of Bw=a:\n%s\n',
-                         self.i, self.n, B, a, w)
+                         self.i, self.n, B0, B, a, w)
             new_e, to_return = self.update(w)
             to_return = list(map(lambda pp: pp[0].reshape(pp[1].shape),
                                  zip(to_return, parameters)))
@@ -204,7 +205,7 @@ class Diis:
         return to_return
 
 
-def geodesic(C, eta, S, Sqrt, invSqrt, t=1):
+def geodesic(C, eta, S, Sqrt, invSqrt, t=1, gs=False):
     """Computes the geodesic of the Grassmannian
     
     
@@ -239,4 +240,7 @@ def geodesic(C, eta, S, Sqrt, invSqrt, t=1):
     u, s, v = svd(invSqrt @ eta, full_matrices=False)
     sin, cos = np.diag(np.sin(t*s)), np.diag(np.cos(t*s))
     temp = (C @ v.T @ cos + Sqrt @ u @ sin) @ v
-    return absil.gram_schmidt(temp, S)
+    if gs:
+        return absil.gram_schmidt(temp, S)
+    else:
+        return temp
