@@ -21,11 +21,11 @@ def _define_hfstep_func(hf_step):
     if hf_step == 'SCF':
         return lambda i_SCF=None, grad_norm=None: 'RH-SCF'
 
-    if hf_step == 'RRN':
-        return lambda i_SCF=None, grad_norm=None: 'RRN'
+    if hf_step == 'RNR':
+        return lambda i_SCF=None, grad_norm=None: 'RNR'
     
-    if hf_step == 'NMLM':
-        return lambda i_SCF=None, grad_norm=None: 'NMLM'
+    if hf_step == 'NRLM':
+        return lambda i_SCF=None, grad_norm=None: 'NRLM'
 
     if hf_step == 'RGD':
         return lambda i_SCF=None, grad_norm=None: 'RGD'
@@ -33,25 +33,33 @@ def _define_hfstep_func(hf_step):
     if hf_step == 'GDLM':
         return lambda i_SCF=None, grad_norm=None: 'GDLM'
 
-    rematch = re.match('SCF-RRN_n(\d+)', hf_step)
+    if hf_step == 'RCG':
+        return lambda i_SCF=None, grad_norm=None: 'RCG'
+
+    rematch = re.match('SCF-RNR_n(\d+)', hf_step)
     if rematch:
         n = int(rematch.group(1))
-        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'RRN'
+        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'RNR'
 
-    rematch = re.match('SCF-NMLM_n(\d+)', hf_step)
+    rematch = re.match('SCF-NRLM_n(\d+)', hf_step)
     if rematch:
         n = int(rematch.group(1))
-        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'NMLM'
+        return lambda i_SCF=0, grad_norm=None: 'RH-SCF' if i_SCF < n else 'NRLM'
 
-    rematch = re.match('SCF-RRN_grad(.+)', hf_step)
+    rematch = re.match('SCF-RNR_grad(.+)', hf_step)
     if rematch:
         g = float(rematch.group(1))
-        return lambda i_SCF=None, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'RRN'
+        return lambda i_SCF=None, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'RNR'
 
-    rematch = re.match('SCF-NMLM_grad(.+)', hf_step)
+    rematch = re.match('SCF-NRLM_grad(.+)', hf_step)
     if rematch:
         g = float(rematch.group(1))
-        return lambda i_SCF=0, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'NMLM'
+        return lambda i_SCF=0, grad_norm=100.0: 'RH-SCF' if grad_norm > g else 'NRLM'
+
+    rematch = re.match('RNR-RCG_n(\d+)', hf_step)
+    if rematch:
+        n = int(rematch.group(1))
+        return lambda i_SCF=0, grad_norm=None: 'RNR' if i_SCF < n else 'RCG'
 
     raise ValueError('Invalid HF step')
 

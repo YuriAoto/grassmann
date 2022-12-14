@@ -96,25 +96,27 @@ def build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S, t=0.01):
 def build_analytic_gradient(C_a, C_b, fock_a, fock_b, S):
     _, N_a = C_a.shape; n, N_b = C_b.shape; N = N_a + N_b
     analytic_grad = np.zeros((n*N + N_a**2 + N_b**2,))
-    restr_a = C_a.T @ S @ C_a - np.eye(N_a)
-    restr_b = C_b.T @ S @ C_b - np.eye(N_b)
-    energies_a, _ = np.linalg.eigh(fock_a)
-    energies_a = np.diag(energies_a[:N_a])
-    energies_b, _ = np.linalg.eigh(fock_b)
-    energies_b = np.diag(energies_b[:N_b])
+    energies_a = np.linalg.eigh(fock_a)[0]
+    energies_a = np.reshape(np.diag(energies_a[:N_a]), (N_a**2,), 'F')
+    energies_b = np.linalg.eigh(fock_b)[0]
+    energies_b = np.reshape(np.diag(energies_b[:N_b]), (N_b**2,), 'F')
     invS = np.linalg.inv(S)
+    Id_N_a, Id_N_b = np.eye(N_a), np.eye(N_b)
+    aux_a, aux_b = C_a.T @ S, C_b.T @ S
+    restr_a, restr_b = aux_a @ C_a - Id_N_a, aux_b @ C_b - Id_N_b
 
     if N_a:
         grad_energy_a = np.reshape(2*fock_a @ C_a, (n*N_a,), 'F')
-        jacob_restr_a = np.reshape(2*S @ C_a @ energies_a, (n*N_a,), 'F')
-        analytic_grad[: n*N_a] = grad_energy_a - jacob_restr_a
-        analytic_grad[n*N : n*N + N_a**2] = np.reshape(restr_a, (N_a**2,), 'F')
-
+        B = [np.kron(aux_a.T, Id_N_a[:, i]) for i in range(N_a)]
+        jacob_restr_a = np.kron(Id_N_a, aux_a) + np.vstack(B).T
+        analytic_grad[:n*N_a] = grad_energy_a - jacob_restr_a.T @ energies_a
+        analytic_grad[n*N:(n*N + N_a**2)] = np.reshape(-restr_a, (N_a**2,), 'F')
     if N_b:
         grad_energy_b = np.reshape(2*fock_b @ C_b, (n*N_b,), 'F')
-        jacob_restr_b = np.reshape(2*S @ C_b @ energies_b, (n*N_b,), 'F')
-        analytic_grad[n*N_a : n*N] = grad_energy_b - jacob_restr_b
-        analytic_grad[n*N + N_a**2:] = np.reshape(restr_b, (N_b**2,) , 'F')
+        B = [np.kron(aux_b.T, Id_N_b[:, i]) for i in range(N_b)]
+        jacob_restr_b = np.kron(Id_N_b, aux_b) + np.vstack(B).T
+        analytic_grad[n*N_a:n*N] = grad_energy_b - jacob_restr_b.T @ energies_b
+        analytic_grad[(n*N + N_a**2):] = np.reshape(-restr_b, (N_b**2,) , 'F')
 
     return analytic_grad
 

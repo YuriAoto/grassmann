@@ -79,13 +79,14 @@ def build_numeric_hessian(C_a, C_b, S, h, g, t=0.001):
 def build_analytic_hessian(C_a, C_b, S, h, g):
     _, N_a = C_a.shape; n, N_b = C_b.shape; N = N_a + N_b
     P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
-    blocks = absil.common_blocks(C_a, C_b, P_a, P_b, g)
+    blocks_a = absil.common_blocks(C_a, P_a, g)
+    blocks_b = absil.common_blocks(C_b, P_b, g)
     fock_a = build_fock(P_a, P_b, h, g)
     fock_b = build_fock(P_b, P_a, h, g)
 
-    return 2*absil.hessian(C_a, C_b, fock_a, fock_b,
-                           blocks[2], blocks[3],
-                           blocks[4], blocks[5], g)
+    return absil.hessian(C_a, C_b, fock_a, fock_b,
+                         blocks_a[1], blocks_b[1],
+                         blocks_a[2], blocks_b[2], g)
 
 
 class HessianTestLagrange(unittest.TestCase):

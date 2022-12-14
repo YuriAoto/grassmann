@@ -43,6 +43,7 @@ def hartree_fock(integrals,
                  max_iter=20,
                  grad_thresh=1.0E-5,
                  grad_type='F_occ_virt',
+                 energy_thresh=1.0E-10,
                  diis_info=None,
                  f_out=sys.stdout,
                  HF_step_type=lambda **x: "RH-SCF"):
@@ -148,20 +149,23 @@ def hartree_fock(integrals,
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
 
-            elif step_type == 'RRN':
-                hf_step.RRN(i_SCF)
+            elif step_type == 'RNR':
+                hf_step.RNR(i_SCF)
 
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
 
-            elif step_type == 'NMLM':
-                hf_step.NMLM(i_SCF)
+            elif step_type == 'NRLM':
+                hf_step.NRLM(i_SCF)
 
             elif step_type == 'RGD':
                 hf_step.RGD(i_SCF)
 
             elif step_type == 'GDLM':
-                hf_step.GDLM(i_SCF)            
+                hf_step.GDLM(i_SCF)
+
+            elif step_type == 'RCG':
+                hf_step.RCG(i_SCF)
 
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
@@ -169,17 +173,17 @@ def hartree_fock(integrals,
 
         if f_out is not None:
             f_out.write((util.fmt_HF_iter_gen_lag
-                         if step_type in {'NMLM', 'GDLM'} else
+                         if step_type in {'NRLM', 'GDLM'} else
                          util.fmt_HF_iter_general).format(
                              i_SCF,
                              nucl_rep + hf_step.energy,
                              hf_step.grad_norm,
-                             hf_step.norm_restriction,
+                             hf_step.restriction_norm,
                              step_type,
                              T.elapsed_time))
             f_out.flush()
 
-        if hf_step.grad_norm < grad_thresh:
+        if hf_step.grad_norm < grad_thresh or hf_step.diff_energy < energy_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break

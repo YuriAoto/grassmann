@@ -52,9 +52,8 @@ def build_gradient(C_a, C_b, fock_a, fock_b, energies_a, energies_b, S):
             jacob_restr_a[:, n*j : n*(j+1)] = np.kron(aux_a, e_j)
             jacob_restr_a[N_a*j : N_a*(j+1), n*j : n*(j+1)] += aux_a
             e_j[j] = 0.0
-        jacob_restr_a = jacob_restr_a.T@np.reshape(energies_a, (N_a**2,) , 'F')
+        jacob_restr_a = jacob_restr_a.T @ np.reshape(energies_a, (N_a**2,), 'F')
         grad_energy_a = np.reshape(2*fock_a @ C_a, (n*N_a,), 'F')
-        # jacob_restr_a = np.reshape(2*S @ C_a @ energies_a, (n*N_a,), 'F')
         grad[: n*N_a] = grad_energy_a - jacob_restr_a
         grad[n*N : n*N + N_a**2] = np.reshape(-restr_a, (N_a**2,), 'F')
 
@@ -66,9 +65,8 @@ def build_gradient(C_a, C_b, fock_a, fock_b, energies_a, energies_b, S):
             jacob_restr_b[:, n*j : n*(j+1)] = np.kron(aux_b, e_j)
             jacob_restr_b[N_b*j : N_b*(j+1), n*j : n*(j+1)] += aux_b
             e_j[j] = 0.0
-        jacob_restr_b = jacob_restr_b.T@np.reshape(energies_b, (N_b**2,) , 'F')
+        jacob_restr_b = jacob_restr_b.T @ np.reshape(energies_b, (N_b**2,), 'F')
         grad_energy_b = np.reshape(2*fock_b @ C_b, (n*N_b,), 'F')
-        # jacob_restr_b = np.reshape(2*S @ C_b @ energies_b, (n*N_b,), 'F')
         grad[n*N_a : n*N] = grad_energy_b - jacob_restr_b
         grad[n*N + N_a**2:] = np.reshape(-restr_b, (N_b**2,) , 'F')
 
