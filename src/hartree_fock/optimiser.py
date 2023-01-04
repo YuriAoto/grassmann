@@ -192,12 +192,7 @@ def hartree_fock(integrals,
                              T.elapsed_time))
             f_out.flush()
 
-        if hf_step.diff_energy < 0:
-            logger.info("Method didn't work.")
-            converged = False
-            break
-
-        if hf_step.grad_norm < grad_thresh or hf_step.diff_energy < energy_thresh:
+        if hf_step.grad_norm < grad_thresh or abs(hf_step.diff_energy) < energy_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
