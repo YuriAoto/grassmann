@@ -59,6 +59,8 @@ class HartreeFockStep():
         self.energies = None
         self.energies_b = None
         self.energy_prev = float('inf')
+        self.conjugacy = None
+        self.step_size = 1.0
 
     @property
     def n(self):
@@ -334,8 +336,143 @@ class HartreeFockStep():
         with logtime('Fock matrix in the orthogonal basis'):
             self.diag_fock()
 
-    def density_matrix_scf(self, i_SCF):
-        raise NotImplementedError("Density matrix based SCF")
+    def RGD(self, i_SCF):
+        """Hartree--Fock using the Riemannian Gradient Descent Method.
+
+        Update method: Backtracking Line Search.
+        References: Boumal's book and Pymanopt.
+        """
+        C_a, C_b = self.orb[0][:, :self.N_a], self.orb[1][:, :self.N_b]
+        S, invS = self.integrals.S, self.integrals.invS
+        X, invX = self.integrals.X, self.integrals.invX
+        g = self.integrals.g._integrals
+
+        self.calc_density_matrix()
+        with logtime('computing common blocks'):
+            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
+            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
+        with logtime('computing the energy'):
+            self.calc_energy()
+        with logtime('computing the gradient'):
+            proj_a = self.Id_n - self.P_a @ S
+            grad_a = 2*proj_a @ invS @ self.Fock_a @ C_a
+            logger.debug('gradient spin alpha:\n%r', grad_a)
+            proj_b = self.Id_n - self.P_b @ S
+            grad_b = 2*proj_b @ invS @ self.Fock_b @ C_b
+            logger.debug('gradient spin beta:\n%r', grad_b)
+            self.grad_norm = util.riem_norm(grad_a, grad_b, S)
+
+        with logtime('updating the point'):
+            self.orb[0][:, :self.N_a] = util.geodesic(C_a, -grad_a, X, invX,
+                                                      t=self.step_size)
+            self.orb[1][:, :self.N_b] = util.geodesic(C_b, -grad_b, X, invX,
+                                                      t=self.step_size)
+            # C_a, C_b, _ = util.RBLS(C_a, C_b, -grad_a, -grad_b,
+            #                         self.grad_norm**2, self.energy,
+            #                         self.energy_prev, S, X, invX, self)
+            # self.orb[0][:, :self.N_a], self.orb[1][:, :self.N_b] = C_a, C_b
+            logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
+                        np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
+                        np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
+
+        self.diff_energy = self.energy_prev - self.energy
+        self.energy_prev = self.energy
+
+    def RCG(self, i_SCF):
+        """Hartree--Fock using Riemannian Conjugate Gradient."""
+        N_a, N_b, N, n = self.N_a, self.N_b, self.N_a + self.N_b, self.n
+        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
+        S, invS = self.integrals.S, self.integrals.invS
+        X, invX = self.integrals.X, self.integrals.invX
+        g = self.integrals.g._integrals
+
+        # todo: this doesn't work if we start with another method because i_SCF
+        # will be greater than 0.
+        if i_SCF == 0:
+            self.calc_density_matrix()
+            with logtime('computing common blocks'):
+                self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
+                self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
+            with logtime('computing Fock matrix'):
+                self.calc_fock_matrix()
+            with logtime('computing the energy'):
+                self.calc_energy()
+            with logtime('computing the gradient'):
+                proj_a = self.Id_n - self.P_a @ S
+                self.RiemG_a = 2*proj_a @ invS @ self.Fock_a @ C_a
+                logger.debug('gradient spin alpha:\n%r', self.RiemG_a)
+                proj_b = self.Id_n - self.P_b @ S
+                self.RiemG_b = 2*proj_b @ invS @ self.Fock_b @ C_b
+                logger.debug('gradient spin beta:\n%r', self.RiemG_b)
+            self.eta_a = -self.RiemG_a
+            self.eta_b = -self.RiemG_b
+        elif i_SCF % (N_a*(n-N_a) + N_b*(n-N_b)) == 0:
+            self.eta_a = -self.RiemG_a
+            self.eta_b = -self.RiemG_b
+        else:
+            self.eta_a = -self.RiemG_a + self.gamma*self.eta_a
+            self.eta_b = -self.RiemG_b + self.gamma*self.eta_b
+
+        self.eta_norm = util.riem_norm(self.eta_a, self.eta_b, S)
+        aux = util.rip(self.RiemG_a, self.RiemG_b, self.RiemG_a, self.RiemG_b, S)
+
+        with logtime('backtracking line search'):
+            newC_a, newC_b, t = util.RBLS(C_a, C_b, self.eta_a, self.eta_b,
+                                          self.eta_norm**2, self.energy,
+                                          self.energy_prev, S, X, invX, self)
+
+        with logtime('parallel transport the vectors'):
+            if self.conjugacy == 'PR':
+                tGk_a = util.pt(self.RiemG_a, self.eta_a, C_a, self.Id_n, X, invX,
+                                self.step_size)
+                tGk_b = util.pt(self.RiemG_b, self.eta_b, C_b, self.Id_n, X, invX,
+                                self.step_size)
+            self.eta_a = util.pt(self.eta_a, self.eta_a, C_a, self.Id_n, X, invX,
+                                 self.step_size)
+            self.eta_b = util.pt(self.eta_b, self.eta_b, C_b, self.Id_n, X, invX,
+                                 self.step_size)
+
+        with logtime('updating the point'):
+            self.orb[0][:, :N_a] = util.geodesic(C_a, self.eta_a, X, invX,
+                                                 self.step_size)
+            self.orb[1][:, :N_b] = util.geodesic(C_b, self.eta_b, X, invX,
+                                                 self.step_size)
+            # self.orb[0][:, :N_a], self.orb[1][:, :N_b] = newC_a, newC_b
+            logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
+                        np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
+                        np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
+
+        self.diff_energy = self.energy_prev - self.energy
+        self.energy_prev = self.energy
+
+        self.calc_density_matrix()
+        with logtime('computing common blocks'):
+            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
+            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
+        with logtime('computing Fock matrix'):
+            self.calc_fock_matrix()
+        with logtime('computing the energy'):
+            self.calc_energy()
+        with logtime('computing the gradient'):
+            proj_a = self.Id_n - self.P_a @ S
+            self.RiemG_a = 2*proj_a @ invS @ self.Fock_a @ C_a
+            logger.debug('gradient spin alpha:\n%r', self.RiemG_a)
+            proj_b = self.Id_n - self.P_b @ S
+            self.RiemG_b = 2*proj_b @ invS @ self.Fock_b @ C_b
+            logger.debug('gradient spin beta:\n%r', self.RiemG_b)
+            self.grad_norm = util.riem_norm(self.RiemG_a, self.RiemG_b, S)
+
+        if self.conjugacy == 'FR':
+            self.gamma = (util.rip(self.RiemG_a, self.RiemG_b,
+                                   self.RiemG_a, self.RiemG_b, S) / aux)
+        elif self.conjugacy == 'PR':
+            self.gamma = (util.rip(self.RiemG_a - tGk_a, self.RiemG_b - tGk_b,
+                                   self.RiemG_a, self.RiemG_b, S) / aux)
+        else:
+            raise NotImplementedError("Conjugacy method not implemented.")
+
 
     def RNR(self, i_SCF):
         """Hartree--Fock using Riemannian Newton--Raphson Method.
@@ -344,57 +481,51 @@ class HartreeFockStep():
         """
         N_a, N_b, N, n = self.N_a, self.N_b, self.N_a + self.N_b, self.n
         C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
-        S, X = self.integrals.S, self.integrals.X
-        invS, invX = self.integrals.invS, self.integrals.invX
-        h, g = self.integrals.h, self.integrals.g._integrals
-        L = np.zeros((n*N + N_a**2 + N_b**2, n*N))
-        R = np.zeros((n*N + N_a**2 + N_b**2,))
+        S, invS = self.integrals.S, self.integrals.invS
+        X, invX = self.integrals.X, self.integrals.invX
+        g = self.integrals.g._integrals
+        aug_hess = np.zeros((n*N + N_a**2 + N_b**2, n*N))
+        aug_grad = np.zeros((n*N + N_a**2 + N_b**2,))
         aux_hess = np.zeros((n*N, n*N))
 
         self.calc_density_matrix()
-        proj_a, proj_b = self.Id_n - self.P_a @ S, self.Id_n - self.P_b @ S
-
         with logtime('computing common blocks'):
             self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
             self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-
         with logtime('computing Fock matrix'):
             self.calc_fock_matrix()
-
         with logtime('computing the energy'):
             self.calc_energy()
-
         with logtime('computing the gradient'):
+            proj_a = self.Id_n - self.P_a @ S
             grad_a = 2*self.Fock_a @ C_a
+            RiemG_a = proj_a @ invS @ grad_a
             logger.debug('gradient spin alpha:\n%r', grad_a)
+            proj_b = self.Id_n - self.P_b @ S
             grad_b = 2*self.Fock_b @ C_b
+            RiemG_b = proj_b @ invS @ grad_b
             logger.debug('gradient spin beta:\n%r', grad_b)
+            aug_grad[:n*N_a] = np.reshape(RiemG_a, (n*N_a,), 'F')
+            aug_grad[n*N_a : n*N] = np.reshape(RiemG_b, (n*N_b,), 'F')
+            self.grad_norm = util.riem_norm(RiemG_a, RiemG_b, S)
 
         with logtime('computing the hessian'):
             hess = absil.hessian(C_a, C_b, self.Fock_a, self.Fock_b,
                                  self.blocks_a[1], self.blocks_b[1],
                                  self.blocks_a[2], self.blocks_b[2], g)
             logger.debug('euclidean hessian:\n%r', hess)
-
             aux_hess[:n*N_a, :n*N_a] = np.kron(self.Id_N_a, proj_a @ invS)
             aux_hess[n*N_a:, n*N_a:] = np.kron(self.Id_N_b, proj_b @ invS)
             hess = aux_hess @ hess
-
             aux_hess[:n*N_a, :n*N_a] = np.kron(grad_a.T @ C_a, self.Id_n)
             aux_hess[n*N_a:, n*N_a:] = np.kron(grad_b.T @ C_b, self.Id_n)
             hess -= aux_hess
-
-        L[:n*N, :] = hess
-        L[n*N : (n*N + N_a**2), : n*N_a] = np.kron(self.Id_N_a, C_a.T @ S)
-        L[(n*N + N_a**2) :, n*N_a :] = np.kron(self.Id_N_b, C_b.T @ S)
-        RiemG_a = proj_a @ invS @ grad_a
-        RiemG_b = proj_b @ invS @ grad_b
-        R[:n*N_a] = -np.reshape(RiemG_a, (n*N_a,), 'F')
-        R[n*N_a : n*N] = -np.reshape(RiemG_b, (n*N_b,), 'F')
-        self.grad_norm = util.riem_norm(RiemG_a, RiemG_b, S)
+            aug_hess[:n*N, :] = hess
+            aug_hess[n*N:(n*N + N_a**2), :n*N_a] = np.kron(self.Id_N_a, C_a.T @ S)
+            aug_hess[(n*N + N_a**2):, n*N_a:] = np.kron(self.Id_N_b, C_b.T @ S)
 
         with logtime('solving the main equation'):
-            eta = np.linalg.lstsq(L, R, rcond=None)
+            eta = np.linalg.lstsq(aug_hess, -aug_grad, rcond=None)
 
         if eta[1].size < 1:
             logger.warning('Hessian does not have full rank')
@@ -414,57 +545,6 @@ class HartreeFockStep():
             logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
                         np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
                         np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
-
-    def newton_orb_rot(self, i_SCF):
-        raise NotImplementedError("As described in Helgaker's book")
-
-    def RGD(self, i_SCF):
-        """Hartree--Fock using the Riemannian Gradient Descent Method.
-
-        Update method: Backtracking Line Search.
-        References: Boumal's book and Pymanopt.
-        """
-        C_a, C_b = self.orb[0][:, :self.N_a], self.orb[1][:, :self.N_b]
-        S, invS = self.integrals.S, self.integrals.invS
-        X, invX = self.integrals.X, self.integrals.invX
-        g = self.integrals.g._integrals
-
-        self.calc_density_matrix()
-
-        with logtime('computing common blocks'):
-            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
-            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-
-        with logtime('computing the energy'):
-            self.calc_energy()
-
-        with logtime('computing the gradient'):
-            proj_a = self.Id_n - self.P_a @ S
-            grad_a = 2*proj_a @ invS @ self.Fock_a @ C_a
-            logger.debug('gradient spin alpha:\n%r', grad_a)
-            proj_b = self.Id_n - self.P_b @ S
-            grad_b = 2*proj_b @ invS @ self.Fock_b @ C_b
-            logger.debug('gradient spin beta:\n%r', grad_b)
-
-        self.grad_norm = util.riem_norm(grad_a, grad_b, S)
-
-        with logtime('updating the point'):
-            # t = 1e-3
-            # C_a = util.geodesic(C_a, -grad_a, X, invX, t)
-            # C_b = util.geodesic(C_b, -grad_b, X, invX, t)
-            C_a, C_b, _ = util.RBLS(C_a, C_b, -grad_a, -grad_b, self.grad_norm,
-                                    self.energy, self.energy_prev, S, X, invX, self,
-                                    i_SCF)
-            self.orb[0][:, :self.N_a], self.orb[1][:, :self.N_b] = C_a, C_b
-            logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
-                        np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
-                        np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
-
-        self.diff_energy = self.energy_prev - self.energy
-        self.energy_prev = self.energy
 
     def NRLM(self, i_SCF):
         """Hartree--Fock using Newton--Raphson with Lagrange multipliers."""
@@ -557,152 +637,8 @@ class HartreeFockStep():
             self.orb[0][:, :N_a] += eta_C[:, :N_a]
             self.orb[1][:, :N_b] += eta_C[:, N_a:]
 
-    def GDLM(self, i_SCF):
-        """Hartree--Fock using Gradient Descent with Lagrange Multipliers.
+    def newton_orb_rot(self, i_SCF):
+        raise NotImplementedError("As described in Helgaker's book")
 
-        Update method: Backtracking Line Search.
-        """
-        N_a, N_b, N, n = self.N_a, self.N_b, self.N_a + self.N_b, self.n
-        S, g = self.integrals.S, self.integrals.g._integrals
-
-        with logtime('Orthogonalizing coefficients and computing the energy'):
-            temp_a = np.copy(self.orb[0][:, :N_a])
-            temp_b = np.copy(self.orb[1][:, :N_b])
-            C_a = absil.gram_schmidt(self.orb[0][:, :N_a], S)
-            C_b = absil.gram_schmidt(self.orb[1][:, :N_b], S)
-            self.calc_density_matrix()
-            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
-            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-            with logtime('computing Fock matrix'):
-                self.calc_fock_matrix()
-            with logtime('computing the energy'):
-                self.calc_energy()
-
-        C_a = self.orb[0][:, :N_a] = temp_a
-        C_b = self.orb[1][:, :N_b] = temp_b
-        eps_a, eps_b = self.energies, self.energies_b
-        aux_a, aux_b = C_a.T @ S, C_b.T @ S
-
-        self.calc_density_matrix()
-
-        with logtime('computing common blocks'):
-            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
-            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-
-        with logtime('computing the energy'):
-            self.calc_energy()
-
-        with logtime('computing the gradient'):
-            # L = f - tr(eps_a.T @ (C_a.T @ S @ C_a - Id_N_a))
-            #       - tr(eps_b.T @ (C_b.T @ S @ C_b - Id_N_b))
-            R_a = aux_a @ C_a - self.Id_N_a
-            B = [np.kron(aux_a.T, self.Id_N_a[:, i]) for i in range(N_a)]
-            Jac_a = np.kron(self.Id_N_a, aux_a) + np.vstack(B).T
-            Jac_a = Jac_a.T @ np.reshape(eps_a, (N_a**2,), 'F')
-            grad_a = 2*self.Fock_a @ C_a - np.reshape(Jac_a, (n, N_a), 'F')
-            logger.debug('gradient spin alpha:\n%r', grad_a)
-
-            R_b = aux_b @ C_b - self.Id_N_b
-            B = [np.kron(aux_b.T, self.Id_N_b[:, i]) for i in range(N_b)]
-            Jac_b = np.kron(self.Id_N_b, aux_b) + np.vstack(B).T
-            Jac_b = Jac_b.T @ np.reshape(eps_b, (N_b**2,), 'F')
-            grad_b = 2*self.Fock_b @ C_b - np.reshape(Jac_b, (n, N_b), 'F')
-            logger.debug('gradient spin beta:\n%r', grad_b)
-
-        self.grad_norm = (linalg.norm(grad_a) + linalg.norm(grad_b)
-                          + linalg.norm(R_a) + linalg.norm(R_b))
-        self.restriction_norm = linalg.norm(R_a) + linalg.norm(R_b)
-        self.L = self.energy - np.trace(eps_a.T @ R_a) - np.trace(eps_b.T @ R_b)
-
-        with logtime('updating the point'):
-            C_a, C_b, eps_a, eps_b, _ = util.EBLS(C_a, C_b, eps_a, eps_b,
-                                                  -grad_a, -grad_b, R_a, R_b,
-                                                  self.grad_norm, self.L,
-                                                  self.L_prev, self)
-            self.orb[0][:, :N_a], self.orb[1][:, :N_b] = C_a, C_b
-            self.energies, self.energies_b = eps_a, eps_b
-
-        self.diff_energy = 1#self.L_prev - self.L
-        self.L_prev = self.L
-
-    def RCG(self, i_SCF):
-        """Hartree--Fock using Riemannian Conjugate Gradient."""
-        N_a, N_b, N, n = self.N_a, self.N_b, self.N_a + self.N_b, self.n
-        C_a, C_b = self.orb[0][:, :N_a], self.orb[1][:, :N_b]
-        S, invS = self.integrals.S, self.integrals.invS
-        X, invX = self.integrals.X, self.integrals.invX
-        h, g = self.integrals.h, self.integrals.g._integrals
-
-        if i_SCF % (N_a*(n-N_a) + N_b*(n-N_b)) == 0 or self.RiemG_a is None:
-            self.calc_density_matrix()
-            with logtime('computing common blocks'):
-                self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
-                self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-            with logtime('computing Fock matrix'):
-                self.calc_fock_matrix()
-            with logtime('computing the energy'):
-                self.calc_energy()
-            with logtime('computing the gradient'):
-                proj_a = self.Id_n - self.P_a @ S
-                self.RiemG_a = 2*proj_a @ invS @ self.Fock_a @ C_a
-                logger.debug('gradient spin alpha:\n%r', self.RiemG_a)
-                proj_b = self.Id_n - self.P_b @ S
-                self.RiemG_b = 2*proj_b @ invS @ self.Fock_b @ C_b
-                logger.debug('gradient spin beta:\n%r', self.RiemG_b)
-            self.eta_a = -self.RiemG_a
-            self.eta_b = -self.RiemG_b
-        else:
-            self.eta_a = -self.RiemG_a + self.gamma*self.eta_a
-            self.eta_b = -self.RiemG_b + self.gamma*self.eta_b
-
-        self.eta_norm = util.riem_norm(self.eta_a, self.eta_b, S)
-        aux = util.rip(self.RiemG_a, self.RiemG_b, self.RiemG_a, self.RiemG_b, S)
-        self.grad_norm = np.sqrt(aux)
-
-        with logtime('updating the point'):
-            # t = 1e-2
-            # nC_a = util.geodesic(C_a, self.eta_a, X, invX, t)
-            # nC_b = util.geodesic(C_b, self.eta_b, X, invX, t)
-            nC_a, nC_b, t = util.RBLS(C_a, C_b, self.eta_a, self.eta_b,
-                                      self.eta_norm, self.energy,
-                                      self.energy_prev, S, X, invX, self, i_SCF)
-
-        tGk_a = util.pt(self.RiemG_a, self.eta_a, C_a, self.Id_n, X, invX, t)
-        tGk_b = util.pt(self.RiemG_b, self.eta_b, C_b, self.Id_n, X, invX, t)
-        self.eta_a = util.pt(self.eta_a, self.eta_a, C_a, self.Id_n, X, invX, t)
-        self.eta_b = util.pt(self.eta_b, self.eta_b, C_b, self.Id_n, X, invX, t)
-
-        self.orb[0][:, :N_a], self.orb[1][:, :N_b] = nC_a, nC_b
-        logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
-                    np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
-                    np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
-
-        self.diff_energy = self.energy_prev - self.energy
-        self.energy_prev = self.energy
-
-        self.calc_density_matrix()
-
-        with logtime('computing common blocks'):
-            self.blocks_a = absil.common_blocks(C_a, self.P_a, g)
-            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-
-        with logtime('computing the energy'):
-            self.calc_energy()
-
-        with logtime('computing the gradient'):
-            proj_a = self.Id_n - self.P_a @ S
-            self.RiemG_a = 2*proj_a @ invS @ self.Fock_a @ C_a
-            logger.debug('gradient spin alpha:\n%r', self.RiemG_a)
-            proj_b = self.Id_n - self.P_b @ S
-            self.RiemG_b = 2*proj_b @ invS @ self.Fock_b @ C_b
-            logger.debug('gradient spin beta:\n%r', self.RiemG_b)
-
-        self.gamma = max(0, (util.rip(self.RiemG_a - tGk_a, self.RiemG_b - tGk_b,
-                                      self.RiemG_a, self.RiemG_b, S) / aux))
-        print(self.gamma)
+    def density_matrix_scf(self, i_SCF):
+        raise NotImplementedError("Density matrix based SCF")

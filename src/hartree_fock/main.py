@@ -79,9 +79,11 @@ def main(args, f_out):
     else:
         grad_type = args.grad_type
 
-    ini_orb=starting_orbitals.initial_orbitals(args.ini_orb,
-                                               molecular_system,
-                                               args.restricted)
+    ini_orb = starting_orbitals.initial_orbitals(args.ini_orb,
+                                                 molecular_system,
+                                                 args.restricted,
+                                                 args.conjugacy,
+                                                 args.step_size)
 
     with logtime('Hartree-Fock optimisation') as T:
         HF = optimiser.hartree_fock(molecular_system.integrals,
@@ -94,6 +96,8 @@ def main(args, f_out):
                                     grad_type=grad_type,
                                     f_out=f_out,
                                     diis_info=diis_info,
+                                    conjugacy=args.conjugacy,
+                                    step_size=args.step_size,
                                     HF_step_type=_define_hfstep_func(args.step_type),
                                     ini_orb=ini_orb)
 

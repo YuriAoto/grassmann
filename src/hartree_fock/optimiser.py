@@ -46,6 +46,8 @@ def hartree_fock(integrals,
                  energy_thresh=1.0E-10,
                  diis_info=None,
                  f_out=sys.stdout,
+                 conjugacy=None,
+                 step_size=1.0,
                  HF_step_type=lambda **x: "RH-SCF"):
     """A general Hartree-Fock procedure
 
@@ -82,12 +84,17 @@ def hartree_fock(integrals,
             'F_asym' - anti-symmetric part of generalized Fock matrix
     
     diis_info (int, optional, default=None)
-        Information regarding Diis
+        Information regarding DIIS
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
         If None the iterations are not printed.
-    
+
+    conjugacy (string, optional, default=None)
+        Only makes sense in the Conjugate Gradient Method. Options: "PR" and "FR"
+        to use the Polak--Ribière or the Fletcher--Reeves formula in the conjugacy
+        coefficient.
+
     HF_step_type (callable, optional, default=lambda **x:"RH-SCF")
         A callable that receives the following arguments:
             i_SCF (int)
@@ -110,6 +117,8 @@ def hartree_fock(integrals,
                          if diis_info is None else
                          diis_info)
     hf_step.grad_type = grad_type
+    hf_step.conjugacy = conjugacy
+    hf_step.step_size = step_size
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'
@@ -182,6 +191,11 @@ def hartree_fock(integrals,
                              step_type,
                              T.elapsed_time))
             f_out.flush()
+
+        if hf_step.diff_energy < 0:
+            logger.info("Method didn't work.")
+            converged = False
+            break
 
         if hf_step.grad_norm < grad_thresh or hf_step.diff_energy < energy_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
