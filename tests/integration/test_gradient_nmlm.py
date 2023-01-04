@@ -21,7 +21,7 @@ def build_fock(Ps, Pt, h, g):
 
     return fock
 
-def build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S, t=0.01):
+def build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S, t=0.01):
     n, N_a = C_a.shape
     _, N_b = C_b.shape
     N = N_a + N_b
@@ -96,79 +96,86 @@ def build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S, t=0.01):
 def build_analytic_gradient(C_a, C_b, fock_a, fock_b, S):
     _, N_a = C_a.shape; n, N_b = C_b.shape; N = N_a + N_b
     analytic_grad = np.zeros((n*N + N_a**2 + N_b**2,))
-    restr_a = C_a.T @ S @ C_a - np.eye(N_a)
-    restr_b = C_b.T @ S @ C_b - np.eye(N_b)
-    energies_a, _ = np.linalg.eigh(fock_a)
-    energies_a = np.diag(energies_a[:N_a])
-    energies_b, _ = np.linalg.eigh(fock_b)
-    energies_b = np.diag(energies_b[:N_b])
+    energies_a = np.linalg.eigh(fock_a)[0]
+    energies_a = np.reshape(np.diag(energies_a[:N_a]), (N_a**2,), 'F')
+    energies_b = np.linalg.eigh(fock_b)[0]
+    energies_b = np.reshape(np.diag(energies_b[:N_b]), (N_b**2,), 'F')
+    invS = np.linalg.inv(S)
+    Id_N_a, Id_N_b = np.eye(N_a), np.eye(N_b)
+    aux_a, aux_b = C_a.T @ S, C_b.T @ S
+    restr_a, restr_b = aux_a @ C_a - Id_N_a, aux_b @ C_b - Id_N_b
 
     if N_a:
         grad_energy_a = np.reshape(2*fock_a @ C_a, (n*N_a,), 'F')
-        jacob_restr_a = np.reshape(2*S @ C_a @ energies_a, (n*N_a,), 'F')
-        analytic_grad[: n*N_a] = grad_energy_a - jacob_restr_a
-        analytic_grad[n*N : n*N + N_a**2] = np.reshape(restr_a, (N_a**2,), 'F')
+        B = [np.kron(aux_a.T, Id_N_a[:, i]) for i in range(N_a)]
+        jacob_restr_a = np.kron(Id_N_a, aux_a) + np.vstack(B).T
+        analytic_grad[:n*N_a] = grad_energy_a - jacob_restr_a.T @ energies_a
+        analytic_grad[n*N:(n*N + N_a**2)] = np.reshape(-restr_a, (N_a**2,), 'F')
     if N_b:
         grad_energy_b = np.reshape(2*fock_b @ C_b, (n*N_b,), 'F')
-        jacob_restr_b = np.reshape(2*S @ C_b @ energies_b, (n*N_b,), 'F')
-        analytic_grad[n*N_a : n*N] = grad_energy_b - jacob_restr_b
-        analytic_grad[n*N + N_a**2:] = np.reshape(restr_b, (N_b**2,) , 'F')
+        B = [np.kron(aux_b.T, Id_N_b[:, i]) for i in range(N_b)]
+        jacob_restr_b = np.kron(Id_N_b, aux_b) + np.vstack(B).T
+        analytic_grad[n*N_a:n*N] = grad_energy_b - jacob_restr_b.T @ energies_b
+        analytic_grad[(n*N + N_a**2):] = np.reshape(-restr_b, (N_b**2,) , 'F')
 
     return analytic_grad
 
-class GradientTestFock(unittest.TestCase):
+class GradientTestLagrange(unittest.TestCase):
 
     def setUp(self):
         self.addTypeEqualityFunc(np.ndarray, tests.assert_arrays)
 
     def test_H2_ccpvdz(self):
-        C = np.load(tests.get_references('Orb__H2__5__ccpvdz.npy'))
+        C_a = np.load(tests.get_references('Orb__H2__5__ccpvdz.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('H2', '5'))
         molecular_system.calculate_integrals('cc-pVDZ', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_H2O_631g(self):
-        C = np.load(tests.get_references('Orb__H2O__Req__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__H2O__Req__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('H2O', 'Req'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_Be_631g(self):
-        C = np.load(tests.get_references('Orb__Be__at__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__Be__at__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('Be', 'at'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
@@ -179,15 +186,15 @@ class GradientTestFock(unittest.TestCase):
             tests.geom_file('Be', 'at'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
         fock_a = build_fock(P_a, P_b, h, g)
         fock_b = build_fock(P_b, P_a, h, g)
 
         analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
-        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
@@ -206,7 +213,7 @@ class GradientTestFock(unittest.TestCase):
         fock_b = build_fock(P_b, P_a, h, g)
 
         analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
-        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
@@ -225,7 +232,7 @@ class GradientTestFock(unittest.TestCase):
         fock_b = build_fock(P_b, P_a, h, g)
 
         analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
-        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
@@ -244,91 +251,96 @@ class GradientTestFock(unittest.TestCase):
         fock_b = build_fock(P_b, P_a, h, g)
 
         analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
-        numeric_grad = build_numeric_gradient(C_a, C_b, h, g, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_He2_631g(self):
-        C = np.load(tests.get_references('Orb__He2__1.5__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__He2__1.5__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('He2', '1.5'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_He2_ccpvdz(self):
-        C = np.load(tests.get_references('Orb__He2__1.5__ccpvdz.npy'))
+        C_a = np.load(tests.get_references('Orb__He2__1.5__ccpvdz.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('He2', '1.5'))
         molecular_system.calculate_integrals('cc-pVDZ', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_He8_631g(self):
-        C = np.load(tests.get_references('Orb__He8_cage__1.5__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__He8_cage__1.5__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('He8_cage', '1.5'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_Li2_631g(self):
-        C = np.load(tests.get_references('Orb__Li2__5__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__Li2__5__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('Li2', '5'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)
 
     def test_N2_631g(self):
-        C = np.load(tests.get_references('Orb__N2__3__631g.npy'))
+        C_a = np.load(tests.get_references('Orb__N2__3__631g.npy'))
+        C_b = C_a.copy()
         molecular_system = MolecularGeometry.from_xyz_file(
             tests.geom_file('N2', '3'))
         molecular_system.calculate_integrals('6-31g', int_meth='ir-wmme')
 
-        P = C @ C.T
         S = molecular_system.integrals.S
         h = molecular_system.integrals.h
         g = molecular_system.integrals.g._integrals
-        fock = build_fock(P, P, h, g)
+        P_a = C_a @ C_a.T; P_b = C_b @ C_b.T
+        fock_a = build_fock(P_a, P_b, h, g); fock_b = build_fock(P_b, P_a, h, g)
 
-        analytic_grad = build_analytic_gradient(C, C, fock, fock, S)
-        numeric_grad = build_numeric_gradient(C, C, h, g, fock, fock, S)
+        analytic_grad = build_analytic_gradient(C_a, C_b, fock_a, fock_b, S)
+        numeric_grad = build_numeric_gradient(C_a, C_b, fock_a, fock_b, h, g, S)
 
         self.assertEqual(analytic_grad, numeric_grad)

@@ -493,7 +493,6 @@ class Integrals():
                 for i in range(len(s)):
                     self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
         elif method == 'symmetrical':
-            # S @ U = U @ s; X = U @ s^-{0.5} @ U.T = U.T @ s^{-0.25} @ s^{-0.25} @ U
             self.X = self.X @ np.diag(s**(-.5)) @ self.X.T
         else:
             raise ValueError(f'Unknown orthogonalization method: {method}')

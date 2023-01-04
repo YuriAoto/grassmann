@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def initial_orbitals(ini_orb, molecular_system, restricted):
+def initial_orbitals(ini_orb, molecular_system, restricted, conjugacy, step_size):
     """Initial orbitals
     
     
@@ -34,6 +34,8 @@ def initial_orbitals(ini_orb, molecular_system, restricted):
     
     restricted (bool)
         True to obtain restricted orbitals
+
+    conjugacy and step_size are a hack to get the SAD working. find a better way.
     
     Return:
     -------
@@ -49,7 +51,9 @@ def initial_orbitals(ini_orb, molecular_system, restricted):
             restricted=restricted)
     if ini_orb == 'SAD':
         logger.info(f'{logmsg}: superposition of atomic densities')
-        return MolecularOrbitals.from_dens(superpos_atdens(molecular_system),
+        return MolecularOrbitals.from_dens(superpos_atdens(molecular_system,
+                                                           conjugacy,
+                                                           step_size),
                                            restricted,
                                            molecular_system.integrals)
     logger.info(f'{logmsg}: from file {ini_orb}')
@@ -61,13 +65,15 @@ def initial_orbitals(ini_orb, molecular_system, restricted):
     orb.orthogonalise(X=molecular_system.integrals.X)
 
 
-def superpos_atdens(molecular_system):
+def superpos_atdens(molecular_system, conjugacy, step_size):
     """Generate superposition of atomic densities
     
     Parameters:
     -----------
     molecular_system (MolecularGeometry)
         The system
+
+    conjugacy and step_size are a hack to get the SAD working. find a better way.
     
     Return:
     -------
@@ -80,7 +86,7 @@ def superpos_atdens(molecular_system):
         atbas = at.element + at.basis
         if atbas in atomic_dens:
             continue
-        atomic_dens[atbas] = calc_at_dens(at.element, at.basis)
+        atomic_dens[atbas] = calc_at_dens(at.element, at.basis, conjugacy, step_size)
     n = molecular_system.integrals.n_func
     mol_dens_a = np.zeros((n, n))
     mol_dens_b = np.zeros((n, n))
@@ -101,7 +107,7 @@ class _SADargs:
         self.__dict__.update(kwargs)
 
 
-def calc_at_dens(element, basis):
+def calc_at_dens(element, basis, conjugacy, step_size):
     """Calculate atomic densisty
     
     Parameters:
@@ -111,6 +117,8 @@ def calc_at_dens(element, basis):
     
     basis (str)
         Basis set name
+
+    conjugacy and step_size are a hack to get the SAD working. find a better way.
     
     """
     fname = 'atomicdenstmpFindnewname.xyz'
@@ -131,7 +139,9 @@ def calc_at_dens(element, basis):
                     diis_at_P=False,
                     grad_type='F_asym',
                     step_type='SCF',
-                    ini_orb='Hcore'
+                    ini_orb='Hcore',
+                    conjugacy=conjugacy,
+                    step_size=step_size
     )
     atHF = main.main(args, None)#sys.stdout)
     return atHF.density

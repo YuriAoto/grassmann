@@ -47,43 +47,28 @@ from scipy import linalg
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def common_blocks(double[:, :] C_a, double[:, :] C_b,
-                  double[:, :] P_a, double[:, :] P_b,
-                  double[:, :, :] g):
-    cdef int i, j, k, L, T = g.shape[0], n = C_a.shape[0]
-    cdef int N_a = C_a.shape[1], N_b = C_b.shape[1]
-    cdef double[:] GP_a = np.zeros(T)
-    cdef double[:] GP_b = np.zeros(T)
-    cdef double[:, :, :] GC_a = np.zeros((T, n, N_a))
-    cdef double[:, :, :] GC_b = np.zeros((T, n, N_b))
-    cdef double[:, :, :] GCC_a = np.zeros((T, N_a, N_a))
-    cdef double[:, :, :] GCC_b = np.zeros((T, N_b, N_b))
+def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
+    cdef int i, j, k, L, T = g.shape[0], n = C.shape[0], N = C.shape[1]
+    cdef double[:] GP = np.zeros(T)
+    cdef double[:, :, :] GC = np.zeros((T, n, N))
+    cdef double[:, :, :] GCC = np.zeros((T, N, N))
     cdef double aux
 
     for L in range(T):
         for i in range(n):
             for k in range(n):
                 aux = g[L, i, k]
-                GP_a[L] += aux * P_a[i, k]
-                GP_b[L] += aux * P_b[i, k]
+                GP[L] += aux * P[i, k]
 
-                for j in range(N_a):
-                    GC_a[L, i, j] += aux * C_a[k, j]
+                for j in range(N):
+                    GC[L, i, j] += aux * C[k, j]
 
-                for j in range(N_b):
-                    GC_b[L, i, j] += aux * C_b[k, j]
+            for j in range(N):
+                aux = C[i, j]
+                for k in range(N):
+                    GCC[L, j, k] += GC[L, i, k] * aux
 
-            for j in range(N_a):
-                aux = C_a[i, j]
-                for k in range(N_a):
-                    GCC_a[L, j, k] += GC_a[L, i, k] * aux
-
-            for j in range(N_b):
-                aux = C_b[i, j]
-                for k in range(N_b):
-                    GCC_b[L, j, k] += GC_b[L, i, k] * aux
-
-    return GP_a, GP_b, GC_a, GC_b, GCC_a, GCC_b
+    return GP, GC, GCC
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
@@ -119,7 +104,7 @@ def mixed_spin(double[:, :, :] GC_a, double[:, :, :] GC_b):
             for j in range(N_b):
                 for a in range(n):
                     for b in range(N_a):
-                        M[i + j*n, a + b*n] += 2 * GC_a[L, a, b] * GC_b[L, i, j]
+                        M[i + j*n, a + b*n] += 4*GC_a[L, a, b]*GC_b[L, i, j]
 
     return M
 
@@ -136,9 +121,9 @@ def non_diag_blocks(double[:, :] C, double[:, :, :] GC,
     for L in range(T):
         for i in range(n):
             for a in range(n):
-                M[i, a] += (2 * GC[L, a, b] * GC[L, i, j]
-                            - GC[L, a, j] * GC[L, i, b]
-                            - g[L, i, a] * GCC[L, j, b])
+                M[i, a] += 2*(2*GC[L, a, b]*GC[L, i, j]
+                              - GC[L, a, j]*GC[L, i, b]
+                              - g[L, i, a]*GCC[L, j, b])
 
     return M
 
@@ -149,13 +134,12 @@ def diag_blocks(double[:, :] C, double[:, :, :] GC, double[:, :, :] GCC,
     """Construct the diagonal blocks of the hessian."""
     cdef int a, i, L
     cdef int n = C.shape[0], T = g.shape[0]
-    cdef double[:, :] M = np.array(fock)
+    cdef double[:, :] M = 2*np.array(fock)
 
     for L in range(T):
         for i in range(n):
             for a in range(i + 1):
-                M[i, a] -= (g[L, i, a] * GCC[L, b, b]
-                            - GC[L, a, b] * GC[L, i, b])
+                M[i, a] -= 2*(g[L, i, a]*GCC[L, b, b] - GC[L, a, b]*GC[L, i, b])
                 M[a, i] = M[i, a]
 
     return M
@@ -171,11 +155,11 @@ def hessian(double[:, :] C_a, double[:, :] C_b,
     cdef int j, b, N = N_a + N_b, T = g.shape[0]
     hess = np.empty((n*N, n*N))
 
-    # computational cost: N_a * N_b * n^2 * L
-    hess[n*N_a :, : n*N_a] = mixed_spin(GC_a, GC_b)
-    hess[: n*N_a, n*N_a :] = hess[n*N_a :, : n*N_a].T
+    # computational cost: O(N_a * N_b * n^2 * L)
+    hess[n*N_a:, :n*N_a] = mixed_spin(GC_a, GC_b)
+    hess[:n*N_a, n*N_a:] = hess[n*N_a:, :n*N_a].T
 
-    # computational cost: N_a * n^2 * L
+    # computational cost: O(N_a * n^2 * L)
     for b in range(N_a):
         hess[n*b : n*(b+1), n*b : n*(b+1)] = \
             diag_blocks(C_a, GC_a, GCC_a, fock_a, g, b)
@@ -184,7 +168,7 @@ def hessian(double[:, :] C_a, double[:, :] C_b,
         hess[n*(b+N_a) : n*(b+N_a+1), n*(b+N_a) : n*(b+N_a+1)] = \
             diag_blocks(C_b, GC_b, GCC_b, fock_b, g, b)
 
-    # computational cost: n^2 * N_a^2 * L
+    # computational cost: O(n^2 * N_a^2 * L)
     for j in range(N_a - 1):
         for b in range(j + 1):
             hess[n*(j+1) : n*(j+2), n*b : n*(b+1)] = \
@@ -215,51 +199,45 @@ def dir_proj(double[:, :] C, double[:, :] grad):
 
     return der
 
-def normalize(double[:] v, double[:, :] S):
+def normalize(double[:] v, double[:, :] G):
     """Normalize a vector with respect to an arbitrary basis.
 
     Parameters:
     -----------
-    v (1D np.ndarray of dimension (n, 1))
-        The vector to be normalized
-
-    S (2D np.ndarray of dimension (n, n))
-        The Gram matrix associated with the basis of interest.
+    - v (nx1 ndarray): the vector to be normalized.
+    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
 
     Returns:
     --------
-    A 1D np.ndarray of dimension (n, 1)
+    nx1 ndarray with the orthonormalized 'v'.
     """
-    return v / np.sqrt(np.transpose(v).T @ S @ v)
+    return v / np.sqrt(np.transpose(v).T @ G @ v)
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def gram_schmidt(M, double[:, :] S):
+def gram_schmidt(M, double[:, :] G):
     """Gram-Schmidt algorithm in an arbitrary basis.
 
     Parameters:
     -----------
-    M (2D np.ndarray of dimension (n, k))
-        Matrix containing the k vectors to be orthonormalized. Each vector is a
-        column of the matrix.
-
-    S (2D np.ndarray of dimension (n, n))
-        The Gram matrix associated with the basis of interest.
+    - M (nxk ndarray): matrix containing the k vectors to be orthonormalized.
+        Each vector is a column of the matrix.
+    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
 
     Returns:
     --------
-    A 2D np.ndarray of dimension (n, k) containing the orthonormalized vectors.
+    A nxk ndarray containing the orthonormalized vectors.
     """
     cdef int i, j
 
-    M[:, 0] = normalize(M[:, 0], S)
+    M[:, 0] = normalize(M[:, 0], G)
     for i in range(1, M.shape[1]):
         Mi = M[:, i]
         for j in range(i):
             Mj = M[:, j]
-            t = Mi.T @ S @ Mj
+            t = Mi.T @ G @ Mj
             Mi = Mi - t * Mj
-            M[:, i] = normalize(Mi, S)
+            M[:, i] = normalize(Mi, G)
 
     return M
 
