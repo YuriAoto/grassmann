@@ -61,7 +61,9 @@ def _get_atomic_number_of_line(line):
     """Get the atomic number from a line '! <ELEMENT_NAME> (xxx) -> [XXX]' """
     rematch = re.match('^!\s*([a-zA-Z]+)\s*\(.+\)\s*->\s*\[.+\]', line)
     if rematch:
-        rematch = ATOMS_NAME.index(rematch.group(1).lower())
+        for i, name in enumerate(ATOMS_NAME):
+            if rematch.group(1).lower() in name:
+                return i
     return rematch
 
 

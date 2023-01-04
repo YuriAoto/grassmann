@@ -7,6 +7,7 @@ import unittest
 import tests
 from integrals.integrals import (_check_basis, _fetch_from_basis_set_exchange,
                                  _write_basis, _from_molpro_to_wmme, _from_json_to_wmme,
+                                 _get_atomic_number_of_line,
                                  basis_file, BasisSetError, BasisInfo)
 from molecular_geometry.molecular_geometry import MolecularGeometry, Atom
 
@@ -101,6 +102,21 @@ class WriteBasisFileTestCase(unittest.TestCase):
                          + 'The basis asdfg+(**)+ for 6\nThe basis asdfg+(**)+ for 6\n')
         os.remove(os.path.join(self.wmme_dir, 'bases/emsl_asdfgpllbrststrbrpl.libmol'))
 
+
+@tests.category('SHORT')
+class InternalsTestCase(unittest.TestCase):
+
+    def test_get_atomic_number_of_line(self):
+        self.assertEqual(1, _get_atomic_number_of_line(
+            '! hydrogen (3s) -> [1s]'))
+        self.assertEqual(3, _get_atomic_number_of_line(
+            '! lithium (kkkkk) -> [mmmmm]'))
+        self.assertEqual(10, _get_atomic_number_of_line(
+            '! neon (kkkkk) -> [mmmmm]'))
+        self.assertEqual(15, _get_atomic_number_of_line(
+            '! phosphorus (kkkkk) -> [mmmmm]'))
+        self.assertEqual(15, _get_atomic_number_of_line(
+            '! phosphorous (kkkkk) -> [mmmmm]'))
 
 @tests.category('SHORT')
 class BasisFileTestCase(unittest.TestCase):
