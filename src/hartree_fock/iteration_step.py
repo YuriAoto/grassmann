@@ -373,9 +373,11 @@ class HartreeFockStep():
             #                         self.grad_norm**2, self.energy,
             #                         self.energy_prev, S, X, invX, self)
             # self.orb[0][:, :self.N_a], self.orb[1][:, :self.N_b] = C_a, C_b
-            logger.info('Is C.T @ S @ C close to Id: %s (alpha); %s (beta)',
-                        np.allclose(C_a.T @ S @ C_a, self.Id_N_a),
-                        np.allclose(C_b.T @ S @ C_b, self.Id_N_b))
+            logger.info('Is C.T @ S @ C close to Id (updated): %s (alpha); %s (beta)',
+                        np.allclose(self.orb[0][:, :self.N_a].T @ S @ self.orb[0][:, :self.N_a],
+                                    self.Id_N_a),
+                        np.allclose(self.orb[1][:, :self.N_b].T @ S @ self.orb[1][:, :self.N_b],
+                                    self.Id_N_b))
 
         self.diff_energy = self.energy_prev - self.energy
         self.energy_prev = self.energy

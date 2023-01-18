@@ -501,8 +501,14 @@ class MolecularOrbitals():
         An instance of MolecularOrbitals.
         """
         if file_name[-4:] == '.xml':
-            return cls._get_orbitals_from_Molpro_xml(file_name)
-        raise ValueError('We can read orbitals from xml files only.')
+            new_orb = cls._get_orbitals_from_Molpro_xml(file_name)
+        elif file_name[-4:] == '.npz':
+            new_orb = cls._get_orbitals_from_npz(file_name)
+        else:
+            raise ValueError('We can read orbitals from xml and npz files only.')
+        new_orb._integrals.n_func = new_orb._coefficients[0].shape[0]
+        logger.info('Loaded orbitals from file %s:\n%s', file_name, new_orb)
+        return new_orb
 
     @classmethod
     def identity(cls, orb_dim, n_elec, n_irrep, basis_len,
@@ -520,7 +526,49 @@ class MolecularOrbitals():
         for i in range(n_irrep):
             new_orbitals.append(np.identity(orb_dim[i])[:, :n_elec[i]])
         return new_orbitals
-
+    
+    @classmethod
+    def _get_orbitals_from_npz(cls, npz_file):
+        """Load orbitals from numpy's npz file.
+        
+        Parameters:
+        -----------
+        npz_file (str)
+            A npz file name with either one or two numpy arrays.
+            If with only one numpy array, consider to be the coefficients
+            of restricted orbitals.
+            If with two numpy arrays, they must be named alpha and beta,
+            and will be the alpha and beta orbitals.
+        
+        Returns:
+        --------
+        An instance of MolecularOrbitals.
+        
+        Limitations:
+        -----------
+        only for n_irrep = 1 at the moment
+        
+        TODO:
+        -----
+        Make it work for n_irrep > 1
+        """
+        loaded_array = np.load(npz_file)
+        if len(loaded_array) == 1:
+            return cls.from_array(loaded_array[loaded_array.keys[0]],
+                                  n_irrep=1,
+                                  name=f'Coefficients from npz file {npz_file}',
+                                  integrals=None,
+                                  energies=None,
+                                  restricted=True)
+        if len(loaded_array) >= 2:
+            return cls.from_array((loaded_array['alpha'],
+                                   loaded_array['beta']),
+                                  n_irrep=1,
+                                  name=f'Coefficients from npz file {npz_file}',
+                                  integrals=None,
+                                  energies=None,
+                                  restricted=False)
+    
     @classmethod
     def _get_orbitals_from_Molpro_xml(cls, xml_file):
         """Load orbitals from Molpro xml file.
@@ -613,6 +661,60 @@ class MolecularOrbitals():
                     raise e
                 cur_orb[spirrep] += 1
         return new_orbitals
+
+    def save(self, filename):
+        """Save orbitals into a file
+        
+        Parameters:
+        -----------
+        filename (str)
+            The filename to save the orbitals.
+            The extension will dictate the format:
+            ".npz" -> numpy's npy file
+        
+        Return:
+        -------
+        Nothing
+        
+        Raises:
+        -------
+        ValueError, for a unknown extension
+        """
+        if filename[-4:] == '.npz':
+            self._dump_to_npz(filename)
+            return
+        raise ValueError(f'File name has unknown extension: {filename}')
+
+    def _dump_to_npz(self, npz_file):
+        """Save orbitals to numpy's npz file.
+        
+        If restricted orbitals, save it in only one numpy array;
+        If unrestricted, save in two numpy arrays,
+        named alpha and beta.
+        
+        Parameters:
+        -----------
+        npz_file (str)
+            A npz file name.
+        
+        Returns:
+        --------
+        An instance of MolecularOrbitals.
+        
+        Limitations:
+        -----------
+        only for n_irrep = 1 at the moment
+        """
+        if self.n_irrep > 1:
+            raise NotImplementedError('Not yet for n_irrep > 1')
+        if self.restricted:
+            np.savez(npz_file,
+                     coefficients=self[0])
+        else:
+            np.savez(npz_file,
+                     alpha=self[0],
+                     beta=self[1])
+
     
     def orthogonalise(self, X=None):
         """Orthogonalise the orbitals
@@ -625,21 +727,47 @@ class MolecularOrbitals():
             pass
         else:
             self._coefficients[0][:, :] = X @ self._coefficients[0]
+            if not self.restricted:
+                self._coefficients[1][:, :] = X @ self._coefficients[1]
     
-    def is_orthonormal(self, Smat=None):
+    def is_orthonormal(self, Smat=None, N=None):
         """Return True if orbitals are orthonormal
+        
+        N (int, if restricted, 2-tuple of int if unrestricted)
+            The number of occupied orbitals
         
         TODO: for more than one irrep
         """
         if self.n_irrep > 1:
             raise NotImplementedError('TODO: for more than one irrep')
-        if Smat is None:
-            id_mat = self[0].T @ self[0]
+        if N is None:
+            Ca = self[0]
+            if not self.restricted:
+                Cb = self[1]
         else:
-            id_mat = self[0].T @ Smat @ self[0]
+            if self.restricted:
+                Ca = self[0][:, :N]
+            else:
+                Ca = self[0][:, :N[0]]
+                Cb = self[1][:, :N[1]]
+        if Smat is None:
+            id_mat = Ca.T @ Ca
+        else:
+            id_mat = Ca.T @ Smat @ Ca
         logger.debug('This should be the identity matrix:\n%s',
                      id_mat)
-        return np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        alpha_is_orth = np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        if not self.restricted:
+            if Smat is None:
+                id_mat = Cb.T @ Cb
+            else:
+                id_mat = Cb.T @ Smat @ Cb
+            logger.debug('This should be the identity matrix:\n%s',
+                         id_mat)
+            beta_is_orth = np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        else:
+            beta_is_orth = True
+        return alpha_is_orth and beta_is_orth
     
     def in_the_basis_of(self, other):
         """Return self in the basis of other.

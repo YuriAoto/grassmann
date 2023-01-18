@@ -6,6 +6,7 @@ TODO: Loading molecular geometry elsewhere
 Yuri Aoto, 2020
 """
 import re
+import logging
 
 import numpy as np
 
@@ -15,6 +16,7 @@ from input_output.log import logtime
 from orbitals import orbitals
 from hartree_fock import starting_orbitals
 
+logger = logging.getLogger(__name__)
 
 def _define_hfstep_func(hf_step):
     """Create the function for Hartree-Fock steps from string hf_step"""
@@ -84,6 +86,7 @@ def main(args, f_out):
                                                  args.restricted,
                                                  args.conjugacy,
                                                  args.step_size)
+    logger.debug('Starting orbitals:\n %s', ini_orb)
 
     with logtime('Hartree-Fock optimisation') as T:
         HF = optimiser.hartree_fock(molecular_system.integrals,
@@ -102,5 +105,7 @@ def main(args, f_out):
                                     ini_orb=ini_orb)
 
     HF.totaltime = T.end_time - T.ini_time
+    if args.save_orb is not None:
+        HF.orbitals.save(args.save_orb)
     if f_out is not None: f_out.write(str(HF))
     return HF

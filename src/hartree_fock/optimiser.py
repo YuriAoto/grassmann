@@ -2,6 +2,7 @@
 
 """
 import sys
+import copy
 import logging
 from collections import namedtuple
 
@@ -142,7 +143,11 @@ def hartree_fock(integrals,
     hf_step.orb = MolecularOrbitals(ini_orb)
 
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
-    assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
+    assert hf_step.orb.is_orthonormal(integrals.S,
+                                      N=(hf_step.N_a
+                                         if restricted else
+                                        (hf_step.N_a, hf_step.N_b))), \
+        "Initial orbitals are not orthonormal"
     hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=hf_step.grad_norm))
 
     if f_out is not None:
@@ -197,12 +202,17 @@ def hartree_fock(integrals,
             converged = True
             break
 
-    hf_step.calc_density_matrix()
-    hf_step.orb.name = 'RHF' if restricted else 'UHF'
+    assert hf_step.orb.is_orthonormal(integrals.S,
+                                      hf_step.N_a
+                                      if restricted else
+                                      (hf_step.N_a, hf_step.N_b)), \
+                                      "Final orbitals are not orthonormal"
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
-    res.orbitals = hf_step.orb
+    res.orbitals = copy.deepcopy(hf_step.orb)
+    res.orbitals.name = 'RHF' if restricted else 'UHF'
     logger.debug('Final orbitals:\n%s', res.orbitals)
+    hf_step.calc_density_matrix()
     if restricted:
         res.density = hf_step.P_a
     else:
