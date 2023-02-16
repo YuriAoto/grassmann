@@ -52,4 +52,4 @@ class InternalsTestCase(unittest.TestCase):
     def test_raise(self):
         with self.assertRaises(ValueError):
             f = _define_hfstep_func('SCF-Absil_3.0')
-        
+     

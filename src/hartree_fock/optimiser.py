@@ -2,7 +2,9 @@
 
 """
 import sys
+import copy
 import logging
+from collections import namedtuple
 
 import numpy as np
 
@@ -28,33 +30,26 @@ def _check_nelec_ms(n_elec, restricted, ms2):
                          ' an even number of electrons and ms=0')
     return restricted, ms2
 
-def hf_initial_orbitals(ini_orb, integrals, restricted):
-    if ini_orb is None:
-        logger.info('Using eigenvectors of orthogonalised h as starting guess')
-        return MolecularOrbitals.from_eig_h(
-            integrals,
-            integrals.basis_set + '(AO)',
-            restricted=restricted)
-    else:
-        logger.info('Using orbitals given by the user as initial guess.')
-        if ini_orb.restricted and not restricted:
-            raise ValueError('Initial orbitals should be of unrestricted type.')
-        orb = MolecularOrbitals(ini_orb)
-        orb.orthogonalise(X=integrals.X)
-        return orb
+
+DiisInfo = namedtuple('DiisInfo',
+                      ['n', 'at_F', 'at_P'])
 
 
 def hartree_fock(integrals,
 		 nucl_rep,
 		 n_elec,
+                 ini_orb,
                  ms2=None,
                  restricted=None,
                  max_iter=20,
                  grad_thresh=1.0E-5,
+                 grad_type='F_occ_virt',
+                 energy_thresh=1.0E-10,
+                 diis_info=None,
                  f_out=sys.stdout,
-                 n_DIIS=0,
-                 HF_step_type=lambda **x: "RH-SCF",
-                 ini_orb=None):
+                 conjugacy=None,
+                 step_size=1.0,
+                 HF_step_type=lambda **x: "RH-SCF"):
     """A general Hartree-Fock procedure
 
     
@@ -66,6 +61,9 @@ def hartree_fock(integrals,
 
     n_elec (int)
     	The number of electrons (must be even)
+    
+    ini_orb (MolecularOrbitals)
+        Initial orbitals for the HF procedure
 
     ms2 (int)
         Two times MS (n alpha minus n beta).
@@ -80,26 +78,32 @@ def hartree_fock(integrals,
     
     grad_thresh (float, optional, default=1.0E-5)
 	Threshold for the norn of the gradient
+
+    grad_type (str, optional, default='F_occ_virt')
+        Gradient type for SCF. Possible valies are:
+            'F_occ_virt' - occupied-virtual block of Fock matrix
+            'F_asym' - anti-symmetric part of generalized Fock matrix
+    
+    diis_info (int, optional, default=None)
+        Information regarding DIIS
     
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
         If None the iterations are not printed.
-    
-    n_DIIS (int, optional, default=0)
-        maximum diminsion of the iterative subspace in DIIS
-        0 means that DIIS is not used
-    
+
+    conjugacy (string, optional, default=None)
+        Only makes sense in the Conjugate Gradient Method. Options: "PR" and "FR"
+        to use the Polak--Ribière or the Fletcher--Reeves formula in the conjugacy
+        coefficient.
+
     HF_step_type (callable, optional, default=lambda **x:"RH-SCF")
         A callable that receives the following arguments:
             i_SCF (int)
             grad (np.ndarray, optional)
         and return one of the following strings:
-            "RH-SCF", "densMat-SCF", "Absil", "orb_rot-Newton"
+            "RH-SCF", "densMat-SCF", "RRN", "orb_rot-Newton"
         that will dictate which method should be used in the
         Hartree-Fock optimisation, in that iteration
-    
-    ini_orb (MolecularOrbitals, optional, default=None)
-        Initial orbitals for the HF procedure
     """
     restricted, ms2 = _check_nelec_ms(n_elec, restricted, ms2)
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
@@ -110,69 +114,122 @@ def hartree_fock(integrals,
     hf_step.N_a = (n_elec + ms2) // 2
     hf_step.N_b = (n_elec - ms2) // 2
     hf_step.n_occ = n_elec
-    hf_step.n_DIIS = n_DIIS
+    hf_step.diis_info = (DiisInfo(n=0, at_F=False, at_P=False)
+                         if diis_info is None else
+                         diis_info)
+    hf_step.grad_type = grad_type
+    hf_step.conjugacy = conjugacy
+    hf_step.step_size = step_size
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'
-                'n DIIS: %d\n',
+                'DIIS: %s\n'
+                'Restricted: %s\n'
+                '2ms: %s\n'
+                'grad type: %s\n',
                 nucl_rep,
                 n_elec,
-                hf_step.n_DIIS)
+                hf_step.diis_info,
+                restricted,
+                ms2,
+                grad_type
+    )
     if restricted:
         logger.info('Number of occupied orbitals: %d', hf_step.N_a)
     else:
         logger.info('Number of occupied orbitals: %d (alpha), %d (beta)',
                     hf_step.N_a,
                     hf_step.N_b)
-    hf_step.orb = hf_initial_orbitals(ini_orb, integrals, restricted)
+    hf_step.orb = MolecularOrbitals(ini_orb)
+
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
-    assert hf_step.orb.is_orthonormal(integrals.S), "Orbitals are not orthonormal"
-    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=100.0))
-    
+    assert hf_step.orb.is_orthonormal(integrals.S,
+                                      N=(hf_step.N_a
+                                         if restricted else
+                                        (hf_step.N_a, hf_step.N_b))), \
+        "Initial orbitals are not orthonormal"
+    hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=hf_step.grad_norm))
+
     if f_out is not None:
-        f_out.write(util.fmt_HF_header_general.format('it.', 'E',
-                                                      '|Gradient|',
-                                                      'step',
-                                                      'time in iteration'))
-        
+        f_out.write(util.write_header)
+
     for i_SCF in range(max_iter):
-        logger.info('Starting HF iteration %d', i_SCF)
         step_type = HF_step_type(i_SCF=i_SCF, grad_norm=hf_step.grad_norm)
+        logger.info('Starting HF iteration %d', i_SCF)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':
                 hf_step.roothan_hall(i_SCF)
-                
+
             elif step_type == 'densMat-SCF':
                 hf_step.density_matrix_scf(i_SCF)
-                
-            elif step_type == 'Absil':
-                hf_step.newton_absil(i_SCF)
-                
+
+            elif step_type == 'RNR':
+                hf_step.RNR(i_SCF)
+
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)
-                
+
+            elif step_type == 'NRLM':
+                hf_step.NRLM(i_SCF)
+
+            elif step_type == 'RGD':
+                hf_step.RGD(i_SCF)
+
+            elif step_type == 'GDLM':
+                hf_step.GDLM(i_SCF)
+
+            elif step_type == 'RCG':
+                hf_step.RCG(i_SCF)
+
             else:
                 raise ValueError("Unknown type of Hartree-Fock step: "
                                  + step_type)
-        
+
         if f_out is not None:
-            f_out.write(util.fmt_HF_iter_general.format(
-                i_SCF, nucl_rep + hf_step.energy,
-                hf_step.grad_norm, step_type, T.elapsed_time))
+            f_out.write((util.fmt_HF_iter_gen_lag
+                         if step_type in {'NRLM', 'GDLM'} else
+                         util.fmt_HF_iter_general).format(
+                             i_SCF,
+                             nucl_rep + hf_step.energy,
+                             hf_step.grad_norm,
+                             hf_step.restriction_norm,
+                             step_type,
+                             T.elapsed_time))
             f_out.flush()
-            
-        if hf_step.grad_norm < grad_thresh:
+
+        if hf_step.grad_norm < grad_thresh or abs(hf_step.diff_energy) < energy_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
 
-    hf_step.orb.name = 'RHF' if restricted else 'UHF'
+    assert hf_step.orb.is_orthonormal(integrals.S,
+                                      hf_step.N_a
+                                      if restricted else
+                                      (hf_step.N_a, hf_step.N_b)), \
+                                      "Final orbitals are not orthonormal"
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
-    res.orbitals = hf_step.orb
+    res.orbitals = copy.deepcopy(hf_step.orb)
+    res.orbitals.name = 'RHF' if restricted else 'UHF'
+    logger.debug('Final orbitals:\n%s', res.orbitals)
+    hf_step.calc_density_matrix()
+    if restricted:
+        res.density = hf_step.P_a
+    else:
+        res.density = hf_step.P_a, hf_step.P_b
     res.success = converged
     res.n_iter = i_SCF
+    if hf_step.large_cond_number:
+        res.warning = 'Large conditioning number at iterations: '
+        if len(hf_step.large_cond_number) == 1:
+            res.warning += f'{hf_step.large_cond_number[0]}'
+        if len(hf_step.large_cond_number) == 2:
+            res.warning += f'{hf_step.large_cond_number[0]}, {hf_step.large_cond_number[-1]}'
+        if len(hf_step.large_cond_number) > 3:
+            res.warning += f'{hf_step.large_cond_number[0]}, ..., {hf_step.large_cond_number[-1]}'
+            res.warning += \
+                '\n          (look for "Large conditioning number" at the log file)'
+
     if not converged:
-        res.warning = 'No convergence was obtained'
         logger.info('End of Hartree-Fock calculation')
     return res

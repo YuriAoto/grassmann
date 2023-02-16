@@ -17,6 +17,7 @@ import numpy as np
 from scipy import linalg
 
 from input_output.parser import ParseError
+from input_output.log import logtime
 import integrals.integrals_cy
 from molecular_geometry.periodic_table import ATOMS_NAME, ATOMS
 
@@ -46,7 +47,7 @@ def _basis_filename(basis, wmme_dir):
     + -> pl
     * -> st
     ( -> lbr
-    ) -> lrbr
+    ) -> rbr
     
     """
     replaced_name = (basis.
@@ -60,7 +61,9 @@ def _get_atomic_number_of_line(line):
     """Get the atomic number from a line '! <ELEMENT_NAME> (xxx) -> [XXX]' """
     rematch = re.match('^!\s*([a-zA-Z]+)\s*\(.+\)\s*->\s*\[.+\]', line)
     if rematch:
-        rematch = ATOMS_NAME.index(rematch.group(1).lower())
+        for i, name in enumerate(ATOMS_NAME):
+            if rematch.group(1).lower() in name:
+                return i
     return rematch
 
 
@@ -171,6 +174,10 @@ def _from_molpro_to_wmme(basis):
         else:
             line = line[:comment_pos]
         lspl = list(map(lambda x: x.strip(), line.split(',')))
+        if line == 'spherical':
+            # This Molpro keyword enforces spherical basis functions and
+            # are in the basis set pulled from basissetexchange.
+            continue
         if not line or 'basis={' == line:
             continue
         if lspl[0] == 'c':
@@ -272,8 +279,8 @@ def _fetch_from_basis_set_exchange(basis, atoms):
     
     Return:
     -------
-    A list of tuples:
-    Each element of this list is the following tuple:
+    A list of the namedtuples BasisInfo:
+    Each element of this list is the following:
     (basis, atomic number, basis set information)
     
     Raise:
@@ -349,9 +356,9 @@ def basis_file(basis, mol_geom, wmme_dir, try_getting_it=True):
                 basis)
         newb = []
         for at in b:
-            newb.append(BasisInfo(name=at[0],
-                                  atom=at[1],
-                                  basis=_from_molpro_to_wmme(at[2])))
+            newb.append(BasisInfo(name=at.name,
+                                  atom=at.atom,
+                                  basis=_from_molpro_to_wmme(at.basis)))
         _write_basis(newb, wmme_dir)
     return file_name
 
@@ -456,7 +463,8 @@ class Integrals():
                     format(at.element, at.coord[0], at.coord[1], at.coord[2]))
         f.close()
         try:
-            Output = check_output(cmd, shell=False)
+            with logtime('Calculating integrals (call to IR-WMME)'):
+                Output = check_output(cmd, shell=False)
             if (version_info) >= (3, 0):
                 Output = Output.decode("utf-8")
         except CalledProcessError as e:
@@ -478,11 +486,16 @@ class Integrals():
             raise Exception('Cannot orthogonalise S: ' +
                             'Overlap integrals not calculated yet.')
         s, self.X = linalg.eigh(self.S)
-        for j in range(len(s)):
-            if abs(s[j]) < 0.000001:
-                raise Exception('LD problems in basis functions, s=' + str(s))
-            for i in range(len(s)):
-                self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        if method == 'canonical':
+            for j in range(len(s)):
+                if abs(s[j]) < 0.000001:
+                    raise Exception('LD problems in basis functions, s=' + str(s))
+                for i in range(len(s)):
+                    self.X[i][j] = self.X[i][j] / math.sqrt(s[j])
+        elif method == 'symmetrical':
+            self.X = self.X @ np.diag(s**(-.5)) @ self.X.T
+        else:
+            raise ValueError(f'Unknown orthogonalization method: {method}')
         if loglevel <= logging.DEBUG:
             logger.debug('X:\n%r', self.X)
             logger.debug('XSX:\n%r', self.X.T @ self.S @ self.X)
@@ -588,7 +601,14 @@ class Two_Elec_Int():
         self._format = 'ijkl'
         self._integrals = g_in_new_format
 
-        
+    def transform_to_4D(self):
+        """Transform integrals to a 4D format"""
+        n = self.n_func
+        g_in_new_format = np.einsum('Fij,Fkl->ijkl',
+                                    self._integrals,
+                                    self._integrals)
+        self._format = '4D'
+        self._integrals = g_in_new_format
 
 
 #####OLD#####

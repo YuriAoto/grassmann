@@ -15,23 +15,24 @@ def _run_Absil(molecule, geometry, basis, max_iter=20, ms2=0, kwargsSCF=None):
     molecular_system = MolecularGeometry.from_xyz_file(
         tests.geom_file(molecule, geometry))
     molecular_system.calculate_integrals(basis, int_meth='ir-wmme')
-    orb = None
     if kwargsSCF is not None:
-        HF = optimiser.Restricted_Closed_Shell_HF(molecular_system.integrals,
-                                                  molecular_system.nucl_rep,
-						  molecular_system.n_elec,
-                                                  f_out=None,
-                                                  **kwargsSCF)
+        HF = optimiser.hartree_fock(molecular_system.integrals,
+                                    molecular_system.nucl_rep,
+				    molecular_system.n_elec,
+                                    restricted=True,
+                                    f_out=None,
+                                    **kwargsSCF)
         orb = orbitals.MolecularOrbitals.unrestrict(HF.orbitals)
-    return optimiser.Unrestricted_HF(molecular_system.integrals,
-				     molecular_system.nucl_rep,
-				     molecular_system.n_elec,
-                                     ms2=ms2,
-                                     max_iter=max_iter,
-                                     ini_orb=orb,
-                                     f_out=None,
-                                     grad_thresh=1.0E-5)
-            
+    return optimiser.hartree_fock(molecular_system.integrals,
+				  molecular_system.nucl_rep,
+				  molecular_system.n_elec,
+                                  ms2=ms2,
+                                  restricted=False,
+                                  max_iter=max_iter,
+                                  ini_orb=orb,
+                                  f_out=None,
+                                  grad_thresh=1.0E-5)
+
 
 class HFAbsilTestCase(unittest.TestCase):
     """TestCase for the HF-Absil implementation."""
@@ -62,7 +63,7 @@ class HFAbsilTestCase(unittest.TestCase):
     
     @tests.category('SHORT', 'ESSENTIAL')
     def test_H2O_631g(self):
-        kwargsSCF = {'max_iter': 3, 'n_DIIS': 2}
+        kwargsSCF = {'max_iter': 3, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='H2O',
                            geometry='Rref_Helgaker',
                            basis='6-31g',
@@ -73,7 +74,7 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
     def test_H2O_631g_2(self):
-        kwargsSCF = {'max_iter': 4, 'n_DIIS': 2}
+        kwargsSCF = {'max_iter': 4, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='H2O',
                            geometry='Rref_Helgaker',
                            basis='6-31g',
@@ -157,7 +158,7 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
     def test_He2_ccpvdz(self):
-        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        kwargsSCF = {'max_iter': 1, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='He2',
                            geometry='1.5',
                            basis='cc-pVDZ',
@@ -168,7 +169,7 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
     def test_He8_631g(self):
-        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        kwargsSCF = {'max_iter': 1, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='He8_cage',
                            geometry='1.5',
                            basis='6-31g',
@@ -179,7 +180,7 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('SHORT', 'ESSENTIAL')
     def test_Li2_631g(self):
-        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        kwargsSCF = {'max_iter': 1, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='Li2',
                            geometry='5',
                            basis='6-31g',
@@ -190,7 +191,7 @@ class HFAbsilTestCase(unittest.TestCase):
 
     @tests.category('LONG', 'ESSENTIAL')
     def test_N2_631g(self):
-        kwargsSCF = {'max_iter': 1, 'n_DIIS': 0}
+        kwargsSCF = {'max_iter': 1, 'ini_orb': 'SAD'}
         resHF = _run_Absil(molecule='N2',
                            geometry='3',
                            basis='6-31g',

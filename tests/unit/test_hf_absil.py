@@ -29,4 +29,3 @@ class HessianTest(unittest.TestCase):
             for j in range(2*n*N_a):
                 print(f'{my_hess[i, j]:.5f} {ref_hess[i, j]:.5f} {i} {j}')
         # self.assertEqual(my_hess, ref_hess)
-

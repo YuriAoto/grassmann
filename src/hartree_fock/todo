@@ -1,0 +1,6 @@
+- finish documentation
+- (re)write tests
+- newton with lagrange multipliers
+- maybe check the hessian and switch to scf if its negative
+- improve gradient descent
+- quasi-newton

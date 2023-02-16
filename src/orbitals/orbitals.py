@@ -277,6 +277,7 @@ class MolecularOrbitals():
             self.in_the_basis = ''
             self.sym_adapted_basis = False
             self.energies = None
+            self.energies_b = None
         else:
             self.__dict__ = deepcopy(source.__dict__)
 
@@ -320,15 +321,118 @@ class MolecularOrbitals():
         e, C = eigh(h_orth)
         if restricted:
             return cls.from_array(integrals.X @ C, 1,
-                                  integrals=integrals)
+                                  integrals=integrals, energies=e)
         else:
             return cls.from_array((integrals.X @ C, integrals.X @ C), 1,
-                                  integrals=integrals, restricted=False)
+                                  integrals=integrals, energies=e,
+                                  restricted=False)
+
+    @classmethod
+    def from_dens(cls, P, restricted, integrals, method='Fock'):
+        """Obtain orbitals from a density
         
+        The density is not necessarily a true density.
+        
+        Parameters:
+        -----------
+        P (2-tuple of np.arrays)
+            Alpha and beta densities
+        
+        restricted (bool)
+            If True, restricted orbitals are obtained from the total
+            (alpha + beta) densities
+        
+        integrals (Integrals)
+            Molecular integrals
+        
+        method (str, optional, default='Fock')
+            The procedure to obtain the orbitals.
+            Currently the only method implemented is forming
+            the Fock matrix and diagonalizing it (a SCF step).
+        
+        TODO: Ideally, this should be done using internals of hartree_fock.
+        However, that module needs some clean up to make it usable from
+        outside
+        
+        """
+        if restricted:
+            P = (P[0] + P[1])
+            Fock_a = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P,
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P,
+                            integrals.g._integrals)
+            Fock_a -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals) / 2
+        else:
+            Fock_a = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Frs->F',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_a += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_a -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            Fock_b = np.array(integrals.h)
+            tmp = np.einsum('rs,Frs->F',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_b += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Frs->F',
+                            P[0],
+                            integrals.g._integrals)
+            Fock_b += np.einsum('F,Fmn->mn',
+                                tmp,
+                                integrals.g._integrals)
+            tmp = np.einsum('rs,Fms->Frm',
+                            P[1],
+                            integrals.g._integrals)
+            Fock_b -= np.einsum('Frm,Frn->mn',
+                                tmp,
+                                integrals.g._integrals)
+
+        if restricted:
+            Fock_a = integrals.X.T @ Fock_a @ integrals.X
+            e, C = eigh(Fock_a)
+            orb_a = integrals.X @ C
+            return cls.from_array(orb_a, 1, name='From SAD',
+                                  integrals=integrals, energies=e)
+        else:
+            Fock_a = integrals.X.T @ Fock_a @ integrals.X
+            Fock_b = integrals.X.T @ Fock_b @ integrals.X
+            e, C = eigh(Fock_a)
+            eb, Cb = eigh(Fock_b)
+            orb_a = integrals.X @ C
+            orb_b = integrals.X @ Cb
+            return cls.from_array((orb_a, orb_b), 1, name='From SAD',
+                                  integrals=integrals,
+                                  energies=e,
+                                  restricted=False)
+
     @classmethod
     def from_array(cls, C, n_irrep,
                    name='Coefficients from array',
                    integrals=None,
+                   energies=None,
                    restricted=True):
         """Load orbitals from a ndarray-like object
         
@@ -357,6 +461,9 @@ class MolecularOrbitals():
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
+        new_orbitals.energies = energies
+        if not restricted:
+            new_orbitals.energies_b = energies
 
         if isinstance(C, tuple):
             for Ci in C:
@@ -394,8 +501,14 @@ class MolecularOrbitals():
         An instance of MolecularOrbitals.
         """
         if file_name[-4:] == '.xml':
-            return cls._get_orbitals_from_Molpro_xml(file_name)
-        raise ValueError('We can read orbitals from xml files only.')
+            new_orb = cls._get_orbitals_from_Molpro_xml(file_name)
+        elif file_name[-4:] == '.npz':
+            new_orb = cls._get_orbitals_from_npz(file_name)
+        else:
+            raise ValueError('We can read orbitals from xml and npz files only.')
+        new_orb._integrals.n_func = new_orb._coefficients[0].shape[0]
+        logger.info('Loaded orbitals from file %s:\n%s', file_name, new_orb)
+        return new_orb
 
     @classmethod
     def identity(cls, orb_dim, n_elec, n_irrep, basis_len,
@@ -413,7 +526,49 @@ class MolecularOrbitals():
         for i in range(n_irrep):
             new_orbitals.append(np.identity(orb_dim[i])[:, :n_elec[i]])
         return new_orbitals
-
+    
+    @classmethod
+    def _get_orbitals_from_npz(cls, npz_file):
+        """Load orbitals from numpy's npz file.
+        
+        Parameters:
+        -----------
+        npz_file (str)
+            A npz file name with either one or two numpy arrays.
+            If with only one numpy array, consider to be the coefficients
+            of restricted orbitals.
+            If with two numpy arrays, they must be named alpha and beta,
+            and will be the alpha and beta orbitals.
+        
+        Returns:
+        --------
+        An instance of MolecularOrbitals.
+        
+        Limitations:
+        -----------
+        only for n_irrep = 1 at the moment
+        
+        TODO:
+        -----
+        Make it work for n_irrep > 1
+        """
+        loaded_array = np.load(npz_file)
+        if len(loaded_array) == 1:
+            return cls.from_array(loaded_array[loaded_array.keys[0]],
+                                  n_irrep=1,
+                                  name=f'Coefficients from npz file {npz_file}',
+                                  integrals=None,
+                                  energies=None,
+                                  restricted=True)
+        if len(loaded_array) >= 2:
+            return cls.from_array((loaded_array['alpha'],
+                                   loaded_array['beta']),
+                                  n_irrep=1,
+                                  name=f'Coefficients from npz file {npz_file}',
+                                  integrals=None,
+                                  energies=None,
+                                  restricted=False)
+    
     @classmethod
     def _get_orbitals_from_Molpro_xml(cls, xml_file):
         """Load orbitals from Molpro xml file.
@@ -506,6 +661,60 @@ class MolecularOrbitals():
                     raise e
                 cur_orb[spirrep] += 1
         return new_orbitals
+
+    def save(self, filename):
+        """Save orbitals into a file
+        
+        Parameters:
+        -----------
+        filename (str)
+            The filename to save the orbitals.
+            The extension will dictate the format:
+            ".npz" -> numpy's npy file
+        
+        Return:
+        -------
+        Nothing
+        
+        Raises:
+        -------
+        ValueError, for a unknown extension
+        """
+        if filename[-4:] == '.npz':
+            self._dump_to_npz(filename)
+            return
+        raise ValueError(f'File name has unknown extension: {filename}')
+
+    def _dump_to_npz(self, npz_file):
+        """Save orbitals to numpy's npz file.
+        
+        If restricted orbitals, save it in only one numpy array;
+        If unrestricted, save in two numpy arrays,
+        named alpha and beta.
+        
+        Parameters:
+        -----------
+        npz_file (str)
+            A npz file name.
+        
+        Returns:
+        --------
+        An instance of MolecularOrbitals.
+        
+        Limitations:
+        -----------
+        only for n_irrep = 1 at the moment
+        """
+        if self.n_irrep > 1:
+            raise NotImplementedError('Not yet for n_irrep > 1')
+        if self.restricted:
+            np.savez(npz_file,
+                     coefficients=self[0])
+        else:
+            np.savez(npz_file,
+                     alpha=self[0],
+                     beta=self[1])
+
     
     def orthogonalise(self, X=None):
         """Orthogonalise the orbitals
@@ -518,21 +727,47 @@ class MolecularOrbitals():
             pass
         else:
             self._coefficients[0][:, :] = X @ self._coefficients[0]
+            if not self.restricted:
+                self._coefficients[1][:, :] = X @ self._coefficients[1]
     
-    def is_orthonormal(self, Smat=None):
+    def is_orthonormal(self, Smat=None, N=None):
         """Return True if orbitals are orthonormal
+        
+        N (int, if restricted, 2-tuple of int if unrestricted)
+            The number of occupied orbitals
         
         TODO: for more than one irrep
         """
         if self.n_irrep > 1:
             raise NotImplementedError('TODO: for more than one irrep')
-        if Smat is None:
-            id_mat = self[0].T @ self[0]
+        if N is None:
+            Ca = self[0]
+            if not self.restricted:
+                Cb = self[1]
         else:
-            id_mat = self[0].T @ Smat @ self[0]
+            if self.restricted:
+                Ca = self[0][:, :N]
+            else:
+                Ca = self[0][:, :N[0]]
+                Cb = self[1][:, :N[1]]
+        if Smat is None:
+            id_mat = Ca.T @ Ca
+        else:
+            id_mat = Ca.T @ Smat @ Ca
         logger.debug('This should be the identity matrix:\n%s',
                      id_mat)
-        return np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        alpha_is_orth = np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        if not self.restricted:
+            if Smat is None:
+                id_mat = Cb.T @ Cb
+            else:
+                id_mat = Cb.T @ Smat @ Cb
+            logger.debug('This should be the identity matrix:\n%s',
+                         id_mat)
+            beta_is_orth = np.allclose(id_mat, np.eye(id_mat.shape[0]))
+        else:
+            beta_is_orth = True
+        return alpha_is_orth and beta_is_orth
     
     def in_the_basis_of(self, other):
         """Return self in the basis of other.

@@ -67,11 +67,14 @@ def _parser():
                         help='memory')
     parser.add_argument('--basis', default='cc-pVDZ',
                         help='basis set')
+    parser.add_argument('--save_orb',
+                        help='Save final orbitals.'
+                        + ' Currently it can be a filename ended by .npz')
     parser.add_argument('--ini_orb',
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'
                         + ' as Molpro\'s "put" xml file or'
-                        + ' npz file')
+                        + ' npz file. Can be Hcore or SAD for HF')
     parser.add_argument('--ini_cc_wf',
                         help='Initial wave function for CC calculations')
     parser.add_argument('--HF_orb',
@@ -82,6 +85,10 @@ def _parser():
                         action='store_true')
     parser.add_argument('--ms2',
                         help='Two times the MS of Hartree-Fock calculation.',
+                        type=int)
+    parser.add_argument('--charge',
+                        help='Electronic charge.',
+                        default=0,
                         type=int)
     parser.add_argument('--method',
                         help='The method.')
@@ -104,11 +111,21 @@ def _parser():
                         ' and <g> the norm of the gradien when the method should'
                         ' change to Absil',
                         default='SCF')
+    parser.add_argument('--grad_type',
+                        help='How the SCF gradient is calculated')
     parser.add_argument('--diis',
                         help='Number of previous iteration steps considered'
                         ' in the Roothaan-Hall Hartree-Fock with DIIS'
                         ' acceleration.',
                         type=int)
+    parser.add_argument('--diis_at_F',
+                        help='Apply DIIS for the Fock matrix in SCF.',
+                        action='store_const',
+                        const=True)
+    parser.add_argument('--diis_at_P',
+                        help='Apply DIIS for the density matrix in SCF.',
+                        action='store_const',
+                        const=True)
     parser.add_argument('--at_ref',
                         help='Do only one iteration at reference.',
                         action='store_true')
@@ -164,6 +181,11 @@ def _parser():
     parser.add_argument('--output',
                         help='Output file name. Passing this option overwrites'
                         + '--out_extension.')
+    parser.add_argument('--conjugacy',
+                        help='Conjugacy option for the Conjugate Gradient Method')
+    parser.add_argument('--step_size',
+                        help='The size of the step to use in the geodesic',
+                        type=float)
     return parser
 
 
@@ -256,8 +278,13 @@ def _check(args):
         raise ParseError('--max_iter is not compatible with --at_ref')
     if args.diis is None:
         args.diis = 0
-    elif args.diis < 0:
-        raise ParseError('--diis can\'t be negative')
+        args.diis_at_F = False
+        args.diis_at_P = False
+    else:
+        if args.diis < 0:
+            raise ParseError('--diis can\'t be negative')
+        if args.diis_at_F is None and args.diis_at_P is None:
+            args.diis_at_F = True
     if args.ini_orb is not None:
         if args.at_ref:
             raise ParseError('--ini_orb is not compatible with --at_ref')
@@ -265,7 +292,8 @@ def _check(args):
                 and os.path.isfile(args.ini_orb)):
             pass
         else:
-            _assert_molpro_output(args.ini_orb, can_be_xml=True)
+            if args.ini_orb not in ('Hcore', 'SAD'):
+                _assert_molpro_output(args.ini_orb, can_be_xml=True)
     if args.method is None:
         if args.geometry is None:
             args.method = 'dist_Grassmann'
