@@ -7,9 +7,9 @@ import numpy as np
 from scipy.linalg import solve, svd, lstsq
 from . import absil
 from . import iteration_step as istep
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('tkagg')
+#import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('tkagg')
 
 logger = logging.getLogger(__name__)
 loglevel = logger.getEffectiveLevel()

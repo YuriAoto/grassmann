@@ -2,8 +2,10 @@
 
 
 """
+import os
 import sys
 import logging
+import tempfile
 
 import numpy as np
 
@@ -121,12 +123,11 @@ def calc_at_dens(element, basis, conjugacy, step_size):
     conjugacy and step_size are a hack to get the SAD working. find a better way.
     
     """
-    fname = 'atomicdenstmpFindnewname.xyz'
-    with open(fname, 'w') as f:
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write('1\n')
         f.write('Atom for calc_at_dens\n')
         f.write(f'{element} 0.0 0.0 0.0\n')
-    args = _SADargs(geometry=fname,
+    args = _SADargs(geometry=f.name,
                     basis=basis,
                     ms2=ATOMS.index(element) % 2,
                     charge=0,
@@ -144,4 +145,5 @@ def calc_at_dens(element, basis, conjugacy, step_size):
                     step_size=step_size
     )
     atHF = main.main(args, None)#sys.stdout)
+    os.remove(f.name)
     return atHF.density
