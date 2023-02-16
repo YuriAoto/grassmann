@@ -1,0 +1,18 @@
+title: Grassmann
+abstract: A software designed to study electronic structure theory using tools from differential geometry.
+authors:
+  - family-names: Aoto
+    given-names: Yuri Alexandre
+    orcid: "https://orcid.org/0000-0002-1981-7470"
+  - family-names: Oliveira da Silva
+    given-names: Caio
+    orcid: "https://orcid.org/0000-0002-7799-4969"
+  - family-names: Morato Ferreira de Moraes
+    given-names: Matheus
+    orcid: "https://orcid.org/0000-0003-3423-7949"
+version: 0.0.1
+date-released: "2023-02-16"
+license: GPL-3.0
+repository-code: "https://github.com/YuriAoto/grassmann"
+message: If you use this software, please cite it using these metadata.
+cff-version: 1.2.0
