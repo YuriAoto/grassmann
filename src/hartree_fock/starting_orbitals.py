@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def initial_orbitals(ini_orb, molecular_system, restricted, conjugacy, step_size):
+def initial_orbitals(ini_orb, molecular_system, restricted,
+                     conjugacy, step_size,
+                     orthogonalise=False):
     """Initial orbitals
     
     
@@ -38,6 +40,9 @@ def initial_orbitals(ini_orb, molecular_system, restricted, conjugacy, step_size
         True to obtain restricted orbitals
 
     conjugacy and step_size are a hack to get the SAD working. find a better way.
+    
+    orthogonalise (bool, optional, default=False)
+        If True, orthogonalise orbitals from a file
     
     Return:
     -------
@@ -60,11 +65,13 @@ def initial_orbitals(ini_orb, molecular_system, restricted, conjugacy, step_size
                                            molecular_system.integrals)
     logger.info(f'{logmsg}: from file {ini_orb}')
     orb = MolecularOrbitals.from_file(ini_orb)
-    if not args.restricted:
+    if not restricted:
         orb = MolecularOrbitals.unrestrict(orb)
     if orb.restricted and not restricted:
         raise ValueError('Initial orbitals should be of unrestricted type.')
-    orb.orthogonalise(X=molecular_system.integrals.X)
+    if orthogonalise:
+        orb.orthogonalise(X=molecular_system.integrals.X)
+    return orb
 
 
 def superpos_atdens(molecular_system, conjugacy, step_size):
@@ -141,6 +148,7 @@ def calc_at_dens(element, basis, conjugacy, step_size):
                     grad_type='F_asym',
                     step_type='SCF',
                     ini_orb='Hcore',
+                    save_orb=None,
                     conjugacy=conjugacy,
                     step_size=step_size
     )

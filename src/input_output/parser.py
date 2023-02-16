@@ -67,6 +67,9 @@ def _parser():
                         help='memory')
     parser.add_argument('--basis', default='cc-pVDZ',
                         help='basis set')
+    parser.add_argument('--save_orb',
+                        help='Save final orbitals.'
+                        + ' Currently it can be a filename ended by .npz')
     parser.add_argument('--ini_orb',
                         help='initial guess for orbitals'
                         + ' or transformation matrices,'
