@@ -49,7 +49,8 @@ def hartree_fock(integrals,
                  f_out=sys.stdout,
                  conjugacy=None,
                  step_size=1.0,
-                 HF_step_type=lambda **x: "RH-SCF"):
+                 HF_step_type=lambda **x: 'RH-SCF',
+                 hf_nrlm_multpl_symm='triangular'):
     """A general Hartree-Fock procedure
 
     
@@ -104,6 +105,25 @@ def hartree_fock(integrals,
             "RH-SCF", "densMat-SCF", "RRN", "orb_rot-Newton"
         that will dictate which method should be used in the
         Hartree-Fock optimisation, in that iteration
+
+    hf_nrlm_multpl_symm (string, optional, default='triangular')
+        Indicates the type of procedure to use in the
+        Newton-Raphson-Lagrange multipliers (NRLM) step type:
+            'triangular': use only one Lagrange multiplier
+                for each pair ij. In this case, the order of the
+                multipliers is:
+                
+                0,0
+                0,1
+                1,1
+                0,2
+                1,2
+                2,2
+                ...
+                
+                See util.array_indices.n_from_triang_with_diag
+                and util.array_indices.ij_from_triang_with_diag
+                    
     """
     restricted, ms2 = _check_nelec_ms(n_elec, restricted, ms2)
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
@@ -120,6 +140,7 @@ def hartree_fock(integrals,
     hf_step.grad_type = grad_type
     hf_step.conjugacy = conjugacy
     hf_step.step_size = step_size
+    hf_step.hf_nrlm_multpl_symm = hf_nrlm_multpl_symm
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'

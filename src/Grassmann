@@ -62,26 +62,26 @@ with open(args.output, 'w') as f_out:
     def toout(x='', add_new_line=True):
         f_out.write(x + ('\n' if add_new_line else ''))
 
+    grassmann_dir = os.path.dirname(os.path.abspath(__file__))
+    if 'src' in grassmann_dir[-4:]:
+        grassmann_dir = os.path.normpath(os.path.join(grassmann_dir, '..'))
+    git_repo = git.Repo(grassmann_dir)
+    git_sha = git_repo.head.object.hexsha
+    memory.set_total_memory(args.memory[0], unit=args.memory[1])
+    toout('Grassmann')
+    toout('Exploring the geometry of the electronic wave functions space')
+    toout('Yuri Aoto - 2018, 2019, 2020')
+    toout()
+    toout('Current git commit: ' + git_sha)
+    toout()
+    toout('Directory:\n' + args.wdir)
+    toout()
+    toout('Command:\n' + ' '.join(args.sys_argv))
+    if args.files_content:
+        toout()
+        toout(''.join(args.files_content))
+    toout()
     try:
-        grassmann_dir = os.path.dirname(os.path.abspath(__file__))
-        if 'src' in grassmann_dir[-4:]:
-            grassmann_dir = os.path.normpath(os.path.join(grassmann_dir, '..'))
-        git_repo = git.Repo(grassmann_dir)
-        git_sha = git_repo.head.object.hexsha
-        memory.set_total_memory(args.memory[0], unit=args.memory[1])
-        toout('Grassmann')
-        toout('Exploring the geometry of the electronic wave functions space')
-        toout('Yuri Aoto - 2018, 2019, 2020')
-        toout()
-        toout('Current git commit: ' + git_sha)
-        toout()
-        toout('Directory:\n' + args.wdir)
-        toout()
-        toout('Command:\n' + ' '.join(args.sys_argv))
-        if args.files_content:
-            toout()
-            toout(''.join(args.files_content))
-        toout()
         with logtime('Main program') as T:
             toout(f'Starting at {dt.fromtimestamp(T.ini_time):%d %b %Y - %H:%M}\n')
             main_grassmann(args, f_out)

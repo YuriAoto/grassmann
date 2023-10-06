@@ -186,6 +186,8 @@ def _parser():
     parser.add_argument('--step_size',
                         help='The size of the step to use in the geodesic',
                         type=float)
+    parser.add_argument('--hf_nrlm_multpl_symm',
+                        help='The type of symmetry to use in the Langrange multipliers.')
     return parser
 
 
@@ -299,6 +301,8 @@ def _check(args):
             args.method = 'dist_Grassmann'
         else:
             args.method = 'Hartree_Fock'
+    if args.hf_nrlm_multpl_symm is None:
+        args.method = 'triangular'
     if args.WF_orb is None:
         args.WF_orb = args.molpro_output
     else:
