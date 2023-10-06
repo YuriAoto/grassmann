@@ -588,6 +588,26 @@ class HartreeFockStep():
             n_params = n_params_a + n_params_b
         hess_Lag = np.zeros((n_params, n_params))
         grad_Lag = np.empty((n_params,))
+        """
+        Note on the implementation:
+        ---------------------------
+        The order of the parameters in the matrices are:
+        For restricted:
+            C   L
+        
+        For unrestricted:
+            C   C_b   L   L_b
+        
+        where C represent orbital coefficients and L Lagrange multipliers.
+        For convenience, we predefine these slices below
+        """
+        s_Ca = np.s_[:n*N_a]
+        s_Cb = np.s_[n*N_a:n*N]
+        s_La = np.s_[n*N: n*N + self.n_lagmtpl]
+        s_Lb = np.s_[n*N + self.n_lagmtpl:]
+        s_C = s_Ca if self.restricted else np.s_[:n*N]
+        s_L = s_La if self.restricted else np.s_[n*N:]
+                    
 
         with logtime('Orthogonalizing coefficients and computing the energy'):
             temp = np.copy(self.orb[0][:, :N_a])    # copying because calc_fock_matrix
@@ -630,10 +650,8 @@ class HartreeFockStep():
                                            self.eps_triangular,
                                            SC,
                                            self.Id_N_a,
-                                           self.n,
-                                           grad_Lag[:n * N_a],
-                                           grad_Lag[n * N:
-                                                    n * N + self.n_lagmtpl])
+                                           grad_Lag[s_Ca],
+                                           grad_Lag[s_La])
             if not self.restricted:
                 Jac_b, restr_b_norm = _nrlm_grad(self.orb[1][:, :N_b],
                                                  self.Fock_b,
@@ -641,41 +659,40 @@ class HartreeFockStep():
                                                  self.eps_triangular,
                                                  SC_b,
                                                  self.Id_N_b,
-                                                 self.n,
-                                                 grad_Lag[n * N_a: n * N],
-                                                 grad_Lag[n * N + self.n_lagmtpl:])
+                                                 grad_Lag[s_Cb],
+                                                 grad_Lag[s_Lb])
             logger.debug('Gradient:\n%s', grad_Lag)
                 
         with logtime('computing the hessian'):
-            hess_Lag[:n*N, :n*N] = absil.hessian(self.orb[0][:, :N_a],
-                                                 self.orb[1][:, :N_b],
-                                                 self.Fock_a, self.Fock_b,
-                                                 self.blocks_a[1],
-                                                 self.blocks_b[1],
-                                                 self.blocks_a[2],
-                                                 self.blocks_b[2],
-                                                 g)
+            hess_Lag[s_C, s_C] = absil.hessian(self.orb[0][:, :N_a],
+                                               self.orb[1][:, :N_b],
+                                               self.Fock_a, self.Fock_b,
+                                               self.blocks_a[1],
+                                               self.blocks_b[1],
+                                               self.blocks_a[2],
+                                               self.blocks_b[2],
+                                               g)
             logger.debug('Hessian (of energy only):\n%r', hess_Lag)
-            if self.eps_triangular:
-                hess_Lag[:n*N_a, :n*N_a] -= np.kron(eps, S)
-                logger.debug('Hessian (including eps x S):\n%r', hess_Lag)
-                _nrlm_J_hess(SC, hess_Lag[:n*N_a, n*N:(n*N + self.n_lagmtpl)])
-                if not self.restricted:
-                    hess_Lag[n*N_a:n*N, n*N_a:n*N] -= np.kron(eps_b, S)
-                    _nrlm_J_hess(SC_b, hess_Lag[n*N_a:n*N, (n*N + self.n_lagmtpl):])
-            else:
-                hess_Lag[:n*N_a, :n*N_a] -= np.kron(eps + eps.T, S)
-                logger.debug('Hessian (including eps x S):\n%r', hess_Lag)
-                hess_Lag[:n*N_a, n*N:(n*N + self.n_lagmtpl)] = -Jac
-                if not self.restricted:
-                    hess_Lag[n*N_a:n*N, n*N_a:n*N] -= np.kron(eps_b + eps_b.T, S)
-                    hess_Lag[n*N_a:n*N, (n*N + self.n_lagmtpl):] = -Jac_b
-            # Now Just copy the symmetric block
-            hess_Lag[n*N:(n*N + self.n_lagmtpl), :n*N_a] = \
-                hess_Lag[:n*N_a, n*N:(n*N + self.n_lagmtpl)].T
+            
+            hess_Lag[s_Ca, s_Ca] -= (np.kron(eps, S)
+                                     if self.eps_triangular else
+                                     np.kron(eps + eps.T, S))
             if not self.restricted:
-                hess_Lag[(n*N + self.n_lagmtpl):, n*N_a:n*N] = \
-                    hess_Lag[n*N_a:n*N, (n*N + self.n_lagmtpl):].T
+                hess_Lag[s_Cb, s_Cb] -= (np.kron(eps_b, S)
+                                         if self.eps_triangular else
+                                         np.kron(eps_b + eps_b.T, S))
+            logger.debug('Hessian (including eps x S):\n%r', hess_Lag)
+            
+            if self.eps_triangular:
+                _nrlm_J_hess(SC, hess_Lag[s_Ca, s_La])
+                if not self.restricted: _nrlm_J_hess(SC_b, hess_Lag[s_Cb, s_Lb])
+            else:
+                hess_Lag[s_Ca, s_La] = -Jac
+                if not self.restricted: hess_Lag[s_Cb, s_Lb] = -Jac_b
+            # Copy the symmetric block
+            hess_Lag[s_La, s_Ca] = hess_Lag[s_Ca, s_La ].T
+            if not self.restricted: hess_Lag[s_Lb, s_Cb] = hess_Lag[s_Cb, s_Lb].T
+                
             logger.debug('Hessian:\n%r', hess_Lag)
 
         self.grad_norm = linalg.norm(grad_Lag)
@@ -688,25 +705,23 @@ class HartreeFockStep():
         elif eta[1] > 1e-10:
             logger.warning('Large conditioning number: %.5e', eta[1])
 
-        eta_C = np.reshape(eta[0][:n*N], (n, N), 'F')
+        eta_C = np.reshape(eta[0][s_C], (n, N), 'F')
         logger.debug('eta: \n%s', eta_C)
         if self.eps_triangular:
-            _nrlm_update_triang_eps(self.lagmult,
-                                    eta[0][n*N:n*N+self.n_lagmtpl])
+            _nrlm_update_triang_eps(self.lagmult, eta[0][s_La])
             if not self.restricted:
-                _nrlm_update_triang_eps(self.lagmult_b,
-                                        eta[0][n*N+self.n_lagmtpl:])
+                _nrlm_update_triang_eps(self.lagmult_b, eta[0][s_Lb])
         else:
-            self.lagmult += np.reshape(eta[0][n*N:(n*N + N_a**2)], (N_a, N_a), 'F')
+            self.lagmult += np.reshape(eta[0][s_La], (N_a, N_a), 'F')
+            logger.debug('lagmult - lagmult.T (alpha): \n%s',
+                         self.lagmult - self.lagmult.T)
             if not self.restricted:
-                self.lagmult_b += np.reshape(eta[0][(n*N + N_a**2):], (N_b, N_b), 'F')
+                self.lagmult_b += np.reshape(eta[0][s_Lb], (N_b, N_b), 'F')
+                logger.debug('lagmult_b - lagmult_b.T (beta): \n%s',
+                             self.lagmult_b - self.lagmult_b.T)
         logger.debug('Lagrange multipliers (alpha): \n%s', self.lagmult)
-        logger.debug('lagmult - lagmult.T (alpha): \n%s',
-                     self.lagmult - self.lagmult.T)
         if not self.restricted:
             logger.debug('Lagrange multipliers (beta): \n%s', self.lagmult_b)
-            logger.debug('lagmult_b - lagmult_b.T (beta): \n%s',
-                         self.lagmult_b - self.lagmult_b.T)
 
         with logtime('updating the orbitals'):
             self.orb[0][:, :N_a] += eta_C[:, :N_a]
@@ -723,12 +738,12 @@ class HartreeFockStep():
 
 
 
-def _nrlm_grad(C, fock, eps, eps_triangular, SC, Id_N, d, grad_E, grad_R):
-    N = Id_N.shape[0]  # This N is not N_a + N_b! It is N_a or N_b,
-                       # depending on what has been passed
+def _nrlm_grad(C, fock, eps, eps_triangular, SC, Id_N, grad_E, grad_R):
+    n, N = C.shape  # This N is not N_a + N_b! It is N_a or N_b,
+                    # depending on what has been passed
     grad = 2 * fock @ C
     logger.debug('Gradient of energy:\n%r', grad)
-    grad_E[:] = np.reshape(grad, (d*N,), 'F')
+    grad_E[:] = np.reshape(grad, (n*N,), 'F')
     R = Id_N - C.T @ SC
     if eps_triangular:
         grad_E[:] -= np.reshape(SC @ eps, (len(grad_E),), 'F')
