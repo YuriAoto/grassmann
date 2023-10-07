@@ -17,6 +17,7 @@ import numpy as np
 from scipy.linalg import inv, expm, eigh
 
 from util.variables import int_dtype
+from util import matrices
 from molecular_geometry.symmetry import number_of_irreducible_repr
 from integrals.integrals import Integrals
 
@@ -726,15 +727,17 @@ class MolecularOrbitals():
                      allow_pickle=True)
 
     
-    def orthogonalise(self, X=None):
-        """Orthogonalise the orbitals
+    def orthogonalize(self, X=None, S=None):
+        """Orthogonalize the orbitals
         
         TODO: for more than one irrep
         """
         if self.n_irrep > 1:
             raise NotImplementedError('TODO: for more than one irrep')
-        if X is None:
-            pass
+        if X is None and S is not None:
+            self._coefficients[0][:, :] = matrices.gram_schmidt(self._coefficients[0], S)
+            if not self.restricted:
+                self._coefficients[1][:, :] = matrices.gram_schmidt(self._coefficients[1], S)
         else:
             self._coefficients[0][:, :] = X @ self._coefficients[0]
             if not self.restricted:

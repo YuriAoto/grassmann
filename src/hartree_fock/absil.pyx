@@ -255,6 +255,38 @@ def hessian(double[:, :] C_a, double[:, :] C_b,
 
     return hess
 
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def hessian_restr(double[:, :] C,
+                  double[:, :] fock,
+                  double[:, :, :] GC,
+                  double[:, :, :] GCC,
+                  double[:, :, :] g):
+    cdef int n = C.shape[0], N = C.shape[1]
+    cdef int j, b, T = g.shape[0]
+    hess = np.empty((n*N, n*N))
+
+    # computational cost: O(N_a * N_b * n^2 * L)
+    hess[:, :] = mixed_spin(GC, GC)
+
+    # computational cost: O(N_a * n^2 * L)
+    for b in range(N):
+        hess[n*b : n*(b+1), n*b : n*(b+1)] = \
+            diag_blocks(C, GC, GCC, fock, g, b)
+
+    # computational cost: O(n^2 * N_a^2 * L)
+    for j in range(N - 1):
+        for b in range(j + 1):
+            hess[n*(j+1) : n*(j+2), n*b : n*(b+1)] = \
+                non_diag_blocks(C, GC, GCC, g, b, j+1)
+            hess[n*b : n*(b+1), n*(j+1) : n*(j+2)] = \
+                hess[n*(j+1) : n*(j+2), n*b : n*(b+1)].T
+
+    return hess
+
+
+
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
 def dir_proj(double[:, :] C, double[:, :] grad):
@@ -268,48 +300,6 @@ def dir_proj(double[:, :] C, double[:, :] grad):
             der[a*n : (a+1)*n, b*n : (b+1)*n] = np.multiply(Id, aux[b, a])
 
     return der
-
-def normalize(double[:] v, double[:, :] G):
-    """Normalize a vector with respect to an arbitrary basis.
-
-    Parameters:
-    -----------
-    - v (nx1 ndarray): the vector to be normalized.
-    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
-
-    Returns:
-    --------
-    nx1 ndarray with the orthonormalized 'v'.
-    """
-    return v / np.sqrt(np.transpose(v).T @ G @ v)
-
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
-def gram_schmidt(M, double[:, :] G):
-    """Gram-Schmidt algorithm in an arbitrary basis.
-
-    Parameters:
-    -----------
-    - M (nxk ndarray): matrix containing the k vectors to be orthonormalized.
-        Each vector is a column of the matrix.
-    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
-
-    Returns:
-    --------
-    A nxk ndarray containing the orthonormalized vectors.
-    """
-    cdef int i, j
-
-    M[:, 0] = normalize(M[:, 0], G)
-    for i in range(1, M.shape[1]):
-        Mi = M[:, i]
-        for j in range(i):
-            Mj = M[:, j]
-            t = Mi.T @ G @ Mj
-            Mi = Mi - t * Mj
-            M[:, i] = normalize(Mi, G)
-
-    return M
 
 
 
