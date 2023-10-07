@@ -12,11 +12,17 @@
         basis set and N_b is the number of the spin beta occupied orbitals
         in the Slater determinant.
 
+    C (2D np.ndarray of dimension (n, N_b))
+        C_b or C_a, but unspecified in that function
+
     P_a (2D np.ndarray of dimension (n, n))
         Density matrix for spin alpha: C_a @ C_a.T
 
     P_b (2D np.ndarray of dimension (n, n))
         Density matrix for spin beta: C_b @ C_b.T
+
+    P (2D np.ndarray of dimension (n, n))
+        P_a or P_b, but unspecified in that function
     
     proj_a (2D np.ndarray of dimension (n, N_a))
         Projection matrix at H_{C_a}: Id - C_a @ C_a.T @ S
@@ -35,6 +41,10 @@
 
     g (3D np.ndarray)
         Two-electron integral matrix.
+        Here all functions assume the three indices g,
+        that need a further contraction in the first index
+        to obtain the actualtwo electron integral that
+        depend on four indices
 
     S (2D np.ndarray)
         Overlap matrix.
@@ -48,6 +58,20 @@ from scipy import linalg
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
 def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
+    """Calculate some useful contractions among C, P and g
+    
+    Parameters:
+    -----------
+    C, P and g: see module's docstring
+    
+    Returns:
+    --------
+    A tuple with the following matrices:
+    
+    GP (1D array) - the contraction g[:,i,k]P[i,k]
+    GC (3D array) - the contraction g[:,:,k]C[k,:]
+    GCC (3D array) - the contraction CG[L,i,k]C[i,j] = g[L,i,k']C[k',k]C[i,j]
+    """
     cdef int i, j, k, L, T = g.shape[0], n = C.shape[0], N = C.shape[1]
     cdef double[:] GP = np.zeros(T)
     cdef double[:, :, :] GC = np.zeros((T, n, N))
@@ -75,6 +99,19 @@ def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
 def fock(double[:] GP_m, double[:] GP_s,
          double[:, :, :] GC_m, double[:, :, :] GC_s,
          double[:, :] h, double[:, :, :] g):
+    """Fock matrix for (unrestricted) spin m
+    
+    F_mn = h_mn + sum_rs [ (Pm + Ps) g_mnrs - Pm g_mrsn ]
+    
+    Parameters:
+    -----------
+    GP_m, GC_m  - Contractions of g with P and C for spin we are at: m.
+                  See common_blocks
+    GP_s, GC_s  - Contractions of g with P and C for the other spin: s.
+                  See common_blocks
+    h, g  - molecular integrals, see module's docstring
+    
+    """
     cdef int i, j, k, L, T = g.shape[0], n = g.shape[1], N = GC_m.shape[2]
     cdef double[:, :] F = np.array(h)
 
@@ -90,6 +127,39 @@ def fock(double[:] GP_m, double[:] GP_s,
                     F[i, j] -= GC_m[L, i, k] * GC_m[L, j, k]
 
     return F
+
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def fock_restr(double[:] GP, double[:, :, :] GC,
+               double[:, :] h, double[:, :, :] g):
+    """Fock matrix for restricted orbitals
+    
+    F_mn = h_mn + sum_rs P [ g_mnrs - g_mrsn/2 ]
+    
+    Parameters:
+    -----------
+    GP, GC  - Contractions of g with P and C.
+              See common_blocks
+    h, g    - molecular integrals, see module's docstring
+    
+    """
+    cdef int i, j, k, L, T = g.shape[0], n = g.shape[1], N = GC.shape[2]
+    cdef double[:, :] F = np.array(h)
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(n):
+                F[i, j] += g[L, i, j] * GP[L]
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(n):
+                for k in range(N):
+                    F[i, j] -= GC[L, i, k] * GC[L, j, k]
+
+    return F
+
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing

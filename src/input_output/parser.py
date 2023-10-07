@@ -302,7 +302,7 @@ def _check(args):
         else:
             args.method = 'Hartree_Fock'
     if args.hf_nrlm_multpl_symm is None:
-        args.method = 'triangular'
+        args.hf_nrlm_multpl_symm = 'triangular'
     if args.WF_orb is None:
         args.WF_orb = args.molpro_output
     else:

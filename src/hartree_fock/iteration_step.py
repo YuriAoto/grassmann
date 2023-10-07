@@ -138,15 +138,15 @@ class HartreeFockStep():
                 return nlag, energies, Id_N
 
             self._init_P()
-            self.eps_triangular = self.hf_nrlm_multpl_symm == 'triangular'
+            self.lagmul_triangular = self.hf_nrlm_multpl_symm == 'triangular'
             (self.n_lagmtpl, self.lagmult, self.Id_N_a) = _initialize_one_spin_NRLM(
                 self.N_a,
-                self.eps_triangular,
+                self.lagmul_triangular,
                 self.orb.energies)
             if not self.restricted:
                 (self.n_lagmtpl_b, self.lagmult_b, self.Id_N_b) = _initialize_one_spin_NRLM(
                     self.N_b,
-                    self.eps_triangular,
+                    self.lagmul_triangular,
                     self.orb.energies_b)
 
         elif step_type == 'GDLM':
@@ -176,7 +176,13 @@ class HartreeFockStep():
     def calc_density_matrix(self):
         """Calculate the density matrix (or matrices)
         
-        P = C @ C.T
+        For unrestricted:
+        P_a = C_a @ C_a.T  for u
+        P_b = C_b @ C_b.T
+        
+        For restricted:
+        P = 2 * C @ C.T = P_a + P_b
+
         """
         self.P_a = self.orb[0][:, :self.N_a] @ self.orb[0][:, :self.N_a].T
         if self.restricted:
@@ -184,24 +190,35 @@ class HartreeFockStep():
             logger.debug('Density matrix:\n%r', self.P_a)
         else:
             self.P_b = self.orb[1][:, :self.N_b] @ self.orb[1][:, :self.N_b].T
-            logger.debug('Alpha density matrix:\n%r', self.P_a)
-            logger.debug('Beta density matrix:\n%r', self.P_b)
+            logger.debug('Density matrix (alpha):\n%r', self.P_a)
+            logger.debug('Density matrix (beta):\n%r', self.P_b)
+
+    def calc_common_blocks(self):
+        """Calculate the common blocks"""
+        self.blocks_a = absil.common_blocks(self.orb[0][:, :self.N_a],
+                                            self.P_a,
+                                            self.integrals.g._integrals)
+        if not self.restricted:
+            self.blocks_b = absil.common_blocks(self.orb[1][:, :self.N_b],
+                                                self.P_b,
+                                                self.integrals.g._integrals)
 
     def calc_fock_matrix(self):
-        """Calculate the Fock matrix
-        
-        F[mn] = h[mn] + P_a[rs]*(g[mnrs] - g[mrsn]/2)
-        The way that einsum is made matters a lot in the time
-        
-        TODO: integrate restricted and unrestricted codes
-        """
-        self.Fock_a = absil.fock(self.blocks_a[0], self.blocks_b[0],
-                                 self.blocks_a[1], self.blocks_b[1],
-                                 self.integrals.h,
-                                 self.integrals.g._integrals)
-        self.Fock_a = np.asarray(self.Fock_a)
-        logger.debug('Fock matrix (alpha):\n%s', self.Fock_a)
-        if not self.restricted:
+        """Calculate the Fock matrix"""
+        if self.restricted:
+            self.Fock_a = absil.fock_restr(self.blocks_a[0],
+                                           self.blocks_a[1],
+                                           self.integrals.h,
+                                           self.integrals.g._integrals)
+            self.Fock_a = np.asarray(self.Fock_a)
+            logger.debug('Fock matrix:\n%s', self.Fock_a)
+        else:
+            self.Fock_a = absil.fock(self.blocks_a[0], self.blocks_b[0],
+                                     self.blocks_a[1], self.blocks_b[1],
+                                     self.integrals.h,
+                                     self.integrals.g._integrals)
+            self.Fock_a = np.asarray(self.Fock_a)
+            logger.debug('Fock matrix (alpha):\n%s', self.Fock_a)
             self.Fock_b = absil.fock(self.blocks_b[0], self.blocks_a[0],
                                      self.blocks_b[1], self.blocks_a[1],
                                      self.integrals.h,
@@ -342,14 +359,8 @@ class HartreeFockStep():
                     if not self.restricted:
                         self.P_b = self.diis_b.calculate(self.grad_b, self.P_b)
 
-        with logtime('computing common blocks'):
-            self.blocks_a = absil.common_blocks(self.orb[0][:, :self.N_a],
-                                                self.P_a,
-                                                self.integrals.g._integrals)
-            self.blocks_b = absil.common_blocks(self.orb[1][:, :self.N_b],
-                                                self.P_b,
-                                                self.integrals.g._integrals)
-
+        with logtime('Computing common blocks'):
+            self.calc_common_blocks()
         with logtime('Form Fock matrix'):
             self.calc_fock_matrix()
         with logtime('Calculate Energy'):
@@ -611,9 +622,10 @@ class HartreeFockStep():
 
         with logtime('Orthogonalizing coefficients and computing the energy'):
             temp = np.copy(self.orb[0][:, :N_a])    # copying because calc_fock_matrix
-            temp_b = np.copy(self.orb[1][:, :N_b])  # and calc_energy use self.orb
             self.orb[0][:, :N_a] = absil.gram_schmidt(self.orb[0][:, :N_a], S)
-            self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
+            if not self.restricted:
+                temp_b = np.copy(self.orb[1][:, :N_b])  # and calc_energy use self.orb
+                self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
             self.calc_density_matrix()
             self.blocks_a = absil.common_blocks(self.orb[0][:, :N_a], self.P_a, g)
             self.blocks_b = absil.common_blocks(self.orb[1][:, :N_b], self.P_b, g)
@@ -627,7 +639,7 @@ class HartreeFockStep():
 
         SC = S @ self.orb[0][:, :N_a]
         SC_b = S @ self.orb[1][:, :N_b]
-        if self.eps_triangular:
+        if self.lagmul_triangular:
             # These matrices have diagonal elements mutiplied by 2
             eps = self.lagmult + self.Id_N_a * self.lagmult
             eps_b = self.lagmult_b + self.Id_N_b * self.lagmult_b
@@ -647,7 +659,7 @@ class HartreeFockStep():
             Jac, restr_a_norm = _nrlm_grad(self.orb[0][:, :N_a],
                                            self.Fock_a,
                                            eps,
-                                           self.eps_triangular,
+                                           self.lagmul_triangular,
                                            SC,
                                            self.Id_N_a,
                                            grad_Lag[s_Ca],
@@ -656,7 +668,7 @@ class HartreeFockStep():
                 Jac_b, restr_b_norm = _nrlm_grad(self.orb[1][:, :N_b],
                                                  self.Fock_b,
                                                  eps_b,
-                                                 self.eps_triangular,
+                                                 self.lagmul_triangular,
                                                  SC_b,
                                                  self.Id_N_b,
                                                  grad_Lag[s_Cb],
@@ -675,15 +687,15 @@ class HartreeFockStep():
             logger.debug('Hessian (of energy only):\n%r', hess_Lag)
             
             hess_Lag[s_Ca, s_Ca] -= (np.kron(eps, S)
-                                     if self.eps_triangular else
+                                     if self.lagmul_triangular else
                                      np.kron(eps + eps.T, S))
             if not self.restricted:
                 hess_Lag[s_Cb, s_Cb] -= (np.kron(eps_b, S)
-                                         if self.eps_triangular else
+                                         if self.lagmul_triangular else
                                          np.kron(eps_b + eps_b.T, S))
             logger.debug('Hessian (including eps x S):\n%r', hess_Lag)
             
-            if self.eps_triangular:
+            if self.lagmul_triangular:
                 _nrlm_J_hess(SC, hess_Lag[s_Ca, s_La])
                 if not self.restricted: _nrlm_J_hess(SC_b, hess_Lag[s_Cb, s_Lb])
             else:
@@ -707,7 +719,7 @@ class HartreeFockStep():
 
         eta_C = np.reshape(eta[0][s_C], (n, N), 'F')
         logger.debug('eta: \n%s', eta_C)
-        if self.eps_triangular:
+        if self.lagmul_triangular:
             _nrlm_update_triang_eps(self.lagmult, eta[0][s_La])
             if not self.restricted:
                 _nrlm_update_triang_eps(self.lagmult_b, eta[0][s_Lb])
@@ -738,14 +750,14 @@ class HartreeFockStep():
 
 
 
-def _nrlm_grad(C, fock, eps, eps_triangular, SC, Id_N, grad_E, grad_R):
+def _nrlm_grad(C, fock, eps, lagmul_triangular, SC, Id_N, grad_E, grad_R):
     n, N = C.shape  # This N is not N_a + N_b! It is N_a or N_b,
                     # depending on what has been passed
     grad = 2 * fock @ C
     logger.debug('Gradient of energy:\n%r', grad)
     grad_E[:] = np.reshape(grad, (n*N,), 'F')
     R = Id_N - C.T @ SC
-    if eps_triangular:
+    if lagmul_triangular:
         grad_E[:] -= np.reshape(SC @ eps, (len(grad_E),), 'F')
         grad_R[:] = R[np.tril_indices(N)]
         Jac = None
