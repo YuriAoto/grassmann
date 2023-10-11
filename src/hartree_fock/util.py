@@ -7,9 +7,9 @@ import numpy as np
 from scipy.linalg import solve, svd, lstsq
 from . import absil
 from . import iteration_step as istep
-#import matplotlib.pyplot as plt
-#import matplotlib
-#matplotlib.use('tkagg')
+# import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('tkagg')
 
 logger = logging.getLogger(__name__)
 loglevel = logger.getEffectiveLevel()
@@ -24,7 +24,8 @@ write_header = \
 fmt_HF_iter_general = '{0:<5d} \t {1:<16.12f} \t {2:<16.12f} \t          \t {4:6s} \t {5:s}\n'
 fmt_HF_iter_gen_lag = '{0:<5d} \t {1:<16.12f} \t {2:<16.12f} \t {3:<.4f} \t {4:6s} \t {5:s}\n'
 
-np.set_printoptions(precision=8,linewidth=10060,suppress=True)
+np.set_printoptions(precision=8, linewidth=10060, suppress=True)
+
 
 def _diis_lincomb_tolog(w, p, newp, thing):
     if True:
@@ -38,38 +39,37 @@ def _diis_lincomb_tolog(w, p, newp, thing):
         logger.debug('DIIS linear combination to get new %s:\n%s', thing, todbg)
 
 
-
 class Diis:
     """A class to compute DIIS.
-    
+
     This has been strongly based on the diis furnished by G. Knizia
     along with his IR-WMME code. Reading his code was very helpful to
     understand DIIS.
-    
+
     Usage:
     ------
     This class should be initiated with the maximum dimension of the
     DIIS subspace. Example:
-    
+
     diis = Diis(5)
-    
+
     To apply the diis, do:
-    
+
     new_p = diis.calculate(e, p)
-    
+
     or:
-    
+
     new_p1, new_p2 = diis.calculate(e, p1, p2)
-    
+
     e are the errors (gradients, residuals), and p, or p1 p2, etc,
     are the parameters where diis will be applied to
     (diis can be simultaneously applied to more parameters,
     although I actually don't know if this is useful ....)
     The object diis will store the required information (namely,
     errors e and parameters p (or p1, p2) from previous iterations.
-    
+
     """
-    
+
     def __init__(self, n_max):
         self.n_max = n_max
         self.parameters_shapes = None
@@ -80,32 +80,33 @@ class Diis:
 
     def init_matrices(self, e, *parameters):
         self.e = np.zeros((self.n_max, np.prod(e.shape)), e.dtype)
-        self.all_parameters = [np.zeros((self.n_max, np.prod(p.shape)), p.dtype) for p in parameters]
+        self.all_parameters = [np.zeros((self.n_max, np.prod(p.shape)), p.dtype)
+                               for p in parameters]
 
     def add_to_matrices(self, e, *parameters):
         if self.e is None:
             self.init_matrices(e, *parameters)
-        self.e[self.i, :] = e.flatten()*2
+        self.e[self.i, :] = e.flatten() * 2
         for i, p in enumerate(parameters):
             self.all_parameters[i][self.i, :] = p.flatten()
         logger.debug('DIIS stored e:\n%s', self.e)
 
     def set_system(self):
         """Create the DIIS linear system
-        
+
         Parameters:
         -----------
         e (np.array)
             Errors of current and n previous steps
-        
+
         """
         B = np.zeros((self.n + 1, self.n + 1))
         B[:self.n, :self.n] = np.einsum('pi,qi->pq',
                                         self.e[:self.n, :],
                                         self.e[:self.n, :])
         B0 = np.copy(B)
-        fScale = sum([np.log(B[i,i].real) for i in range(self.n)])
-        fScale = np.exp(fScale/self.n)
+        fScale = sum([np.log(B[i, i].real) for i in range(self.n)])
+        fScale = np.exp(fScale / self.n)
         B[:self.n, :self.n] /= fScale
         B[:self.n, self.n] = B[self.n, :self.n] = -1.0
         a = np.zeros(self.n + 1)
@@ -118,21 +119,21 @@ class Diis:
             w = lstsq(B, a)[0]
         else:
             w = solve(B, a)
-        logger.debug('DIISs Bw - a:\n%r', B@w - a)
+        logger.debug('DIISs Bw - a:\n%r', B @ w - a)
         return w
 
     def update(self, w, update_p_matrix=False, update_e_matrix=False):
         """Update the parameters and gradient
-        
+
         Parameters:
         -----------
         w (np.ndarray)
             The solution of the diis system
-        
+
         update_e_matrix (bool, optional, default=False)
             If True, update the internal matrix with the errors.
             Thus, next DIIS steps will use the estimated errors
-        
+
         update_p_matrix (bool, optional, default=False)
             If True, update the internal matrices with the parameters.
             Thus, next DIIS steps will use estimated parameters
@@ -148,7 +149,7 @@ class Diis:
             if update_p_matrix:
                 p[self.i, :] = np.copy(new_parameters[-1])
         return new_e, new_parameters
-    
+
     def increase(self):
         """Advance self.i, and increase self.n if possible"""
         self.i += 1
@@ -159,33 +160,34 @@ class Diis:
 
     def calculate(self, e, *parameters, **kargs):
         """Calculate a DIIS step
-        
+
         Parameters:
         -----------
         e (np.ndarray)
             The errors
-        
+
         *args (np.ndarray)
             The parameters where the DIIS will work on
-        
+
         Returns:
         --------
-        
+
         Does not return anything, but p and g are updated.
-        
+
         TODO:
         -----
-        
+
         This does not give the same result for equivalent
         restricted and unrestricted calculations.
         Investigate why.
-        
+
         This implementation is rather simple, and is not sufficient
         to achieve convergence for benzene. Improve this.
-        
+
         """
         increase_i = kargs['increase_i'] if 'increase_i' in kargs else True
-        if self.n_max > 0: self.add_to_matrices(e, *parameters)
+        if self.n_max > 0:
+            self.add_to_matrices(e, *parameters)
         if self.n > 1:
             B, B0, a = self.set_system()
             w = self.solve(B, a)
@@ -204,14 +206,17 @@ class Diis:
                 logger.debug('updated by DIIS:\n%s', p)
         else:
             to_return = parameters
-        if len(to_return) == 1: to_return = to_return[0]
-        if increase_i: self.increase()
+        if len(to_return) == 1:
+            to_return = to_return[0]
+        if increase_i:
+            self.increase()
         return to_return
+
 
 def geodesic(C, DD, X, invX, t=1, gs=False):
     """Computes the geodesic of the Grassmannian
-    
-    
+
+
     Parameters:
     -----------
     - C (nxN ndarray): orbitals' coefficients (aka an element in the Stiefel).
@@ -227,8 +232,9 @@ def geodesic(C, DD, X, invX, t=1, gs=False):
     A nxN ndarray with the new orbitals' coefficients.
     """
     U, D, V = svd(invX @ DD, full_matrices=False)
-    sin, cos = np.diag(np.sin(t*D)), np.diag(np.cos(t*D))
+    sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
     return (C @ V.T @ cos + X @ U @ sin) @ V
+
 
 def pt(vector, direction, point, Id, X, invX, t):
     """Computes the parallel transport along a geodesic in the Grassmannian.
@@ -247,9 +253,10 @@ def pt(vector, direction, point, Id, X, invX, t):
     An nxN ndarray that represents the parallel transport of 'vector'.
     """
     U, D, V = svd(invX @ direction, full_matrices=False)
-    sin, cos = np.diag(np.sin(t*D)), np.diag(np.cos(t*D))
+    sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
     return ((-point @ V.T @ sin + X @ U @ cos) @ U.T @ invX
             + Id - X @ U @ U.T @ invX) @ vector
+
 
 def RBLS(C_a, C_b, DD_a, DD_b, norm_DD, E_cur, E_prev, S, X, invX, hf):
     """Riemannian Backtracking Line Search.
@@ -278,9 +285,9 @@ def RBLS(C_a, C_b, DD_a, DD_b, norm_DD, E_cur, E_prev, S, X, invX, hf):
     auxC_a, auxC_b = np.copy(C_a), np.copy(C_b)
 
     if E_prev == float('inf'):
-        Xi = 1/np.sqrt(norm_DD)
+        Xi = 1 / np.sqrt(norm_DD)
     else:
-        Xi = 4*(E_prev - E_cur)/norm_DD
+        Xi = 4 * (E_prev - E_cur) / norm_DD
 
     U_a, D_a, V_a = svd(invX @ DD_a, full_matrices=False)
     U_b, D_b, V_b = svd(invX @ DD_b, full_matrices=False)
@@ -288,22 +295,40 @@ def RBLS(C_a, C_b, DD_a, DD_b, norm_DD, E_cur, E_prev, S, X, invX, hf):
     auxU_a, auxU_b = X @ U_a, X @ U_b
     sin_a, cos_a = np.diag(np.sin(D_a)), np.diag(np.cos(D_a))
     sin_b, cos_b = np.diag(np.sin(D_b)), np.diag(np.cos(D_b))
-    ener = E_cur - r*t_n*Xi*norm_DD + 1
+    ener = E_cur - r * t_n * Xi * norm_DD + 1
 
-    while E_cur - ener < r*t_n*Xi*norm_DD and n < max_iter:
-        n += 1; t_n *= t
-        sin_a, cos_a = np.sin(t_n*Xi*D_a, out=sin_a), np.cos(t_n*Xi*D_a, out=cos_a)
-        sin_b, cos_b = np.sin(t_n*Xi*D_b, out=sin_b), np.cos(t_n*Xi*D_b, out=cos_b)
+    while E_cur - ener < r * t_n * Xi * norm_DD and n < max_iter:
+        n += 1
+        t_n *= t
+        sin_a, cos_a = np.sin(t_n * Xi * D_a, out=sin_a), np.cos(t_n * Xi * D_a, out=cos_a)
+        sin_b, cos_b = np.sin(t_n * Xi * D_b, out=sin_b), np.cos(t_n * Xi * D_b, out=cos_b)
         auxC_a = (auxV_a @ cos_a + auxU_a @ sin_a) @ V_a
         auxC_b = (auxV_b @ cos_b + auxU_b @ sin_b) @ V_b
         ener = hf._energy(auxC_a, auxC_b)
 
-    return absil.gram_schmidt(auxC_a, S), absil.gram_schmidt(auxC_b, S), t_n*Xi
+    return absil.gram_schmidt(auxC_a, S), absil.gram_schmidt(auxC_b, S), t_n * Xi
 
-def rip(u_1, u_2, v_1, v_2, S):
-    """Riemannian Inner Product in the Product of Grassmannians."""
-    return np.trace(u_1.T @ S @ v_1) + np.trace(u_2.T @ S @ v_2)
 
-def riem_norm(v_1, v_2, S):
-    """Riemannian Norm in the Product of Grassmannians."""
-    return np.sqrt(rip(v_1, v_2, v_1, v_2, S))
+def rip(first_vector, second_vector, S):
+    """Riemannian Inner Product in the Grassmannian.
+
+    params:
+    - first_vector and second_vector: list of vectors where each vector is in the tangent space of a Grassmannian.
+    - S: overlap matrix. but could also be a list with different overlap matrices. the modification that should be made in this case is also zipping the list S.
+
+    example: if we are working with, say, Gr(2, 5) x Gr(3, 5), then S is a 5x5 matrix, first_vector = [x_1, x_2], second_vector = [y_1, y_2], where x_1, y_1 \in T_{C_1}Gr(2, 5) and x_2, y_2 \in T_{C_2}Gr(3, 5). observe that we can have as many Grassmannians as we want as long as S (which forces 5 to be fixed) stays the same. then it's just a matter of basic linear algebra: the inner product in the product of vector spaces is the sum of the inner products.
+    """
+    return sum(
+        np.trace(x.T @ S @ y) for x, y in zip(first_vector, second_vector)
+    )
+
+def Riem_norm(vector, S):
+    """Riemannian Norm in the Grassmannian.
+
+    - vector: list of vectors where each vector is in the tangent space of a
+    Grassmannian.
+    - S: overlap matrix. but could also be a list with different overlap
+    matrices. nothing changes in this function, just in the inner product.
+    see documentation of the `rip` function.
+    """
+    return np.sqrt(rip(vector, vector, S))

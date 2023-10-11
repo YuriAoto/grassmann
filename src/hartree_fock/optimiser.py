@@ -25,7 +25,7 @@ def _check_nelec_ms(n_elec, restricted, ms2):
         ms2 = n_elec % 2
     if (n_elec - ms2) % 2 != 0:
         raise ValueError(f'Number of electrons, {n_elec} not compatible with 2MS, {ms2}.')
-    if restricted and not(n_elec % 2 == 0 and ms2 == 0):
+    if restricted and not (n_elec % 2 == 0 and ms2 == 0):
         raise ValueError('Restricted calculation requires'
                          ' an even number of electrons and ms=0')
     return restricted, ms2
@@ -36,8 +36,8 @@ DiisInfo = namedtuple('DiisInfo',
 
 
 def hartree_fock(integrals,
-		 nucl_rep,
-		 n_elec,
+                 nucl_rep,
+                 n_elec,
                  ini_orb,
                  ms2=None,
                  restricted=None,
@@ -52,7 +52,7 @@ def hartree_fock(integrals,
                  HF_step_type=lambda **x: "RH-SCF"):
     """A general Hartree-Fock procedure
 
-    
+
     integrals (Integrals)
         The molecular integrals in the basis
 
@@ -60,8 +60,8 @@ def hartree_fock(integrals,
         The nuclear repulsion
 
     n_elec (int)
-    	The number of electrons (must be even)
-    
+        The number of electrons (must be even)
+
     ini_orb (MolecularOrbitals)
         Initial orbitals for the HF procedure
 
@@ -74,19 +74,19 @@ def hartree_fock(integrals,
         number of electrons, False for odd number of electrons
 
     max_iter (int, optional, default=20)
-	Maximum number of iterations
-    
+        Maximum number of iterations
+
     grad_thresh (float, optional, default=1.0E-5)
-	Threshold for the norn of the gradient
+        Threshold for the norn of the gradient
 
     grad_type (str, optional, default='F_occ_virt')
         Gradient type for SCF. Possible valies are:
             'F_occ_virt' - occupied-virtual block of Fock matrix
             'F_asym' - anti-symmetric part of generalized Fock matrix
-    
+
     diis_info (int, optional, default=None)
         Information regarding DIIS
-    
+
     f_out (File object, optional, default=sys.stdout)
         The output to print the iterations.
         If None the iterations are not printed.
@@ -119,7 +119,7 @@ def hartree_fock(integrals,
                          diis_info)
     hf_step.grad_type = grad_type
     hf_step.conjugacy = conjugacy
-    hf_step.step_size = step_size
+    hf_step.step_size = step_size if step_size else hf_step.step_size
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
                 'Number of  electrons: %d\n'
@@ -133,7 +133,7 @@ def hartree_fock(integrals,
                 restricted,
                 ms2,
                 grad_type
-    )
+                )
     if restricted:
         logger.info('Number of occupied orbitals: %d', hf_step.N_a)
     else:
@@ -146,7 +146,7 @@ def hartree_fock(integrals,
     assert hf_step.orb.is_orthonormal(integrals.S,
                                       N=(hf_step.N_a
                                          if restricted else
-                                        (hf_step.N_a, hf_step.N_b))), \
+                                         (hf_step.N_a, hf_step.N_b))), \
         "Initial orbitals are not orthonormal"
     hf_step.initialise(HF_step_type(i_SCF=0, grad_norm=hf_step.grad_norm))
 
@@ -197,7 +197,10 @@ def hartree_fock(integrals,
                              T.elapsed_time))
             f_out.flush()
 
-        if hf_step.grad_norm < grad_thresh or abs(hf_step.diff_energy) < energy_thresh:
+        if hf_step.grad_norm < grad_thresh:
+            # in case someone implement backtracking line search, check for the
+            # difference of energy between consecutive steps, ie,
+            # abs(hf_step.diff_energy) < energy_thresh:
             logger.info('Convergence reached in %d iterations.', i_SCF)
             converged = True
             break
@@ -206,7 +209,7 @@ def hartree_fock(integrals,
                                       hf_step.N_a
                                       if restricted else
                                       (hf_step.N_a, hf_step.N_b)), \
-                                      "Final orbitals are not orthonormal"
+        "Final orbitals are not orthonormal"
     res = OptResults(kind_of_calc)
     res.energy = nucl_rep + hf_step.energy
     res.orbitals = copy.deepcopy(hf_step.orb)
@@ -214,9 +217,9 @@ def hartree_fock(integrals,
     logger.debug('Final orbitals:\n%s', res.orbitals)
     hf_step.calc_density_matrix()
     if restricted:
-        res.density = hf_step.P_a
+        res.density = hf_step.P
     else:
-        res.density = hf_step.P_a, hf_step.P_b
+        res.density = hf_step.P, hf_step.P_b
     res.success = converged
     res.n_iter = i_SCF
     if hf_step.large_cond_number:
