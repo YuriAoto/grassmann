@@ -114,7 +114,8 @@ class LogFilter():
         elif rec.funcName == '__exit__':
             rec.funcName = 'Finishing time management'
         if self.logfilter_re is not None:
-            return self.logfilter_re.search(rec.funcName) is not None
+            return (self.logfilter_re.search(rec.funcName) is not None
+                    or self.logfilter_re.search(rec.msg) is not None)
         # Uncomment this to check for possible records to filter
         # print()
         # print(rec)

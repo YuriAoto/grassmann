@@ -23,10 +23,22 @@
     proj (2D np.ndarray of dimension (d, N_a))
         Projection matrix to the tangent space of the Grassmannian:
         Id - C @ C.T @ S
-
+    
     proj_b (2D np.ndarray of dimension (d, N_b))
         Projection matrix to the tangent space of the Grassmannian for spin
         beta: Id - C_b @ C_b.T @ S
+
+    C (2D np.ndarray of dimension (n, N_b))
+        C_b or C_a, but unspecified in that function
+
+    P_a (2D np.ndarray of dimension (n, n))
+        Density matrix for spin alpha: C_a @ C_a.T
+
+    P_b (2D np.ndarray of dimension (n, n))
+        Density matrix for spin beta: C_b @ C_b.T
+
+    P (2D np.ndarray of dimension (n, n))
+        P_a or P_b, but unspecified in that function
 
     grad (2D np.ndarray of dimension (n, N_a))
         The gradient of the energy (spin alpha in the unrestricted case).
@@ -39,6 +51,10 @@
 
     g (3D np.ndarray)
         Two-electron integral matrix.
+        Here all functions assume the three indices g,
+        that need a further contraction in the first index
+        to obtain the actualtwo electron integral that
+        depend on four indices
 
     S (2D np.ndarray)
         Overlap matrix.
@@ -51,15 +67,29 @@ cimport cython
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
 def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
-    cdef int i, j, k, L, T = g.shape[0], d = C.shape[0], N = C.shape[1]
+    """Calculate some useful contractions among C, P and g
+    
+    Parameters:
+    -----------
+    C, P and g: see module's docstring
+    
+    Returns:
+    --------
+    A tuple with the following matrices:
+    
+    GP (1D array) - the contraction g[:,i,k]P[i,k]
+    GC (3D array) - the contraction g[:,:,k]C[k,:]
+    GCC (3D array) - the contraction CG[L,i,k]C[i,j] = g[L,i,k']C[k',k]C[i,j]
+    """
+    cdef int i, j, k, L, T = g.shape[0], n = C.shape[0], N = C.shape[1]
     cdef double[:] GP = np.zeros(T)
-    cdef double[:, :, :] GC = np.zeros((T, d, N))
+    cdef double[:, :, :] GC = np.zeros((T, n, N))
     cdef double[:, :, :] GCC = np.zeros((T, N, N))
     cdef double aux
 
     for L in range(T):
-        for i in range(d):
-            for k in range(d):
+        for i in range(n):
+            for k in range(n):
                 aux = g[L, i, k]
                 GP[L] += aux * P[i, k]
 
@@ -76,11 +106,22 @@ def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def fock(double[:] GP_m,
-         double[:] GP_s,
+def fock(double[:] GP_m, double[:] GP_s,
          double[:, :, :] GC_m,
-         double[:, :] h,
-         double[:, :, :] g):
+         double[:, :] h, double[:, :, :] g):
+    """Fock matrix for (unrestricted) spin m
+    
+    F_mn = h_mn + sum_rs [ (Pm + Ps) g_mnrs - Pm g_mrsn ]
+    
+    Parameters:
+    -----------
+    GP_m, GC_m  - Contractions of g with P and C for spin we are at: m.
+                  See common_blocks
+    GP_s        - Contraction of g with P for the other spin: s.
+                  See common_blocks
+    h, g  - molecular integrals, see module's docstring
+    
+    """
     cdef int i, j, k, L, T = g.shape[0], d = g.shape[1], N = GC_m.shape[2]
     cdef double[:, :] F = np.array(h)
 
@@ -94,6 +135,38 @@ def fock(double[:] GP_m,
             for j in range(d):
                 for k in range(N):
                     F[i, j] -= GC_m[L, i, k] * GC_m[L, j, k]
+
+    return F
+
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing
+def fock_restr(double[:] GP, double[:, :, :] GC,
+               double[:, :] h, double[:, :, :] g):
+    """Fock matrix for restricted orbitals
+    
+    F_mn = h_mn + sum_rs P [ g_mnrs - g_mrsn/2 ]
+    
+    Parameters:
+    -----------
+    GP, GC  - Contractions of g with P and C.
+              See common_blocks
+    h, g    - molecular integrals, see module's docstring
+    
+    """
+    cdef int i, j, k, L, T = g.shape[0], n = g.shape[1], N = GC.shape[2]
+    cdef double[:, :] F = np.array(h)
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(n):
+                F[i, j] += g[L, i, j] * GP[L]
+
+    for L in range(T):
+        for i in range(n):
+            for j in range(n):
+                for k in range(N):
+                    F[i, j] -= GC[L, i, k] * GC[L, j, k]
 
     return F
 
@@ -272,55 +345,40 @@ def dir_proj(double[:, :] C, double[:, :] grad):
     cdef double[:, :] Id = np.eye(n)
     der = np.zeros((n * N, n * N))
 
+    # computational cost: O(N_a * N_b * n^2 * L)
+    hess[:, :] = mixed_spin(GC, GC)
+
+    # computational cost: O(N_a * n^2 * L)
     for b in range(N):
         for a in range(N):
             der[a * n: (a + 1) * n, b * n: (b + 1) * n] = np.multiply(Id, aux[b, a])
 
-    return der
+    # computational cost: O(n^2 * N_a^2 * L)
+    for j in range(N - 1):
+        for b in range(j + 1):
+            hess[n*(j+1) : n*(j+2), n*b : n*(b+1)] = \
+                non_diag_blocks(C, GC, GCC, g, b, j+1)
+            hess[n*b : n*(b+1), n*(j+1) : n*(j+2)] = \
+                hess[n*(j+1) : n*(j+2), n*b : n*(b+1)].T
+
+    return hess
 
 
-def normalize(double[:] v, double[:, :] G):
-    """Normalize a vector with respect to an arbitrary basis.
-
-    Parameters:
-    -----------
-    - v (nx1 ndarray): the vector to be normalized.
-    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
-
-    Returns:
-    --------
-    nx1 ndarray with the orthonormalized 'v'.
-    """
-    return v / np.sqrt(np.transpose(v).T @ G @ v)
 
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def gram_schmidt(M, double[:, :] G):
-    """Gram-Schmidt algorithm in an arbitrary basis.
+def dir_proj(double[:, :] C, double[:, :] grad):
+    cdef int a, b, n = grad.shape[0], N = grad.shape[1]
+    cdef double[:, :] aux = np.transpose(C) @ np.array(grad)
+    cdef double[:, :] Id = np.eye(n)
+    der = np.zeros((n*N, n*N))
 
-    Parameters:
-    -----------
-    - M (nxk ndarray): matrix containing the k vectors to be orthonormalized.
-        Each vector is a column of the matrix.
-    - G (nxn ndarray): the Gram matrix associated with the basis of interest.
+    for b in range(N):
+        for a in range(N):
+            der[a*n : (a+1)*n, b*n : (b+1)*n] = np.multiply(Id, aux[b, a])
 
-    Returns:
-    --------
-    A nxk ndarray containing the orthonormalized vectors.
-    """
-    cdef int i, j
-
-    M[:, 0] = normalize(M[:, 0], G)
-    for i in range(1, M.shape[1]):
-        Mi = M[:, i]
-        for j in range(i):
-            Mj = M[:, j]
-            t = Mi.T @ G @ Mj
-            Mi = Mi - t * Mj
-            M[:, i] = normalize(Mi, G)
-
-    return M
+    return der
 
 
 # DEPRECATED FUNCTIONS

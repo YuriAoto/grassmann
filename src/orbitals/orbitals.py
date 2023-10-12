@@ -17,6 +17,7 @@ import numpy as np
 from scipy.linalg import inv, expm, eigh
 
 from util.variables import int_dtype
+from util import matrices
 from molecular_geometry.symmetry import number_of_irreducible_repr
 from integrals.integrals import Integrals
 
@@ -425,7 +426,7 @@ class MolecularOrbitals():
             orb_b = integrals.X @ Cb
             return cls.from_array((orb_a, orb_b), 1, name='From SAD',
                                   integrals=integrals,
-                                  energies=e,
+                                  energies=(e, eb),
                                   restricted=False)
 
     @classmethod
@@ -461,10 +462,12 @@ class MolecularOrbitals():
         new_orbitals.sym_adapted_basis = False
         new_orbitals._coefficients = []
         new_orbitals.restricted = restricted
-        new_orbitals.energies = energies
-        if not restricted:
-            new_orbitals.energies_b = energies
-
+        if isinstance(energies, tuple) and len(energies) == 2:
+            new_orbitals.energies = energies[0]
+            new_orbitals.energies_b = energies[1]
+        else:
+            new_orbitals.energies = energies
+ 
         if isinstance(C, tuple):
             for Ci in C:
                 new_orbitals._coefficients.append(np.array(Ci, dtype=float))
@@ -481,6 +484,8 @@ class MolecularOrbitals():
 
     @classmethod
     def unrestrict(cls, other):
+        if not other.restricted:
+            return deepcopy(other)
         return cls.from_array((other._coefficients[0],
                                other._coefficients[0]),
                               1,
@@ -552,21 +557,22 @@ class MolecularOrbitals():
         -----
         Make it work for n_irrep > 1
         """
-        loaded_array = np.load(npz_file)
-        if len(loaded_array) == 1:
-            return cls.from_array(loaded_array[loaded_array.keys[0]],
+        loaded_array = np.load(npz_file, allow_pickle=True)
+        if 'coefficients' in loaded_array:
+            return cls.from_array(loaded_array['coefficients'],
                                   n_irrep=1,
                                   name=f'Coefficients from npz file {npz_file}',
                                   integrals=None,
-                                  energies=None,
+                                  energies=loaded_array['energies'],
                                   restricted=True)
-        if len(loaded_array) >= 2:
+        else:
             return cls.from_array((loaded_array['alpha'],
                                    loaded_array['beta']),
                                   n_irrep=1,
                                   name=f'Coefficients from npz file {npz_file}',
                                   integrals=None,
-                                  energies=None,
+                                  energies=(loaded_array['energies'],
+                                            loaded_array['energies_b']),
                                   restricted=False)
     
     @classmethod
@@ -709,22 +715,29 @@ class MolecularOrbitals():
             raise NotImplementedError('Not yet for n_irrep > 1')
         if self.restricted:
             np.savez(npz_file,
-                     coefficients=self[0])
+                     coefficients=self[0],
+                     energies=self.energies,
+                     allow_pickle=True)
         else:
             np.savez(npz_file,
                      alpha=self[0],
-                     beta=self[1])
+                     beta=self[1],
+                     energies=self.energies,
+                     energies_b=self.energies_b,
+                     allow_pickle=True)
 
     
-    def orthogonalise(self, X=None):
-        """Orthogonalise the orbitals
+    def orthogonalize(self, X=None, S=None):
+        """Orthogonalize the orbitals
         
         TODO: for more than one irrep
         """
         if self.n_irrep > 1:
             raise NotImplementedError('TODO: for more than one irrep')
-        if X is None:
-            pass
+        if X is None and S is not None:
+            self._coefficients[0][:, :] = matrices.gram_schmidt(self._coefficients[0], S)
+            if not self.restricted:
+                self._coefficients[1][:, :] = matrices.gram_schmidt(self._coefficients[1], S)
         else:
             self._coefficients[0][:, :] = X @ self._coefficients[0]
             if not self.restricted:

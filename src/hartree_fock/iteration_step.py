@@ -11,6 +11,7 @@ import numpy as np
 from scipy import linalg
 
 from util.variables import sqrt2
+from util import array_indices
 from input_output.log import logtime
 from . import util
 from . import absil
@@ -53,10 +54,12 @@ class HartreeFockStep():
         self.blocks_b = None
         self.restriction_norm = None
         self.large_cond_number = []
-        self.energies = None
-        self.energies_b = None
         self.conjugacy = None
         self.step_size = 1e-3
+        self.lagmult = None
+        self.lagmult_b = None
+        self.energy_prev = float('inf')
+        self.hf_nrlm_multpl_symm = None
 
     @property
     def d(self):
@@ -113,14 +116,46 @@ class HartreeFockStep():
             self.Id_N_a = np.eye(self.N_a)
             if not self.restricted:
                 self.Id_N_b = np.eye(self.N_b)
-
+        
         elif step_type == 'NRLM':
+            def _initialize_one_spin_NRLM(N, lagmtpl_triang, orbener):
+                """Initialize variables for specific spin/restricted in NRLM
+                
+                N (int) - number of occupied orbitals
+                lagmtpl_triang (bool) - True if only triangular part of
+                                        multipliers is used
+                orbener (iter of floats) - orbital energies
+                
+                Note that, even if lagmtpl_triang == True,
+                the matrix with initial lagrange multipliers
+                is a (symmetric) square matrix
+                """
+                energies = np.diag(orbener[:N])
+                if lagmtpl_triang:
+                    nlag = array_indices.triangular(N)
+                else:
+                    nlag = N**2
+                Id_N = np.eye(N)
+                logger.info('n lagrange multipliers: %d', nlag)
+                return nlag, energies, Id_N
+
             self._init_P()
-            self.Id_N_a = np.eye(self.N_a)
-            self.energies = np.diag(self.orb.energies[:self.N_a])
+            self.lagmul_triangular = self.hf_nrlm_multpl_symm == 'triangular'
+            (self.n_lagmtpl, self.lagmult, self.Id_N_a) = _initialize_one_spin_NRLM(
+                self.N_a,
+                self.lagmul_triangular,
+                self.orb.energies)
             if not self.restricted:
-                self.Id_N_b = np.eye(self.N_b)
-                self.energies_b = np.diag(self.orb.energies_b[:self.N_b])
+                (self.n_lagmtpl_b, self.lagmult_b, self.Id_N_b) = _initialize_one_spin_NRLM(
+                    self.N_b,
+                    self.lagmul_triangular,
+                    self.orb.energies_b)
+
+            self.Id_N_b = np.eye(self.N_b)
+            self.Id_n = np.eye(self.n)
+            self.lagmult = np.diag(self.orb.energies[:self.N_a])
+            if not self.restricted:
+                self.lagmult_b = np.diag(self.orb.energies_b[:self.N_b])
 
         elif step_type == 'RCG':
             self._init_P()
@@ -139,7 +174,13 @@ class HartreeFockStep():
     def calc_density_matrix(self):
         """Calculate the density matrix (or matrices)
         
-        P = C @ C.T
+        For unrestricted:
+        P_a = C_a @ C_a.T  for u
+        P_b = C_b @ C_b.T
+        
+        For restricted:
+        P = 2 * C @ C.T = P_a + P_b
+
         """
         self.P = self.orb[0][:, :self.N_a] @ self.orb[0][:, :self.N_a].T
         if self.restricted:
@@ -147,46 +188,41 @@ class HartreeFockStep():
             logger.debug('Density matrix:\n%r', self.P)
         else:
             self.P_b = self.orb[1][:, :self.N_b] @ self.orb[1][:, :self.N_b].T
-            logger.debug('Alpha density matrix:\n%r', self.P)
-            logger.debug('Beta density matrix:\n%r', self.P_b)
+            logger.debug('Density matrix (alpha):\n%r', self.P_a)
+            logger.debug('Density matrix (beta):\n%r', self.P_b)
+
+    def calc_common_blocks(self):
+        """Calculate the common blocks"""
+        self.blocks_a = absil.common_blocks(self.orb[0][:, :self.N_a],
+                                            self.P_a,
+                                            self.integrals.g._integrals)
+        if not self.restricted:
+            self.blocks_b = absil.common_blocks(self.orb[1][:, :self.N_b],
+                                                self.P_b,
+                                                self.integrals.g._integrals)
 
     def calc_fock_matrix(self):
-        """Calculate the Fock matrix
-        
-        F[ij] = h[ij] + \sum_{k,l} P[kl]*(g[ijkl] - g[ikjl]/2)
-        The way that einsum is made matters a lot in the time
-        
-        TODO: integrate restricted and unrestricted codes
-        """
+        """Calculate the Fock matrix"""
         if self.restricted:
-            self.fock = absil.fock(
-                self.blocks[0],
-                self.zeros,
-                self.blocks[1],
-                self.integrals.h,
-                self.integrals.g._integrals
-            )
-            self.fock = np.asarray(self.fock)
-            logger.debug('Fock matrix:\n%s', self.fock)
+            self.Fock_a = absil.fock_restr(self.blocks_a[0],
+                                           self.blocks_a[1],
+                                           self.integrals.h,
+                                           self.integrals.g._integrals)
+            self.Fock_a = np.asarray(self.Fock_a)
+            logger.debug('Fock matrix:\n%s', self.Fock_a)
         else:
-            self.fock = absil.fock(
-                self.blocks[0],
-                self.blocks_b[0],
-                self.blocks[1],
-                self.integrals.h,
-                self.integrals.g._integrals
-            )
-            self.fock = np.asarray(self.fock)
-            logger.debug('Fock matrix (alpha):\n%s', self.fock)
-            self.fock_b = absil.fock(
-                self.blocks_b[0],
-                self.blocks[0],
-                self.blocks_b[1],
-                self.integrals.h,
-                self.integrals.g._integrals
-            )
-            self.fock_b = np.asarray(self.fock_b)
-            logger.debug('Fock matrix (beta):\n%s', self.fock_b)
+            self.Fock_a = absil.fock(self.blocks_a[0], self.blocks_b[0],
+                                     self.blocks_a[1], self.blocks_b[1],
+                                     self.integrals.h,
+                                     self.integrals.g._integrals)
+            self.Fock_a = np.asarray(self.Fock_a)
+            logger.debug('Fock matrix (alpha):\n%s', self.Fock_a)
+            self.Fock_b = absil.fock(self.blocks_b[0], self.blocks_a[0],
+                                     self.blocks_b[1], self.blocks_a[1],
+                                     self.integrals.h,
+                                     self.integrals.g._integrals)
+            self.Fock_b = np.asarray(self.Fock_b)
+            logger.debug('Fock matrix (beta):\n%s', self.Fock_b)
 
     def calc_energy(self):
         """Calculate the energy
@@ -206,6 +242,47 @@ class HartreeFockStep():
         logger.info('Electronic energy: %f\nOne-electron energy: %f'
                     '\nTwo-electron energy: %f',
                     self.energy, self.one_el_energy, self.two_el_energy)
+
+    def calc_energy_non_orth_coeff(self, save_all=False):
+        """Calculate the energy associated to the coefficients
+        
+        Save the original coefficients, orthogonalize them,
+        calculate the energy, and then put the originals back
+        
+        To save also density matrix, common_blocks and fock matrices,
+        use save_all=True
+        
+        """
+        temp_C = np.copy(self.orb[0][:, :self.N_a])
+        if not self.restricted:
+            temp_C_b = np.copy(self.orb[1][:, :self.N_b])
+        if save_all:
+            temp_P = np.copy(self.P_a)
+            temp_b = np.copy(self.blocks_a)
+            temp_F = np.copy(self.Fock_a)
+            if not self.restricted:
+                temp_P_b = np.copy(self.P_b)
+                temp_b_b = np.copy(self.blocks_b)
+                temp_F_b = np.copy(self.Fock_b)
+        
+        self.orb.orthogonalize(X=self.integrals.X)  # S=self.integrals.S)
+        self.calc_density_matrix()
+        self.calc_common_blocks()
+        self.calc_fock_matrix()
+        self.calc_energy()
+        
+        self.orb[0][:, :self.N_a] = temp_C
+        if not self.restricted:
+            self.orb[1][:, :self.N_b] = temp_C_b
+        if save_all:
+            self.P_a = temp_P
+            self.blocks_a = temp_b
+            self.Fock_a = temp_F
+            if not self.restricted:
+                self.P_b = temp_P_b
+                self.blocks_b = temp_b_b
+                self.Fock_b = temp_F_b
+
 
     def calc_SCF_grad(self):
         if self.grad_occvirtF:
@@ -289,19 +366,8 @@ class HartreeFockStep():
                             self.P_b
                         )
 
-        with logtime('computing common blocks'):
-            self.blocks = absil.common_blocks(
-                self.orb[0][:, :self.N_a],
-                self.P,
-                self.integrals.g._integrals
-            )
-            if not self.restricted:
-                self.blocks_b = absil.common_blocks(
-                    self.orb[1][:, :self.N_b],
-                    self.P_b,
-                    self.integrals.g._integrals
-                )
-
+        with logtime('Computing common blocks'):
+            self.calc_common_blocks()
         with logtime('Form Fock matrix'):
             self.calc_fock_matrix()
         with logtime('Calculate Energy'):
@@ -624,97 +690,251 @@ class HartreeFockStep():
 
     def NRLM(self, i_SCF):
         """Hartree--Fock using Newton--Raphson with Lagrange multipliers."""
-        N_a, N_b, N, n = self.N_a, self.N_b, self.N_a + self.N_b, self.d
+        N_a, N_b, n = self.N_a, self.N_b, self.n
+        N = self.N_a if self.restricted else self.N_a + self.N_b
         S, g = self.integrals.S, self.integrals.g._integrals
-        hess_Lag = np.zeros((n*N + N_a**2 + N_b**2, n*N + N_a**2 + N_b**2))
-        grad_Lag = np.empty((n*N + N_a**2 + N_b**2,))
+        n_params_a = n * N_a + self.n_lagmtpl
+        if self.restricted:
+            n_params = n_params_a
+        else:
+            n_params_b = n * N_b + self.n_lagmtpl_b
+            n_params = n_params_a + n_params_b
+        hess_Lag = np.zeros((n_params, n_params))
+        grad_Lag = np.empty((n_params,))
+        """
+        Note on the implementation:
+        ---------------------------
+        The order of the parameters in the matrices are:
+        For restricted:
+            C   L
+        
+        For unrestricted:
+            C   C_b   L   L_b
+        
+        where C represent orbital coefficients and L Lagrange multipliers.
+        For convenience, we predefine these slices below
+        """
+        s_Ca = np.s_[:n*N_a]
+        s_Cb = np.s_[n*N_a:n*N]
+        s_La = np.s_[n*N: n*N + self.n_lagmtpl]
+        s_Lb = np.s_[n*N + self.n_lagmtpl:]
+        s_C = s_Ca if self.restricted else np.s_[:n*N]
+        s_L = s_La if self.restricted else np.s_[n*N:]
+        SC = S @ self.orb[0][:, :N_a]
+        if not self.restricted:
+            SC_b = S @ self.orb[1][:, :N_b]
 
         with logtime('Orthogonalizing coefficients and computing the energy'):
-            temp = np.copy(self.orb[0][:, :N_a])
-            temp_b = np.copy(self.orb[1][:, :N_b])
-            self.orb[0][:, :N_a] = absil.gram_schmidt(self.orb[0][:, :N_a], S)
-            self.orb[1][:, :N_b] = absil.gram_schmidt(self.orb[1][:, :N_b], S)
+            # Energy is computed here because orbitals may not be orthonormal
+            # Thus, they have to be orthogonalized first
+            self.calc_energy_non_orth_coeff()
+            
+        if self.lagmul_triangular:
+            # These matrices are symmetric and have diagonal elements mutiplied by 2
+            # They are a easier way to store the otherwise clumsy
+            # indexing of pairs: 00, 01, 11, 02, 12, 22, ...
+            eps = self.lagmult + self.Id_N_a * self.lagmult
+            if not self.restricted:
+                eps_b = self.lagmult_b + self.Id_N_b * self.lagmult_b
+        else:
+            eps, eps_b = self.lagmult, self.lagmult_b
+
+        with logtime('Form the density matrix'):
             self.calc_density_matrix()
-            self.blocks = absil.common_blocks(self.orb[0][:, :N_a], self.P, g)
-            self.blocks_b = absil.common_blocks(self.orb[1][:, :N_b], self.P_b, g)
-            with logtime('computing Fock matrix'):
-                self.calc_fock_matrix()
-            with logtime('computing the energy'):
-                self.calc_energy()
-
-        C = self.orb[0][:, :N_a] = temp
-        C_b = self.orb[1][:, :N_b] = temp_b
-        eps, eps_b = self.energies, self.energies_b
-        aux, aux_b = C.T @ S, C_b.T @ S
-
-        self.calc_density_matrix()
-
-        with logtime('computing common blocks'):
-            self.blocks = absil.common_blocks(C, self.P, g)
-            self.blocks_b = absil.common_blocks(C_b, self.P_b, g)
-
-        with logtime('computing Fock matrix'):
+        with logtime('Computing common blocks'):
+            self.calc_common_blocks()
+        with logtime('Form Fock matrix'):
             self.calc_fock_matrix()
-
-        with logtime('computing the gradient'):
-            R = aux @ C - self.Id_N_a
-            B = [np.kron(aux.T, self.Id_N_a[:, i]) for i in range(N_a)]
-            Jac = np.kron(self.Id_N_a, aux) + np.vstack(B).T
-            grad = 2*self.fock @ C
-            grad_Lag[:n*N_a] = (np.reshape(grad, (n*N_a,), 'F')
-                                - Jac.T @ np.reshape(eps, (N_a**2,), 'F'))
-            grad_Lag[n*N:(n*N + N_a**2)] = np.reshape(-R, (N_a**2,), 'F')
-            logger.debug('gradient spin alpha:\n%r', grad)
-
-            R_b = aux_b @ C_b - self.Id_N_b
-            B = [np.kron(aux_b.T, self.Id_N_b[:, i]) for i in range(N_b)]
-            Jac_b = np.kron(self.Id_N_b, aux_b) + np.vstack(B).T
-            grad_b = 2*self.fock_b @ C_b
-            grad_Lag[n*N_a:n*N] = (np.reshape(grad_b, (n*N_b,), 'F')
-                                   - Jac_b.T @ np.reshape(eps_b, (N_b**2,), 'F'))
-            grad_Lag[n*N + N_a**2:] = np.reshape(-R_b, (N_b**2,), 'F')
-            logger.debug('gradient spin beta:\n%r', grad_b)
-
-        with logtime('computing the hessian'):
-            hess_Lag[:n*N, :n*N] = absil.hessian(C, C_b,
-                                                 self.fock, self.fock_b,
-                                                 self.blocks[1],
-                                                 self.blocks_b[1],
-                                                 self.blocks[2],
-                                                 self.blocks_b[2],
-                                                 g)
-            hess_Lag[:n*N_a, :n*N_a] -= np.kron(eps + eps.T, S)
-            hess_Lag[n*N:(n*N + N_a**2), :n*N_a] = -Jac
-            hess_Lag[:n*N_a, n*N:(n*N + N_a**2)] = -Jac.T
-            hess_Lag[n*N_a:n*N, n*N_a:n*N] -= np.kron(eps_b + eps_b.T, S)
-            hess_Lag[(n*N + N_a**2):, n*N_a:n*N] = -Jac_b
-            hess_Lag[n*N_a:n*N, (n*N + N_a**2):] = -Jac_b.T
-            logger.debug('hessian:\n%r', hess_Lag)
+        with logtime('Computing the gradient'):
+            Jac, restr_a_norm = _nrlm_grad(self.orb[0][:, :N_a],
+                                           self.Fock_a,
+                                           eps,
+                                           self.lagmul_triangular,
+                                           SC,
+                                           self.Id_N_a,
+                                           grad_Lag[s_Ca],
+                                           grad_Lag[s_La])
+            if not self.restricted:
+                Jac_b, restr_b_norm = _nrlm_grad(self.orb[1][:, :N_b],
+                                                 self.Fock_b,
+                                                 eps_b,
+                                                 self.lagmul_triangular,
+                                                 SC_b,
+                                                 self.Id_N_b,
+                                                 grad_Lag[s_Cb],
+                                                 grad_Lag[s_Lb])
+        logger.debug('Gradient:\n%s', grad_Lag)
+        with logtime('Computing the Hessian'):
+            if self.restricted:
+                hess_Lag[s_C, s_C] = absil.hessian_restr(self.orb[0][:, :N_a],
+                                                         self.Fock_a,
+                                                         self.blocks_a[1],
+                                                         self.blocks_a[2],
+                                                         g)
+            else:
+                hess_Lag[s_C, s_C] = absil.hessian(self.orb[0][:, :N_a],
+                                                   self.orb[1][:, :N_b],
+                                                   self.Fock_a, self.Fock_b,
+                                                   self.blocks_a[1],
+                                                   self.blocks_b[1],
+                                                   self.blocks_a[2],
+                                                   self.blocks_b[2],
+                                                   g)
+            logger.debug('Hessian (of energy only):\n%r', hess_Lag)
+            
+            hess_Lag[s_Ca, s_Ca] -= (np.kron(eps, S)
+                                     if self.lagmul_triangular else
+                                     np.kron(eps + eps.T, S))
+            if not self.restricted:
+                hess_Lag[s_Cb, s_Cb] -= (np.kron(eps_b, S)
+                                         if self.lagmul_triangular else
+                                         np.kron(eps_b + eps_b.T, S))
+            logger.debug('Hessian (including eps x S):\n%r', hess_Lag)
+            
+            if self.lagmul_triangular:
+                _nrlm_J_hess(SC, hess_Lag[s_Ca, s_La])
+                if not self.restricted: _nrlm_J_hess(SC_b, hess_Lag[s_Cb, s_Lb])
+            else:
+                hess_Lag[s_Ca, s_La] = -Jac
+                if not self.restricted: hess_Lag[s_Cb, s_Lb] = -Jac_b
+            # Copy the symmetric block
+            hess_Lag[s_La, s_Ca] = hess_Lag[s_Ca, s_La].T
+            if not self.restricted: hess_Lag[s_Lb, s_Cb] = hess_Lag[s_Cb, s_Lb].T
+        logger.debug('Hessian:\n%r', hess_Lag)
 
         self.grad_norm = linalg.norm(grad_Lag)
-        self.restriction_norm = linalg.norm(R) + linalg.norm(R_b)
+        self.restriction_norm = restr_a_norm
+        if not self.restricted: self.restriction_norm += restr_b_norm
 
         with logtime('solving the main equation'):
-            eta = np.linalg.lstsq(hess_Lag, -grad_Lag, rcond=None)
-        if eta[1].size < 1:
-            logger.warning('Hessian does not have full rank')
-        elif eta[1] > 1e-10:
-            logger.warning('Large conditioning number: %.5e', eta[1])
+            C_update, L_update = _solve_nrlm_equation(hess_Lag, grad_Lag, n, N)
 
-        eta_C = np.reshape(eta[0][:n*N], (n, N), 'F')
-        self.energies += np.reshape(eta[0][n*N:(n*N + N_a**2)], (N_a, N_a), 'F')
-        logger.debug('eta: \n%s', eta_C)
-        logger.debug('energies alpha: \n%s', self.energies)
-        self.energies_b += np.reshape(eta[0][(n*N + N_a**2):],
-                                      (N_b, N_b), 'F')
-        logger.debug('energies beta: \n%s', self.energies_b)
-
-        with logtime('updating the point'):
-            self.orb[0][:, :N_a] += eta_C[:, :N_a]
-            self.orb[1][:, :N_b] += eta_C[:, N_a:]
+        with logtime('Updating the Orbitals and multipliers'):
+            logger.debug('C_update: \n%s', C_update)
+            logger.debug('L_update: \n%s', L_update)
+            _nrlm_update_lagmult(self.lagmult, L_update[:self.n_lagmtpl],
+                                 self.lagmul_triangular, N_a)
+            logger.debug('Lagrange multipliers (alpha): \n%s', self.lagmult)
+            logger.debug('lagmult - lagmult.T (alpha): \n%s',
+                         self.lagmult - self.lagmult.T)
+            if not self.restricted:
+                _nrlm_update_lagmult(self.lagmult_b, L_update[self.n_lagmtpl:],
+                                     self.lagmul_triangular, N_b)
+                logger.debug('Lagrange multipliers (beta): \n%s', self.lagmult_b)
+                logger.debug('lagmult_b - lagmult_b.T (beta): \n%s',
+                             self.lagmult_b - self.lagmult_b.T)
+            self.orb[0][:, :N_a] += C_update[:, :N_a]
+            self.orb.energies = np.diag(self.lagmult)
+            if not self.restricted:
+                self.orb[1][:, :N_b] += C_update[:, N_a:]
+                self.orb.energies_b = np.diag(self.lagmult_b)
 
     def newton_orb_rot(self, i_SCF):
         raise NotImplementedError("As described in Helgaker's book")
 
     def density_matrix_scf(self, i_SCF):
         raise NotImplementedError("Density matrix based SCF")
+
+
+
+def _nrlm_grad(C, fock, eps, lagmul_triangular, SC, Id_N, grad_E, grad_R):
+    n, N = C.shape  # This N is not N_a + N_b! It is N_a or N_b,
+                    # depending on what has been passed
+    grad = 2 * fock @ C
+    logger.debug('Gradient of energy:\n%r', grad)
+    grad_E[:] = np.reshape(grad, (n*N,), 'F')
+    R = Id_N - C.T @ SC
+    if lagmul_triangular:
+        grad_E[:] -= np.reshape(SC @ eps, (len(grad_E),), 'F')
+        grad_R[:] = R[np.tril_indices(N)]
+        Jac = None
+    else:
+        B = [np.kron(SC, Id_N[:, i]) for i in range(N)]
+        Jac = np.kron(Id_N, SC) + np.vstack(B)
+        grad_E[:] -= Jac @ np.reshape(eps, (N**2,), 'F')
+        grad_R[:] = np.reshape(R, (N**2,), 'F')
+    return Jac, linalg.norm(R)
+
+
+def _nrlm_J_hess(SC, hess_J):
+    def _start_block(k):
+        return array_indices.triangular(k)
+
+    n, N = SC.shape  # This N is not N_a + N_b! It is N_a or N_b,
+                     # depending on what has been passed
+    for k in range(N):
+        p_slice = slice(n*k, n*k + n)
+        hess_J[p_slice, _start_block(k): _start_block(k+1)] = -SC[:, :k+1]
+        for j in range(k, N):
+            hess_J[p_slice, _start_block(j) + k] += -SC[:, j]
+
+
+def _nrlm_update_lagmult(ener, eta, is_triangular, N):
+    """Add eta to ener, taking care of the version"""
+    if is_triangular:
+        _nrlm_update_triang_eps(ener, eta)
+    else:
+        ener[:, :] += np.reshape(eta[:N**2], (N, N), 'F')
+
+
+def _nrlm_update_triang_eps(ener, eta):
+    """Add eta to ener, with triangular version for multipliers
+    
+    This function does, in essence
+    
+    ener += eta.
+    
+    However, whereas ener is square (and the code assume to be symmetric):
+    
+    ener_11  ener_12  ...  ener_1N
+    ener_12  ener_22  ...  ener_2N
+      ...      ...           ...
+    ener_1N  ener_N2  ...  ener_NN
+    
+    eta is a 1D array with the upper triangular part (includding diagonal):
+    
+    eta_11  eta_12  ...  eta_1N  eta_22  ...  eta_2N  ...  eta _NN
+    
+    Parameters:
+    -----------
+    ener (NxN array of floats) - the current multipliers
+    eta (1D array of floats) - update for the multipliers
+    
+    Return:
+    -------
+    Nothing. array ener is updated
+    
+    """
+    idx = np.tril_indices(ener.shape[0])
+    for i, j, e in zip(idx[0], idx[1], eta):
+        ener[i, j] += e
+        if i != j:
+            ener[j, i] += e
+
+
+def _solve_nrlm_equation(H, g, n, N):
+    """Solves the linear equation for the step
+    
+    Parameters:
+    -----------
+    H (2D array) - The Hessian
+    g (1D array) - The gradient
+    n (int) - number of orbitals
+    N (int) - number of occupied orbitals
+    
+    Returns:
+    --------
+    A tuple with the update in C and in the Lagrange multipliers.
+    In C is returned as a 2D array with shape (n, N)
+    and in the multipliers they come as a 1D array
+    
+    """
+    eta = np.linalg.lstsq(H, -g, rcond=None)
+    if eta[1].size < 1:
+        logger.warning('Hessian does not have full rank')
+    elif eta[1] > 1e-10:
+        logger.warning('Large conditioning number: %.5e', eta[1])
+    return (np.reshape(eta[0][0:n*N], (n, N), 'F'),
+            eta[0][n*N:])
+
+

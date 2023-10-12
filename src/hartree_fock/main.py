@@ -92,6 +92,7 @@ def main(args, f_out):
         HF = optimiser.hartree_fock(molecular_system.integrals,
                                     molecular_system.nucl_rep,
                                     molecular_system.n_elec - args.charge,
+                                    ini_orb=ini_orb,
                                     ms2=args.ms2,
                                     restricted=args.restricted,
                                     max_iter=args.max_iter,
@@ -102,7 +103,7 @@ def main(args, f_out):
                                     conjugacy=args.conjugacy,
                                     step_size=args.step_size,
                                     HF_step_type=_define_hfstep_func(args.step_type),
-                                    ini_orb=ini_orb)
+                                    hf_nrlm_multpl_symm=args.hf_nrlm_multpl_symm)
 
     HF.totaltime = T.end_time - T.ini_time
     if args.save_orb is not None:

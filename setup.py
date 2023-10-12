@@ -30,6 +30,7 @@ all_cython_files = ["src/integrals/integrals_cy",
                     "src/orbitals/occ_orbitals",
                     "src/orbitals/orbital_space",
                     "src/util/array_indices",
+                    "src/util/matrices",
                     "src/coupled_cluster/cluster_decomposition",
                     "src/hartree_fock/absil"]
 
