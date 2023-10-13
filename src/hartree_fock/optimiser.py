@@ -176,6 +176,7 @@ def hartree_fock(integrals,
 
     for i_SCF in range(max_iter):
         step_type = HF_step_type(i_SCF=i_SCF, grad_norm=hf_step.grad_norm)
+        hf_step.step_type = step_type
         logger.info('Starting HF iteration %d', i_SCF)
         with logtime('HF iteration') as T:
             if step_type == 'RH-SCF':

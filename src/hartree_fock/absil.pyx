@@ -23,7 +23,7 @@
     proj (2D np.ndarray of dimension (d, N_a))
         Projection matrix to the tangent space of the Grassmannian:
         Id - C @ C.T @ S
-    
+
     proj_b (2D np.ndarray of dimension (d, N_b))
         Projection matrix to the tangent space of the Grassmannian for spin
         beta: Id - C_b @ C_b.T @ S
@@ -81,15 +81,15 @@ def common_blocks(double[:, :] C, double[:, :] P, double[:, :, :] g):
     GC (3D array) - the contraction g[:,:,k]C[k,:]
     GCC (3D array) - the contraction CG[L,i,k]C[i,j] = g[L,i,k']C[k',k]C[i,j]
     """
-    cdef int i, j, k, L, T = g.shape[0], n = C.shape[0], N = C.shape[1]
+    cdef int i, j, k, L, T = g.shape[0], d = C.shape[0], N = C.shape[1]
     cdef double[:] GP = np.zeros(T)
-    cdef double[:, :, :] GC = np.zeros((T, n, N))
+    cdef double[:, :, :] GC = np.zeros((T, d, N))
     cdef double[:, :, :] GCC = np.zeros((T, N, N))
     cdef double aux
 
     for L in range(T):
-        for i in range(n):
-            for k in range(n):
+        for i in range(d):
+            for k in range(d):
                 aux = g[L, i, k]
                 GP[L] += aux * P[i, k]
 
@@ -141,8 +141,8 @@ def fock(double[:] GP_m, double[:] GP_s,
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing
-def fock_restr(double[:] GP, double[:, :, :] GC,
-               double[:, :] h, double[:, :, :] g):
+def restricted_fock(double[:] GP, double[:, :, :] GC,
+                    double[:, :] h, double[:, :, :] g):
     """Fock matrix for restricted orbitals
     
     F_mn = h_mn + sum_rs P [ g_mnrs - g_mrsn/2 ]
@@ -154,17 +154,17 @@ def fock_restr(double[:] GP, double[:, :, :] GC,
     h, g    - molecular integrals, see module's docstring
     
     """
-    cdef int i, j, k, L, T = g.shape[0], n = g.shape[1], N = GC.shape[2]
+    cdef int i, j, k, L, T = g.shape[0], d = g.shape[1], N = GC.shape[2]
     cdef double[:, :] F = np.array(h)
 
     for L in range(T):
-        for i in range(n):
-            for j in range(n):
+        for i in range(d):
+            for j in range(d):
                 F[i, j] += g[L, i, j] * GP[L]
 
     for L in range(T):
-        for i in range(n):
-            for j in range(n):
+        for i in range(d):
+            for j in range(d):
                 for k in range(N):
                     F[i, j] -= GC[L, i, k] * GC[L, j, k]
 
@@ -345,38 +345,9 @@ def dir_proj(double[:, :] C, double[:, :] grad):
     cdef double[:, :] Id = np.eye(n)
     der = np.zeros((n * N, n * N))
 
-    # computational cost: O(N_a * N_b * n^2 * L)
-    hess[:, :] = mixed_spin(GC, GC)
-
-    # computational cost: O(N_a * n^2 * L)
     for b in range(N):
         for a in range(N):
             der[a * n: (a + 1) * n, b * n: (b + 1) * n] = np.multiply(Id, aux[b, a])
-
-    # computational cost: O(n^2 * N_a^2 * L)
-    for j in range(N - 1):
-        for b in range(j + 1):
-            hess[n*(j+1) : n*(j+2), n*b : n*(b+1)] = \
-                non_diag_blocks(C, GC, GCC, g, b, j+1)
-            hess[n*b : n*(b+1), n*(j+1) : n*(j+2)] = \
-                hess[n*(j+1) : n*(j+2), n*b : n*(b+1)].T
-
-    return hess
-
-
-
-
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing
-def dir_proj(double[:, :] C, double[:, :] grad):
-    cdef int a, b, n = grad.shape[0], N = grad.shape[1]
-    cdef double[:, :] aux = np.transpose(C) @ np.array(grad)
-    cdef double[:, :] Id = np.eye(n)
-    der = np.zeros((n*N, n*N))
-
-    for b in range(N):
-        for a in range(N):
-            der[a*n : (a+1)*n, b*n : (b+1)*n] = np.multiply(Id, aux[b, a])
 
     return der
 
