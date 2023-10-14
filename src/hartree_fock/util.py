@@ -311,24 +311,48 @@ def RBLS(C_a, C_b, DD_a, DD_b, norm_DD, E_cur, E_prev, S, X, invX, hf):
 
 def rip(first_vector, second_vector, S):
     """Riemannian Inner Product in the Grassmannian.
+    
+    Parameters:
+    -----------
+    first_vector and second_vector:
+        list of vectors where each vector is in the tangent space of a Grassmannian.
+    S: overlap matrix.
+    
+    Example:
+    --------
+    If we are working with, say, Gr(2, 5) x Gr(3, 5), then S is a 5x5 matrix,
+    first_vector = [x_1, x_2], second_vector = [y_1, y_2],
+    where x_1, y_1 \in T_{C_1}Gr(2, 5) and x_2, y_2 \in T_{C_2}Gr(3, 5).
+    Observe that we can have as many Grassmannians as we want as long as S
+    (which forces 5 to be fixed) stays the same.
+    Then it's just a matter of basic linear algebra:
+    The inner product in the product of vector spaces is the sum of the inner products.
+    
+    Notes:
+    ------
+    S could also be a list with different overlap matrices.
+    The modification that should be made in this case is also zipping the list S.
 
-    params:
-    - first_vector and second_vector: list of vectors where each vector is in the tangent space of a Grassmannian.
-    - S: overlap matrix. but could also be a list with different overlap matrices. the modification that should be made in this case is also zipping the list S.
-
-    example: if we are working with, say, Gr(2, 5) x Gr(3, 5), then S is a 5x5 matrix, first_vector = [x_1, x_2], second_vector = [y_1, y_2], where x_1, y_1 \in T_{C_1}Gr(2, 5) and x_2, y_2 \in T_{C_2}Gr(3, 5). observe that we can have as many Grassmannians as we want as long as S (which forces 5 to be fixed) stays the same. then it's just a matter of basic linear algebra: the inner product in the product of vector spaces is the sum of the inner products.
     """
     return sum(
         np.trace(x.T @ S @ y) for x, y in zip(first_vector, second_vector)
     )
 
+
 def Riem_norm(vector, S):
     """Riemannian Norm in the Grassmannian.
-
+    
+    Parameters:
+    -----------
     - vector: list of vectors where each vector is in the tangent space of a
-    Grassmannian.
-    - S: overlap matrix. but could also be a list with different overlap
-    matrices. nothing changes in this function, just in the inner product.
-    see documentation of the `rip` function.
+        Grassmannian.
+    - S: overlap matrix.
+    
+    Notes:
+    ------
+    S could also be a list with different overlap matrices.
+    Nothing changes in this function, just in the inner product.
+    See documentation of the `rip` function.
+
     """
     return np.sqrt(rip(vector, vector, S))

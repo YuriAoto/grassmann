@@ -140,6 +140,8 @@ def hartree_fock(integrals,
     hf_step.grad_type = grad_type
     hf_step.conjugacy = conjugacy
     hf_step.step_size = step_size if step_size else hf_step.step_size
+    if restricted:
+        hf_step.step_size /= 2
     hf_step.hf_nrlm_multpl_symm = hf_nrlm_multpl_symm
     logger.info('Starting Hartree-Fock calculation. Type:%s\n', kind_of_calc)
     logger.info('Nuclear repulsion energy: %f\n'
@@ -219,7 +221,9 @@ def hartree_fock(integrals,
                              T.elapsed_time))
             f_out.flush()
 
-        if hf_step.grad_norm < grad_thresh:
+        if (hf_step.grad_norm + (hf_step.restriction_norm
+                                 if hf_step is 'NRLM' else
+                                 0.0)) < grad_thresh:
             # in case someone implement backtracking line search, check for the
             # difference of energy between consecutive steps, ie,
             # abs(hf_step.diff_energy) < energy_thresh:
