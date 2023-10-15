@@ -155,6 +155,8 @@ def hartree_fock(integrals,
     hf_step.orb = MolecularOrbitals(ini_orb)
 
     logger.debug('Initial molecular orbitals:\n %s', hf_step.orb)
+    logger.info('restricted = %s', restricted)
+    logger.info('N_a: %s', hf_step.N_a)
     assert hf_step.orb.is_orthonormal(integrals.S,
                                       N=(hf_step.N_a
                                          if restricted else

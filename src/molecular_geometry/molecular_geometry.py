@@ -193,13 +193,18 @@ class MolecularGeometry():
     def n_elec(self):
         """Return the number of electrons in the MolecularGeometry."""
         if self._n_elec is None:
-            self._n_elec = 0
-            for at in self._atoms:
-                self._n_elec += (at.atomic_number
-                                 if isinstance(at.atomic_number, int) else
-                                 1)
-            self._n_elec -= self.charge
+            return self.total_nuclear_charge - self.charge
         return self._n_elec
+
+    @property
+    def total_nuclear_charge(self):
+        """Return the total nuclar charge in the MolecularGeometry"""
+        nc = 0
+        for at in self._atoms:
+            nc += (at.atomic_number
+                   if isinstance(at.atomic_number, int) else
+                   1)
+        return nc
 
     @property
     def nucl_rep(self):
