@@ -18,19 +18,6 @@ logger = logging.getLogger(__name__)
 loglevel = logging.getLogger().getEffectiveLevel()
 
 
-def _check_nelec_ms(n_elec, restricted, ms2):
-    if restricted is None:
-        restricted = n_elec % 2 == 0 and ms2 == 0
-    if ms2 is None:
-        ms2 = n_elec % 2
-    if (n_elec - ms2) % 2 != 0:
-        raise ValueError(f'Number of electrons, {n_elec} not compatible with 2MS, {ms2}.')
-    if restricted and not (n_elec % 2 == 0 and ms2 == 0):
-        raise ValueError('Restricted calculation requires'
-                         ' an even number of electrons and ms=0')
-    return restricted, ms2
-
-
 DiisInfo = namedtuple('DiisInfo',
                       ['n', 'at_F', 'at_P'])
 
@@ -39,8 +26,8 @@ def hartree_fock(integrals,
                  nucl_rep,
                  n_elec,
                  ini_orb,
-                 ms2=None,
-                 restricted=None,
+                 ms2,
+                 restricted,
                  max_iter=20,
                  grad_thresh=1.0E-5,
                  grad_type='F_occ_virt',
@@ -53,6 +40,9 @@ def hartree_fock(integrals,
                  hf_nrlm_multpl_symm='triangular'):
     """A general Hartree-Fock procedure
 
+    
+    Parameters:
+    -----------
 
     integrals (Integrals)
         The molecular integrals in the basis
@@ -125,7 +115,6 @@ def hartree_fock(integrals,
                 and util.array_indices.ij_from_triang_with_diag
                     
     """
-    restricted, ms2 = _check_nelec_ms(n_elec, restricted, ms2)
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
     converged = False
     hf_step = HartreeFockStep()

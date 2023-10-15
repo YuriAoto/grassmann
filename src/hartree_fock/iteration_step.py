@@ -319,16 +319,15 @@ class HartreeFockStep():
                 tmp = self.fock_b @ self.P_b @ self.integrals.S
                 self.grad_b = tmp - tmp.T
 
-        self.set_grad_norm(self.grad, self.grad_b)
-        logger.info('Gradient norm = %f', self.grad_norm)
-
         if self.restricted:
+            self.set_grad_norm(self.grad)
             logger.debug('Gradient:\n%s', self.grad)
             if loglevel <= logging.INFO and self.grad_occvirtF:
                 logger.info(
                     'Current orbital energies:\n%r', self.orb.energies
                 )
         else:
+            self.set_grad_norm(self.grad, self.grad_b)
             logger.debug('Gradient (alpha):\n%s', self.grad)
             logger.debug('Gradient (beta):\n%s', self.grad_b)
             if self.grad_occvirtF:

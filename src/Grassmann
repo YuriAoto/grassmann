@@ -33,6 +33,10 @@ all_files = [args.output,
              args.logfile,
              args.outdir]
 
+if args.show_args:
+    parser.print_all_arguments(args)
+    sys.exit('Exiting after showing arguments.')
+
 if any(map(os.path.exists, all_files)):
     i_backup = '_0'
     while (any([os.path.exists(f_name + i_backup)

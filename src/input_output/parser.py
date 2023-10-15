@@ -82,7 +82,12 @@ def _parser():
                         + ' (as Molpro\'s "put" xml file)')
     parser.add_argument('--restricted',
                         help='Restricted calculation.',
-                        action='store_true')
+                        action='store_const',
+                        const=True)
+    parser.add_argument('--unrestricted',
+                        help='Unrestricted calculation.',
+                        action='store_const',
+                        const=True)
     parser.add_argument('--ms2',
                         help='Two times the MS of Hartree-Fock calculation.',
                         type=int)
@@ -164,6 +169,9 @@ def _parser():
                         default=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
     parser.add_argument('--state',
                         help='desired state, in Molpro notation')
+    parser.add_argument('--show_args',
+                        help='Show arguments of calculation and exit.',
+                        action='store_true')
     parser.add_argument('-l', '--loglevel',
                         help='set log level (integer)')
     parser.add_argument('--logfilter',
@@ -274,6 +282,11 @@ def _check(args):
     else:
         raise ParseError(args.memory
                          + ' is not a valid memory specification')
+    if args.unrestricted and args.restricted:
+        raise ParseError('Do not pass both --restricted and --unrestricted')
+    if args.unrestricted:
+        args.restricted = False
+    del args.unrestricted
     if args.max_iter is None:
         args.max_iter = 20
     elif args.at_ref:
@@ -468,3 +481,11 @@ def parse(sysargv=None):
     args.main_input = main_input
     _check(args)
     return args
+
+
+def print_all_arguments(args):
+    """Print all arguments stored in args"""
+    print('----------')
+    for k, v in args.__dict__.items():
+        print(f'{k} = {v}')
+    print('----------')

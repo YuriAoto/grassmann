@@ -66,6 +66,21 @@ def _define_hfstep_func(hf_step):
     raise ValueError('Invalid HF step')
 
 
+def check_nelec_ms(n_elec, restricted, ms2):
+    if ms2 is None:
+        ms2 = n_elec % 2
+        logger.debug('YAA: %s, %s',n_elec, ms2)
+    if restricted is None:
+        restricted = n_elec % 2 == 0 and ms2 == 0
+        logger.debug('YAA: %s', restricted)
+    if (n_elec - ms2) % 2 != 0:
+        raise ValueError(f'Number of electrons, {n_elec} not compatible with 2MS, {ms2}.')
+    if restricted and not (n_elec % 2 == 0 and ms2 == 0):
+        raise ValueError('Restricted calculation requires'
+                         ' an even number of electrons and ms=0')
+    return restricted, ms2
+
+
 def main(args, f_out):
     """Main function for Hartree-Fock"""
     molecular_system = MolecularGeometry.from_xyz_file(args.geometry)
@@ -81,9 +96,11 @@ def main(args, f_out):
     else:
         grad_type = args.grad_type
 
+    n_elec = molecular_system.n_elec - args.charge
+    restricted, ms2 = check_nelec_ms(n_elec, args.restricted, args.ms2)
     ini_orb = starting_orbitals.initial_orbitals(args.ini_orb,
                                                  molecular_system,
-                                                 args.restricted,
+                                                 restricted,
                                                  args.conjugacy,
                                                  args.step_size)
     logger.debug('Starting orbitals:\n %s', ini_orb)
@@ -91,10 +108,10 @@ def main(args, f_out):
     with logtime('Hartree-Fock optimisation') as T:
         HF = optimiser.hartree_fock(molecular_system.integrals,
                                     molecular_system.nucl_rep,
-                                    molecular_system.n_elec - args.charge,
-                                    ini_orb=ini_orb,
-                                    ms2=args.ms2,
-                                    restricted=args.restricted,
+                                    n_elec,
+                                    ini_orb,
+                                    ms2,
+                                    restricted,
                                     max_iter=args.max_iter,
                                     grad_thresh=1E-8,
                                     grad_type=grad_type,
