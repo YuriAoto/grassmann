@@ -61,6 +61,10 @@ class HartreeFockStep():
         self.lagmult_b = None
         self.energy_prev = float('inf')
         self.hf_nrlm_multpl_symm = None
+        self.eta = None
+        self.eta_b = None
+        self.Riem_grad = None
+        self.Riem_grad_b = None
 
     @property
     def d(self):
@@ -298,7 +302,6 @@ class HartreeFockStep():
                 self.blocks_b = temp_b_b
                 self.fock_b = temp_F_b
 
-
     def calc_SCF_grad(self):
         if self.grad_occvirtF:
             F_MO = self.orb[0].T @ self.fock @ self.orb[0]
@@ -338,6 +341,46 @@ class HartreeFockStep():
                     'Current orbital energies (beta):\n%r', self.orb.energies_b
                 )
 
+    def calc_Riem_grad(self, save_eucl_grad=False):
+        if self.restricted:
+            proj = self.Id_d - 0.5 * self.P @ self.integrals.S
+            self.Euc_grad = 4 * self.fock @ self.orb[0][:, :self.N_a]
+            self.Riem_grad = proj @ self.integrals.invS @ self.Euc_grad
+            logger.debug('Euclidean gradient:\n%r', self.Euc_grad)
+            logger.debug('Riemannian gradient:\n%r', self.Riem_grad)
+            self.set_grad_norm(self.Riem_grad)
+            if not save_eucl_grad:
+                del self.Euc_grad
+        else:
+            proj = self.Id_d - self.P @ self.integrals.S
+            self.Euc_grad = 2 * self.fock @ self.orb[0][:, :self.N_a]
+            self.Riem_grad = proj @ self.integrals.invS @ self.Euc_grad
+            logger.debug('Euclidean gradient (alpha):\n%r', self.Euc_grad)
+            logger.debug('Riemannian gradient (alpha):\n%r', self.Riem_grad)
+            proj_b = self.Id_d - self.P_b @ self.integrals.S
+            self.Euc_grad_b = 2 * self.fock_b @ self.orb[1][:, :self.N_b]
+            self.Riem_grad_b = proj_b @ self.integrals.invS @ self.Euc_grad_b
+            logger.debug('Euclidean gradient (beta):\n%r', self.Euc_grad_b)
+            logger.debug('Riemannian gradient (beta):\n%r', self.Riem_grad_b)
+            self.set_grad_norm(self.Riem_grad, self.Riem_grad_b)
+            if not save_eucl_grad:
+                del self.Euc_grad
+                del self.Euc_grad_b
+
+    def orbitals_Riemannian_update(self, v, v_b=None, t=1.0):
+        """Update the orbitals through the geodesic in the direction of v (and v_b)"""
+        self.orb[0][:, :self.N_a] = util.geodesic(self.orb[0][:, :self.N_a],
+                                                  v,
+                                                  self.integrals.X,
+                                                  self.integrals.invX,
+                                                  t)
+        if not self.restricted:
+            self.orb[1][:, :self.N_b] = util.geodesic(self.orb[1][:, :self.N_b],
+                                                      v_b,
+                                                      self.integrals.X,
+                                                      self.integrals.invX,
+                                                      t)
+
     def diag_fock(self):
         if self.restricted:
             fock_orth = self.integrals.X.T @ self.fock @ self.integrals.X
@@ -359,27 +402,29 @@ class HartreeFockStep():
             self.orb[0][:, :] = self.integrals.X @ C
             self.orb[1][:, :] = self.integrals.X @ C_b
 
-    def roothan_hall(self, i_SCF):
-        """Roothan-Hall procedure as described, e.g, in Szabo"""
+
+    def make_dens_fock_energy(self, calc_energy=True, diis_at_P=False):
         with logtime('Form the density matrix'):
             self.calc_density_matrix()
-
-        if self.diis_info.at_P:
+        if diis_at_P and self.diis_info.at_P:
             with logtime('DIIS step'):
-                if i_SCF:
-                    self.P = self.diis.calculate(self.grad, self.P)
-                    if not self.restricted:
-                        self.P_b = self.diis_b.calculate(
-                            self.grad_b,
-                            self.P_b
-                        )
-
+                self.P = self.diis.calculate(self.grad, self.P)
+                if not self.restricted:
+                    self.P_b = self.diis_b.calculate(
+                        self.grad_b,
+                        self.P_b
+                    )
         with logtime('Computing common blocks'):
             self.calc_common_blocks()
         with logtime('Form Fock matrix'):
             self.calc_fock_matrix()
-        with logtime('Calculate Energy'):
-            self.calc_energy()
+        if calc_energy:
+            with logtime('Calculate Energy'):
+                self.calc_energy()
+
+    def roothan_hall(self, i_SCF):
+        """Roothan-Hall procedure as described, e.g, in Szabo"""
+        self.make_dens_fock_energy(diis_at_P=i_SCF)
         with logtime('Calculate Gradient'):
             self.calc_SCF_grad()
         if self.diis_info.at_F:
@@ -395,56 +440,20 @@ class HartreeFockStep():
 
     def RGD(self, i_SCF):
         """Hartree--Fock using Riemannian Gradient Descent Method.
-
+        
         References: Boumal's book, Pymanopt and Caio's dissertation.
         """
-        C = self.orb[0][:, :self.N_a]
-        if not self.restricted:
-            C_b = self.orb[1][:, :self.N_b]
-        S, invS = self.integrals.S, self.integrals.invS
-        X, invX = self.integrals.X, self.integrals.invX
-        g = self.integrals.g._integrals
-
-        self.calc_density_matrix()
-        with logtime('computing common blocks'):
-            self.calc_common_blocks()
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-        with logtime('computing the energy'):
-            self.calc_energy()
+        self.make_dens_fock_energy()
         with logtime('computing the gradient'):
-            if self.restricted:
-                proj = self.Id_d - 0.5 * self.P @ S
-                Euc_grad = 4 * self.fock @ C
-                Riem_grad = proj @ invS @ Euc_grad
-                logger.debug('Euclidean gradient:\n%r', Euc_grad)
-                logger.debug('Riemannian gradient:\n%r', Riem_grad)
-                self.set_grad_norm(Riem_grad)
-            else:
-                proj = self.Id_d - self.P @ S
-                Euc_grad = 2 * self.fock @ C
-                Riem_grad = proj @ invS @ Euc_grad
-                logger.debug('Euclidean gradient (alpha):\n%r', Euc_grad)
-                logger.debug('Riemannian gradient (alpha):\n%r', Riem_grad)
-                proj_b = self.Id_d - self.P_b @ S
-                Euc_grad_b = 2 * self.fock_b @ C_b
-                Riem_grad_b = proj_b @ invS @ Euc_grad_b
-                logger.debug('Euclidean gradient (beta):\n%r', Euc_grad_b)
-                logger.debug('Riemannian gradient (beta):\n%r', Riem_grad_b)
-                self.set_grad_norm(Riem_grad, Riem_grad_b)
-
+            self.calc_Riem_grad()
         with logtime('updating the point'):
-            self.orb[0][:, :self.N_a] = util.geodesic(
-                C, -Riem_grad, X, invX, t=self.step_size
-            )
-            if not self.restricted:
-                self.orb[1][:, :self.N_b] = util.geodesic(
-                    C_b, -Riem_grad_b, X, invX, t=self.step_size
-                )            
-
+            self.orbitals_Riemannian_update(-self.Riem_grad,
+                                            v_b=(None
+                                                 if self.restricted else
+                                                 -self.Riem_grad_b),
+                                            t=self.step_size)
         self.diff_energy = self.energy_prev - self.energy
         self.energy_prev = self.energy
-
 
     def RCG(self, i_SCF):
         """Hartree--Fock using Riemannian Conjugate Gradient."""
@@ -505,44 +514,18 @@ class HartreeFockStep():
             )
 
         with logtime('updating the point'):
-            self.orb[0][:, :N_a] = util.geodesic(
-                C, self.eta, X, invX, self.step_size
-            )
-            if not self.restricted:
-                self.orb[1][:, :N_b] = util.geodesic(
-                    C_b, self.eta_b, X, invX, self.step_size
-                )
+            self.orbitals_Riemannian_update(self.eta,
+                                            v_b=(None
+                                                 if self.restricted else
+                                                 self.eta_b),
+                                            t=self.step_size)
 
         self.diff_energy = self.energy_prev - self.energy
         self.energy_prev = self.energy
 
-        self.calc_density_matrix()
-        with logtime('computing common blocks'):
-            self.calc_common_blocks()
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-        with logtime('computing the energy'):
-            self.calc_energy()
+        self.make_dens_fock_energy()
         with logtime('computing the gradient'):
-            if self.restricted:
-                proj = self.Id_d - 0.5 * self.P @ S
-                Euc_grad = 4 * self.fock @ C
-                self.Riem_grad = proj @ invS @ Euc_grad
-                logger.debug('Euclidean gradient:\n%r', Euc_grad)
-                logger.debug('Riemannian gradient:\n%r', self.Riem_grad)
-                self.set_grad_norm(self.Riem_grad)
-            else:
-                proj = self.Id_d - self.P @ S
-                Euc_grad = 2 * self.fock @ C
-                self.Riem_grad = proj @ invS @ Euc_grad
-                logger.debug('Euclidean gradient (alpha):\n%r', Euc_grad)
-                logger.debug('Riemannian gradient (alpha):\n%r', self.Riem_grad)
-                proj_b = self.Id_d - self.P_b @ S
-                Euc_grad_b = 2 * self.fock_b @ C_b
-                self.Riem_grad_b = proj_b @ invS @ Euc_grad_b
-                logger.debug('Euclidean gradient (beta):\n%r', Euc_grad_b)
-                logger.debug('Riemannian gradient (beta):\n%r', self.Riem_grad_b)
-                self.set_grad_norm(self.Riem_grad, self.Riem_grad_b)
+            self.calc_Riem_grad()
 
         self.gamma = 1 / aux
         if self.restricted:
@@ -578,111 +561,65 @@ class HartreeFockStep():
         X, invX = self.integrals.X, self.integrals.invX
         g = self.integrals.g._integrals
 
-        with logtime('Form the density matrix'):
-            self.calc_density_matrix()
-        with logtime('computing common blocks'):
-            self.calc_common_blocks()
-        with logtime('computing Fock matrix'):
-            self.calc_fock_matrix()
-        with logtime('computing the energy'):
-            self.calc_energy()
+        self.make_dens_fock_energy()
+            
         with logtime('computing the gradient'):
+            self.calc_Riem_grad(save_eucl_grad=True)
             if self.restricted:
-                proj = self.Id_d - 0.5 * self.P @ S
-                Euc_grad = 4 * self.fock @ C
-                Riem_grad = proj @ invS @ Euc_grad
                 aug_grad = np.zeros(N_a * (d + N_a))
-                aug_grad[:d*N_a] = np.reshape(Riem_grad, -1, 'F')
-                self.set_grad_norm(Riem_grad, Riemannian=True)
-                logger.debug('Euclidean gradient:\n%r', Euc_grad)
-                logger.debug('Riemannian gradient:\n%r', Riem_grad)
+                aug_grad[:d*N_a] = np.reshape(self.Riem_grad, -1, 'F')
             else:
-                proj = self.Id_d - self.P @ S
-                Euc_grad = 2 * self.fock @ C
-                Riem_grad = proj @ invS @ Euc_grad
-                logger.debug('Euclidean gradient (alpha):\n%r', Euc_grad)
-                logger.debug('Riemannian gradient (alpha):\n%r', Riem_grad)
-                proj_b = self.Id_d - self.P_b @ S
-                Euc_grad_b = 2 * self.fock_b @ C_b
-                Riem_grad_b = proj_b @ invS @ Euc_grad_b
                 aug_grad = np.zeros((d + N_a)*N_a + (d + N_b)*N_b)
-                aug_grad[:d*N_a] = np.reshape(Riem_grad, (d*N_a,), 'F')
-                aug_grad[d*N_a:d*(N_a + N_b)] = np.reshape(Riem_grad_b, (d*N_b), 'F')
-                self.set_grad_norm(Riem_grad, Riem_grad_b, Riemannian=True)
-                logger.debug('Euclidean gradient (beta):\n%r', Euc_grad_b)
-                logger.debug('Riemannian gradient (beta):\n%r', Riem_grad_b)
+                aug_grad[:d*N_a] = np.reshape(self.Riem_grad, (d*N_a,), 'F')
+                aug_grad[d*N_a:d*(N_a + N_b)] = np.reshape(self.Riem_grad_b, (d*N_b), 'F')
 
         with logtime('computing the hessian'):
             if self.restricted:
                 Euc_Hess = absil.restricted_hessian(
-                    C, self.fock, self.blocks[1], self.blocks[2], g
-                )
-                logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
-                Riem_Hess = np.kron(self.Id_N_a, proj @ invS) @ Euc_Hess
-                Riem_Hess -= np.kron(Euc_grad.T @ C, self.Id_d)
-                aug_Hess = np.vstack([Riem_Hess, np.kron(self.Id_N_a, C.T @ S)])
-            else:
-                aug_Hess = np.zeros((d*N + N_a**2 + N_b**2, d*N))
-                aux_Hess = np.zeros((d*N, d*N))
-                Euc_Hess = absil.hessian(
                     C,
-                    C_b,
                     self.fock,
-                    self.fock_b,
                     self.blocks[1],
-                    self.blocks_b[1],
                     self.blocks[2],
-                    self.blocks_b[2],
                     g
                 )
-                logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+            else:
+                Euc_Hess = absil.hessian(
+                    C, C_b,
+                    self.fock, self.fock_b,
+                    self.blocks[1], self.blocks_b[1],
+                    self.blocks[2], self.blocks_b[2],
+                    g
+                )
+            logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+            if self.restricted:
+                proj = self.Id_d - 0.5 * self.P @ self.integrals.S
+                Riem_Hess = np.kron(self.Id_N_a, proj @ invS) @ Euc_Hess
+                Riem_Hess -= np.kron(self.Euc_grad.T @ C, self.Id_d)
+                aug_Hess = np.vstack([Riem_Hess, np.kron(self.Id_N_a, C.T @ S)])
+            else:
+                proj = self.Id_d - self.P @ self.integrals.S
+                proj_b = self.Id_d - self.P_b @ self.integrals.S
+                aux_Hess = np.zeros((d*N, d*N))
                 aux_Hess[:d*N_a, :d*N_a] = np.kron(self.Id_N_a, proj @ invS)
                 aux_Hess[d*N_a:, d*N_a:] = np.kron(self.Id_N_b, proj_b @ invS)
                 Riem_Hess = aux_Hess @ Euc_Hess
-                aux_Hess[:d*N_a, :d*N_a] = np.kron(Euc_grad.T @ C, self.Id_d)
-                aux_Hess[d*N_a:, d*N_a:] = np.kron(
-                    Euc_grad_b.T @ C_b, self.Id_d
-                )
+                aux_Hess[:d*N_a, :d*N_a] = np.kron(self.Euc_grad.T @ C, self.Id_d)
+                aux_Hess[d*N_a:, d*N_a:] = np.kron(self.Euc_grad_b.T @ C_b, self.Id_d)
                 Riem_Hess -= aux_Hess
+                aug_Hess = np.zeros((d*N + N_a**2 + N_b**2, d*N))
                 aug_Hess[:d*N, :] = Riem_Hess
-                aug_Hess[d*N:(d*N + N_a**2), :d*N_a] = np.kron(
-                    self.Id_N_a, C.T @ S
-                )
-                aug_Hess[(d*N + N_a**2):, d*N_a:] = np.kron(
-                    self.Id_N_b, C_b.T @ S
-                )
+                aug_Hess[d*N:(d*N + N_a**2), :d*N_a] = np.kron(self.Id_N_a, C.T @ S)
+                aug_Hess[(d*N + N_a**2):, d*N_a:] = np.kron(self.Id_N_b, C_b.T @ S)
 
         with logtime('solving the main equation'):
-            eta = np.linalg.lstsq(aug_Hess, -aug_grad, rcond=None)
-
-        if eta[1].size < 1:
-            logger.warning('Hessian does not have full rank')
-        elif eta[1] > 1e-10:
-            logger.warning('Large conditioning number: %.5e', eta[1])
-            self.large_cond_number.append(i_SCF)
-
-        if self.restricted:
-            eta = np.reshape(eta[0], (d, N_a), 'F')
-            logger.debug('eta: \n%s', eta)
-            logger.info(
-                'Is C.T @ S @ eta close to zero: %s',
-                np.allclose(C.T @ S @ eta, np.zeros((N_a, N_a)))
-            )
-            with logtime('updating the point'):
-                self.orb[0][:, :N_a] = util.geodesic(C, eta, X, invX)
-        else:
-            eta = np.reshape(eta[0], (d, N), 'F')
-            logger.info(
-                'Is C.T @ S @ eta close to zero: %s',
-                np.allclose(C.T @ S @ eta[:, :N_a], np.zeros((N_a, N_a)))
-            )
-            logger.info(
-                'Is C.T @ S @ eta close to zero (beta): %s',
-                np.allclose(C_b.T @ S @ eta[:, N_a:], np.zeros((N_b, N_b)))
-            )
-            with logtime('updating the point'):
-                self.orb[0][:, :N_a] = util.geodesic(C, eta[:, :N_a], X, invX)
-                self.orb[1][:, :N_b] = util.geodesic(C_b, eta[:, N_a:], X, invX)
+            eta = _solve_rnr_equation(aug_Hess, aug_grad, d,
+                                      check_in_tgspace=False,
+                                      C=(C
+                                         if self.restricted else
+                                         np.concatenate((C, C_b), 1)),
+                                      S=S)
+        with logtime('updating the point'):
+            self.orbitals_Riemannian_update(eta[:, :N_a], v_b=eta[:, N_a:])
 
 
     def NRLM(self, i_SCF):
@@ -741,12 +678,8 @@ class HartreeFockStep():
         if not self.restricted:
             logger.debug('Lagrange multipliers (beta):\n%s', lagmult_b)
 
-        with logtime('Form the density matrix'):
-            self.calc_density_matrix()
-        with logtime('Computing common blocks'):
-            self.calc_common_blocks()
-        with logtime('Form Fock matrix'):
-            self.calc_fock_matrix()
+        self.make_dens_fock_energy(calc_energy=False)
+
         with logtime('Computing the gradient'):
             Jac, Riem_grad = _nrlm_grad(
                 self.orb[0][:, :N_a], self.fock, lagmult,
@@ -765,15 +698,6 @@ class HartreeFockStep():
         else:
             self.restriction_norm = self.set_grad_norm(grad_Lag[s_La],grad_Lag[s_Lb])
             self.set_grad_norm(Riem_grad, Riem_grad_b, Riemannian=True)
-
-        # if self.restricted:
-        #     self.set_grad_norm(np.concatenate((grad_Lag[s_Ca],
-        #                                                          grad_Lag[s_La])))
-        # else:
-        #     self.set_grad_norm(np.concatenate((grad_Lag[s_Ca],
-        #                                                          grad_Lag[s_La])),
-        #                                          np.concatenate((grad_Lag[s_Cb],
-        #                                                          grad_Lag[s_Lb])))
         logger.debug('Gradient:\n%s', grad_Lag)
 
         with logtime('Computing the Hessian'):
@@ -812,7 +736,7 @@ class HartreeFockStep():
             # Copy the symmetric block
             hess_Lag[s_La, s_Ca] = hess_Lag[s_Ca, s_La].T
             if not self.restricted: hess_Lag[s_Lb, s_Cb] = hess_Lag[s_Cb, s_Lb].T
-        logger.debug('Hessian:\n%r', hess_Lag)
+            logger.debug('Hessian:\n%r', hess_Lag)
 
         with logtime('solving the main equation'):
             C_update, L_update = _solve_nrlm_equation(hess_Lag, grad_Lag, n, N)
@@ -930,20 +854,20 @@ def _nrlm_update_triang_lagmult(ener, eta):
             ener[j, i] += e
 
 
-def _solve_nrlm_equation(H, g, n, N):
+def _solve_nrlm_equation(H, g, d, N):
     """Solves the linear equation for the step
     
     Parameters:
     -----------
     H (2D array) - The Hessian
     g (1D array) - The gradient
-    n (int) - number of orbitals
+    d (int) - number of orbitals
     N (int) - number of occupied orbitals
     
     Returns:
     --------
     A tuple with the update in C and in the Lagrange multipliers.
-    In C is returned as a 2D array with shape (n, N)
+    In C is returned as a 2D array with shape (d, N)
     and in the multipliers they come as a 1D array
     
     """
@@ -952,7 +876,49 @@ def _solve_nrlm_equation(H, g, n, N):
         logger.warning('Hessian does not have full rank')
     elif eta[1] > 1e-10:
         logger.warning('Large conditioning number: %.5e', eta[1])
-    return (np.reshape(eta[0][0:n*N], (n, N), 'F'),
-            eta[0][n*N:])
+        self.large_cond_number.append(i_SCF)
+    C = np.reshape(eta[0][0:d*N], (d, N), 'F')
+    L = eta[0][d*N:]
+    logger.debug('Update for orbital coefficients: \n%s', eta)
+    logger.debug('Update for multipliers: \n%s', eta)
+    return C, L
 
 
+def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None):
+    """Solves the linear equation for the step
+    
+    Parameters:
+    -----------
+    H (2D array) - The Hessian
+    g (1D array) - The gradient
+    d (int) - number of orbitals
+    check_in_tgspace (bool) - if True, check if the result is in the tangent space
+                              In this case, S (the overlap matrix) and C (the orbital
+                              coefficients) must be given
+    S (2D array) - the overlap matrix
+    C (2D array) - the orbitals coefficients. If unrestricted, alpha and beta should
+                   be passed in one large matrix of size d x N, where
+                   N = N_a + N_b.
+    
+    Returns:
+    --------
+    The tangent vector eta, a 2D array of shape (d,N)
+
+    """
+    eta = np.linalg.lstsq(H, -g, rcond=None)
+    if eta[1].size < 1:
+        logger.warning('Hessian does not have full rank')
+    elif eta[1] > 1e-10:
+        logger.warning('Large conditioning number: %.5e', eta[1])
+        self.large_cond_number.append(i_SCF)
+    N = eta[0].shape[0] // d
+    eta = np.reshape(eta[0], (d, N), 'F')
+    logger.debug('Tangent vector eta: \n%s', eta)
+    if check_in_tgspace:
+        if C is None or S is None:
+            raise ValueError('When check_in_tgspace is True, C and S must be passed')
+        cTse = C.T @ S @ eta[:,:N]
+        logger.debug('C.T @ S @ eta[:,:N]:\n%s', cTse)
+        logger.info('||C.T @ S @ eta|| = %s', linalg.norm(cTse))
+
+    return eta
