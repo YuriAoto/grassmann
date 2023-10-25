@@ -11,11 +11,13 @@ import numpy as np
 from scipy import linalg
 
 from util.variables import sqrt2
+from util import matrices
 from util import array_indices
 from input_output.log import logtime
 from . import util
 from . import absil
 from . import absilnp
+from . import stiefel
 
 
 logger = logging.getLogger(__name__)
@@ -547,6 +549,79 @@ class HartreeFockStep():
                 )
 
 
+    def RNR_Stiefel(self, i_SCF):
+        """Hartree--Fock using Riemannian Newton--Raphson Method on the Stiefel manifold."""
+        N_a, d = self.N_a, self.d
+        C = self.orb[0][:, :N_a]
+        if not self.restricted:
+            N_b, N = self.N_b, self.N_a + self.N_b
+            C_b = self.orb[1][:, :N_b]
+        S, invS = self.integrals.S, self.integrals.invS
+        X, invX = self.integrals.X, self.integrals.invX
+        g = self.integrals.g._integrals
+
+        self.make_dens_fock_energy()
+            
+        with logtime('computing the gradient'):
+            self.calc_RiemSt_grad(save_eucl_grad=True)
+            if self.restricted:
+                aug_grad = np.zeros(N_a * (d + N_a))
+                aug_grad[:d*N_a] = np.reshape(self.Riem_grad, -1, 'F')
+            else:
+                aug_grad = np.zeros((d + N_a)*N_a + (d + N_b)*N_b)
+                aug_grad[:d*N_a] = np.reshape(self.Riem_grad, (d*N_a,), 'F')
+                aug_grad[d*N_a:d*(N_a + N_b)] = np.reshape(self.Riem_grad_b, (d*N_b), 'F')
+
+        with logtime('computing the hessian'):
+            if self.restricted:
+                Euc_Hess = absil.restricted_hessian(
+                    C,
+                    self.fock,
+                    self.blocks[1],
+                    self.blocks[2],
+                    g
+                )
+            else:
+                Euc_Hess = absil.hessian(
+                    C, C_b,
+                    self.fock, self.fock_b,
+                    self.blocks[1], self.blocks_b[1],
+                    self.blocks[2], self.blocks_b[2],
+                    g
+                )
+            logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+            if self.restricted:
+                proj = self.Id_d - 0.5 * self.P @ self.integrals.S
+                Riem_Hess = np.kron(self.Id_N_a, proj @ invS) @ Euc_Hess
+                Riem_Hess -= np.kron(self.Euc_grad.T @ C, self.Id_d)
+                aug_Hess = np.vstack([Riem_Hess, np.kron(self.Id_N_a, C.T @ S)])
+            else:
+                proj = self.Id_d - self.P @ self.integrals.S
+                proj_b = self.Id_d - self.P_b @ self.integrals.S
+                aux_Hess = np.zeros((d*N, d*N))
+                aux_Hess[:d*N_a, :d*N_a] = np.kron(self.Id_N_a, proj @ invS)
+                aux_Hess[d*N_a:, d*N_a:] = np.kron(self.Id_N_b, proj_b @ invS)
+                Riem_Hess = aux_Hess @ Euc_Hess
+                aux_Hess[:d*N_a, :d*N_a] = np.kron(self.Euc_grad.T @ C, self.Id_d)
+                aux_Hess[d*N_a:, d*N_a:] = np.kron(self.Euc_grad_b.T @ C_b, self.Id_d)
+                Riem_Hess -= aux_Hess
+                aug_Hess = np.zeros((d*N + N_a**2 + N_b**2, d*N))
+                aug_Hess[:d*N, :] = Riem_Hess
+                aug_Hess[d*N:(d*N + N_a**2), :d*N_a] = np.kron(self.Id_N_a, C.T @ S)
+                aug_Hess[(d*N + N_a**2):, d*N_a:] = np.kron(self.Id_N_b, C_b.T @ S)
+
+        with logtime('solving the main equation'):
+            eta = _solve_rnr_equation(aug_Hess, aug_grad, d,
+                                      check_in_tgspace=False,
+                                      C=(C
+                                         if self.restricted else
+                                         np.concatenate((C, C_b), 1)),
+                                      S=S)
+        with logtime('updating the point'):
+            self.orbitals_Riemannian_update(eta[:, :N_a], v_b=eta[:, N_a:])
+
+        
+
     def RNR(self, i_SCF):
         """Hartree--Fock using Riemannian Newton--Raphson Method.
 
@@ -590,6 +665,11 @@ class HartreeFockStep():
                     self.blocks[2], self.blocks_b[2],
                     g
                 )
+            #------- dbg
+            Corth = np.copy(C)
+            Corth = matrices.gram_schmidt(Corth, np.eye(d))
+            stiefel.test_FYY(Corth, Euc_Hess)
+            #-------- dbg
             logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
             if self.restricted:
                 proj = self.Id_d - 0.5 * self.P @ self.integrals.S
@@ -922,3 +1002,4 @@ def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None):
         logger.info('||C.T @ S @ eta|| = %s', linalg.norm(cTse))
 
     return eta
+
