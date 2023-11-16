@@ -666,9 +666,11 @@ class HartreeFockStep():
                     g
                 )
             #------- dbg
-            Corth = np.copy(C)
-            Corth = matrices.gram_schmidt(Corth, np.eye(d))
-            stiefel.test_FYY(Corth, Euc_Hess)
+#            Corth = np.copy(C)
+#            Corth = matrices.gram_schmidt(Corth, np.eye(d))
+#            stiefel.test_HessFDX(Corth, Euc_Hess,
+#                                 self.fock, S=S)
+#            stiefel.test_FYY(Corth, Euc_Hess)
             #-------- dbg
             logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
             if self.restricted:
@@ -698,6 +700,10 @@ class HartreeFockStep():
                                          if self.restricted else
                                          np.concatenate((C, C_b), 1)),
                                       S=S)
+            Corth = np.copy(C)
+            stiefel.test_HessFDX_with_eta(Corth, Euc_Hess, eta,
+                                          self.fock, S=S)
+
         with logtime('updating the point'):
             self.orbitals_Riemannian_update(eta[:, :N_a], v_b=eta[:, N_a:])
 
