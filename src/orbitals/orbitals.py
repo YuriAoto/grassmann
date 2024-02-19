@@ -61,7 +61,7 @@ def extend_to_unrestricted(U):
         U.append(np.array(U[i]))
 
 
-def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
+def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01, S=None):
     """Completes the space spanned by the columns of U
     
     If the columns of U span n orbitals, the function
@@ -106,6 +106,8 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
     """
     full_U = []
     for i, Ui in enumerate(U):
+        if S is None:
+            S = np.eye(orb_dim[i])
         if Ui.shape[0] != orb_dim[i]:
             raise ValueError(
                 'First dimension of U does not match'
@@ -121,16 +123,13 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
             while direction < orb_dim[i]:
                 newV = np.zeros(orb_dim[i])
                 newV[(q + direction) % orb_dim[i]] = 1.0
-                newV = newV - np.matmul(np.matmul(full_U[-1][:, :q],
-                                                  full_U[-1][:, :q].T),
-                                        newV)
-                norm_newV = np.sqrt(np.dot(newV, newV))
+                newV = (np.eye(orb_dim[i]) - full_U[-1][:, :q] @ full_U[-1][:, :q].T @ S) @ newV
+                norm_newV = np.sqrt(newV @ S @ newV)
                 if norm_newV > eps:
                     break
                 direction += 1
             if direction == orb_dim[i]:
-                raise Exception(
-                    'No new directions to look for external space!')
+                raise Exception('No new directions to look for external space!')
             full_U[-1][:, q] = newV / norm_newV
         # with QR decomposition:
         # full_U[-1], r = qr(full_U[-1])
@@ -138,6 +137,9 @@ def complete_orb_space(U, orb_dim, keep_direction=False, eps=0.01):
         #     for q in range(Ui.shape[1]):
         #         if np.dot(full_U[-1][:, q], Ui[:, q]) < 0:
         #             full_U[-1][:, q] *= -1
+        
+        #    print(full_U[0].T @ S @ Ui)
+        #    print(full_U[0].T @ S @ full_U[0])
     return full_U
 
 

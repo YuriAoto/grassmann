@@ -25,6 +25,9 @@ def _define_hfstep_func(hf_step):
 
     if hf_step == 'RNR':
         return lambda i_SCF=None, grad_norm=None: 'RNR'
+
+    if hf_step == 'RNR_St':
+        return lambda i_SCF=None, grad_norm=None: 'RNR_St'
     
     if hf_step == 'NRLM':
         return lambda i_SCF=None, grad_norm=None: 'NRLM'

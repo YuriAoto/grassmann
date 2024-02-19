@@ -2,6 +2,8 @@ grassmann.egg-info
 build
 *.pyc
 testing.log
+tests/inputs_outputs/geometries/*.gr*
+tests/inputs_outputs/geometries/atomicdenstmpFindnewname.xyz
 doc/*.aux
 doc/*.log
 doc/*.out

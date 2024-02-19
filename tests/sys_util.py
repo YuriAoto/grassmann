@@ -18,6 +18,8 @@ results
 """
 import os
 
+from molecular_geometry.molecular_geometry import MolecularGeometry
+
 main_files_dir = (os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                'inputs_outputs/')))
 
@@ -106,6 +108,13 @@ def _get_inpout_file(file_name, only_exist=True, only_check=False):
     if (not only_exist or os.path.isfile(full_fname)):
         return full_fname
     raise FileNotFoundError('There is no ' + full_fname)
+
+
+def get_test_system(molecule, geometry, basis, with_integrals=True):
+    molecular_system = MolecularGeometry.from_xyz_file(geom_file(molecule, geometry))
+    if with_integrals:
+        molecular_system.calculate_integrals(basis, int_meth='ir-wmme')
+    return molecular_system
 
 
 _func_get_file = r"""
