@@ -108,12 +108,21 @@ class HartreeFockStep():
         elif step_type == 'densMat-SCF':
             pass
 
-        elif step_type in ('RNR', 'RNR_St'):
+        elif step_type == 'RNR':
             self._init_P()
             self.Id_d = np.eye(self.d)
             self.Id_N_a = np.eye(self.N_a)
             if not self.restricted:
                 self.Id_N_b = np.eye(self.N_b)
+                
+        elif step_type in ('RNR_St', 'true_RNR_St'):
+            if not self.restricted:
+                raise NotImplementedError('unrestricted method at Stiefel is not implemented')
+            self._init_P()
+            self.Id_d = np.eye(self.d)
+            self.Id_N_a = np.eye(self.N_a)
+            self.manifold = stiefel.StiefelManifold((self.d, self.N_a),
+                                                    self.integrals.S)
 
         elif step_type == 'orb_rot-Newton':
             pass
@@ -397,11 +406,11 @@ class HartreeFockStep():
                                                                   self.integrals.invX,
                                                                   t)
         elif manifold == 'St':
-            self.orb[0][:, :self.N_a] = stiefel.geodesic(self.orb[0][:, :self.N_a],
-                                                         v, self.integrals.S, t)
+            self.orb[0][:, :self.N_a] = self.manifold.geodesic(self.orb[0][:, :self.N_a],
+                                                               v, t)
             if not self.restricted:
-                self.orb[1][:, :self.N_b] = stiefel.geodesic(self.orb[1][:, :self.N_b],
-                                                             v_b, self.integrals.S, t)
+                self.orb[1][:, :self.N_b] = self.manifold.geodesic(self.orb[1][:, :self.N_b],
+                                                                   v_b, t)
         else:
             raise ValueError('Unknown manifold for point update')
 
@@ -644,6 +653,8 @@ class HartreeFockStep():
                                                             if self.restricted else
                                                             np.concatenate((C, C_b), 1)),
                                                          S=S)
+            logger.info('Norm of eta: %s', linalg.norm(eta))
+
         if large_cond_number:
             self.large_cond_number.append(i_SCF)
 
@@ -697,11 +708,9 @@ class HartreeFockStep():
                 )
             logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
             if self.restricted:
-                Riem_Hess = stiefel.make_Hess(C,
-                                              self.Euc_grad,
-                                              Euc_Hess,
-                                              S, invS)
-                augmentation = stiefel.make_augmentation(C, S)
+                Riem_Hess = self.manifold.make_Hess(C, self.Euc_grad, Euc_Hess)
+                check_Hess_rank(C, Riem_Hess, self.manifold, isTrue_Hess=False)
+                augmentation = self.manifold.make_augmentation(C)
                 aug_Hess = np.vstack([Riem_Hess,
                                       augmentation])
             else:
@@ -727,14 +736,78 @@ class HartreeFockStep():
                 C=(C
                    if self.restricted else
                    np.concatenate((C, C_b), 1)),
-                S=S)
+                S=S,
+                    manifold=self.manifold)
         if large_cond_number:
             self.large_cond_number.append(i_SCF)
-        eta[:, :N_a] = grassmannian.proj_tgspace(C, eta[:, :N_a], S=S)
+ #       eta[:, :N_a] = self.manifold.proj_tgspace(C, eta[:, :N_a])
+#        eta[:, :N_a] = grassmannian.proj_tgspace(C, eta[:, :N_a], S=S)
+
         with logtime('updating the point'):
             self.orbitals_Riemannian_update(eta[:, :N_a],
                                             v_b=eta[:, N_a:],
-                                            manifold='Gr')
+                                            manifold='St')
+
+
+    def true_RNR_Stiefel(self, i_SCF):
+        """Hartree--Fock using Riemannian Newton--Raphson Method on the "true" Stiefel manifold."""
+        N_a, d = self.N_a, self.d
+        C = self.orb[0][:, :N_a]
+        if not self.restricted:
+            raise NotImplementedError('Currently RNR_Stiefel is implementated for restricted.')
+        S, invS = self.integrals.S, self.integrals.invS
+        g = self.integrals.g._integrals
+
+        self.make_dens_fock_energy()
+
+        tgsp_basis = self.manifold.basis_for_tg_space(C)
+        
+        with logtime('computing the gradient'):
+            # Assuming that Stiefel grad equals Grassmann grad,
+            # since the function (energy) is actually defined in Gr.
+            self.calc_Riem_grad(save_eucl_grad=True)
+        with logtime('Expanding the gradient in the basis'):
+            grad_in_basis = self.manifold.tgvec_matrix_to_basis(self.Riem_grad,
+                                                                basis=tgsp_basis)
+
+        with logtime('computing the hessian'):
+            if self.restricted:
+                Euc_Hess = absil.restricted_hessian(
+                    C,
+                    self.fock,
+                    self.blocks[1],
+                    self.blocks[2],
+                    g
+                )
+            else:
+                Euc_Hess = absil.hessian(
+                    C, C_b,
+                    self.fock, self.fock_b,
+                    self.blocks[1], self.blocks_b[1],
+                    self.blocks[2], self.blocks_b[2],
+                    g
+                )
+            logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+            if True:
+                Hess_in_basis = self.manifold.true_Hessian_directly(C,
+                                                                    self.Euc_grad,
+                                                                    Euc_Hess,
+                                                                    basis=tgsp_basis)
+            else:
+                Riem_Hess = self.manifold.make_Hess(C, self.Euc_grad, Euc_Hess)
+                Hess_in_basis = self.manifold.true_Hessian_from_MatHess(C, Riem_Hess)
+            check_Hess_rank(C, Hess_in_basis, self.manifold, isTrue_Hess=True)
+
+
+        with logtime('solving the main equation'):
+            eta = _solve_true_rnr_equation(Hess_in_basis, grad_in_basis,
+                                           self.manifold, tgsp_basis)
+            logger.info('Norm of eta: %s', linalg.norm(eta))
+
+        with logtime('updating the point'):
+            self.orbitals_Riemannian_update(eta[:, :N_a],
+                                            v_b=eta[:, N_a:],
+                                            manifold='St')
 
 
     def NRLM(self, i_SCF):
@@ -1006,7 +1079,7 @@ def _solve_nrlm_equation(H, g, d, N):
     return C, L, large_cond_number
 
 
-def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None):
+def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None, manifold=None):
     """Solves the linear equation for the step
     
     Parameters:
@@ -1043,6 +1116,42 @@ def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None):
         cTse = C.T @ S @ eta[:,:N]
         logger.debug('C.T @ S @ eta[:,:N]:\n%s', cTse)
         logger.info('T(Gr): ||C.T @ S @ eta|| = %s', linalg.norm(cTse))
-        stiefel.check_in_tgspace(eta[:,:N], C, S=S)
+        if manifold is not None:
+            manifold.check_in_tgspace(eta[:,:N], C)
     return eta, large_cond_number
 
+
+
+def _solve_true_rnr_equation(H, g, manifold, basis):
+    """Solves the linear equation, in the basis for tg space, for the RNR step
+    
+    Parameters:
+    -----------
+    H (2D array) - The Hessian
+    g (1D array)               - The gradient
+    manifod                    - The manifold
+    basis (list of2D arrays)   - a list with the basis for the tangent space
+    
+    Returns:
+    --------
+    The tangent vector eta, as a 2D array of shape manifold.shape
+
+    """
+    eta = linalg.solve(H, -g)
+    return manifold.tgvec_basis_to_matrix(eta, basis=basis)
+
+
+def check_Hess_rank(C, Hess, st, isTrue_Hess=True):
+    true_Hess = (Hess
+                 if isTrue_Hess else
+                 st.true_Hessian_from_MatHess(C, Hess))
+    logger.info('Hessian rank: %s;\n'
+                'dim  Stiefel: %s;\n'
+                'det Hess:     %s',
+                np.linalg.matrix_rank(Hess),
+                st.dim,
+                np.linalg.det(Hess))
+
+
+
+    
