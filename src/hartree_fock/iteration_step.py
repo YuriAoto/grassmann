@@ -1147,10 +1147,12 @@ def check_Hess_rank(C, Hess, st, isTrue_Hess=True):
                  st.true_Hessian_from_MatHess(C, Hess))
     logger.info('Hessian rank: %s;\n'
                 'dim  Stiefel: %s;\n'
-                'det Hess:     %s',
+                'det Hess:     %s;\n'
+                '|H - H.T|:    %s',
                 np.linalg.matrix_rank(Hess),
                 st.dim,
-                np.linalg.det(Hess))
+                np.linalg.det(Hess),
+                np.linalg.norm(true_Hess - true_Hess.T))
 
 
 
