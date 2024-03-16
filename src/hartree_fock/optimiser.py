@@ -184,8 +184,11 @@ def hartree_fock(integrals,
             elif step_type == 'RNR_St':
                 hf_step.RNR_Stiefel(i_SCF)
 
+            elif step_type == 'true_RNR':
+                hf_step.true_RNR(i_SCF)
+
             elif step_type == 'true_RNR_St':
-                hf_step.true_RNR_Stiefel(i_SCF)
+                hf_step.true_RNR(i_SCF)
 
             elif step_type == 'orb_rot-Newton':
                 hf_step.newton_orb_rot(i_SCF)

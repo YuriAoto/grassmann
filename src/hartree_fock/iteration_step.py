@@ -114,15 +114,26 @@ class HartreeFockStep():
             self.Id_N_a = np.eye(self.N_a)
             if not self.restricted:
                 self.Id_N_b = np.eye(self.N_b)
-                
-        elif step_type in ('RNR_St', 'true_RNR_St'):
+            self.manifold = grassmannian.GrassmannManifold((self.d, self.N_a),
+                                                           S=self.integrals.S,
+                                                           invS=self.integrals.invS,
+                                                           X=self.integrals.X,
+                                                           invX=self.integrals.invX)
+
+        elif step_type in ('RNR_St', 'true_RNR_St', 'true_RNR'):
             if not self.restricted:
                 raise NotImplementedError('unrestricted method at Stiefel is not implemented')
             self._init_P()
             self.Id_d = np.eye(self.d)
             self.Id_N_a = np.eye(self.N_a)
-            self.manifold = stiefel.StiefelManifold((self.d, self.N_a),
-                                                    self.integrals.S)
+            Manifold = (grassmannian.GrassmannManifold
+                        if step_type == 'true_RNR' else
+                        stiefel.StiefelManifold)
+            self.manifold = Manifold((self.d, self.N_a),
+                                     S=self.integrals.S,
+                                     invS=self.integrals.invS,
+                                     X=self.integrals.X,
+                                     invX=self.integrals.invX)
 
         elif step_type == 'orb_rot-Newton':
             pass
@@ -391,28 +402,13 @@ class HartreeFockStep():
                 del self.Euc_grad
                 del self.Euc_grad_b
 
-    def orbitals_Riemannian_update(self, v, v_b=None, t=1.0, manifold='Gr'):
+    def orbitals_Riemannian_update(self, v, v_b=None, t=1.0):
         """Update the orbitals through the geodesic in the direction of v (and v_b)"""
-        if manifold == 'Gr':
-            self.orb[0][:, :self.N_a] = grassmannian.geodesic(self.orb[0][:, :self.N_a],
-                                                              v,
-                                                              self.integrals.X,
-                                                              self.integrals.invX,
-                                                              t)
-            if not self.restricted:
-                self.orb[1][:, :self.N_b] = grassmannian.geodesic(self.orb[1][:, :self.N_b],
-                                                                  v_b,
-                                                                  self.integrals.X,
-                                                                  self.integrals.invX,
-                                                                  t)
-        elif manifold == 'St':
-            self.orb[0][:, :self.N_a] = self.manifold.geodesic(self.orb[0][:, :self.N_a],
-                                                               v, t)
-            if not self.restricted:
-                self.orb[1][:, :self.N_b] = self.manifold.geodesic(self.orb[1][:, :self.N_b],
-                                                                   v_b, t)
-        else:
-            raise ValueError('Unknown manifold for point update')
+        self.orb[0][:, :self.N_a] = self.manifold.geodesic(self.orb[0][:, :self.N_a],
+                                                           v, t)
+        if not self.restricted:
+            self.orb[1][:, :self.N_b] = self.manifold_b.geodesic(self.orb[1][:, :self.N_b],
+                                                                 v_b, t)
 
     def diag_fock(self):
         if self.restricted:
@@ -660,8 +656,7 @@ class HartreeFockStep():
 
         with logtime('updating the point'):
             self.orbitals_Riemannian_update(eta[:, :N_a],
-                                            v_b=eta[:, N_a:],
-                                            manifold='Gr')
+                                            v_b=eta[:, N_a:])
 
 
     def RNR_Stiefel(self, i_SCF):
@@ -745,12 +740,12 @@ class HartreeFockStep():
 
         with logtime('updating the point'):
             self.orbitals_Riemannian_update(eta[:, :N_a],
-                                            v_b=eta[:, N_a:],
-                                            manifold='St')
+                                            v_b=eta[:, N_a:])
 
-
-    def true_RNR_Stiefel(self, i_SCF):
-        """Hartree--Fock using Riemannian Newton--Raphson Method on the "true" Stiefel manifold."""
+    def true_RNR(self, i_SCF):
+        """Hartree--Fock using Riemannian Newton--Raphson Method on the "true" manifold.
+        
+        """
         N_a, d = self.N_a, self.d
         C = self.orb[0][:, :N_a]
         if not self.restricted:
@@ -796,8 +791,8 @@ class HartreeFockStep():
             else:
                 Riem_Hess = self.manifold.make_Hess(C, self.Euc_grad, Euc_Hess)
                 Hess_in_basis = self.manifold.true_Hessian_from_MatHess(C, Riem_Hess)
+            
             check_Hess_rank(C, Hess_in_basis, self.manifold, isTrue_Hess=True)
-
 
         with logtime('solving the main equation'):
             eta = _solve_true_rnr_equation(Hess_in_basis, grad_in_basis,
@@ -806,8 +801,7 @@ class HartreeFockStep():
 
         with logtime('updating the point'):
             self.orbitals_Riemannian_update(eta[:, :N_a],
-                                            v_b=eta[:, N_a:],
-                                            manifold='St')
+                                            v_b=eta[:, N_a:])
 
 
     def NRLM(self, i_SCF):
@@ -1141,18 +1135,24 @@ def _solve_true_rnr_equation(H, g, manifold, basis):
     return manifold.tgvec_basis_to_matrix(eta, basis=basis)
 
 
-def check_Hess_rank(C, Hess, st, isTrue_Hess=True):
+def check_Hess_rank(C, Hess, manifold, isTrue_Hess=True):
     true_Hess = (Hess
                  if isTrue_Hess else
-                 st.true_Hessian_from_MatHess(C, Hess))
-    logger.info('Hessian rank: %s;\n'
-                'dim  Stiefel: %s;\n'
-                'det Hess:     %s;\n'
-                '|H - H.T|:    %s',
-                np.linalg.matrix_rank(Hess),
-                st.dim,
-                np.linalg.det(Hess),
-                np.linalg.norm(true_Hess - true_Hess.T))
+                 manifold.true_Hessian_from_MatHess(C, Hess))
+    eigvals, _ = linalg.eigh(true_Hess)
+    det_from_eigvals = 1.0
+    smallest_eigval = None
+    for e in eigvals:
+        if smallest_eigval is None or abs(e) < smallest_eigval:
+            smallest_eigval = abs(e)
+        det_from_eigvals *= e
+    logger.info(f'Hessian rank: {np.linalg.matrix_rank(Hess)};\n'
+                f'manifold dim: {manifold.dim};\n'
+                f'|H - H.T|:         {np.linalg.norm(true_Hess - true_Hess.T)};\n'
+                f'det H:             {linalg.det(Hess)};\n'
+                f'prod(eigvals(H)):  {det_from_eigvals};\n'
+                f'smallest eigval:   {smallest_eigval};\n'
+                f'eigvals(H):\n {eigvals};\n')
 
 
 

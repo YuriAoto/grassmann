@@ -23,49 +23,24 @@ logger = logging.getLogger(__name__)
 from orbitals import orbitals
 from util import array_indices
 from util.variables import sqrt2
-
+from . import matrix_manifold
 
 
 def sym(X):
     return (X + X.T)/2
 
+def asym(X):
+    return (X - X.T)/2
 
-class StiefelManifold:
 
-    def __init__(self, shape, S=None):
-        self.shape = shape
-        self.S = S
-        self._make_attributes()
+class StiefelManifold(matrix_manifold.MatrixManifold):
 
-    @property
-    def n(self):
-        return self.shape[0]
-
-    @property
-    def p(self):
-        return self.shape[1]
-
-    @property
-    def d(self):
-        return self.shape[0]
-
-    @property
-    def N(self):
-        return self.shape[1]
+    def __init__(self, shape, S=None, invS=None, X=None, invX=None):
+        super().__init__(shape, S=S, invS=invS, X=X, invX=invX)
 
     def _make_attributes(self):
-        assert self.S.shape == (self.n, self.n)
-        self.Id_n = np.eye(self.n)
-        self.Id_p = np.eye(self.p)
-        self.mat_dim = self.n * self.p
+        super()._make_attributes()
         self.dim = self.mat_dim - self.p * (self.p + 1) // 2
-        self.invS = np.linalg.inv(self.S)
-
-    def assert_shape(self, x):
-        """Raises ValueError if x.shape != self.shape"""
-        if x.shape != self.shape:
-            raise ValueError('Matrix has incorrect shape for this Stiefel manifold')
-        
 
     def can_rip(self, Y, v1, v2):
         """Calculates the canonical Riemannian internal product of Stiefel
@@ -82,42 +57,6 @@ class StiefelManifold:
         if self.S is not None: raise ValueError("S != None is not implemented.")
         return np.trace(v1.T @ (self.Id_n - Y @ Y.T / 2) @ v2)
 
-
-    def rip(self, v1, v2):
-        """Calculates the Riemannian internal product in the Stiefel.
-
-        Parameters:
-        -----------
-        Y (2D arrays of shape n,p) - the point of the Stiefel manifold
-        v1 and v2 (2D arrays of shape n,p) - the tangent vectors
-
-        """
-        self.assert_shape(v1)
-        self.assert_shape(v2)
-        return np.trace(v1.T @ v2
-                        if self.S is None else
-                        v1.T @ self.S @ v2)
-
-    def _matvecmul_in_np_space(self, A, b):
-        """Make A@b where A is np x np and b is a (n,p) array
-        
-        This makes the multiplication where A is in the vectorized
-        form, b is unvectorizes (thus, b is a nxp matrix) and the result
-        is given in the unvectorized form.
-        Vectorization means stacking column on top of column
-        
-        Parameters:
-        -----------
-        A (2D array of shape (self.mat_dim, self.mat_dim))
-        b (2D array of shape self.shape)
-        
-        Result:
-        -------
-        A 2D array of shape self.shape
-
-        """
-        return np.reshape(A @ np.reshape(b, (self.mat_dim,), 'F'),
-                          self.shape, 'F')
 
     def proj_tgspace(self, Y, Z):
         """Calculates the projection of Z into the tangent space of the Stiefel
@@ -188,7 +127,7 @@ class StiefelManifold:
             else:
                 raise ValueError('Unknown mode to generate tangent vectors')
 
-    def ith_tg_vecs(self, Y, i, mode='2.5'):
+    def ith_tg_vec(self, Y, i, mode='2.5'):
         """Return the i-th tangent vector that is yield by tg_vecs"""
         if i < array_indices.triangular(self.p-1):
             ii, j = array_indices.ij_from_triang(i)
@@ -280,7 +219,6 @@ class StiefelManifold:
         for i in range(self.dim):
             v += x[i] * basis[i]
         return v
-
     
 
     def geodesic(self, Y, v, t=1):
@@ -328,7 +266,7 @@ class StiefelManifold:
         A 2D array of shape self.shape - Hess f(Y)[v]
         
         """
-        Hv = self.invS @ self._matvecmul_in_np_space(euc_Hess, v)
+        Hv = self.invS @ self.matvecmul_in_np_space(euc_Hess, v)
         Hv -= v @ sym(Y.T @ euc_grad)
         return self.proj_tgspace(Y, Hv)
 
@@ -405,7 +343,7 @@ class StiefelManifold:
         if basis is None: basis = self.basis_for_tg_space(Y)
         true_Hess = np.empty((self.dim, self.dim))
         for i in range(self.dim):
-            H_basis_i = self._matvecmul_in_np_space(mat_Hess, basis[i])
+            H_basis_i = self.matvecmul_in_np_space(mat_Hess, basis[i])
             is_in_tgspace = self.check_in_tgspace(Y, H_basis_i)
             if not is_in_tgspace:
                 logger.critical('H @ basis[i] is not in tg space for basis element number %s', i)

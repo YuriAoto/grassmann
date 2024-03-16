@@ -12,66 +12,120 @@ from scipy import linalg
 
 from . import absil
 
+from . import stiefel
 
-def proj_tgspace(Y, Z, S=None):
-    """Calculates the projection of Z into the tangent space of the Grassmannian
-    
-    Similar to Equation (3.41) of Absil book, but with Gram matrix.
-    
-    Parameters:
-    -----------
-    Y (2D array of shape d,N) - the point of the Grassmann manifold
-    Z (2D array of shape d,N) - the matrix to be projected into the tangent space
-    S (2D array of dimension n,n) - the Gram matrix
-    """
-    return (np.eye(Y.shape[0]) - (Y @ Y.T
-                                  if S is None else
-                                  Y @ Y.T @ S)) @ Z
+class GrassmannManifold(stiefel.StiefelManifold):
+
+    def __init__(self, shape, S=None, invS=None, X=None, invX=None):
+        super().__init__(shape, S=S, invS=invS, X=X, invX=invX)
+
+    def _make_attributes(self):
+        super()._make_attributes()
+        self.dim = (self.n - self.p) * self.p
 
 
-def geodesic(C, DD, X, invX, t=1, gs=False):
-    """Computes the geodesic of the Grassmannian
+    def proj_tgspace(self, Y, Z):
+        """Calculates the projection of Z into the tangent space of the Grassmannian
+
+        Similar to Equation (3.41) of Absil book, but with Gram matrix.
+
+        Parameters:
+        -----------
+        Y (2D array of shape d,N) - the point of the Grassmann manifold
+        Z (2D array of shape d,N) - the matrix to be projected into the tangent space
+        """
+        return (self.Id_n - (Y @ Y.T
+                             if self.S is None else
+                             Y @ Y.T @ self.S)) @ Z
 
 
-    Parameters:
-    -----------
-    - C (nxN ndarray): orbitals' coefficients (aka an element in the Stiefel).
-    - DD (nxN ndarray): the descent direction in the horizontal space. It must
-        satisfy C.T @ S @ DD = 0.
-    - S (nxn ndarray): the overlap matrix of the basis set.
-    - X (nxn ndarray): a matrix that satisfies X.T @ S @ X = Id.
-    - invX (nxn ndarray): the inverse of X.
-    - t (float, optional, default=1): the size of the step of the geodesic.
-
-    Returns:
-    --------
-    A nxN ndarray with the new orbitals' coefficients.
-    """
-    U, D, V = linalg.svd(invX @ DD, full_matrices=False)
-    sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
-    return (C @ V.T @ cos + X @ U @ sin) @ V
+    def tg_vecs(self, Y):
+        for v in super().tg_vecs(Y, mode='2.5', in_Gr_tgspace_orth=False):
+            yield v
 
 
-def pt(vector, direction, point, Id, X, invX, t):
-    """Computes the parallel transport along a geodesic in the Grassmannian.
+    def ith_tg_vec(self, Y, i):
+        if i >= self.dim:
+            raise ValueError('Too large index for tan vector')
+        return super().ith_tg_vec(Y, i+array_indices.triangular(self.p-1), mode='2.5')
 
-    Parameters:
-    -----------
-    - vector (nxN ndarray): the vector to be transported.
-    - direction (nxN ndarray): the initial direction of the geodesic g'(0).
-    - point (nxN ndarray): the starting point of the geodesic g(0).
-    - Id (nxn ndarray): identity matrix (just to save memory).
-    - X (nxn ndarray): a matrix that satisfies X.T @ S @ X = Id.
-    - invX (nxn ndarray): the inverse of X.
+    def basis_for_tg_space(self, Y):
+        # It seems that we cannot use super() here, as the super function calls tg_vecs
+        # with some extra arguments... What a pity!
+        basis = []
+        for name_v, v in self.tg_vecs(Y):
+            basis.append(v)
+        return basis
 
-    Returns:
-    --------
-    An nxN ndarray that represents the parallel transport of 'vector'.
-    """
-    U, D, V = linalg.svd(invX @ direction, full_matrices=False)
-    sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
-    return ((-point @ V.T @ sin + X @ U @ cos) @ U.T @ invX
-            + Id - X @ U @ U.T @ invX) @ vector
+        return super().basis_for_tg_space(Y, include_Gr_tgspace_orth=False)
+
+
+    def Hess(self, Y, v, euc_grad, euc_Hess):
+        """Calculates the Hessian acting on a tangent vector
+        
+        Parameters:
+        -----------
+        Y (2D array, shape self.shape) - point at the Stiefel
+        v (2D array, shape self.shape) - the tangent vector
+        euc_grad (2D array, shape self.shape) - Euclidean gradient
+        euc_Hess (2D array, shape (self.mat_dim, self.mat_dim)) - Euclidean Hessian
+        
+        Returns:
+        --------
+        A 2D array of shape self.shape - Hess f(Y)[v]
+        
+        """
+        Hv = self.invS @ self.matvecmul_in_np_space(euc_Hess, v)
+        Hv -= v @ Y.T @ euc_grad
+        return self.proj_tgspace(Y, Hv)
+
+
+    def geodesic_St(self, Y, v, t=1):
+        super().geodesic(Y, v, t=1)
+
+
+    def geodesic(self, C, DD, t=1):
+        """Computes the geodesic of the Grassmannian
+
+        Parameters:
+        -----------
+        - C (nxN ndarray): orbitals' coefficients (aka an element in the Stiefel).
+        - DD (nxN ndarray): the descent direction in the horizontal space. It must
+            satisfy C.T @ S @ DD = 0.
+        - S (nxn ndarray): the overlap matrix of the basis set.
+        - t (float, optional, default=1): the size of the step of the geodesic.
+
+        Returns:
+        --------
+        A nxN ndarray with the new orbitals' coefficients.
+        """
+        U, D, V = linalg.svd(self.invX @ DD, full_matrices=False)
+        sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
+        return (C @ V.T @ cos + self.X @ U @ sin) @ V
+    ##        - X (nxn ndarray): a matrix that satisfies X.T @ S @ X = Id.
+    ##        - invX (nxn ndarray): the inverse of X.
+
+
+    def pt(self, vector, direction, point, t):
+        """Computes the parallel transport along a geodesic in the Grassmannian.
+
+        Parameters:
+        -----------
+        - vector (nxN ndarray): the vector to be transported.
+        - direction (nxN ndarray): the initial direction of the geodesic g'(0).
+        - point (nxN ndarray): the starting point of the geodesic g(0).
+        - Id (nxn ndarray): identity matrix (just to save memory).
+        - X (nxn ndarray): a matrix that satisfies X.T @ S @ X = Id.
+        - invX (nxn ndarray): the inverse of X.
+
+        Returns:
+        --------
+        An nxN ndarray that represents the parallel transport of 'vector'.
+        """
+        U, D, V = linalg.svd(self.invX @ direction, full_matrices=False)
+        sin, cos = np.diag(np.sin(t * D)), np.diag(np.cos(t * D))
+        return ((-point @ V.T @ sin + self.X @ U @ cos) @ U.T @ self.invX
+                + self.Id_n - self.X @ U @ U.T @ self.invX) @ vector
 
 
 def RBLS(C_a, C_b, DD_a, DD_b, norm_DD, E_cur, E_prev, S, X, invX, hf):
