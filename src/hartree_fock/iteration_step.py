@@ -1131,7 +1131,11 @@ def _solve_true_rnr_equation(H, g, manifold, basis):
     The tangent vector eta, as a 2D array of shape manifold.shape
 
     """
-    eta = linalg.solve(H, -g)
+    eigval, eigvec = linalg.eigh(H)
+    eta, res, rnk, s = linalg.lstsq(H, -g) #, cond=1.0e-2)
+    print(f'\n\n eta: \n {eta}\n\n\n\n')
+    print(f'\n\n U@eta: \n {eigvec.T @ eta}\n\n\n\n')
+    print(f'res: {res} \n rnk: {rnk} \n s: {s}')
     return manifold.tgvec_basis_to_matrix(eta, basis=basis)
 
 
