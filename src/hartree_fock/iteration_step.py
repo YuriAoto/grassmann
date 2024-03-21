@@ -796,7 +796,9 @@ class HartreeFockStep():
 
         with logtime('solving the main equation'):
             eta = _solve_true_rnr_equation(Hess_in_basis, grad_in_basis,
-                                           self.manifold, tgsp_basis)
+                                           self.manifold, tgsp_basis,
+                                           solve_via_eigh=self.manifold == 'Stiefel'
+                                           )
             logger.info('Norm of eta: %s', linalg.norm(eta))
 
         with logtime('updating the point'):
@@ -1116,7 +1118,7 @@ def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None, manifol
 
 
 
-def _solve_true_rnr_equation(H, g, manifold, basis):
+def _solve_true_rnr_equation(H, g, manifold, basis, solve_via_eigh=False):
     """Solves the linear equation, in the basis for tg space, for the RNR step
     
     Parameters:
@@ -1131,11 +1133,16 @@ def _solve_true_rnr_equation(H, g, manifold, basis):
     The tangent vector eta, as a 2D array of shape manifold.shape
 
     """
-    eigval, eigvec = linalg.eigh(H)
-    eta, res, rnk, s = linalg.lstsq(H, -g) #, cond=1.0e-2)
-    print(f'\n\n eta: \n {eta}\n\n\n\n')
-    print(f'\n\n U@eta: \n {eigvec.T @ eta}\n\n\n\n')
-    print(f'res: {res} \n rnk: {rnk} \n s: {s}')
+    if solve_via_eigh:
+        eigvals, eigvecs = linalg.eigh(H)
+        b = eigvecs.T @ g
+        x = np.zeros(eigvals.shape)
+        for i, lbda in enumerate(eigvals):
+            if lbda > 0.01:
+                x[i] = -b[i] / lbda
+        eta = eigvecs @ x
+    else:
+        eta, res, rnk, s = linalg.lstsq(H, -g, cond=1.0e-2)
     return manifold.tgvec_basis_to_matrix(eta, basis=basis)
 
 
