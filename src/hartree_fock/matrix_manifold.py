@@ -31,6 +31,7 @@ class MatrixManifold:
         self.X = X
         self.invX = invX
         self._make_attributes()
+        self.name = 'Matrices'
 
     @property
     def n(self):

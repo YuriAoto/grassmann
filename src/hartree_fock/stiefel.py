@@ -37,6 +37,7 @@ class StiefelManifold(matrix_manifold.MatrixManifold):
 
     def __init__(self, shape, S=None, invS=None, X=None, invX=None):
         super().__init__(shape, S=S, invS=invS, X=X, invX=invX)
+        self.name = 'Stiefel'
 
     def _make_attributes(self):
         super()._make_attributes()

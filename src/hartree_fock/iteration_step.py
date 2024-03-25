@@ -803,7 +803,9 @@ class HartreeFockStep():
 
         with logtime('solving the main equation'):
             eta = _solve_true_rnr_equation(Hess_in_basis, grad_in_basis,
-                                           self.manifold, tgsp_basis, self.lstsq_cond)
+                                           self.manifold, tgsp_basis,
+                                           solve_via_eigh=self.manifold == 'Stiefel',
+                                           cond_thr=self.lstsq_cond)
             logger.info('Norm of eta: %s', linalg.norm(eta))
 
         with logtime('updating the point'):
@@ -1123,7 +1125,7 @@ def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None, manifol
 
 
 
-def _solve_true_rnr_equation(H, g, manifold, basis, lstsq_cond):
+def _solve_true_rnr_equation(H, g, manifold, basis, solve_via_eigh=False, cond_thr=None):
     """Solves the linear equation, in the basis for tg space, for the RNR step
     
     Parameters:
@@ -1132,14 +1134,24 @@ def _solve_true_rnr_equation(H, g, manifold, basis, lstsq_cond):
     g (1D array)               - The gradient
     manifod                    - The manifold
     basis (list of2D arrays)   - a list with the basis for the tangent space
-    lstsq_cond (optional, float) - the cond parameter for the scipy.linalg.lstsq
+    solve_via_eigh (optional, bool)     - Solve system in the basis of eigenvectors of Hess
+    lcond_thr (optional, float) - the cond parameter for the scipy.linalg.lstsq
     
     Returns:
     --------
     The tangent vector eta, as a 2D array of shape manifold.shape
 
     """
-    eta, res, rnk, s = linalg.lstsq(H, -g, cond=lstsq_cond)
+    if solve_via_eigh:
+        eigvals, eigvecs = linalg.eigh(H)
+        b = eigvecs.T @ g
+        x = np.zeros(eigvals.shape)
+        for i, lbda in enumerate(eigvals):
+            if if None is None or lbda > cond_thr:
+                x[i] = -b[i] / lbda
+        eta = eigvecs @ x
+    else:
+        eta, res, rnk, s = linalg.lstsq(H, -g, cond=cond_thr)
     return manifold.tgvec_basis_to_matrix(eta, basis=basis)
 
 
