@@ -37,7 +37,8 @@ def hartree_fock(integrals,
                  conjugacy=None,
                  step_size=1.0,
                  HF_step_type=lambda **x: 'RH-SCF',
-                 hf_nrlm_multpl_symm='triangular'):
+                 hf_nrlm_multpl_symm='triangular',
+                 lstsq_cond=None):
     """A general Hartree-Fock procedure
 
     
@@ -113,7 +114,8 @@ def hartree_fock(integrals,
                 
                 See util.array_indices.n_from_triang_with_diag
                 and util.array_indices.ij_from_triang_with_diag
-                    
+                
+    lstsq_cond
     """
     kind_of_calc = 'closed-shell RHF' if restricted else 'UHF'
     converged = False
@@ -129,6 +131,7 @@ def hartree_fock(integrals,
     hf_step.grad_type = grad_type
     hf_step.conjugacy = conjugacy
     hf_step.step_size = step_size if step_size else hf_step.step_size
+    hf_step.lstsq_cond = lstsq_cond
     if restricted:
         hf_step.step_size /= 2
     hf_step.hf_nrlm_multpl_symm = hf_nrlm_multpl_symm

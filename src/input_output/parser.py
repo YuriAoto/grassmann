@@ -191,6 +191,8 @@ def _parser():
                         + '--out_extension.')
     parser.add_argument('--conjugacy',
                         help='Conjugacy option for the Conjugate Gradient Method')
+    parser.add_argument('--lstsq_cond',
+                        help='cond parameter for the scipy.lingal.lstsq')
     parser.add_argument('--step_size',
                         help='The size of the step to use in the geodesic',
                         type=float)

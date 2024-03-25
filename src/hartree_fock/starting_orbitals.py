@@ -151,7 +151,8 @@ def calc_at_dens(element, basis, conjugacy, step_size):
                     save_orb=None,
                     conjugacy=conjugacy,
                     step_size=step_size,
-                    hf_nrlm_multpl_symm='full'
+                    hf_nrlm_multpl_symm='full',
+                    lstsq_cond=None
     )
     atHF = main.main(args, None)#sys.stdout)
     os.remove(f.name)

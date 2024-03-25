@@ -129,7 +129,8 @@ def main(args, f_out):
                                     conjugacy=args.conjugacy,
                                     step_size=args.step_size,
                                     HF_step_type=_define_hfstep_func(args.step_type),
-                                    hf_nrlm_multpl_symm=args.hf_nrlm_multpl_symm)
+                                    hf_nrlm_multpl_symm=args.hf_nrlm_multpl_symm,
+                                    lstsq_cond=args.lstsq_cond)
 
     HF.totaltime = T.end_time - T.ini_time
     if args.save_orb is not None:

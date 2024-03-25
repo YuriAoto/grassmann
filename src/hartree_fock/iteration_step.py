@@ -596,6 +596,8 @@ class HartreeFockStep():
             
         with logtime('computing the gradient'):
             self.calc_Riem_grad(save_eucl_grad=True)
+            
+        with logtime('Making augmentation at the gradient'):
             if self.restricted:
                 aug_grad = np.zeros(N_a * (d + N_a))
                 aug_grad[:d*N_a] = np.reshape(self.Riem_grad, -1, 'F')
@@ -604,7 +606,7 @@ class HartreeFockStep():
                 aug_grad[:d*N_a] = np.reshape(self.Riem_grad, (d*N_a,), 'F')
                 aug_grad[d*N_a:d*(N_a + N_b)] = np.reshape(self.Riem_grad_b, (d*N_b), 'F')
 
-        with logtime('computing the hessian'):
+        with logtime('computing the euclidean hessian'):
             if self.restricted:
                 Euc_Hess = absil.restricted_hessian(
                     C,
@@ -622,6 +624,8 @@ class HartreeFockStep():
                     g
                 )
             logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+            
+        with logtime('computing the Riemannian hessian with augmentation'):
             if self.restricted:
                 proj = self.Id_d - 0.5 * self.P @ self.integrals.S
                 Riem_Hess = np.kron(self.Id_N_a, proj @ invS) @ Euc_Hess
@@ -750,29 +754,29 @@ class HartreeFockStep():
         C = self.orb[0][:, :N_a]
         if not self.restricted:
             raise NotImplementedError('Currently RNR_Stiefel is implementated for restricted.')
-        S, invS = self.integrals.S, self.integrals.invS
-        g = self.integrals.g._integrals
 
         self.make_dens_fock_energy()
-
-        tgsp_basis = self.manifold.basis_for_tg_space(C)
+        
+        with logtime('Computing the basis for the tangent space'):
+            tgsp_basis = self.manifold.basis_for_tg_space(C)
         
         with logtime('computing the gradient'):
             # Assuming that Stiefel grad equals Grassmann grad,
             # since the function (energy) is actually defined in Gr.
             self.calc_Riem_grad(save_eucl_grad=True)
+        
         with logtime('Expanding the gradient in the basis'):
             grad_in_basis = self.manifold.tgvec_matrix_to_basis(self.Riem_grad,
                                                                 basis=tgsp_basis)
 
-        with logtime('computing the hessian'):
+        with logtime('computing the euclidean hessian'):
             if self.restricted:
                 Euc_Hess = absil.restricted_hessian(
                     C,
                     self.fock,
                     self.blocks[1],
                     self.blocks[2],
-                    g
+                    self.integrals.g._integrals
                 )
             else:
                 Euc_Hess = absil.hessian(
@@ -780,9 +784,11 @@ class HartreeFockStep():
                     self.fock, self.fock_b,
                     self.blocks[1], self.blocks_b[1],
                     self.blocks[2], self.blocks_b[2],
-                    g
+                    self.integrals.g._integrals
                 )
             logger.debug('Euclidean Hessian:\n%r', Euc_Hess)
+
+        with logtime('computing the Riemannian Hessian in the basis'):
             if True:
                 Hess_in_basis = self.manifold.true_Hessian_directly(C,
                                                                     self.Euc_grad,
@@ -791,12 +797,13 @@ class HartreeFockStep():
             else:
                 Riem_Hess = self.manifold.make_Hess(C, self.Euc_grad, Euc_Hess)
                 Hess_in_basis = self.manifold.true_Hessian_from_MatHess(C, Riem_Hess)
-            
-            check_Hess_rank(C, Hess_in_basis, self.manifold, isTrue_Hess=True)
+
+        
+        # check_Hess_rank(C, Hess_in_basis, self.manifold, isTrue_Hess=True)
 
         with logtime('solving the main equation'):
             eta = _solve_true_rnr_equation(Hess_in_basis, grad_in_basis,
-                                           self.manifold, tgsp_basis)
+                                           self.manifold, tgsp_basis, self.lstsq_cond)
             logger.info('Norm of eta: %s', linalg.norm(eta))
 
         with logtime('updating the point'):
@@ -1116,7 +1123,7 @@ def _solve_rnr_equation(H, g, d, check_in_tgspace=False, C=None, S=None, manifol
 
 
 
-def _solve_true_rnr_equation(H, g, manifold, basis):
+def _solve_true_rnr_equation(H, g, manifold, basis, lstsq_cond):
     """Solves the linear equation, in the basis for tg space, for the RNR step
     
     Parameters:
@@ -1125,17 +1132,14 @@ def _solve_true_rnr_equation(H, g, manifold, basis):
     g (1D array)               - The gradient
     manifod                    - The manifold
     basis (list of2D arrays)   - a list with the basis for the tangent space
+    lstsq_cond (optional, float) - the cond parameter for the scipy.linalg.lstsq
     
     Returns:
     --------
     The tangent vector eta, as a 2D array of shape manifold.shape
 
     """
-    eigval, eigvec = linalg.eigh(H)
-    eta, res, rnk, s = linalg.lstsq(H, -g) #, cond=1.0e-2)
-    print(f'\n\n eta: \n {eta}\n\n\n\n')
-    print(f'\n\n U@eta: \n {eigvec.T @ eta}\n\n\n\n')
-    print(f'res: {res} \n rnk: {rnk} \n s: {s}')
+    eta, res, rnk, s = linalg.lstsq(H, -g, cond=lstsq_cond)
     return manifold.tgvec_basis_to_matrix(eta, basis=basis)
 
 
