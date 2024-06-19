@@ -11,7 +11,7 @@ import numpy as np
 from scipy import linalg
 
 from . import absil
-
+from util import array_indices
 from . import stiefel
 
 class GrassmannManifold(stiefel.StiefelManifold):
@@ -82,7 +82,7 @@ class GrassmannManifold(stiefel.StiefelManifold):
 
 
     def geodesic_St(self, Y, v, t=1):
-        super().geodesic(Y, v, t=1)
+        return super().geodesic(Y, v, t=1)
 
 
     def geodesic(self, C, DD, t=1):

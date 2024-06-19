@@ -1147,7 +1147,7 @@ def _solve_true_rnr_equation(H, g, manifold, basis, solve_via_eigh=False, cond_t
         b = eigvecs.T @ g
         x = np.zeros(eigvals.shape)
         for i, lbda in enumerate(eigvals):
-            if if None is None or lbda > cond_thr:
+            if cond_thr is None or lbda > cond_thr:
                 x[i] = -b[i] / lbda
         eta = eigvecs @ x
     else:
