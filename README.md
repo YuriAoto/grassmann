@@ -1,5 +1,5 @@
 # grassmann
-Grassmann is designed to study electronic structure theory using tools from differential geometry.
+Studying electronic structure theory using tools from differential geometry.
 
 Grassmann is being developed under the financial support of FAPESP - São Paulo Research Foundation,
 grant #2017/21199-0, at the Federal University of ABC (UFABC), Brazil.
